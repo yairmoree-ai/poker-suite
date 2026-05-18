@@ -1237,65 +1237,33 @@ async function syncFromSheets(){
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
-    // Use JSONP-style via script tag to bypass CORS for GET
-    const data = await fetchViaScript(gsUrl+'?key=poker_data&callback=__gsCallback&t='+Date.now());
-    if(data && data.ok && data.value){
-      applySnapshot(data.value);
+    const url = gsUrl + '?key=poker_data&t=' + Date.now();
+    const resp = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow'
+    });
+    const text = await resp.text();
+    let r;
+    try{ r = JSON.parse(text); }
+    catch(e){ throw new Error('תגובה לא תקינה: ' + text.slice(0,80)); }
+    if(r.ok && r.value){
+      applySnapshot(r.value);
       persist();
       render();
       updateSyncDot('ok');
-      setSyncStatus('נתונים נטענו: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+      setSyncStatus('נטען: ' + new Date().toLocaleTimeString('he-IL'), '#5fc47a');
       notify('נתונים נטענו מ-Google ✓');
-    } else if(data && !data.ok){
+    } else {
       updateSyncDot('idle');
       setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
-    } else {
-      // Try direct fetch as fallback
-      const resp = await fetch(gsUrl+'?key=poker_data&t='+Date.now());
-      const r = await resp.json();
-      if(r.ok && r.value){
-        applySnapshot(r.value);
-        persist(); render();
-        updateSyncDot('ok');
-        setSyncStatus('נתונים נטענו ✓', '#5fc47a');
-        notify('נתונים נטענו מ-Google ✓');
-      }
     }
   }catch(e){
-    // Last resort: try direct fetch
-    try{
-      const resp = await fetch(gsUrl+'?key=poker_data&t='+Date.now());
-      const r = await resp.json();
-      if(r.ok && r.value){
-        applySnapshot(r.value);
-        persist(); render();
-        updateSyncDot('ok');
-        setSyncStatus('נתונים נטענו ✓', '#5fc47a');
-        notify('נתונים נטענו מ-Google ✓');
-      }
-    }catch(e2){
-      updateSyncDot('err');
-      setSyncStatus('שגיאת חיבור: '+e2.message, '#e07b6a');
-    }
+    updateSyncDot('err');
+    setSyncStatus('שגיאה: ' + e.message, '#e07b6a');
   }
 }
 
-function fetchViaScript(url){
-  return new Promise((resolve)=>{
-    const cbName = '__gsCallback_'+Date.now();
-    window[cbName] = (data)=>{
-      delete window[cbName];
-      document.getElementById('__gs_script')?.remove();
-      resolve(data);
-    };
-    const s = document.createElement('script');
-    s.id = '__gs_script';
-    s.src = url.replace('__gsCallback', cbName);
-    s.onerror = ()=>{ delete window[cbName]; s.remove(); resolve(null); };
-    setTimeout(()=>{ if(window[cbName]){ delete window[cbName]; s.remove(); resolve(null); } }, 8000);
-    document.head.appendChild(s);
-  });
-}
+
 
 function toggleSettings(){
   const box = document.getElementById('settings-box');
