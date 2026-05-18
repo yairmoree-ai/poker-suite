@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#080b12">
+<title>Poker Suite</title>
+<style>
+:root{
+  --gold:#c8a96e;--gold2:#a07840;--bg:#080b12;--bg2:#0f1320;
+  --felt:#14422a;--felt2:#0e2e1c;--red:#e05555;--blue:#5b9bd5;--green:#5fc47a;
+  --panel:#0d1220;--border:rgba(200,169,110,0.18);
+  --text:#e2ddd4;--muted:#5a5870;--muted2:#3a3650;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-text-fill-color:inherit}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#080b12!important;background-color:#080b12!important;color:#e2ddd4;direction:rtl}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px}
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+/* TOP BAR */
+#topbar{flex-shrink:0;background:#080b12;border-bottom:1px solid rgba(200,169,110,0.18);z-index:40}
+#statsbar{padding:6px 8px;display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;background:#080b12}
+#statsbar::-webkit-scrollbar{display:none}
+.sbox{background:#0f1320;border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:4px 8px;flex-shrink:0;text-align:center;min-width:54px}
+.sbox label{display:block;font-size:9px;color:var(--muted);margin-bottom:1px}
+.sbox .val{font-size:13px;font-weight:800;color:var(--gold)}
+.sbox input{background:none;border:none;color:var(--gold);font-size:13px;font-weight:800;width:56px;text-align:center;outline:none}
+.sbox select{background:transparent;border:none;color:var(--gold);font-size:13px;font-weight:800;outline:none;cursor:pointer}
+/* NAV */
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:7px 10px 5px}
+.nav-tabs{display:flex;gap:5px}
+.nav-tab{padding:5px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#5a5870;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;-webkit-appearance:none}
+.nav-tab.active{background:rgba(200,169,110,0.15);border-color:rgba(200,169,110,0.4);color:var(--gold)}
+/* MAIN */
+#main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
+/* TABLE */
+#table-view{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+#table-wrap{flex:1;position:relative;overflow:hidden;background:#080b12;min-height:0;max-height:calc(100vw * 1.6)}
+#table-svg{display:block}
+#seats-container{position:absolute;inset:0;z-index:10;pointer-events:none}
+.seat-el{position:absolute;transform:translate(-50%,-50%);z-index:10;pointer-events:auto;transition:transform .1s}
+.seat-btn{border-radius:10px;border:1.5px dashed rgba(255,255,255,0.18);background:#080b12;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:4px}
+.seat-btn.occupied{background:#0a0e1c;border:1.5px solid rgba(200,169,110,0.3);padding:5px 4px;box-shadow:0 2px 12px rgba(0,0,0,0.6)}
+.seat-btn.active{border-color:var(--gold)!important;box-shadow:0 0 14px rgba(200,169,110,0.35)}
+.seat-btn.folded{opacity:.35}
+.seat-btn.allin{border-color:var(--red)!important}
+.seat-name{font-size:10px;font-weight:700;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;color:var(--text)}
+.seat-stack{font-size:9px;color:#6a9060;text-align:center}
+.seat-pos{font-size:8px;font-weight:700;border-radius:4px;padding:1px 5px}
+.seat-action-label{font-size:9px;color:var(--gold);text-align:center;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat-cards-mini{display:flex;gap:2px;margin-top:2px}
+.dealer-chip{font-size:7px;font-weight:900;background:var(--gold);color:#0a0d14;border-radius:3px;padding:1px 3px}
+/* BOARD */
+#board-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;z-index:5;pointer-events:auto}
+#board-cards{display:flex;gap:4px;direction:ltr}
+#pot-display{font-size:11px;font-weight:700;color:var(--gold);text-align:center;text-shadow:0 1px 4px rgba(0,0,0,0.8);background:rgba(0,0,0,0.4);border-radius:8px;padding:2px 10px}
+.board-card-btn{border-radius:6px;background:rgba(0,0,0,0.4);border:1.5px dashed rgba(255,255,255,0.18);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s}
+.board-card-btn:hover{border-color:var(--gold)}
+.board-card-btn.has-card{background:rgba(255,255,255,0.07);border-style:solid}
+.card-label{font-size:7px;color:rgba(255,255,255,0.2);margin-top:2px;text-align:center}
+#blinds-btn{padding:5px 14px;border-radius:18px;border:1px solid rgba(200,169,110,0.35);background:rgba(8,11,18,0.92);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(6px);white-space:nowrap}
+/* PANELS */
+.panel{position:absolute;bottom:0;left:0;right:0;background:#0a0e18;border-top:1px solid rgba(200,169,110,0.18);border-radius:16px 16px 0 0;z-index:50;max-height:75vh;overflow-y:auto;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.panel.open{transform:translateY(0)}
+.panel-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 8px;position:sticky;top:0;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.06);z-index:1}
+.panel-title{font-size:13px;font-weight:800;color:var(--gold)}
+.panel-body{padding:12px 14px 24px}
+.panel-close{background:none;border:none;color:var(--muted);font-size:20px;line-height:1;padding:0}
+/* CARD PICKER */
+#card-picker{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:16px}
+#card-picker.open{display:flex}
+#cpbox{background:#0f1420;border:1px solid rgba(200,169,110,0.18);border-radius:18px;padding:18px 14px;width:100%;max-width:380px}
+.rank-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+.suit-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.rank-btn,.suit-btn{padding:10px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text);font-weight:800;font-size:15px;cursor:pointer}
+.suit-btn{padding:14px 0;border-radius:12px;border:2px solid rgba(255,255,255,0.08)}
+.suit-btn:disabled{opacity:.2;cursor:not-allowed}
+.suit-btn div{font-size:24px}.suit-btn span{font-size:15px;font-weight:900;display:block;margin-top:2px}
+.picker-back{width:100%;margin-top:10px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-size:12px}
+/* ACTIONS in seat panel */
+.action-block{margin-bottom:8px}
+.action-row{display:flex;align-items:center;gap:6px;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:4px}
+.action-lbl{font-size:10px;font-weight:700;min-width:52px}
+.action-amt{width:72px;padding:5px 7px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#c8a96e;font-size:12px;outline:none;text-align:center;direction:ltr;-webkit-appearance:none}
+.action-go{padding:5px 10px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer}
+.action-chip{display:inline-flex;align-items:center;gap:3px;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;margin:2px}
+.action-chip .rm{background:none;border:none;font-size:10px;cursor:pointer;opacity:.5;padding:0}
+/* FORMS */
+.form-row{display:flex;gap:8px;margin-bottom:8px}
+.form-group{flex:1}
+.form-group label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:600}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#e2ddd4;font-size:12px;outline:none;direction:rtl;-webkit-appearance:none;appearance:none}
+.form-group input[type=number]{direction:ltr;text-align:center}
+/* BUTTONS */
+.btn{padding:7px 12px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0a0d14}
+.btn-outline{background:transparent;border:1px solid rgba(200,169,110,0.4);color:var(--gold)}
+.btn-red{background:rgba(224,85,85,0.15);border:1px solid rgba(224,85,85,0.4);color:#e07b6a}
+.btn-green{background:rgba(95,196,122,0.15);border:1px solid rgba(95,196,122,0.4);color:var(--green)}
+.btn-sm{padding:5px 9px;font-size:11px;border-radius:7px}
+.btn-xs{padding:3px 7px;font-size:10px;border-radius:6px}
+.btn-gray{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#5a5870}
+/* LISTS */
+.list-view{flex:1;overflow-y:auto;padding:10px 12px 60px;background:#080b12}
+.card-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:11px;padding:11px 12px;margin-bottom:7px;color:#e2ddd4}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted2);font-size:13px}
+.empty-icon{font-size:40px;margin-bottom:10px}
+/* BLIND LEVELS */
+.bl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.bl-btn{padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);color:var(--muted);font-size:11px;cursor:pointer;text-align:center}
+.bl-btn.active,.bl-btn:hover{border-color:rgba(200,169,110,0.45);background:rgba(200,169,110,0.1);color:var(--gold)}
+.bl-btn .ante{font-size:8px;color:var(--muted2);display:block}
+/* PLAYERS POPUP */
+#players-popup{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);display:none;align-items:flex-end;justify-content:center}
+#players-popup.open{display:flex}
+#pp-box{background:#0f1420;border:1px solid rgba(200,169,110,0.18);border-radius:16px 16px 0 0;width:100%;max-width:480px;max-height:75vh;overflow-y:auto;padding:0 0 24px}
+/* OVERLAY */
+#overlay{position:fixed;inset:0;z-index:49;background:rgba(0,0,0,0.6);display:none}
+#overlay.open{display:block}
+/* NOTIF */
+#notif{position:fixed;top:55px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(200,169,110,0.15);border:1px solid rgba(200,169,110,0.4);border-radius:8px;padding:7px 16px;font-size:12px;color:var(--gold);z-index:400;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
+#notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* DIVIDER */
+.div{height:1px;background:rgba(255,255,255,0.06);margin:8px 0}
+.sec-lbl{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:5px;display:block}
+/* RESULT BTNS */
+.res-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.res-btn{padding:8px 4px;border-radius:9px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:var(--muted2);font-weight:700;font-size:10px;cursor:pointer;text-align:center}
+.res-btn.active{border-color:rgba(200,169,110,0.5);background:rgba(200,169,110,0.12);color:var(--gold)}
+/* TOURNAMENT PRIZE */
+.prize-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.prize-lbl{font-size:12px;color:var(--text);min-width:80px}
+.prize-val{font-size:13px;font-weight:800;color:var(--gold)}
+.prize-inp{width:90px;padding:6px 8px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#c8a96e;font-size:13px;font-weight:700;outline:none;text-align:center;direction:ltr;-webkit-appearance:none}
+</style>
+</head>
+<body>
+<div id="app" style="background:#080b12">
+<div id="import-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(200,169,110,0.95);padding:10px 16px;align-items:center;gap:10px;justify-content:space-between">
+  <span style="font-size:12px;font-weight:700;color:#0a0d14">יש לך קובץ גיבוי? ייבא עכשיו</span>
+  <div style="display:flex;gap:6px">
+    <button onclick="document.getElementById('import-box').style.display='flex'" style="padding:6px 14px;border-radius:7px;border:none;background:#0a0d14;color:#c8a96e;font-weight:800;font-size:12px;cursor:pointer">📂 ייבוא</button>
+    <button onclick="document.getElementById('import-banner').style.display='none'" style="padding:6px 10px;border-radius:7px;border:none;background:rgba(0,0,0,0.2);color:#0a0d14;font-size:14px;cursor:pointer">✕</button>
+  </div>
+</div>
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="topnav">
+    <div style="display:flex;align-items:center;gap:7px" onclick="toggleSettings()">
+      <span style="font-size:15px;font-weight:900;color:var(--gold)">🃏</span>
+      <span style="font-size:9px;letter-spacing:3px;color:var(--muted)">POKER SUITE</span>
+      <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#3a3650;display:inline-block" title="סטטוס סנכרון"></span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-table" onclick="showView('table')">שולחן</button>
+      <button class="nav-tab" id="tab-hands" onclick="showView('hands')">ידיים</button>
+      <button class="nav-tab" id="tab-tourn" onclick="showView('tourn')">טורנירים</button>
+      <button class="nav-tab" id="tab-players" onclick="showView('players')">שחקנים</button>
+    </div>
+    <div style="display:flex;gap:5px">
+      <button class="btn btn-outline btn-sm" onclick="showActivePlayers()">👥 פעילים</button>
+      <button class="btn btn-gold btn-sm" onclick="newHand()">יד חדשה</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleSettings()" style="padding:5px 8px;font-size:14px" title="הגדרות">⚙️</button>
+    </div>
+  </div>
+  <div id="statsbar">
+    <div class="sbox"><label>עלות כניסה</label><input type="number" id="inp-buyin-cost" value="50" min="0" onchange="S.buyinCost=+this.value;persist();renderStats()"></div>
+    <div class="sbox"><label>שחקנים בשולחן</label><select id="sel-table-size" onchange="setTableSize(+this.value)">
+      <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+    </select></div>
+    <div class="sbox"><label>שחקנים</label><div class="val" id="stat-players">0</div></div>
+    <div class="sbox"><label>Rebuy</label><div class="val" id="stat-rebuys">0</div></div>
+    <div class="sbox"><label>כניסות</label><div class="val" id="stat-entries">0</div></div>
+    <div class="sbox"><label>פעילים</label><div class="val" id="stat-active">0/0</div></div>
+    <div class="sbox"><label>קופת פרסים</label><div class="val" id="stat-prize">₪0</div></div>
+  </div>
+</div>
+<!-- MAIN -->
+<div id="main" style="background:#080b12">
+  <!-- TABLE -->
+  <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow:hidden">
+    <div id="table-wrap">
+      <svg id="table-svg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
+        <defs>
+          <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
+          <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#164828"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
+        </defs>
+        <ellipse cx="50" cy="50" rx="49" ry="48" fill="#060a10"/>
+        <ellipse cx="50" cy="50" rx="48" ry="47" fill="url(#gF)" opacity=".55"/>
+        <ellipse cx="50" cy="50" rx="48" ry="47" fill="none" stroke="#1e5535" stroke-width="1.5"/>
+        <ellipse cx="50" cy="50" rx="44.5" ry="43.5" fill="url(#gF2)"/>
+        <ellipse cx="50" cy="50" rx="44.5" ry="43.5" fill="none" stroke="#164030" stroke-width=".5"/>
+        <ellipse cx="50" cy="50" rx="41" ry="40" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>
+      </svg>
+      <div id="seats-container"></div>
+      <div id="board-center">
+        <div id="board-cards"></div>
+        <div id="pot-display" style="display:none"></div>
+        <button id="blinds-btn" onclick="openBlindsPanel()">-/-</button>
+      </div>
+    </div>
+    <!-- Seat panel -->
+    <div class="panel" id="seat-panel">
+      <div class="panel-header">
+        <div class="panel-title" id="spt"></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-green btn-sm" id="btn-rebuy" onclick="doRebuyActive()" style="display:none">Rebuy +</button>
+          <button class="btn btn-red btn-sm" id="btn-ko" onclick="doKO()" style="display:none">KO 💀</button>
+          <button class="panel-close" onclick="closeSeatPanel()">✕</button>
+        </div>
+      </div>
+      <div class="panel-body" id="spb"></div>
+    </div>
+    <!-- Blinds panel -->
+    <div class="panel" id="blinds-panel">
+      <div class="panel-header">
+        <div class="panel-title">⚡ בליינדים</div>
+        <button class="panel-close" onclick="closePanel('blinds-panel')">✕</button>
+      </div>
+      <div id="blinds-body" class="panel-body"></div>
+    </div>
+    <!-- Record hand panel -->
+    <div class="panel" id="record-panel">
+      <div class="panel-header">
+        <div class="panel-title">📝 תיעוד יד</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-gold btn-sm" onclick="saveHandRecord()">שמור ✓</button>
+          <button class="panel-close" onclick="closePanel('record-panel');curHand=null">✕</button>
+        </div>
+      </div>
+      <div id="record-body" class="panel-body"></div>
+    </div>
+  </div>
+  <!-- HANDS -->
+  <div id="hands-view" class="list-view" style="display:none;background:#080b12">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;color:var(--gold)">📋 ידיים</div>
+      <div id="hands-count" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+    <div id="hand-list"></div>
+  </div>
+  <!-- TOURNAMENTS -->
+  <div id="tourn-view" class="list-view" style="display:none;background:#080b12">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;color:var(--gold)">🏆 טורנירים</div>
+      <button class="btn btn-gold btn-sm" onclick="saveTournament()">שמור טורניר נוכחי</button>
+    </div>
+    <div style="display:flex;gap:7px;margin-bottom:12px">
+      <button class="btn btn-red btn-sm" onclick="resetTournament()">אפס טורניר</button>
+    </div>
+    <div id="tourn-list"></div>
+  </div>
+  <!-- PLAYERS -->
+  <div id="players-view" class="list-view" style="display:none;background:#080b12">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;color:var(--gold)">👥 שחקנים</div>
+      <button class="btn btn-gold btn-sm" onclick="showAddPlayer()">+ הוסף</button>
+      <button class="btn btn-outline btn-sm" onclick="exportData()">📤 ייצוא</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-box').style.display='flex'">📂 שחזור</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('list-import-box').style.display='flex'">📋 ייבוא רשימה</button>
+    </div>
+    <div id="diag-box" style="display:none;background:#141824;border:1px solid rgba(200,169,110,0.3);border-radius:10px;padding:10px;margin-bottom:10px;font-size:11px;color:#e2ddd4;word-break:break-all"></div>
+    <div id="add-player-row" style="display:block;background:rgba(255,255,255,0.06);border:1px solid rgba(200,169,110,0.25);border-radius:12px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:7px">שם שחקן חדש</div>
+      <div style="display:flex;gap:7px">
+        <input id="new-pname" placeholder="שם..." style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:13px;outline:none;direction:rtl;-webkit-appearance:none" onkeydown="if(event.key==='Enter')addPlayer()">
+        <button class="btn btn-gold" onclick="addPlayer()">הוסף</button>
+
+      </div>
+    </div>
+    <div id="player-list"></div>
+  </div>
+</div>
+</div>
+<!-- CARD PICKER -->
+<div id="card-picker"><div id="cpbox">
+  <div style="font-size:13px;color:var(--gold);font-weight:700;text-align:center" id="cp-title">בחר קלף</div>
+  <div id="cp-content"></div>
+</div></div>
+<!-- ACTIVE PLAYERS POPUP -->
+<div id="players-popup"><div id="pp-box">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px 10px;position:sticky;top:0;background:#121824;border-bottom:1px solid rgba(255,255,255,0.06)">
+    <div style="font-size:13px;font-weight:800;color:var(--gold)">👥 שחקנים פעילים</div>
+    <button onclick="document.getElementById('players-popup').classList.remove('open')" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+  </div>
+  <div id="pp-content" style="padding:12px 14px"></div>
+</div></div>
+<!-- OVERLAY -->
+<div id="overlay" onclick="closeAllPanels()"></div>
+<!-- NOTIF -->
+<div id="notif"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const SUITS=['♠','♥','♦','♣'];
+const SC={'♠':'#e2ddd4','♥':'#e05555','♦':'#e05555','♣':'#e2ddd4'};
+const PC={BTN:'#5b9bd5','BTN/SB':'#8b7cb8',SB:'#8b7cb8',BB:'#e07b6a',
+  UTG:'#e05555','UTG+1':'#d4735e',MP:'#c8a96e','MP+1':'#b8b870',
+  HJ:'#7eb8a4',CO:'#5fc4b4',LJ:'#6ab8d4'};
+const PBN={
+  2:['BTN/SB','BB'],3:['BTN','SB','BB'],4:['BTN','SB','BB','UTG'],
+  5:['BTN','SB','BB','UTG','CO'],6:['BTN','SB','BB','UTG','MP','CO'],
+  7:['BTN','SB','BB','UTG','UTG+1','MP','CO'],
+  8:['BTN','SB','BB','UTG','UTG+1','MP','HJ','CO'],
+  9:['BTN','SB','BB','UTG','UTG+1','MP','MP+1','HJ','CO'],
+  10:['BTN','SB','BB','UTG','UTG+1','MP','MP+1','HJ','CO','LJ']
+};
+const DEF_BLINDS=[
+  {sb:500,bb:1000,ante:0},
+  {sb:1000,bb:1000,ante:0},
+  {sb:1000,bb:2000,ante:0},
+  {sb:2000,bb:4000,ante:0},
+  {sb:3000,bb:6000,ante:0},
+  {sb:5000,bb:10000,ante:0},
+  {sb:10000,bb:20000,ante:0},
+  {sb:15000,bb:30000,ante:0},
+  {sb:20000,bb:40000,ante:0},
+  {sb:25000,bb:50000,ante:0},
+  {sb:30000,bb:60000,ante:0},
+  {sb:50000,bb:100000,ante:0}
+];
+let BLIND_LEVELS=[...DEF_BLINDS];
+const ACTIONS=[
+  {k:'Fold',   c:'#888888', amt:false},
+  {k:'Check',  c:'#7eb8a4', amt:false},
+  {k:'Call',   c:'#5b9bd5', amt:true},
+  {k:'Open',   c:'#c8a96e', amt:true},
+  {k:'Raise',  c:'#e0a050', amt:true},
+  {k:'3bet',   c:'#e07b6a', amt:true},
+  {k:'4bet',   c:'#e05555', amt:true},
+  {k:'5bet',   c:'#cc3333', amt:true},
+  {k:'All-in', c:'#ff2222', amt:true}
+];
+const RESULTS=[
+  {k:'win',l:'ניצחתי',e:'🏆',c:'#5fc47a'},
+  {k:'lose',l:'הפסדתי',e:'💸',c:'#e07b6a'},
+  {k:'fold_win',l:'קיפלו',e:'🤫',c:'#7eb8a4'},
+  {k:'split',l:'חלוקה',e:'🤝',c:'#c8a96e'}
+];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+let S={
+  playerLib:[],
+  tableSize:9,
+  buyinCost:50,
+  buyins:{},       // {pid:{buyin:n,rebuy:n}}
+  koOrder:[],      // pids in order of KO (first KO = last place)
+  blindLevel:0,
+  customBlinds:null,
+  customBlindLevels:[],
+  btnSeat:0,
+  seats:[],
+  board:[null,null,null,null,null],
+  handLog:[],
+  tournLog:[],
+  houseRake:200,
+  place4:0, place3:0,
+};
+let activeSeat=null, cpTarget=null, cpRank=null;
+let curHand=null, recStreet='פרה-פלופ', recActor='0';
+
+// ═══════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════
+function applySnapshot(v){
+  if(v.playerLib) S.playerLib=v.playerLib;
+  if(v.seats) S.seats=v.seats;
+  if(v.board) S.board=v.board;
+  if(v.btnSeat!==undefined) S.btnSeat=v.btnSeat;
+  if(v.buyinCost) S.buyinCost=v.buyinCost;
+  if(v.buyins) S.buyins=v.buyins;
+  if(v.koOrder) S.koOrder=v.koOrder;
+  if(v.blindLevel!==undefined) S.blindLevel=v.blindLevel;
+  if(v.customBlinds!==undefined) S.customBlinds=v.customBlinds;
+  if(v.customBlindLevels) S.customBlindLevels=v.customBlindLevels;
+  if(v.tableSize) S.tableSize=v.tableSize;
+  if(v.houseRake!==undefined) S.houseRake=v.houseRake;
+  if(v.place4!==undefined) S.place4=v.place4;
+  if(v.place3!==undefined) S.place3=v.place3;
+  if(v.handLog) S.handLog=v.handLog;
+  if(v.tournLog) S.tournLog=v.tournLog;
+  BLIND_LEVELS=[...DEF_BLINDS,...(S.customBlindLevels||[])];
+}
+
+function loadState(){
+  // 0. Try embedded <script id="ps-data"> tag (data saved inside HTML file)
+  try{
+    const dataEl = document.getElementById('ps-data');
+    if(dataEl && dataEl.textContent.trim()){
+      const v = JSON.parse(dataEl.textContent);
+      if(v && (v.playerLib?.length||v.handLog?.length||v.tournLog?.length)){
+        applySnapshot(v);
+        persist();
+        render();
+        return;
+      }
+    }
+  }catch(e){}
+
+  // 1. Try sessionStorage full snapshot (survives refresh)
+  try{
+    const snap = sessionStorage.getItem('ps_snap');
+    if(snap){ const v=JSON.parse(snap); if(v.playerLib?.length||v.handLog?.length||v.tournLog?.length){ applySnapshot(v); render(); return; } }
+  }catch(e){}
+
+  // 2. Try localStorage full snapshot
+  try{
+    const snap = localStorage.getItem('ps_backup');
+    if(snap){ const v=JSON.parse(snap); if(v.playerLib?.length||v.handLog?.length||v.tournLog?.length){ applySnapshot(v); render(); return; } }
+  }catch(e){}
+
+  // 3. Try individual keys (old format)
+  function readLS(keys){ for(const k of keys){ try{ const v=localStorage.getItem(k); if(v) return JSON.parse(v); }catch(e){} } return null; }
+
+  const lib=readLS(['ps_lib','ptlib']);
+  if(lib) S.playerLib=Array.isArray(lib)?lib:[];
+
+  const seats=readLS(['ps_seats','ptseats']);
+  if(seats){ S.seats=seats.seats||[]; S.board=seats.board||[null,null,null,null,null]; S.btnSeat=seats.btnSeat||0; }
+
+  const tourn=readLS(['ps_tourn','pttable','ps_tournament']);
+  if(tourn){
+    Object.assign(S,{
+      buyinCost:tourn.buyinCost||50, buyins:tourn.buyins||{}, koOrder:tourn.koOrder||[],
+      blindLevel:tourn.blindLevel||0, customBlinds:tourn.customBlinds||null,
+      customBlindLevels:tourn.customBlindLevels||[], tableSize:tourn.tableSize||9,
+      houseRake:tourn.houseRake??200, place4:tourn.place4||0, place3:tourn.place3||0
+    });
+    BLIND_LEVELS=[...DEF_BLINDS,...S.customBlindLevels];
+  }
+
+  const log=readLS(['ps_log','ptlog']);
+  if(log) S.handLog=Array.isArray(log)?log:[];
+
+  const tlog=readLS(['ps_tlog','pttlog']);
+  if(tlog) S.tournLog=Array.isArray(tlog)?tlog:[];
+
+  if(S.buyinCost===100) S.buyinCost=50;
+  render();
+  // Show import banner if no data found
+  if(!S.playerLib.length && !S.handLog.length) {
+    setTimeout(()=>{
+      const banner = document.getElementById('import-banner');
+      if(banner) banner.style.display='flex';
+    }, 300);
+  }
+}
+function persist(){
+  const snap = fullSnapshot();
+  // Save to both localStorage and sessionStorage
+  try{ localStorage.setItem('ps_lib',JSON.stringify(S.playerLib)); }catch(e){}
+  try{ localStorage.setItem('ps_seats',JSON.stringify({seats:S.seats,board:S.board,btnSeat:S.btnSeat})); }catch(e){}
+  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,houseRake:S.houseRake,place4:S.place4,place3:S.place3})); }catch(e){}
+  try{ localStorage.setItem('ps_log',JSON.stringify(S.handLog)); }catch(e){}
+  try{ localStorage.setItem('ps_tlog',JSON.stringify(S.tournLog)); }catch(e){}
+  // Also save full snapshot to sessionStorage (survives refresh, not new tab)
+  try{ sessionStorage.setItem('ps_snap', JSON.stringify(snap)); }catch(e){}
+  // Save to all known old keys for migration
+  try{ localStorage.setItem('ps_backup', JSON.stringify(snap)); }catch(e){}
+  // Auto-sync to Google Sheets (debounced)
+  if(typeof syncToSheets === 'function' && gsUrl) syncToSheets(false);
+}
+
+function fullSnapshot(){
+  return {
+    version:3, ts: Date.now(),
+    playerLib:S.playerLib, seats:S.seats, board:S.board, btnSeat:S.btnSeat,
+    buyinCost:S.buyinCost, buyins:S.buyins, koOrder:S.koOrder,
+    blindLevel:S.blindLevel, customBlinds:S.customBlinds,
+    customBlindLevels:S.customBlindLevels, tableSize:S.tableSize,
+    houseRake:S.houseRake, place4:S.place4, place3:S.place3,
+    handLog:S.handLog, tournLog:S.tournLog
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// DERIVED
+// ═══════════════════════════════════════════════════════
+const getBlinds=()=>S.customBlinds||BLIND_LEVELS[S.blindLevel]||DEF_BLINDS[0];
+const getBB=()=>getBlinds().bb;
+const pName=pid=>S.playerLib.find(p=>p.id===pid)?.name||'';
+const sortedLib=()=>[...S.playerLib].sort((a,b)=>a.name.localeCompare(b.name,'he'));
+const totalBuyins=()=>Object.values(S.buyins).reduce((s,b)=>s+b.buyin,0);
+const totalRebuys=()=>Object.values(S.buyins).reduce((s,b)=>s+b.rebuy,0);
+const totalEntries=()=>totalBuyins()+totalRebuys();
+const prizePool=()=>totalEntries()*S.buyinCost;
+const activePlayers=()=>S.seats.filter(s=>s.playerId&&!s.folded);
+const allUsedCards=()=>[...S.board,...S.seats.flatMap(s=>s.cards||[])].filter(Boolean);
+
+function calcPot(){
+  // Sum all amounts from all seats current round actions
+  return S.seats.reduce((total,seat)=>{
+    return total+(seat.actions||[]).reduce((s,a)=>s+(parseFloat(a.amount)||0),0);
+  },0);
+}
+
+function assignPos(){
+  const occ=S.seats.filter(s=>s.playerId).map(s=>s.seatIdx).sort((a,b)=>a-b);
+  if(occ.length<2) return S.seats;
+  const labels=PBN[Math.min(occ.length,10)]||[];
+  const bi=occ.indexOf(S.btnSeat);
+  const rot=bi>=0?[...occ.slice(bi),...occ.slice(0,bi)]:occ;
+  return S.seats.map(s=>{const pi=rot.indexOf(s.seatIdx);return{...s,pos:pi>=0?(labels[pi]||''):''}; });
+}
+
+function getSeatXY(i,count){
+  const cx=50,cy=50,rx=43,ry=41;
+  const angle=(Math.PI/2)+(2*Math.PI*i/count);
+  return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════
+function render(){
+  renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+}
+function renderStats(){
+  const buy=Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0).length;
+  document.getElementById('stat-players').textContent=buy;
+  document.getElementById('stat-rebuys').textContent=totalRebuys();
+  document.getElementById('stat-entries').textContent=totalEntries();
+  document.getElementById('stat-active').textContent=`${activePlayers().length}/${totalEntries()}`;
+  document.getElementById('stat-prize').textContent=`₪${prizePool().toLocaleString()}`;
+  document.getElementById('inp-buyin-cost').value=S.buyinCost;
+  document.getElementById('sel-table-size').value=S.tableSize;
+}
+function renderSeats(){
+  const cont=document.getElementById('seats-container'); cont.innerHTML='';
+  const swp=assignPos();
+  for(let i=0;i<S.tableSize;i++){
+    const{x,y}=getSeatXY(i,S.tableSize);
+    const seat=swp.find(s=>s.seatIdx===i);
+    const name=seat?.playerId?pName(seat.playerId):null;
+    const isAct=activeSeat===i, isFold=seat?.folded, isAlin=seat?.allin, isBtn=i===S.btnSeat&&seat?.playerId;
+    const bb=getBB();
+    const sbb=seat?.stack&&bb?(seat.stack/bb).toFixed(1):null;
+    const lastAct=seat?.actions?.slice(-1)[0];
+    const w=seat?.playerId?78:44;
+    let cls='seat-btn';
+    if(seat?.playerId)cls+=' occupied';
+    if(isAct)cls+=' active';
+    if(isFold)cls+=' folded';
+    if(isAlin)cls+=' allin';
+    const el=document.createElement('div');
+    el.className='seat-el';
+    el.style=`left:${x}%;top:${y}%`;
+    el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?62:42}px" onclick="clickSeat(${i})">
+      ${seat?.playerId?`
+        <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
+          ${seat.pos?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}22;color:${PC[seat.pos]||'#c8a96e'}">${seat.pos}</span>`:''}
+          ${isBtn?`<span class="dealer-chip">D</span>`:''}
+        </div>
+        <div class="seat-name">${name||'?'}</div>
+        ${seat.stack?`<div class="seat-stack">${seat.stack.toLocaleString()}${sbb?` (${sbb}bb)`:''}</div>`:''}
+        ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
+        ${lastAct?`<div class="seat-action-label" style="color:${ACTIONS.find(a=>a.k===lastAct.type)?.c||'var(--gold)'}">${lastAct.type}${lastAct.amount?' '+Number(lastAct.amount).toLocaleString():''}</div>`:''}
+      `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
+    </div>`;
+    cont.appendChild(el);
+  }
+}
+function renderBoard(){
+  const cont=document.getElementById('board-cards'); cont.innerHTML='';
+  const labels=['F1','F2','F3','T','R'];
+  const sw=Math.min(Math.max(28,Math.floor((document.getElementById('table-wrap').offsetWidth||300)*0.062)),36);
+  S.board.forEach((card,i)=>{
+    const wrap=document.createElement('div'); wrap.style='text-align:center';
+    const btn=document.createElement('button');
+    btn.className='board-card-btn'+(card?' has-card':'');
+    btn.style=`width:${sw}px;height:${Math.round(sw*1.4)}px`;
+    btn.onclick=()=>openCP(`board${i}`);
+    btn.innerHTML=card
+      ?`<span style="font-size:${Math.round(sw*.38)}px;font-weight:900;color:${SC[card.suit]};line-height:1.1">${card.rank}</span><span style="font-size:${Math.round(sw*.28)}px;color:${SC[card.suit]};line-height:1">${card.suit}</span>`
+      :`<span style="font-size:${Math.round(sw*.45)}px;color:rgba(255,255,255,0.12)">+</span>`;
+    const lbl=document.createElement('div'); lbl.className='card-label'; lbl.textContent=labels[i];
+    wrap.appendChild(btn); wrap.appendChild(lbl); cont.appendChild(wrap);
+  });
+  if(S.board.some(Boolean)){
+    const clr=document.createElement('button');
+    clr.style='background:none;border:none;color:rgba(255,255,255,0.2);font-size:9px;cursor:pointer;padding:2px';
+    clr.textContent='✕ נקה'; clr.onclick=()=>{S.board=[null,null,null,null,null];persist();renderBoard();};
+    cont.appendChild(clr);
+  }
+  // Pot
+  const pot=calcPot();
+  const pd=document.getElementById('pot-display');
+  if(pot>0){ pd.style.display='block'; pd.textContent=`Pot: ₪${pot.toLocaleString()}`; }
+  else pd.style.display='none';
+}
+function renderBlindsBtn(){
+  const b=getBlinds();
+  const fmt=n=>n>=1000?(n/1000)+'K':n;
+  document.getElementById('blinds-btn').textContent=`${fmt(b.sb)}/${fmt(b.bb)}${b.ante?` ante ${fmt(b.ante)}`:''}`;
+}
+
+// ═══════════════════════════════════════════════════════
+// SEAT PANEL
+// ═══════════════════════════════════════════════════════
+function renderSeatPanel(){
+  const i=activeSeat; if(i===null)return;
+  const swp=assignPos();
+  const seat=swp.find(s=>s.seatIdx===i)||{seatIdx:i,playerId:'',stack:0,pos:'',cards:[null,null],actions:[],folded:false,allin:false};
+  const has=!!seat.playerId, pos=seat.pos, bb=getBB();
+  document.getElementById('spt').innerHTML=`מושב ${i+1}${pos?` <span style="font-size:10px;font-weight:700;color:${PC[pos]||'var(--gold)'};background:${PC[pos]||'var(--gold)'}20;border-radius:4px;padding:1px 6px">${pos}</span>`:''}`;
+  document.getElementById('btn-ko').style.display=has?'':'none';
+  document.getElementById('btn-rebuy').style.display=has?'':'none';
+  // Player + stack
+  const takenPids=S.seats.filter(s=>s.seatIdx!==i&&s.playerId).map(s=>s.playerId);
+  let html=`<div class="form-row">
+    <div class="form-group"><label>שחקן</label>
+      <select onchange="setSeatPlayer(${i},this.value)">
+        <option value="">-- ריק --</option>
+        ${sortedLib().map(p=>`<option value="${p.id}"${seat.playerId===p.id?' selected':''}${takenPids.includes(p.id)?' disabled style="color:#555"':''}>${p.name}${takenPids.includes(p.id)?' ✗':''}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label>ערימה${seat.stack&&bb?` <span style="color:var(--muted2);font-weight:400">(${(seat.stack/bb).toFixed(1)}bb)</span>`:''}</label>
+      <input type="number" value="${seat.stack||''}" placeholder="0" onchange="updSeat(${i},{stack:+this.value||0})">
+    </div>
+  </div>`;
+  // BTN
+  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">עמדת דילר</span>
+    <button class="btn ${S.btnSeat===i?'btn-gold':'btn-outline'} btn-sm" onclick="S.btnSeat=${i};persist();renderSeats();renderSeatPanel()">
+      ${S.btnSeat===i?'✓ BTN':'סמן BTN'}
+    </button></div>`;
+  // Cards
+  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">קלפים (Showdown)</span>
+    <div style="display:flex;gap:5px;align-items:center">
+      ${[0,1].map(ci=>{const c=seat.cards?.[ci];return`<button class="board-card-btn${c?' has-card':''}" style="width:36px;height:50px" onclick="openCP('seat${i}_c${ci}')">
+        ${c?`<span style="font-size:13px;font-weight:900;color:${SC[c.suit]};line-height:1.1">${c.rank}</span><span style="font-size:10px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:16px;color:rgba(255,255,255,0.12)">+</span>`}
+      </button>`;}).join('')}
+      ${(seat.cards||[]).some(Boolean)?`<button class="btn btn-gray btn-xs" onclick="updSeat(${i},{cards:[null,null]})">✕</button>`:''}
+    </div></div>`;
+  // Actions
+  html+=`<div><span class="sec-lbl">פעולות</span>
+    <div class="action-block">
+      ${ACTIONS.map(a=>`
+        <div class="action-row">
+          <span class="action-lbl" style="color:${a.c}">${a.k}</span>
+          ${a.amt?`<input class="action-amt" type="number" id="aamt-${i}-${a.k}" placeholder="סכום" min="0" onkeydown="if(event.key==='Enter')doAction(${i},'${a.k}',this.value)">`:`<span style="flex:1"></span>`}
+          <button class="action-go" style="background:${a.c}22;border:1px solid ${a.c}55;color:${a.c}" onclick="doAction(${i},'${a.k}',${a.amt?`document.getElementById('aamt-${i}-${a.k}')?.value||''`:`''`})">✓</button>
+        </div>`).join('')}
+    </div>`;
+  // Current actions chips
+  if((seat.actions||[]).length){
+    html+=`<div style="margin-top:6px;display:flex;flex-wrap:wrap">
+      ${seat.actions.map((a,ai)=>{const def=ACTIONS.find(x=>x.k===a.type)||ACTIONS[0];return`<span class="action-chip" style="background:${def.c}18;border:1px solid ${def.c}45;color:${def.c}">
+        ${a.street?a.street.slice(0,2)+' · ':''}${a.type}${a.amount?' '+Number(a.amount).toLocaleString():''}
+        <button class="rm" onclick="rmSeatAction(${i},${ai})">✕</button>
+      </span>`;}).join('')}
+      <button class="btn btn-gray btn-xs" style="margin:2px" onclick="updSeat(${i},{actions:[],folded:false,allin:false})">איפוס</button>
+    </div>`;
+  }
+  html+=`</div><div class="div"></div>
+    <button class="btn btn-red" style="width:100%;margin-top:4px" onclick="removeSeat(${i})">הסר מושב</button>`;
+  document.getElementById('spb').innerHTML=html;
+}
+
+function doAction(seatIdx, type, amount){
+  const seat=S.seats.find(s=>s.seatIdx===seatIdx); if(!seat)return;
+  const amt=parseFloat(amount)||0;
+  if(!seat.actions)seat.actions=[];
+  seat.actions.push({street:'',type,amount:amt?String(amt):''});
+  if(type==='Fold')seat.folded=true;
+  if(type==='All-in')seat.allin=true;
+  // Deduct from stack if amount given
+  if(amt>0){
+    seat.stack=Math.max(0,(seat.stack||0)-amt);
+  }
+  // Clear input
+  const inp=document.getElementById(`aamt-${seatIdx}-${type}`);
+  if(inp)inp.value='';
+  persist(); renderSeats(); renderBoard(); renderSeatPanel();
+}
+function rmSeatAction(seatIdx,ai){
+  const seat=S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat?.actions)return;
+  const a=seat.actions[ai];
+  // Restore stack if amount was deducted
+  if(a&&parseFloat(a.amount)>0)seat.stack=(seat.stack||0)+parseFloat(a.amount);
+  seat.actions.splice(ai,1);
+  persist(); renderSeats(); renderBoard(); renderSeatPanel();
+}
+
+// ═══════════════════════════════════════════════════════
+// SEAT ACTIONS
+// ═══════════════════════════════════════════════════════
+function clickSeat(i){
+  if(activeSeat===i){activeSeat=null;closePanel('seat-panel');return;}
+  if(!S.seats.find(s=>s.seatIdx===i))
+    S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:0,pos:'',cards:[null,null],actions:[],folded:false,allin:false});
+  activeSeat=i; renderSeatPanel(); openPanel('seat-panel'); renderSeats();
+}
+function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
+function setSeatPlayer(i,pid){
+  updSeat(i,{playerId:pid});
+}
+function updSeat(i,upd){
+  const idx=S.seats.findIndex(s=>s.seatIdx===i);
+  if(idx>=0)Object.assign(S.seats[idx],upd);
+  persist(); renderSeats(); renderBoard(); renderSeatPanel();
+}
+function removeSeat(i){
+  S.seats=S.seats.filter(s=>s.seatIdx!==i);
+  activeSeat=null; closePanel('seat-panel');
+  persist(); render();
+}
+function doKO(){
+  if(activeSeat===null)return;
+  const seat=S.seats.find(s=>s.seatIdx===activeSeat); if(!seat)return;
+  const pid=seat.playerId;
+  if(pid&&!S.koOrder.includes(pid))S.koOrder.push(pid);
+  seat.playerId='';seat.stack=0;seat.cards=[null,null];seat.actions=[];seat.folded=false;seat.allin=false;
+  activeSeat=null; closePanel('seat-panel');
+  persist(); render(); notify('שחקן הוצא 💀');
+}
+function doRebuyActive(){
+  const seat=S.seats.find(s=>s.seatIdx===activeSeat);
+  if(seat?.playerId)doRebuy(seat.playerId,1);
+}
+function doBuyin(pid){
+  if(!pid)return;
+  if(!S.buyins[pid])S.buyins[pid]={buyin:0,rebuy:0};
+  if(S.buyins[pid].buyin>0){notify('BuyIn כבר בוצע לשחקן זה');return;}
+  S.buyins[pid].buyin=1;
+  persist(); renderStats(); renderPlayerList(); notify('BuyIn נוסף ✓');
+}
+function cancelBuyin(pid){
+  if(!S.buyins[pid])return;
+  S.buyins[pid].buyin=0;
+  persist(); renderStats(); renderPlayerList();
+}
+function doRebuy(pid,d){
+  if(!pid)return;
+  if(!S.buyins[pid])S.buyins[pid]={buyin:0,rebuy:0};
+  S.buyins[pid].rebuy=Math.max(0,S.buyins[pid].rebuy+d);
+  persist(); renderStats(); renderPlayerList();
+  if(d>0)notify('Rebuy ✓');
+}
+function setTableSize(n){
+  S.tableSize=n; S.seats=S.seats.filter(s=>s.seatIdx<n);
+  persist(); render();
+}
+
+// ═══════════════════════════════════════════════════════
+// ACTIVE PLAYERS POPUP
+// ═══════════════════════════════════════════════════════
+function showActivePlayers(){
+  const pp=document.getElementById('players-popup');
+  const cont=document.getElementById('pp-content');
+  const active=S.seats.filter(s=>s.playerId);
+  const swp=assignPos();
+  const ko=[...S.koOrder].reverse(); // last KO first in list
+  let html='';
+  if(!active.length&&!ko.length){html='<div style="color:var(--muted);font-size:13px;padding:10px">אין שחקנים פעילים</div>';}
+  else{
+    if(active.length){
+      html+=`<div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:7px">פעילים (${active.length})</div>`;
+      swp.filter(s=>s.playerId&&!s.folded).forEach(s=>{
+        html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <span style="font-size:10px;font-weight:700;color:${PC[s.pos]||'var(--gold)'};background:${PC[s.pos]||'var(--gold)'}18;border-radius:4px;padding:1px 6px;min-width:36px;text-align:center">${s.pos||'-'}</span>
+          <span style="font-size:13px;font-weight:700;flex:1">${pName(s.playerId)}</span>
+          ${s.stack?`<span style="font-size:11px;color:var(--muted)">${s.stack.toLocaleString()}</span>`:''}
+        </div>`;
+      });
+    }
+    if(ko.length){
+      html+=`<div style="font-size:11px;color:var(--muted);font-weight:600;margin:12px 0 7px">הודחו</div>`;
+      // ko[0]=first eliminated=last place, ko[last]=last eliminated=2nd place
+      const activeCnt = S.seats.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId)).length;
+      ko.forEach((pid,i)=>{
+        // i=0 is last KO (2nd place), i=last is first KO (last place)
+        const place = activeCnt + i + 1;
+        const medal = place===2?'🥈':place===3?'🥉':'';
+        html+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <span style="font-size:14px;width:20px">${medal}</span>
+          <span style="font-size:11px;color:var(--muted);min-width:52px">מקום ${place}</span>
+          <span style="font-size:13px;font-weight:700">${pName(pid)||pid}</span>
+        </div>`;
+      });
+    }
+  }
+  cont.innerHTML=html;
+  pp.classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════
+// BLINDS PANEL
+// ═══════════════════════════════════════════════════════
+function openBlindsPanel(){
+  renderBlindsBody();
+  openPanel('blinds-panel');
+}
+function renderBlindsBody(){
+  const b=getBlinds();
+  const fmt=n=>n>=1000?(n/1000)+'K':String(n);
+  const allLvl=[...DEF_BLINDS,...S.customBlindLevels];
+  document.getElementById('blinds-body').innerHTML=`
+    <div style="display:flex;gap:7px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="chgBlind(-1)">◀</button>
+      <button class="btn btn-outline btn-sm" onclick="chgBlind(1)">▶</button>
+      <span style="font-size:13px;font-weight:700;color:var(--gold)">${fmt(b.sb)}/${fmt(b.bb)}${b.ante?` ante ${fmt(b.ante)}`:''}</span>
+    </div>
+    <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;margin-bottom:12px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:7px;font-weight:600">הוסף רמה מותאמת</div>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+        <input type="number" id="cbl-sb" placeholder="SB" style="width:68px;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--gold);font-size:12px;outline:none;text-align:center;direction:ltr">
+        <span style="color:var(--muted)">/</span>
+        <input type="number" id="cbl-bb" placeholder="BB" style="width:68px;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--gold);font-size:12px;outline:none;text-align:center;direction:ltr">
+        <span style="font-size:10px;color:var(--muted)">ante</span>
+        <input type="number" id="cbl-ante" placeholder="0" style="width:60px;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--gold);font-size:12px;outline:none;text-align:center;direction:ltr">
+        <button class="btn btn-gold btn-sm" onclick="saveCustomBL()">+ שמור</button>
+      </div>
+    </div>
+    <div class="bl-grid">
+      ${allLvl.map((l,i)=>{
+        const isC=i>=DEF_BLINDS.length, isA=S.blindLevel===i&&!S.customBlinds;
+        return`<button class="bl-btn${isA?' active':''}" onclick="setBlind(${i})" style="${isC?'border-color:rgba(200,169,110,0.3)':''}">
+          <strong>${fmt(l.sb)}/${fmt(l.bb)}</strong>
+          ${l.ante?`<span class="ante">ante ${fmt(l.ante)}</span>`:''}
+          ${isC?`<span onclick="event.stopPropagation();delCustomBL(${i-DEF_BLINDS.length})" style="font-size:8px;color:rgba(200,80,80,0.6);cursor:pointer;display:block">✕</span>`:''}
+        </button>`;
+      }).join('')}
+    </div>`;
+}
+function setBlind(i){S.blindLevel=i;S.customBlinds=null;persist();renderBlindsBtn();renderBlindsBody();}
+function chgBlind(d){S.blindLevel=Math.max(0,Math.min(BLIND_LEVELS.length-1,S.blindLevel+d));S.customBlinds=null;persist();renderBlindsBtn();renderBlindsBody();}
+function saveCustomBL(){
+  const sb=parseInt(document.getElementById('cbl-sb')?.value)||0;
+  const bb=parseInt(document.getElementById('cbl-bb')?.value)||0;
+  const ante=parseInt(document.getElementById('cbl-ante')?.value)||0;
+  if(!sb||!bb){notify('הכנס SB ו-BB');return;}
+  S.customBlindLevels.push({sb,bb,ante});
+  BLIND_LEVELS=[...DEF_BLINDS,...S.customBlindLevels];
+  persist(); renderBlindsBody(); notify('רמה נשמרה ✓');
+}
+function delCustomBL(idx){
+  S.customBlindLevels.splice(idx,1);
+  BLIND_LEVELS=[...DEF_BLINDS,...S.customBlindLevels];
+  if(S.blindLevel>=BLIND_LEVELS.length)S.blindLevel=BLIND_LEVELS.length-1;
+  persist(); renderBlindsBody();
+}
+
+// ═══════════════════════════════════════════════════════
+// HAND RECORDING
+// ═══════════════════════════════════════════════════════
+function newHand(){
+  const swp=assignPos();
+  const b=getBlinds();
+  curHand={
+    id:uid(), date:new Date().toLocaleString('he-IL'),
+    blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
+    board:[...S.board],
+    seats:swp.filter(s=>s.playerId).map(s=>({
+      seatIdx:s.seatIdx, playerId:s.playerId, playerName:pName(s.playerId),
+      pos:s.pos, stack:s.stack, cards:[...(s.cards||[null,null])],
+      actions:[], folded:s.folded||false, allin:s.allin||false
+    })),
+    result:null, amount:'', notes:'', potLog:[]
+  };
+  recStreet='פרה-פלופ'; recActor='0';
+  renderRecordPanel(); openPanel('record-panel');
+}
+function renderRecordPanel(){
+  if(!curHand)return;
+  const h=curHand;
+  const streets=['פרה-פלופ','פלופ','טורן','ריבר'];
+  let potSoFar=0;
+  // Calculate pot from all recorded actions
+  h.seats.forEach(s=>(s.actions||[]).forEach(a=>{if(parseFloat(a.amount)>0)potSoFar+=parseFloat(a.amount);}));
+  let html=``;
+  // Board
+  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">לוח</span>
+    <div style="display:flex;gap:4px;direction:ltr">
+      ${h.board.map((c,i)=>{const lbl=['F1','F2','F3','T','R'][i];return`<div style="text-align:center">
+        <button class="board-card-btn${c?' has-card':''}" style="width:30px;height:42px" onclick="openCPR('rb${i}')">
+          ${c?`<span style="font-size:11px;font-weight:900;color:${SC[c.suit]};line-height:1.1">${c.rank}</span><span style="font-size:9px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:14px;color:rgba(255,255,255,0.12)">+</span>`}
+        </button><div class="card-label">${lbl}</div></div>`;}).join('')}
+    </div></div>`;
+  // Street tabs
+  html+=`<div style="display:flex;gap:5px;margin-bottom:8px;overflow-x:auto">
+    ${streets.map(s=>`<button style="padding:5px 9px;border-radius:7px;border:1.5px solid ${recStreet===s?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};background:${recStreet===s?'rgba(200,169,110,0.12)':'transparent'};color:${recStreet===s?'var(--gold)':'var(--muted)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0" onclick="recStreet='${s}';renderRecordPanel()">${s}</button>`).join('')}
+  </div>`;
+  // Player selector
+  html+=`<div style="display:flex;gap:5px;margin-bottom:8px;overflow-x:auto;flex-wrap:wrap">
+    ${h.seats.map((s,si)=>`<button style="padding:5px 9px;border-radius:7px;border:1.5px solid ${recActor===String(si)?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};background:${recActor===String(si)?'rgba(200,169,110,0.12)':'transparent'};color:${recActor===String(si)?'var(--gold)':'var(--muted)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap" onclick="recActor='${si}';renderRecordPanel()">
+      ${s.playerName||'?'}${s.pos?` (${s.pos})`:''}</button>`).join('')}
+  </div>`;
+  // Action buttons
+  html+=`<div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:9px;margin-bottom:10px">
+    <div style="font-size:10px;color:var(--muted);margin-bottom:6px">פועל: <strong style="color:var(--gold)">${h.seats[+recActor]?.playerName||'?'}</strong> | Pot: <strong style="color:var(--gold)">₪${potSoFar.toLocaleString()}</strong></div>
+    ${ACTIONS.map(a=>`<div class="action-row">
+      <span class="action-lbl" style="color:${a.c}">${a.k}</span>
+      ${a.amt?`<input class="action-amt" type="number" id="ra-${a.k}" placeholder="סכום" min="0" onkeydown="if(event.key==='Enter')addRecAct('${a.k}',this.value)">`:'<span style="flex:1"></span>'}
+      <button class="action-go" style="background:${a.c}22;border:1px solid ${a.c}55;color:${a.c}" onclick="addRecAct('${a.k}',${a.amt?`document.getElementById('ra-${a.k}')?.value||''`:`''`})">✓</button>
+    </div>`).join('')}
+  </div>`;
+  // Actions by street
+  const allActs=h.seats.flatMap((s,si)=>(s.actions||[]).map(a=>({...a,si,pn:s.playerName,pos:s.pos})));
+  ['פרה-פלופ','פלופ','טורן','ריבר'].forEach(st=>{
+    const sa=allActs.filter(a=>a.street===st);
+    if(!sa.length)return;
+    let runPot=0;
+    h.seats.forEach(s=>(s.actions||[]).filter(a=>a.street===st).forEach(a=>{if(parseFloat(a.amount)>0)runPot+=parseFloat(a.amount);}));
+    html+=`<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px">${st}</div>
+      ${sa.map(a=>{const def=ACTIONS.find(x=>x.k===a.type)||ACTIONS[0];const isH=a.si===0;return`<div style="display:flex;align-items:center;gap:7px;padding:5px 7px;background:rgba(0,0,0,0.18);border-radius:7px;margin-bottom:3px">
+        <span style="font-size:10px;color:${isH?'var(--gold)':'#e07b6a'};font-weight:700;min-width:55px">${a.pos?`[${a.pos}] `:''}${a.pn}</span>
+        <span style="font-size:11px;font-weight:700;color:${def.c}">${a.type}</span>
+        ${a.amount?`<span style="font-size:11px;color:var(--gold);font-weight:700">₪${Number(a.amount).toLocaleString()}</span>`:''}
+        ${a.stackAfter!==undefined?`<span style="font-size:9px;color:var(--muted)">→ ₪${Number(a.stackAfter).toLocaleString()}</span>`:''}
+      </div>`;}).join('')}
+    </div>`;
+  });
+  // Showdown cards
+  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">קלפי שחקנים</span>
+    ${h.seats.map((s,si)=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+      <div style="font-size:10px;color:${si===0?'var(--gold)':'#e07b6a'};font-weight:700;min-width:60px">${s.playerName||'?'}</div>
+      ${[0,1].map(ci=>{const c=s.cards?.[ci];return`<button class="board-card-btn${c?' has-card':''}" style="width:30px;height:42px" onclick="openCPR('rs${si}_c${ci}')">
+        ${c?`<span style="font-size:10px;font-weight:900;color:${SC[c.suit]};line-height:1.1">${c.rank}</span><span style="font-size:8px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:13px;color:rgba(255,255,255,0.12)">+</span>`}
+      </button>`;}).join('')}
+    </div>`).join('')}</div>`;
+  // Result
+  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">תוצאה</span>
+    <div class="res-grid">${RESULTS.map(r=>`<button class="res-btn${h.result===r.k?' active':''}" style="${h.result===r.k?`background:${r.c}18;border-color:${r.c}55;color:${r.c}`:''}" onclick="curHand.result='${r.k}';renderRecordPanel()">
+      <div style="font-size:15px;margin-bottom:1px">${r.e}</div>${r.l}
+    </button>`).join('')}</div>
+    ${h.result?`<input type="number" value="${h.amount||''}" placeholder="סכום" style="margin-top:7px;width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--gold);font-size:13px;outline:none;text-align:center;direction:ltr" onchange="curHand.amount=this.value">`:``}
+  </div>`;
+  // Notes
+  html+=`<div><span class="sec-lbl">הערות</span>
+    <textarea rows="2" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text);font-size:12px;outline:none;resize:none;direction:rtl;line-height:1.6" placeholder="תיאור, קריאות..." onchange="curHand.notes=this.value">${h.notes||''}</textarea>
+  </div>`;
+  document.getElementById('record-body').innerHTML=html;
+}
+function addRecAct(type,amount){
+  if(!curHand)return;
+  const si=+recActor;
+  const amt=parseFloat(amount)||0;
+  const seat=curHand.seats[si]; if(!seat)return;
+  if(!seat.actions)seat.actions=[];
+  const stackBefore=seat.stack||0;
+  const stackAfter=amt>0?Math.max(0,stackBefore-amt):stackBefore;
+  seat.actions.push({street:recStreet,type,amount:amt?String(amt):'',stackAfter});
+  if(amt>0)seat.stack=stackAfter;
+  if(type==='Fold')seat.folded=true;
+  if(type==='All-in')seat.allin=true;
+  const inp=document.getElementById(`ra-${type}`); if(inp)inp.value='';
+  renderRecordPanel();
+}
+function openCPR(t){cpTarget='__r__'+t;openCP(cpTarget);}
+function saveHandRecord(){
+  if(!curHand)return;
+  // Calculate final pot
+  let pot=0;
+  curHand.seats.forEach(s=>(s.actions||[]).forEach(a=>{if(parseFloat(a.amount)>0)pot+=parseFloat(a.amount);}));
+  curHand.finalPot=pot;
+  S.handLog=[curHand,...S.handLog];
+  // Reset table
+  S.board=[null,null,null,null,null];
+  S.seats=S.seats.map(s=>({...s,cards:[null,null],actions:[],folded:false,allin:false}));
+  persist(); closePanel('record-panel'); curHand=null;
+  render(); notify('יד נשמרה ✓');
+}
+
+// ═══════════════════════════════════════════════════════
+// HAND LIST
+// ═══════════════════════════════════════════════════════
+function renderHandList(){
+  const cont=document.getElementById('hand-list');
+  document.getElementById('hands-count').textContent=`${S.handLog.length} ידיים`;
+  if(!S.handLog.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">🃏</div>אין ידיים עדיין</div>';return;}
+  cont.innerHTML=S.handLog.map((h,hi)=>{
+    const res=RESULTS.find(r=>r.k===h.result);
+    const boardCards=(h.board||[]).filter(Boolean);
+    return`<div class="card-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div><div style="font-size:10px;color:var(--muted)">${h.date}</div>
+          <div style="font-size:11px;color:var(--gold)">${h.blinds}${h.anteStr?' '+h.anteStr:''}</div>
+          ${h.finalPot?`<div style="font-size:10px;color:var(--muted)">Pot: ₪${h.finalPot.toLocaleString()}</div>`:''}</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${res?`<span style="font-size:14px;color:${res.c}">${res.e}${h.amount?` <span style="font-size:11px">${['win','fold_win','split'].includes(h.result)?'+':'-'}${h.amount}</span>`:''}</span>`:''}
+          <button class="btn btn-red btn-xs" onclick="deleteHand(${hi})">✕</button>
+        </div>
+      </div>
+      ${boardCards.length?`<div style="display:flex;gap:3px;direction:ltr;margin-bottom:6px">${boardCards.map(c=>`<div style="width:22px;height:30px;border-radius:4px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:8px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:6px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`).join('')}</div>`:``}
+      ${(h.seats||[]).map(s=>`<div style="font-size:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+        ${s.pos?`<span style="color:${PC[s.pos]||'var(--gold)'};font-weight:700;margin-left:4px">${s.pos}</span>`:''}
+        <span style="font-weight:600">${s.playerName||'?'}</span>
+        ${s.stack?`<span style="color:var(--muted);margin-right:4px"> ₪${s.stack.toLocaleString()}</span>`:''}
+        ${(s.actions||[]).length?`<div style="margin-top:2px;padding-right:8px">${s.actions.map(a=>{const def=ACTIONS.find(x=>x.k===a.type)||ACTIONS[0];return`<span style="font-size:9px;color:${def.c};margin-left:4px">${a.street?a.street.slice(0,2)+':':''} ${a.type}${a.amount?' ₪'+Number(a.amount).toLocaleString():''}${a.stackAfter!==undefined?' →'+a.stackAfter.toLocaleString():''}</span>`;}).join('')}</div>`:''}
+      </div>`).join('')}
+      ${h.notes?`<div style="font-size:11px;color:var(--muted);margin-top:5px;font-style:italic">${h.notes}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function deleteHand(hi){
+  S.handLog.splice(hi,1); persist(); renderHandList();
+}
+
+// ═══════════════════════════════════════════════════════
+// TOURNAMENT
+// ═══════════════════════════════════════════════════════
+function calcPrizes(){
+  const pool=prizePool();
+  const house=S.houseRake||0;
+  const p4=parseFloat(S.place4)||0;
+  const p3=parseFloat(S.place3)||0;
+  const rem=Math.max(0,pool-house-p4-p3);
+  return{pool,house,p4,p3,p2:rem*0.3,p1:rem*0.7,rem};
+}
+function saveTournament(){
+  const pr=calcPrizes();
+  // Determine places: koOrder = [first KO, second KO, ...]
+  // Reverse for placing: last KO = 4th place, second-to-last = 3rd, etc.
+  const ko=[...S.koOrder];
+  const allSeatedPids=S.seats.filter(s=>s.playerId).map(s=>s.playerId);
+  // Active players = potential winners
+  const activePids=S.seats.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId)).map(s=>s.playerId);
+  // Build a name map for all known pids
+  const nameMap={};
+  S.playerLib.forEach(p=>{nameMap[p.id]=p.name;});
+  const t={
+    id:uid(), date:new Date().toLocaleString('he-IL'),
+    buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
+    totalEntries:totalEntries(), prizePool:pr.pool,
+    houseRake:pr.house, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
+    koOrder:[...S.koOrder],
+    // Sorted by finish: 1st=winner(not KO'd), 2nd=last KO, 3rd=second-to-last KO, etc.
+    finishOrder:[...activePids, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid)})),
+    activePlayers:activePids.map(pid=>({pid,name:pName(pid)})),
+    playerNames:nameMap,
+    blinds:`${getBlinds().sb}/${getBlinds().bb}`
+  };
+  S.tournLog=[t,...S.tournLog];
+  persist(); renderTournList(); notify('טורניר נשמר ✓');
+}
+function resetTournament(){
+  // Show inline confirm inside the app
+  const cont = document.getElementById('tourn-list');
+  const prev = cont.innerHTML;
+  cont.insertAdjacentHTML('afterbegin', `
+    <div id="reset-confirm" style="background:rgba(224,85,85,0.12);border:1px solid rgba(224,85,85,0.4);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center">
+      <div style="font-size:13px;font-weight:700;color:#e07b6a;margin-bottom:10px">לאפס את כל נתוני הטורניר?</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">פעולה זו תמחק BuyIn, Rebuy, סדר הדחה וכל נתוני השולחן</div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="btn btn-red" onclick="doResetTournament()">כן, אפס</button>
+        <button class="btn btn-gray" onclick="document.getElementById('reset-confirm')?.remove()">ביטול</button>
+      </div>
+    </div>`);
+}
+function doResetTournament(){
+  document.getElementById('reset-confirm')?.remove();
+  S.buyins={}; S.koOrder=[];
+  S.seats=S.seats.map(s=>({...s,playerId:'',stack:0,cards:[null,null],actions:[],folded:false,allin:false}));
+  S.board=[null,null,null,null,null];
+  persist(); render(); renderTournList(); notify('טורניר אופס ✓');
+}
+function deleteTournament(ti){
+  S.tournLog.splice(ti,1); persist(); renderTournList();
+}
+function renderTournList(){
+  const cont=document.getElementById('tourn-list');
+  // Prize calculator for current tournament
+  const pr=calcPrizes();
+  // Build finish order for display
+  const winners = S.seats.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId)).map(s=>s.playerId);
+  const finishRows = [];
+  winners.forEach(pid=>finishRows.push({place:1,pid}));
+  [...S.koOrder].reverse().forEach((pid,i)=>finishRows.push({place:winners.length+i+1,pid}));
+
+  let html=`<div class="card-item" style="border-color:rgba(200,169,110,0.3);margin-bottom:14px">
+    <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:12px">טורניר נוכחי</div>
+
+    ${finishRows.length?`
+    <div style="background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:10px;margin-bottom:12px">
+      <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px">🏆 דירוג שחקנים</div>
+      ${finishRows.map(r=>{
+        const isFirst=r.place===1;
+        const medal=r.place===1?'🥇':r.place===2?'🥈':r.place===3?'🥉':'';
+        const prize=r.place===1?Math.round(pr.p1):r.place===2?Math.round(pr.p2):r.place===3?pr.p3:r.place===4?pr.p4:0;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:${isFirst?'8px 6px':'5px 6px'};margin-bottom:3px;border-radius:8px;background:${isFirst?'rgba(200,169,110,0.12)':'rgba(255,255,255,0.03)'}">
+          <span style="font-size:${isFirst?'20px':'16px'}">${medal||r.place+'.'}</span>
+          <strong style="font-size:${isFirst?'15px':'13px'};color:${isFirst?'var(--gold)':'var(--text)'};flex:1">${pName(r.pid)||'?'}</strong>
+          ${prize?`<span style="font-size:${isFirst?'14px':'12px'};font-weight:800;color:${isFirst?'var(--green)':'var(--gold)'}">₪${prize.toLocaleString()}</span>`:''}
+        </div>`;
+      }).join('')}
+    </div>`:``}
+
+    <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:.5px">📊 נתוני טורניר</div>
+    <div class="prize-row"><span class="prize-lbl">שחקנים</span><span class="prize-val">${totalBuyins()}</span></div>
+    <div class="prize-row"><span class="prize-lbl">Rebuy כולל</span><span class="prize-val">${totalRebuys()}</span></div>
+    <div class="prize-row"><span class="prize-lbl">קופת פרסים</span><span class="prize-val">₪${pr.pool.toLocaleString()}</span></div>
+
+    <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:.5px">💰 חישוב וחלוקת פרסים</div>
+    <div class="prize-row">
+      <span class="prize-lbl">בית</span>
+      <input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">
+    </div>
+    <div class="prize-row">
+      <span class="prize-lbl">מקום 4</span>
+      <input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()">
+    </div>
+    <div class="prize-row">
+      <span class="prize-lbl">מקום 3</span>
+      <input class="prize-inp" type="number" value="${S.place3||0}" placeholder="0" onchange="S.place3=+this.value;persist();renderTournList()">
+    </div>
+    <div class="prize-row">
+      <span class="prize-lbl" style="color:var(--text)">מקום 2 (30%)</span>
+      <span class="prize-val">₪${Math.round(pr.p2).toLocaleString()}</span>
+    </div>
+    <div class="prize-row">
+      <span class="prize-lbl" style="color:var(--gold);font-weight:700">מקום 1 (70%)</span>
+      <span class="prize-val" style="color:var(--green);font-size:16px">₪${Math.round(pr.p1).toLocaleString()}</span>
+    </div>
+  </div>`;
+  if(S.tournLog.length){
+    html+=`<div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px">היסטוריה (${S.tournLog.length})</div>`;
+    html+=S.tournLog.map((t,ti)=>`<div class="card-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div><div style="font-size:10px;color:var(--muted)">${t.date}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold)">₪${t.prizePool.toLocaleString()}</div></div>
+        <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px">
+        ${[['שחקנים',t.totalBuyins],['Rebuy',t.totalRebuys],['כניסות',t.totalEntries],['בליינדים',t.blinds]].map(([l,v])=>`<div style="font-size:10px;color:var(--muted)">${l}: <span style="color:var(--text);font-weight:600">${v}</span></div>`).join('')}
+      </div>
+      ${[['מקום 1',t.place1,'var(--green)'],['מקום 2',t.place2,'#c8a96e'],['מקום 3',t.place3,'#8a8090'],['מקום 4',t.place4,'#6a6070']].filter(([,v])=>v).map(([l,v,c])=>`<div style="font-size:10px"><span style="color:var(--muted)">${l}: </span><span style="color:${c};font-weight:700">₪${Math.round(v).toLocaleString()}</span></div>`).join('')}
+      ${t.finishOrder?.length?`<div style="margin-top:6px">${t.finishOrder.map(f=>{const medal=f.place===1?'🥇':f.place===2?'🥈':f.place===3?'🥉':'';return`<div style="font-size:10px;padding:2px 0"><span style="color:var(--muted)">מקום ${f.place} ${medal}</span> <strong>${f.name}</strong></div>`;}).join('')}</div>`:t.koOrder?.length?`<div style="margin-top:5px;font-size:9px;color:var(--muted)">הדחה: ${[...t.koOrder].reverse().map((pid,i)=>`${i+1}. ${t.playerNames?.[pid]||S.playerLib.find(p=>p.id===pid)?.name||pid}`).join(' ← ')}</div>`:''}
+    </div>`).join('');
+  }
+  cont.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════
+// PLAYERS
+// ═══════════════════════════════════════════════════════
+function renderPlayerList(){
+  const cont=document.getElementById('player-list');
+  if(!S.playerLib.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div>אין שחקנים</div>';return;}
+  const swp=assignPos();
+  cont.innerHTML=sortedLib().map(p=>{
+    const b=S.buyins[p.id]||{buyin:0,rebuy:0};
+    const inGame=S.seats.some(s=>s.playerId===p.id);
+    const hands=S.handLog.filter(h=>(h.seats||[]).some(s=>s.playerId===p.id));
+    return`<div class="card-item" style="display:flex;align-items:center;gap:9px;${inGame?'border-color:rgba(95,196,122,0.25)':''}">
+      <div style="width:34px;height:34px;border-radius:17px;background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0">${p.name[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700">${p.name}${inGame?` <span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}</div>
+        <div style="font-size:10px;color:var(--muted)">${b.buyin?`BuyIn: ${b.buyin}`:'לא נרשם'} ${b.rebuy?`· Rebuy: ${b.rebuy}`:''} ${hands.length?`· ${hands.length} ידיים`:''}</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
+        ${!b.buyin?`<button class="btn btn-green btn-xs" onclick="doBuyin('${p.id}')">BuyIn</button>`:`<button class="btn btn-gray btn-xs" onclick="cancelBuyin('${p.id}')">ביטול BuyIn</button>`}
+        <button class="btn btn-outline btn-xs" onclick="doRebuy('${p.id}',1)">+R</button>
+        <button class="btn btn-gray btn-xs" onclick="doRebuy('${p.id}',-1)">-R</button>
+        ${!S.koOrder.includes(p.id)&&b.buyin>0?`<button class="btn btn-red btn-xs" onclick="koPlayerFromList('${p.id}')">KO 💀</button>`:''}
+        ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
+        <button class="btn btn-red btn-xs" onclick="deletePlayer('${p.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+// ═══════════════════════════════
+// GOOGLE SHEETS SYNC
+// ═══════════════════════════════
+let gsUrl = '';
+let syncTimer = null;
+
+function loadGSUrl(){
+  try{ gsUrl = localStorage.getItem('ps_gsurl')||''; }catch(e){}
+  const inp = document.getElementById('gs-url');
+  if(inp && gsUrl) inp.value = gsUrl;
+  updateSyncDot(gsUrl ? 'idle' : 'off');
+}
+
+function saveGSUrl(){
+  const inp = document.getElementById('gs-url');
+  gsUrl = inp?.value?.trim()||'';
+  try{ localStorage.setItem('ps_gsurl', gsUrl); }catch(e){}
+  updateSyncDot(gsUrl ? 'idle' : 'off');
+  if(gsUrl){ syncToSheets(true); }
+  else { setSyncStatus('סנכרון כבוי'); }
+}
+
+function updateSyncDot(state){
+  const dot = document.getElementById('sync-dot');
+  if(!dot) return;
+  const colors = {off:'#3a3650', idle:'#5b9bd5', syncing:'#c8a96e', ok:'#5fc47a', err:'#e07b6a'};
+  dot.style.background = colors[state]||colors.idle;
+  dot.title = {off:'ללא סנכרון', idle:'מחובר ל-Google', syncing:'מסנכרן...', ok:'סונכרן ✓', err:'שגיאת סנכרון'}[state]||'';
+}
+
+function setSyncStatus(msg, color){
+  const el = document.getElementById('sync-status');
+  if(el){ el.textContent = msg; el.style.color = color||'#5a5870'; }
+}
+
+async function syncToSheets(immediate){
+  if(!gsUrl) return;
+  if(!immediate){
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(()=>syncToSheets(true), 2000);
+    return;
+  }
+  updateSyncDot('syncing');
+  setSyncStatus('שולח נתונים...', '#c8a96e');
+  try{
+    const snap = fullSnapshot();
+    // Use no-cors mode - response will be opaque but data will be saved
+    await fetch(gsUrl, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({key:'poker_data', value: snap})
+    });
+    // no-cors means we can't read response, but if no exception = success
+    updateSyncDot('ok');
+    setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+  }catch(e){
+    updateSyncDot('err');
+    setSyncStatus('שגיאת חיבור: '+e.message, '#e07b6a');
+  }
+}
+
+async function syncFromSheets(){
+  if(!gsUrl){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
+  updateSyncDot('syncing');
+  setSyncStatus('מושך נתונים...', '#c8a96e');
+  try{
+    // Use JSONP-style via script tag to bypass CORS for GET
+    const data = await fetchViaScript(gsUrl+'?key=poker_data&callback=__gsCallback&t='+Date.now());
+    if(data && data.ok && data.value){
+      applySnapshot(data.value);
+      persist();
+      render();
+      updateSyncDot('ok');
+      setSyncStatus('נתונים נטענו: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+      notify('נתונים נטענו מ-Google ✓');
+    } else if(data && !data.ok){
+      updateSyncDot('idle');
+      setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
+    } else {
+      // Try direct fetch as fallback
+      const resp = await fetch(gsUrl+'?key=poker_data&t='+Date.now());
+      const r = await resp.json();
+      if(r.ok && r.value){
+        applySnapshot(r.value);
+        persist(); render();
+        updateSyncDot('ok');
+        setSyncStatus('נתונים נטענו ✓', '#5fc47a');
+        notify('נתונים נטענו מ-Google ✓');
+      }
+    }
+  }catch(e){
+    // Last resort: try direct fetch
+    try{
+      const resp = await fetch(gsUrl+'?key=poker_data&t='+Date.now());
+      const r = await resp.json();
+      if(r.ok && r.value){
+        applySnapshot(r.value);
+        persist(); render();
+        updateSyncDot('ok');
+        setSyncStatus('נתונים נטענו ✓', '#5fc47a');
+        notify('נתונים נטענו מ-Google ✓');
+      }
+    }catch(e2){
+      updateSyncDot('err');
+      setSyncStatus('שגיאת חיבור: '+e2.message, '#e07b6a');
+    }
+  }
+}
+
+function fetchViaScript(url){
+  return new Promise((resolve)=>{
+    const cbName = '__gsCallback_'+Date.now();
+    window[cbName] = (data)=>{
+      delete window[cbName];
+      document.getElementById('__gs_script')?.remove();
+      resolve(data);
+    };
+    const s = document.createElement('script');
+    s.id = '__gs_script';
+    s.src = url.replace('__gsCallback', cbName);
+    s.onerror = ()=>{ delete window[cbName]; s.remove(); resolve(null); };
+    setTimeout(()=>{ if(window[cbName]){ delete window[cbName]; s.remove(); resolve(null); } }, 8000);
+    document.head.appendChild(s);
+  });
+}
+
+function toggleSettings(){
+  const box = document.getElementById('settings-box');
+  if(!box) return;
+  loadGSUrl();
+  box.style.display = box.style.display==='none' ? 'flex' : 'none';
+}
+
+function importNameList(){
+  const ta = document.getElementById('list-import-ta');
+  const lines = ta.value.split('\n').map(l=>l.trim()).filter(l=>l.length>1);
+  if(!lines.length){ notify('אין שמות להוסיף'); return; }
+  let added = 0, skipped = 0;
+  lines.forEach(name=>{
+    if(S.playerLib.some(p=>p.name.toLowerCase()===name.toLowerCase())){
+      skipped++;
+    } else {
+      S.playerLib.push({id:uid(), name});
+      added++;
+    }
+  });
+  persist();
+  renderPlayerList();
+  document.getElementById('list-import-box').style.display='none';
+  ta.value='';
+  notify(`נוספו ${added} שחקנים${skipped?' ('+skipped+' כפילויות דולגו)':''} ✓`);
+}
+
+function exportData(){
+  try{
+    const snap = JSON.stringify(fullSnapshot());
+    const b64 = btoa(unescape(encodeURIComponent(snap)));
+    // Show copy dialog
+    const box = document.getElementById('backup-box');
+    const ta = document.getElementById('backup-ta');
+    ta.value = b64;
+    box.style.display = 'flex';
+    ta.select();
+    try{ navigator.clipboard.writeText(b64); notify('קוד גיבוי הועתק ✓'); }
+    catch(e){ notify('העתק את הקוד ידנית'); }
+  }catch(e){ notify('שגיאה: '+e.message); }
+}
+
+function importFromCode(){
+  const ta = document.getElementById('import-ta');
+  const code = ta.value.trim();
+  if(!code){ notify('הדבק קוד גיבוי'); return; }
+  try{
+    const snap = JSON.parse(decodeURIComponent(escape(atob(code))));
+    applySnapshot(snap);
+    persist();
+    render();
+    document.getElementById('import-box').style.display='none';
+    ta.value='';
+    notify('נתונים שוחזרו ✓ ('+S.playerLib.length+' שחקנים)');
+  }catch(e){ notify('קוד לא תקין'); }
+}
+
+function importData(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      applySnapshot(data);
+      persist();
+      render();
+      renderPlayerList();
+      notify('נתונים יובאו בהצלחה ✓ (' + (S.playerLib.length) + ' שחקנים)');
+    } catch(err) {
+      notify('שגיאה בקובץ: ' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function diagStorage(){
+  const box = document.getElementById('diag-box');
+  box.style.display = 'block';
+  let html = '<div style="color:var(--gold);font-weight:700;margin-bottom:8px">מפתחות ב-localStorage:</div>';
+  const allKeys = [];
+  for(let i=0; i<localStorage.length; i++) allKeys.push(localStorage.key(i));
+  if(!allKeys.length){ box.innerHTML = html + '<div style="color:#e07b6a">localStorage ריק לחלוטין!</div>'; return; }
+  allKeys.sort().forEach(k=>{
+    const val = localStorage.getItem(k);
+    let preview = '';
+    try{
+      const parsed = JSON.parse(val);
+      if(Array.isArray(parsed)) preview = `[${parsed.length} פריטים]`;
+      else if(typeof parsed === 'object') preview = `{${Object.keys(parsed).join(', ')}}`;
+      else preview = String(parsed).slice(0,40);
+    }catch(e){ preview = val?.slice(0,40)||''; }
+    html += `<div style="margin-bottom:6px;padding:5px;background:rgba(255,255,255,0.04);border-radius:6px">
+      <div style="color:var(--gold);font-weight:600">${k}</div>
+      <div style="color:var(--muted)">${preview}</div>
+      <button class="btn btn-green btn-xs" style="margin-top:3px" onclick="tryLoad('${k}')">טען כ-שחקנים</button>
+    </div>`;
+  });
+  box.innerHTML = html;
+}
+function tryLoad(key){
+  try{
+    const v = JSON.parse(localStorage.getItem(key));
+    if(Array.isArray(v) && v[0]?.name){
+      S.playerLib = v;
+      persist();
+      renderPlayerList();
+      document.getElementById('diag-box').style.display='none';
+      notify('שחקנים נטענו ✓ ('+v.length+')');
+    } else if(v?.seats || v?.playerLib){
+      if(v.playerLib){ S.playerLib=v.playerLib; }
+      if(v.seats){ S.seats=v.seats; }
+      if(v.buyins){ S.buyins=v.buyins; }
+      if(v.handLog){ S.handLog=v.handLog; }
+      if(v.tournLog){ S.tournLog=v.tournLog; }
+      persist(); render();
+      document.getElementById('diag-box').style.display='none';
+      notify('נתונים נטענו ✓');
+    } else {
+      notify('המפתח לא מכיל שחקנים');
+    }
+  }catch(e){ notify('שגיאה: '+e.message); }
+}
+function showAddPlayer(){document.getElementById('new-pname')?.focus();}
+function addPlayer(){
+  const inp=document.getElementById('new-pname');
+  const name=inp?.value?.trim(); if(!name)return;
+  S.playerLib.push({id:uid(),name});
+  inp.value=''; inp.focus();
+  persist(); renderPlayerList(); notify('שחקן נוסף ✓');
+}
+function deletePlayer(id){
+  S.playerLib=S.playerLib.filter(p=>p.id!==id);
+  persist(); renderPlayerList();
+}
+function koPlayerFromList(pid){
+  // Add to KO order if not already there
+  if(!S.koOrder.includes(pid)) S.koOrder.push(pid);
+  // Remove from any seat
+  const seat=S.seats.find(s=>s.playerId===pid);
+  if(seat){
+    seat.playerId=''; seat.stack=0; seat.cards=[null,null];
+    seat.actions=[]; seat.folded=false; seat.allin=false;
+  }
+  persist(); render(); renderPlayerList(); notify('שחקן הוצא 💀');
+}
+
+// ═══════════════════════════════════════════════════════
+// CARD PICKER
+// ═══════════════════════════════════════════════════════
+function openCP(target){cpTarget=target;cpRank=null;renderCP();document.getElementById('card-picker').classList.add('open');}
+function renderCP(){
+  const used=cpTarget?.startsWith('__r__')
+    ?(curHand?.board||[]).concat(curHand?.seats?.flatMap(s=>s.cards||[])||[]).filter(Boolean)
+    :allUsedCards();
+  document.getElementById('cp-title').textContent=cpRank?`חליפה עבור ${cpRank}`:'בחר דרגה';
+  document.getElementById('cp-content').innerHTML=!cpRank
+    ?`<div class="rank-grid">${RANKS.map(r=>`<button class="rank-btn" onclick="cpRank='${r}';renderCP()">${r}</button>`).join('')}</div>`
+    :`<div class="suit-grid">${SUITS.map(s=>{const u=used.some(c=>c&&c.rank===cpRank&&c.suit===s);return`<button class="suit-btn" ${u?'disabled':''} onclick="pickCard('${s}')"><div style="color:${SC[s]}">${s}</div><span style="color:${SC[s]}">${cpRank}</span></button>`;}).join('')}</div>
+    <button class="picker-back" onclick="cpRank=null;renderCP()">← חזרה</button>`;
+}
+function pickCard(s){
+  const card={rank:cpRank,suit:s};
+  const t=cpTarget; document.getElementById('card-picker').classList.remove('open');
+  if(t?.startsWith('__r__')){
+    const rt=t.replace('__r__','');
+    if(rt.startsWith('rb')){curHand.board[+rt.replace('rb','')]=card;}
+    else{const m=rt.match(/rs(\d+)_c(\d+)/);if(m)curHand.seats[+m[1]].cards[+m[2]]=card;}
+    renderRecordPanel(); return;
+  }
+  if(t?.startsWith('board')){S.board[+t.replace('board','')]=card;}
+  else if(t?.startsWith('seat')){
+    const m=t.match(/seat(\d+)_c(\d+)/);
+    if(m){const seat=S.seats.find(s=>s.seatIdx===+m[1]);if(seat){if(!seat.cards)seat.cards=[null,null];seat.cards[+m[2]]=card;}}
+  }
+  persist(); renderSeats(); renderBoard();
+  if(activeSeat!==null)renderSeatPanel();
+}
+try{document.getElementById('card-picker').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});}catch(e){}
+
+// ═══════════════════════════════════════════════════════
+// PANELS & VIEWS
+// ═══════════════════════════════════════════════════════
+function openPanel(id){
+  document.getElementById(id)?.classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+function closePanel(id){
+  document.getElementById(id)?.classList.remove('open');
+  if(!document.querySelector('.panel.open'))document.getElementById('overlay').classList.remove('open');
+}
+function closeAllPanels(){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('players-popup').classList.remove('open');
+  activeSeat=null; renderSeats();
+}
+function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
+function showView(v){
+  ['table','hands','tourn','players'].forEach(vv=>{
+    document.getElementById(`${vv}-view`).style.display=vv===v?(vv==='table'?'flex':'block'):'none';
+    document.getElementById(`tab-${vv}`)?.classList.toggle('active',vv===v);
+  });
+  if(v==='hands')renderHandList();
+  if(v==='tourn')renderTournList();
+  if(v==='players')renderPlayerList();
+}
+function notify(msg){
+  const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ═══════════════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════════════
+try{
+  const ro=new ResizeObserver(()=>{renderSeats();renderBoard();});
+  ro.observe(document.getElementById('table-wrap'));
+}catch(e){
+  // Fallback for browsers without ResizeObserver
+  window.addEventListener('resize',()=>{renderSeats();renderBoard();});
+}
+
+// INIT
+try{ loadState(); }catch(e){ console.error('loadState error:',e); render(); }
+try{ loadGSUrl(); }catch(e){}
+</script>
+
+<!-- LIST IMPORT BOX -->
+<div id="list-import-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:400px">
+    <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:4px">📋 ייבוא רשימת שחקנים</div>
+    <div style="font-size:11px;color:#5a5870;margin-bottom:10px">הדבק שמות – שם אחד בכל שורה</div>
+    <textarea id="list-import-ta" rows="8" oninput="const lines=this.value.split('\n').filter(l=>l.trim().length>1);document.getElementById('list-import-preview').textContent=lines.length?lines.length+' שמות זוהו':''" placeholder="ישראל ישראלי&#10;יוסי כהן&#10;מושה לוי&#10;..." style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:13px;direction:rtl;resize:none;outline:none;box-sizing:border-box;line-height:1.8"></textarea>
+    <div style="font-size:10px;color:#3a3650;margin-top:5px" id="list-import-preview"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="importNameList()" style="flex:2;padding:11px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer">✓ הוסף שחקנים</button>
+      <button onclick="document.getElementById('list-import-box').style.display='none'" style="flex:1;padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS / SYNC PANEL -->
+<div id="settings-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto">
+    <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:14px">⚙️ הגדרות סנכרון</div>
+
+    <!-- Google Sheets -->
+    <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:4px">🔗 Google Sheets</div>
+      <div style="font-size:10px;color:#5a5870;margin-bottom:8px">הדבק את ה-URL של ה-Apps Script לסנכרון אוטומטי</div>
+      <input id="gs-url" type="url" placeholder="https://script.google.com/macros/s/..." 
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:11px;outline:none;direction:ltr;box-sizing:border-box;margin-bottom:8px">
+      <div style="display:flex;gap:7px">
+        <button onclick="saveGSUrl()" style="flex:1;padding:8px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:12px;cursor:pointer">שמור URL</button>
+        <button onclick="syncFromSheets()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">📥 משוך נתונים</button>
+        <button onclick="syncToSheets(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:12px;cursor:pointer">📤 שלח נתונים</button>
+      </div>
+      <div id="sync-status" style="font-size:10px;color:#5a5870;margin-top:6px;min-height:14px"></div>
+    </div>
+
+    <!-- Instructions -->
+    <div style="background:rgba(200,169,110,0.06);border:1px solid rgba(200,169,110,0.15);border-radius:10px;padding:10px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:#c8a96e;margin-bottom:6px">📖 הגדרה ראשונית (פעם אחת)</div>
+      <div style="font-size:10px;color:#6a6070;line-height:1.8">
+        1. פתח <strong style="color:#e2ddd4">script.google.com</strong><br>
+        2. צור פרויקט חדש → הדבק את קוד ה-Script<br>
+        3. Deploy → New Deployment → Web App<br>
+        4. Execute as: <strong style="color:#e2ddd4">Me</strong> | Access: <strong style="color:#e2ddd4">Anyone</strong><br>
+        5. העתק את ה-URL → הדבק למעלה
+      </div>
+    </div>
+
+    <!-- Manual backup -->
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:#e2ddd4;margin-bottom:7px">💾 גיבוי ידני</div>
+      <div style="display:flex;gap:7px">
+        <button onclick="exportData();document.getElementById('settings-box').style.display='none'" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(200,169,110,0.3);background:transparent;color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer">💾 קוד גיבוי</button>
+        <button onclick="document.getElementById('settings-box').style.display='none';document.getElementById('import-box').style.display='flex'" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#8a8090;font-size:12px;cursor:pointer">📂 שחזור</button>
+      </div>
+    </div>
+
+    <button onclick="document.getElementById('settings-box').style.display='none'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">סגור</button>
+  </div>
+</div>
+
+<!-- BACKUP BOX -->
+<div id="backup-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:400px">
+    <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:6px">💾 קוד גיבוי</div>
+    <div style="font-size:11px;color:#5a5870;margin-bottom:10px">העתק והדבק בהודעה לעצמך (WhatsApp/Notes) לשחזור בעתיד</div>
+    <textarea id="backup-ta" readonly rows="4" onclick="this.select();navigator.clipboard?.writeText(this.value)" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#c8a96e;font-size:10px;font-family:monospace;direction:ltr;resize:none;outline:none;box-sizing:border-box"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="const ta=document.getElementById('backup-ta');ta.select();try{navigator.clipboard.writeText(ta.value);notify('הועתק ✓');}catch(e){}" style="flex:2;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer">📋 העתק</button>
+      <button onclick="document.getElementById('backup-box').style.display='none'" style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">סגור</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT BOX -->
+<div id="import-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:400px">
+    <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:6px">📂 שחזור מקוד גיבוי</div>
+    <div style="font-size:11px;color:#5a5870;margin-bottom:10px">הדבק את קוד הגיבוי שהעתקת</div>
+    <textarea id="import-ta" rows="4" placeholder="הדבק קוד גיבוי כאן..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:10px;font-family:monospace;direction:ltr;resize:none;outline:none;box-sizing:border-box"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="importFromCode()" style="flex:2;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer">✓ שחזר</button>
+      <button onclick="document.getElementById('import-box').style.display='none'" style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">ביטול</button>
+    </div>
+  </div>
+</div>
+</body></html>
