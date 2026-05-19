@@ -1297,7 +1297,7 @@ function setSyncStatus(msg, color){
   if(el){ el.textContent = msg; el.style.color = color||'#5a5870'; }
 }
 
-function syncToSheets(immediate){
+async function syncToSheets(immediate){
   if(!gsUrl) return;
   if(!immediate){
     clearTimeout(syncTimer);
@@ -1306,89 +1306,46 @@ function syncToSheets(immediate){
   }
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
-  const body = JSON.stringify({key:'poker_data', value: fullSnapshot()});
-  // XHR with sync fallback for iOS Safari standalone
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', gsUrl, true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.timeout = 15000;
-  xhr.onreadystatechange = function(){
-    if(xhr.readyState === 4){
-      updateSyncDot('ok');
-      setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-    }
-  };
-  xhr.onerror = function(){
-    // Last resort: no-cors fetch
-    fetch(gsUrl, {method:'POST', mode:'no-cors', body}).catch(()=>{});
+  try{
+    await fetch(gsUrl, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({key:'poker_data', value: fullSnapshot()})
+    });
     updateSyncDot('ok');
-    setSyncStatus('סונכרן (no-cors)', '#c8a96e');
-  };
-  xhr.ontimeout = function(){
+    setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+  }catch(e){
     updateSyncDot('err');
-    setSyncStatus('timeout', '#e07b6a');
-  };
-  xhr.send(body);
+    setSyncStatus('שגיאה: '+e.message, '#e07b6a');
+  }
 }
 
-function syncFromSheets(){
+async function syncFromSheets(){
   if(!gsUrl){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
-  // Use JSONP via script tag - works in ALL iOS Safari modes
-  const cbName = '_gs_' + Date.now();
-  const existing = document.getElementById('_gs_script');
-  if(existing) existing.remove();
-  const timeout = setTimeout(()=>{
-    delete window[cbName];
-    document.getElementById('_gs_script')?.remove();
-    // Fallback to XHR
-    const xhr2 = new XMLHttpRequest();
-    xhr2.open('GET', gsUrl + '?key=poker_data&t=' + Date.now(), true);
-    xhr2.timeout = 10000;
-    xhr2.onload = function(){
-      try{
-        const r = JSON.parse(xhr2.responseText);
-        if(r.ok && r.value){ applySnapshot(r.value); persist(); render(); updateSyncDot('ok'); setSyncStatus('נטען ✓', '#5fc47a'); notify('נתונים נטענו ✓'); }
-        else { updateSyncDot('idle'); setSyncStatus('אין נתונים עדיין', '#c8a96e'); }
-      }catch(e){ updateSyncDot('err'); setSyncStatus('שגיאה: '+e.message, '#e07b6a'); }
-    };
-    xhr2.onerror = ()=>{ updateSyncDot('err'); setSyncStatus('שגיאת רשת - נסה מ-Safari', '#e07b6a'); };
-    xhr2.send();
-  }, 6000);
-  window[cbName] = function(data){
-    clearTimeout(timeout);
-    delete window[cbName];
-    document.getElementById('_gs_script')?.remove();
-    if(data && data.ok && data.value){
-      applySnapshot(data.value); persist(); render();
-      updateSyncDot('ok'); setSyncStatus('נטען: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+  try{
+    const resp = await fetch(gsUrl+'?key=poker_data&t='+Date.now(), {
+      method:'GET',
+      redirect:'follow'
+    });
+    const text = await resp.text();
+    const r = JSON.parse(text);
+    if(r.ok && r.value){
+      applySnapshot(r.value);
+      persist(); render();
+      updateSyncDot('ok');
+      setSyncStatus('נטען: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
       notify('נתונים נטענו מ-Google ✓');
     } else {
-      updateSyncDot('idle'); setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
+      updateSyncDot('idle');
+      setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
     }
-  };
-  const s = document.createElement('script');
-  s.id = '_gs_script';
-  s.src = gsUrl + '?key=poker_data&callback=' + cbName + '&t=' + Date.now();
-  s.onerror = function(){
-    clearTimeout(timeout);
-    delete window[cbName];
-    // Trigger XHR fallback
-    const xhr2 = new XMLHttpRequest();
-    xhr2.open('GET', gsUrl + '?key=poker_data&t=' + Date.now(), true);
-    xhr2.timeout = 10000;
-    xhr2.onload = function(){
-      try{
-        const r = JSON.parse(xhr2.responseText);
-        if(r.ok && r.value){ applySnapshot(r.value); persist(); render(); updateSyncDot('ok'); setSyncStatus('נטען ✓', '#5fc47a'); notify('נתונים נטענו ✓'); }
-        else { updateSyncDot('idle'); setSyncStatus('אין נתונים עדיין', '#c8a96e'); }
-      }catch(e){ updateSyncDot('err'); setSyncStatus('שגיאה: '+e.message, '#e07b6a'); }
-    };
-    xhr2.onerror = ()=>{ updateSyncDot('err'); setSyncStatus('שגיאת רשת - פתח ב-Safari', '#e07b6a'); };
-    xhr2.send();
-  };
-  document.head.appendChild(s);
+  }catch(e){
+    updateSyncDot('err');
+    setSyncStatus('שגיאה: '+e.message, '#e07b6a');
+  }
 }
 
 
