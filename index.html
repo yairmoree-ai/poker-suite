@@ -1035,7 +1035,7 @@ function saveTournament(){
     houseRake:pr.house, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
     koOrder:[...S.koOrder],
     // Sorted by finish: 1st=winner(not KO'd), 2nd=last KO, 3rd=second-to-last KO, etc.
-    finishOrder:[...activePids, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid)})),
+    finishOrder:[...activePids, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid),rebuy:(S.buyins[pid]||{}).rebuy||0})),
     activePlayers:activePids.map(pid=>({pid,name:pName(pid)})),
     playerNames:nameMap,
     blinds:`${getBlinds().sb}/${getBlinds().bb}`
@@ -1068,41 +1068,91 @@ function deleteTournament(ti){
   S.tournLog.splice(ti,1); persist(); renderTournList();
 }
 function renderTournList(){
-  const cont=document.getElementById('tourn-list');
-  // Prize calculator for current tournament
-  const pr=calcPrizes();
-  // Build finish order for display
+  const cont = document.getElementById('tourn-list');
+  const pr = calcPrizes();
+
+  // Build finish order
   const winners = S.seats.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId)).map(s=>s.playerId);
   const finishRows = [];
   winners.forEach(pid=>finishRows.push({place:1,pid}));
   [...S.koOrder].reverse().forEach((pid,i)=>finishRows.push({place:winners.length+i+1,pid}));
 
-  let html=`<div class="card-item" style="border-color:rgba(200,169,110,0.3);margin-bottom:14px">
+  // Prize per place
+  const prizeByPlace = {1:Math.round(pr.p1), 2:Math.round(pr.p2), 3:pr.p3||0, 4:pr.p4||0};
+
+  // Rebuy per player
+  const rebuyByPid = pid => (S.buyins[pid]||{}).rebuy||0;
+
+  let html = `<div class="card-item" style="border-color:rgba(200,169,110,0.3);margin-bottom:14px">
     <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:12px">טורניר נוכחי</div>
 
-    ${finishRows.length?`
-    <div style="background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:10px;margin-bottom:12px">
-      <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px">🏆 דירוג שחקנים</div>
-      ${finishRows.map(r=>{
-        const isFirst=r.place===1;
-        const medal=r.place===1?'🥇':r.place===2?'🥈':r.place===3?'🥉':'';
-        const prize=r.place===1?Math.round(pr.p1):r.place===2?Math.round(pr.p2):r.place===3?pr.p3:r.place===4?pr.p4:0;
-        return `<div style="display:flex;align-items:center;gap:8px;padding:${isFirst?'8px 6px':'5px 6px'};margin-bottom:3px;border-radius:8px;background:${isFirst?'rgba(200,169,110,0.12)':'rgba(255,255,255,0.03)'}">
-          <span style="font-size:${isFirst?'20px':'16px'}">${medal||r.place+'.'}</span>
-          <strong style="font-size:${isFirst?'15px':'13px'};color:${isFirst?'var(--gold)':'var(--text)'};flex:1">${pName(r.pid)||'?'}</strong>
-          ${prize?`<span style="font-size:${isFirst?'14px':'12px'};font-weight:800;color:${isFirst?'var(--green)':'var(--gold)'}">₪${prize.toLocaleString()}</span>`:''}
-        </div>`;
+    <!-- TOP 4 PLACES -->
+    ${finishRows.filter(r=>r.place<=4).length ? `
+    <div style="margin-bottom:14px">
+      ${finishRows.filter(r=>r.place<=4).map(r=>{
+        const name = pName(r.pid)||'?';
+        const rb = rebuyByPid(r.pid);
+        const prize = prizeByPlace[r.place]||0;
+        if(r.place <= 3){
+          const medals = {1:{e:'🏆',c:'#FFD700',s:'24px'},2:{e:'🥈',c:'#C0C0C0',s:'20px'},3:{e:'🥉',c:'#CD7F32',s:'18px'}};
+          const m = medals[r.place];
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:7px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid ${m.c}30">
+            <div style="text-align:center;min-width:44px">
+              <div style="font-size:${m.s}">${m.e}</div>
+              <div style="font-size:9px;font-weight:800;color:${m.c}">מקום ${r.place}</div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:800;color:#e2ddd4">${name}</div>
+              ${rb>0?`<div style="font-size:11px;color:var(--muted)">Rebuy: ${rb}</div>`:'<div style="font-size:11px;color:var(--muted2)">ללא Rebuy</div>'}
+            </div>
+            ${prize?`<div style="font-size:15px;font-weight:900;color:${r.place===1?'#5fc47a':'var(--gold)'}">₪${prize.toLocaleString()}</div>`:''}
+          </div>`;
+        } else {
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:7px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+            <div style="text-align:center;min-width:44px">
+              <div style="font-size:13px;color:var(--muted);font-weight:700">מקום 4</div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:#e2ddd4">${name}</div>
+              ${rb>0?`<div style="font-size:11px;color:var(--muted)">Rebuy: ${rb}</div>`:'<div style="font-size:11px;color:var(--muted2)">ללא Rebuy</div>'}
+            </div>
+            ${prize?`<div style="font-size:13px;font-weight:800;color:var(--gold)">₪${prize.toLocaleString()}</div>`:''}
+          </div>`;
+        }
       }).join('')}
-    </div>`:``}
+    </div>` : ''}
 
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
-    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:.5px">📊 נתוני טורניר</div>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">📊 נתוני טורניר</div>
     <div class="prize-row"><span class="prize-lbl">שחקנים</span><span class="prize-val">${totalBuyins()}</span></div>
     <div class="prize-row"><span class="prize-lbl">Rebuy כולל</span><span class="prize-val">${totalRebuys()}</span></div>
     <div class="prize-row"><span class="prize-lbl">קופת פרסים</span><span class="prize-val">₪${pr.pool.toLocaleString()}</span></div>
 
+    <!-- REBUY BREAKDOWN -->
+    ${totalRebuys()>0?`
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
-    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:.5px">💰 חישוב וחלוקת פרסים</div>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">🔄 התפלגות Rebuy לפי שחקן</div>
+    <div>
+      ${Object.entries(S.buyins)
+        .filter(([pid,b])=>b.rebuy>0)
+        .sort((a,b)=>b[1].rebuy-a[1].rebuy)
+        .map(([pid,b])=>{
+          const maxR = Math.max(...Object.values(S.buyins).map(x=>x.rebuy||0),1);
+          const pct = Math.round((b.rebuy/maxR)*100);
+          return `<div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+              <span style="font-size:11px;color:#e2ddd4">${pName(pid)||'?'}</span>
+              <span style="font-size:11px;font-weight:700;color:var(--gold)">${b.rebuy}</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px">
+              <div style="height:100%;border-radius:2px;background:var(--gold);width:${pct}%;transition:width 0.4s"></div>
+            </div>
+          </div>`;
+        }).join('')}
+    </div>`:''}
+
+    <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">💰 חישוב וחלוקת פרסים</div>
     <div class="prize-row">
       <span class="prize-lbl">בית</span>
       <input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">
@@ -1124,22 +1174,63 @@ function renderTournList(){
       <span class="prize-val" style="color:var(--green);font-size:16px">₪${Math.round(pr.p1).toLocaleString()}</span>
     </div>
   </div>`;
+
+  // Tournament history
   if(S.tournLog.length){
-    html+=`<div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px">היסטוריה (${S.tournLog.length})</div>`;
-    html+=S.tournLog.map((t,ti)=>`<div class="card-item">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div><div style="font-size:10px;color:var(--muted)">${t.date}</div>
-          <div style="font-size:12px;font-weight:700;color:var(--gold)">₪${t.prizePool.toLocaleString()}</div></div>
-        <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px">
-        ${[['שחקנים',t.totalBuyins],['Rebuy',t.totalRebuys],['כניסות',t.totalEntries],['בליינדים',t.blinds]].map(([l,v])=>`<div style="font-size:10px;color:var(--muted)">${l}: <span style="color:var(--text);font-weight:600">${v}</span></div>`).join('')}
-      </div>
-      ${[['מקום 1',t.place1,'var(--green)'],['מקום 2',t.place2,'#c8a96e'],['מקום 3',t.place3,'#8a8090'],['מקום 4',t.place4,'#6a6070']].filter(([,v])=>v).map(([l,v,c])=>`<div style="font-size:10px"><span style="color:var(--muted)">${l}: </span><span style="color:${c};font-weight:700">₪${Math.round(v).toLocaleString()}</span></div>`).join('')}
-      ${t.finishOrder?.length?`<div style="margin-top:6px">${t.finishOrder.map(f=>{const medal=f.place===1?'🥇':f.place===2?'🥈':f.place===3?'🥉':'';return`<div style="font-size:10px;padding:2px 0"><span style="color:var(--muted)">מקום ${f.place} ${medal}</span> <strong>${f.name}</strong></div>`;}).join('')}</div>`:t.koOrder?.length?`<div style="margin-top:5px;font-size:9px;color:var(--muted)">הדחה: ${[...t.koOrder].reverse().map((pid,i)=>`${i+1}. ${t.playerNames?.[pid]||S.playerLib.find(p=>p.id===pid)?.name||pid}`).join(' ← ')}</div>`:''}
-    </div>`).join('');
+    html += `<div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px">היסטוריה (${S.tournLog.length})</div>`;
+    html += S.tournLog.map((t,ti)=>{
+      const prizeByPlaceT = {1:Math.round(t.place1||0),2:Math.round(t.place2||0),3:t.place3||0,4:t.place4||0};
+      const finishT = t.finishOrder||[];
+      // Rebuy per player from saved data
+      const rebuyT = pid => {
+        const found = t.finishOrder?.find(f=>f.pid===pid);
+        return found?.rebuy||0;
+      };
+      return `<div class="card-item">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-size:10px;color:var(--muted)">${t.date}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold)">₪${(t.prizePool||0).toLocaleString()}</div>
+          </div>
+          <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
+          ${[['שחקנים',t.totalBuyins],['Rebuy',t.totalRebuys],['כניסות',t.totalEntries]].map(([l,v])=>`<div style="font-size:10px;color:var(--muted)">${l}: <span style="color:var(--text);font-weight:600">${v||0}</span></div>`).join('')}
+        </div>
+        ${finishT.filter(f=>f.place<=4).map(f=>{
+          const rb = f.rebuy||0;
+          const prize = prizeByPlaceT[f.place]||0;
+          if(f.place<=3){
+            const medals={1:'🏆',2:'🥈',3:'🥉'};
+            const colors={1:'#FFD700',2:'#C0C0C0',3:'#CD7F32'};
+            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:4px;border-radius:9px;background:rgba(255,255,255,0.03)">
+              <span style="font-size:16px">${medals[f.place]}</span>
+              <div style="flex:1">
+                <span style="font-size:12px;font-weight:700;color:#e2ddd4">${f.name||'?'}</span>
+                ${rb>0?`<span style="font-size:10px;color:var(--muted);margin-right:4px"> (R:${rb})</span>`:''}
+              </div>
+              ${prize?`<span style="font-size:12px;font-weight:800;color:${colors[f.place]}">₪${prize.toLocaleString()}</span>`:''}
+            </div>`;
+          } else {
+            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;margin-bottom:4px;border-radius:8px;background:rgba(255,255,255,0.02)">
+              <span style="font-size:11px;color:var(--muted);min-width:52px">מקום 4</span>
+              <div style="flex:1">
+                <span style="font-size:11px;font-weight:600;color:#e2ddd4">${f.name||'?'}</span>
+                ${rb>0?`<span style="font-size:10px;color:var(--muted);margin-right:4px"> (R:${rb})</span>`:''}
+              </div>
+              ${prize?`<span style="font-size:11px;font-weight:700;color:var(--gold)">₪${prize.toLocaleString()}</span>`:''}
+            </div>`;
+          }
+        }).join('')}
+        ${t.totalRebuys>0&&t.finishOrder?.some(f=>f.rebuy>0)?`
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05)">
+          <div style="font-size:9px;color:var(--muted2);margin-bottom:3px">Rebuy: ${t.finishOrder.filter(f=>f.rebuy>0).map(f=>`${f.name} (${f.rebuy})`).join(', ')}</div>
+        </div>`:''}
+      </div>`;
+    }).join('');
   }
-  cont.innerHTML=html;
+
+  cont.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════
