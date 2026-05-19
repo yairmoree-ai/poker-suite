@@ -1016,8 +1016,8 @@ function saveTournament(){
   // Reverse for placing: last KO = 4th place, second-to-last = 3rd, etc.
   const ko=[...S.koOrder];
   const allSeatedPids=S.seats.filter(s=>s.playerId).map(s=>s.playerId);
-  // Active players = potential winners
-  const activePids=S.seats.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId)).map(s=>s.playerId);
+  // Active players = have buyin AND not KO'd (regardless of seat)
+  const activePids=Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid));
   // Build a name map for all known pids
   const nameMap={};
   S.playerLib.forEach(p=>{nameMap[p.id]=p.name;});
@@ -1064,8 +1064,8 @@ function renderTournList(){
   const cont = document.getElementById('tourn-list');
   const pr = calcPrizes();
 
-  // Build finish order
-  const winners = S.seats.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId)).map(s=>s.playerId);
+  // Build finish order - winners = have buyin AND not KO'd
+  const winners = Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid));
   const finishRows = [];
   winners.forEach(pid=>finishRows.push({place:1,pid}));
   [...S.koOrder].reverse().forEach((pid,i)=>finishRows.push({place:winners.length+i+1,pid}));
