@@ -254,7 +254,7 @@ input,select,textarea{font-family:inherit}
       <button class="btn btn-gold btn-sm" onclick="showAddPlayer()">+ הוסף</button>
       <button class="btn btn-outline btn-sm" onclick="exportData()">📤 ייצוא</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-box').style.display='flex'">📂 שחזור</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('list-import-box').style.display='flex'">📋 ייבוא שמות</button>
+
     </div>
     <div id="diag-box" style="display:none;background:#141824;border:1px solid rgba(200,169,110,0.3);border-radius:10px;padding:10px;margin-bottom:10px;font-size:11px;color:#e2ddd4;word-break:break-all"></div>
     <div id="add-player-row" style="display:block;background:rgba(255,255,255,0.06);border:1px solid rgba(200,169,110,0.25);border-radius:12px;padding:12px;margin-bottom:12px">
@@ -1363,25 +1363,7 @@ function toggleSettings(){
   box.style.display = box.style.display==='none' ? 'flex' : 'none';
 }
 
-function importNameList(){
-  const ta = document.getElementById('list-import-ta');
-  const lines = ta.value.split('\n').map(l=>l.trim()).filter(l=>l.length>1);
-  if(!lines.length){ notify('אין שמות להוסיף'); return; }
-  let added = 0, skipped = 0;
-  lines.forEach(name=>{
-    if(S.playerLib.some(p=>p.name.toLowerCase()===name.toLowerCase())){
-      skipped++;
-    } else {
-      S.playerLib.push({id:uid(), name});
-      added++;
-    }
-  });
-  persist();
-  renderPlayerList();
-  document.getElementById('list-import-box').style.display='none';
-  ta.value='';
-  notify(`נוספו ${added} שחקנים${skipped?' ('+skipped+' כפילויות דולגו)':''} ✓`);
-}
+
 
 function exportData(){
   try{
@@ -1588,65 +1570,6 @@ try{
   if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
 }catch(e){}
 </script>
-
-<!-- LIST IMPORT BOX -->
-<div id="list-import-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
-  <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:400px">
-    <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:4px">📋 ייבוא רשימת שחקנים</div>
-    <div style="font-size:11px;color:#5a5870;margin-bottom:10px">הדבק שמות – שם אחד בכל שורה</div>
-    <textarea id="list-import-ta" rows="8" oninput="const lines=this.value.split('\n').filter(l=>l.trim().length>1);document.getElementById('list-import-preview').textContent=lines.length?lines.length+' שמות זוהו':''" placeholder="ישראל ישראלי&#10;יוסי כהן&#10;מושה לוי&#10;..." style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:13px;direction:rtl;resize:none;outline:none;box-sizing:border-box;line-height:1.8"></textarea>
-    <div style="font-size:10px;color:#3a3650;margin-top:5px" id="list-import-preview"></div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="importNameList()" style="flex:2;padding:11px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer">✓ הוסף שחקנים</button>
-      <button onclick="document.getElementById('list-import-box').style.display='none'" style="flex:1;padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">ביטול</button>
-    </div>
-  </div>
-</div>
-
-<!-- SETTINGS / SYNC PANEL -->
-<div id="settings-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
-  <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto">
-    <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:14px">⚙️ הגדרות סנכרון</div>
-
-    <!-- Google Sheets -->
-    <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:4px">🔗 Google Sheets</div>
-      <div style="font-size:10px;color:#5a5870;margin-bottom:8px">הדבק את ה-URL של ה-Apps Script לסנכרון אוטומטי</div>
-      <input id="gs-url" type="url" placeholder="https://script.google.com/macros/s/..." 
-        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:11px;outline:none;direction:ltr;box-sizing:border-box;margin-bottom:8px">
-      <div style="display:flex;gap:7px">
-        <button onclick="saveGSUrl()" style="flex:1;padding:8px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:12px;cursor:pointer">שמור URL</button>
-        <button onclick="syncFromSheets()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">📥 משוך נתונים</button>
-        <button onclick="syncToSheets(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:12px;cursor:pointer">📤 שלח נתונים</button>
-      </div>
-      <div id="sync-status" style="font-size:10px;color:#5a5870;margin-top:6px;min-height:14px"></div>
-    </div>
-
-    <!-- Instructions -->
-    <div style="background:rgba(200,169,110,0.06);border:1px solid rgba(200,169,110,0.15);border-radius:10px;padding:10px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:#c8a96e;margin-bottom:6px">📖 הגדרה ראשונית (פעם אחת)</div>
-      <div style="font-size:10px;color:#6a6070;line-height:1.8">
-        1. פתח <strong style="color:#e2ddd4">script.google.com</strong><br>
-        2. צור פרויקט חדש → הדבק את קוד ה-Script<br>
-        3. Deploy → New Deployment → Web App<br>
-        4. Execute as: <strong style="color:#e2ddd4">Me</strong> | Access: <strong style="color:#e2ddd4">Anyone</strong><br>
-        5. העתק את ה-URL → הדבק למעלה
-      </div>
-    </div>
-
-    <!-- Emergency backup -->
-    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:#e2ddd4;margin-bottom:4px">💾 גיבוי חירום</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:7px">למקרה שאין חיבור לגוגל</div>
-      <div style="display:flex;gap:7px">
-        <button onclick="exportData()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(200,169,110,0.3);background:transparent;color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer">💾 העתק קוד</button>
-        <button onclick="document.getElementById('settings-box').style.display='none';document.getElementById('import-box').style.display='flex'" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#8a8090;font-size:12px;cursor:pointer">📂 שחזר</button>
-      </div>
-    </div>
-
-    <button onclick="document.getElementById('settings-box').style.display='none'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">סגור</button>
-  </div>
-</div>
 
 <!-- BACKUP BOX -->
 <div id="backup-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
