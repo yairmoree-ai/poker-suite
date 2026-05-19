@@ -41,7 +41,7 @@ input,select,textarea{font-family:inherit}
 #main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
 /* TABLE */
 #table-view{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
-#table-wrap{flex:1;position:relative;overflow:hidden;background:#080b12;min-height:0;height:calc(100vh - 145px);max-height:calc(100vh - 145px);max-width:100vw}
+#table-wrap{position:relative;overflow:hidden;background:#080b12;width:min(100vw, calc(100vh - 145px));height:min(100vw, calc(100vh - 145px));margin:0 auto;flex-shrink:0}
 #table-svg{display:block}
 #seats-container{position:absolute;inset:0;z-index:10;pointer-events:none}
 .seat-el{position:absolute;transform:translate(-50%,-50%);z-index:10;pointer-events:auto;transition:transform .1s}
@@ -183,12 +183,12 @@ input,select,textarea{font-family:inherit}
           <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
           <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#164828"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
         </defs>
-        <ellipse cx="50" cy="50" rx="47" ry="43" fill="#060a10"/>
-        <ellipse cx="50" cy="50" rx="46" ry="42" fill="url(#gF)" opacity=".55"/>
-        <ellipse cx="50" cy="50" rx="46" ry="42" fill="none" stroke="#1e5535" stroke-width="1.5"/>
-        <ellipse cx="50" cy="50" rx="42.5" ry="38.5" fill="url(#gF2)"/>
-        <ellipse cx="50" cy="50" rx="42.5" ry="38.5" fill="none" stroke="#164030" stroke-width=".5"/>
-        <ellipse cx="50" cy="50" rx="39" ry="35" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>
+        <circle cx="50" cy="50" r="47" fill="#060a10"/>
+        <circle cx="50" cy="50" r="46" fill="url(#gF)" opacity=".55"/>
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#1e5535" stroke-width="1.5"/>
+        <circle cx="50" cy="50" r="42" fill="url(#gF2)"/>
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#164030" stroke-width=".5"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>
       </svg>
       <div id="seats-container"></div>
       <div id="board-center">
@@ -504,7 +504,7 @@ function assignPos(){
 }
 
 function getSeatXY(i,count){
-  const cx=50,cy=50,rx=44,ry=38;
+  const cx=50,cy=50,rx=42,ry=42;
   const angle=(Math.PI/2)+(2*Math.PI*i/count);
   return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
 }
