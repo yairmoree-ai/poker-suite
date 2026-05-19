@@ -143,9 +143,8 @@ input,select,textarea{font-family:inherit}
 <!-- TOP BAR -->
 <div id="topbar">
   <div class="topnav">
-    <div style="display:flex;align-items:center;gap:7px" onclick="toggleSettings()">
-      <span style="font-size:15px;font-weight:900;color:var(--gold)">🃏</span>
-      <span style="font-size:9px;letter-spacing:3px;color:var(--muted)">POKER SUITE</span>
+    <div style="display:flex;align-items:center;gap:7px">
+      <button onclick="toggleSettings()" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);font-size:14px;cursor:pointer;line-height:1">⚙️</button>
       <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#3a3650;display:inline-block" title="סטטוס סנכרון"></span>
     </div>
     <div class="nav-tabs">
@@ -157,7 +156,6 @@ input,select,textarea{font-family:inherit}
     <div style="display:flex;gap:5px">
       <button class="btn btn-outline btn-sm" onclick="showActivePlayers()">👥 פעילים</button>
       <button class="btn btn-gold btn-sm" onclick="newHand()">יד חדשה</button>
-      <button class="btn btn-outline btn-sm" onclick="toggleSettings()" style="padding:5px 8px;font-size:14px" title="הגדרות">⚙️</button>
     </div>
   </div>
   <div id="statsbar">
@@ -1594,6 +1592,37 @@ try{
       <button onclick="importFromCode()" style="flex:2;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer">✓ שחזר</button>
       <button onclick="document.getElementById('import-box').style.display='none'" style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">ביטול</button>
     </div>
+  </div>
+</div>
+
+<!-- SETTINGS BOX -->
+<div id="settings-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto">
+    <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:14px">⚙️ הגדרות סנכרון</div>
+
+    <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:4px">🔗 Google Sheets</div>
+      <div style="font-size:10px;color:#5a5870;margin-bottom:8px">הדבק את ה-URL של ה-Apps Script לסנכרון אוטומטי</div>
+      <input id="gs-url" type="url" placeholder="https://script.google.com/macros/s/..."
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:11px;outline:none;direction:ltr;box-sizing:border-box;margin-bottom:8px">
+      <div style="display:flex;gap:7px">
+        <button onclick="saveGSUrl()" style="flex:1;padding:8px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:12px;cursor:pointer">שמור URL</button>
+        <button onclick="syncFromSheets()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">📥 משוך נתונים</button>
+        <button onclick="syncToSheets(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:12px;cursor:pointer">📤 שלח נתונים</button>
+      </div>
+      <div id="sync-status" style="font-size:10px;color:#5a5870;margin-top:6px;min-height:14px"></div>
+    </div>
+
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:#e2ddd4;margin-bottom:4px">💾 גיבוי חירום</div>
+      <div style="font-size:10px;color:#5a5870;margin-bottom:7px">למקרה שאין חיבור לגוגל</div>
+      <div style="display:flex;gap:7px">
+        <button onclick="exportData()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(200,169,110,0.3);background:transparent;color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer">💾 העתק קוד</button>
+        <button onclick="document.getElementById('settings-box').style.display='none';document.getElementById('import-box').style.display='flex'" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#8a8090;font-size:12px;cursor:pointer">📂 שחזר</button>
+      </div>
+    </div>
+
+    <button onclick="document.getElementById('settings-box').style.display='none'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">סגור</button>
   </div>
 </div>
 </body></html>
