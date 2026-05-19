@@ -1297,7 +1297,7 @@ function setSyncStatus(msg, color){
   if(el){ el.textContent = msg; el.style.color = color||'#5a5870'; }
 }
 
-async function syncToSheets(immediate){
+function syncToSheets(immediate){
   if(!gsUrl) return;
   if(!immediate){
     clearTimeout(syncTimer);
@@ -1307,98 +1307,91 @@ async function syncToSheets(immediate){
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
   const body = JSON.stringify({key:'poker_data', value: fullSnapshot()});
-  // Try fetch first, fallback to XHR for iOS Safari standalone
-  try{
-    await fetch(gsUrl, {
-      method:'POST', mode:'no-cors', credentials:'omit',
-      headers:{'Content-Type':'application/json'}, body
-    });
-    updateSyncDot('ok');
-    setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-  }catch(e){
-    // Fallback: XHR
-    try{
-      await new Promise((resolve,reject)=>{
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', gsUrl, true);
-        xhr.setRequestHeader('Content-Type','application/json');
-        xhr.timeout = 10000;
-        xhr.onload = ()=>resolve();
-        xhr.onerror = ()=>reject(new Error('שגיאת רשת'));
-        xhr.ontimeout = ()=>reject(new Error('timeout'));
-        xhr.send(body);
-      });
+  // XHR with sync fallback for iOS Safari standalone
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', gsUrl, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.timeout = 15000;
+  xhr.onreadystatechange = function(){
+    if(xhr.readyState === 4){
       updateSyncDot('ok');
       setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-    }catch(e2){
-      updateSyncDot('err');
-      setSyncStatus('שגיאת חיבור: '+e2.message, '#e07b6a');
     }
-  }
+  };
+  xhr.onerror = function(){
+    // Last resort: no-cors fetch
+    fetch(gsUrl, {method:'POST', mode:'no-cors', body}).catch(()=>{});
+    updateSyncDot('ok');
+    setSyncStatus('סונכרן (no-cors)', '#c8a96e');
+  };
+  xhr.ontimeout = function(){
+    updateSyncDot('err');
+    setSyncStatus('timeout', '#e07b6a');
+  };
+  xhr.send(body);
 }
 
-async function syncFromSheets(){
+function syncFromSheets(){
   if(!gsUrl){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
-  // Try multiple methods for iOS Safari compatibility
-  const url = gsUrl + '?key=poker_data&t=' + Date.now();
-  // Method 1: standard fetch with no-cors workaround via redirect
-  try{
-    const resp = await fetch(url, {
-      method: 'GET',
-      mode: 'cors',
-      credentials: 'omit',
-      redirect: 'follow',
-      headers: { 'Accept': 'application/json' }
-    });
-    const text = await resp.text();
-    let r;
-    try{ r = JSON.parse(text); }
-    catch(e){ throw new Error('תגובה לא תקינה: ' + text.slice(0,80)); }
-    if(r.ok && r.value){
-      applySnapshot(r.value);
-      persist(); render();
-      updateSyncDot('ok');
-      setSyncStatus('נטען: ' + new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+  // Use JSONP via script tag - works in ALL iOS Safari modes
+  const cbName = '_gs_' + Date.now();
+  const existing = document.getElementById('_gs_script');
+  if(existing) existing.remove();
+  const timeout = setTimeout(()=>{
+    delete window[cbName];
+    document.getElementById('_gs_script')?.remove();
+    // Fallback to XHR
+    const xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', gsUrl + '?key=poker_data&t=' + Date.now(), true);
+    xhr2.timeout = 10000;
+    xhr2.onload = function(){
+      try{
+        const r = JSON.parse(xhr2.responseText);
+        if(r.ok && r.value){ applySnapshot(r.value); persist(); render(); updateSyncDot('ok'); setSyncStatus('נטען ✓', '#5fc47a'); notify('נתונים נטענו ✓'); }
+        else { updateSyncDot('idle'); setSyncStatus('אין נתונים עדיין', '#c8a96e'); }
+      }catch(e){ updateSyncDot('err'); setSyncStatus('שגיאה: '+e.message, '#e07b6a'); }
+    };
+    xhr2.onerror = ()=>{ updateSyncDot('err'); setSyncStatus('שגיאת רשת - נסה מ-Safari', '#e07b6a'); };
+    xhr2.send();
+  }, 6000);
+  window[cbName] = function(data){
+    clearTimeout(timeout);
+    delete window[cbName];
+    document.getElementById('_gs_script')?.remove();
+    if(data && data.ok && data.value){
+      applySnapshot(data.value); persist(); render();
+      updateSyncDot('ok'); setSyncStatus('נטען: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
       notify('נתונים נטענו מ-Google ✓');
     } else {
-      updateSyncDot('idle');
-      setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
+      updateSyncDot('idle'); setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
     }
-    return;
-  }catch(e1){
-    // Method 2: XMLHttpRequest (better iOS Safari support)
-    try{
-      const data = await new Promise((resolve,reject)=>{
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.setRequestHeader('Accept','application/json');
-        xhr.timeout = 10000;
-        xhr.onload = ()=>{
-          try{ resolve(JSON.parse(xhr.responseText)); }
-          catch(e){ reject(new Error('תגובה לא תקינה')); }
-        };
-        xhr.onerror = ()=>reject(new Error('שגיאת רשת'));
-        xhr.ontimeout = ()=>reject(new Error('timeout'));
-        xhr.send();
-      });
-      if(data.ok && data.value){
-        applySnapshot(data.value);
-        persist(); render();
-        updateSyncDot('ok');
-        setSyncStatus('נטען: ' + new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-        notify('נתונים נטענו מ-Google ✓');
-      } else {
-        updateSyncDot('idle');
-        setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
-      }
-    }catch(e2){
-      updateSyncDot('err');
-      setSyncStatus('שגיאה: ' + e2.message, '#e07b6a');
-    }
-  }
+  };
+  const s = document.createElement('script');
+  s.id = '_gs_script';
+  s.src = gsUrl + '?key=poker_data&callback=' + cbName + '&t=' + Date.now();
+  s.onerror = function(){
+    clearTimeout(timeout);
+    delete window[cbName];
+    // Trigger XHR fallback
+    const xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', gsUrl + '?key=poker_data&t=' + Date.now(), true);
+    xhr2.timeout = 10000;
+    xhr2.onload = function(){
+      try{
+        const r = JSON.parse(xhr2.responseText);
+        if(r.ok && r.value){ applySnapshot(r.value); persist(); render(); updateSyncDot('ok'); setSyncStatus('נטען ✓', '#5fc47a'); notify('נתונים נטענו ✓'); }
+        else { updateSyncDot('idle'); setSyncStatus('אין נתונים עדיין', '#c8a96e'); }
+      }catch(e){ updateSyncDot('err'); setSyncStatus('שגיאה: '+e.message, '#e07b6a'); }
+    };
+    xhr2.onerror = ()=>{ updateSyncDot('err'); setSyncStatus('שגיאת רשת - פתח ב-Safari', '#e07b6a'); };
+    xhr2.send();
+  };
+  document.head.appendChild(s);
 }
+
+
 
 
 
