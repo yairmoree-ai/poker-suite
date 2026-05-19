@@ -1265,13 +1265,13 @@ function renderPlayerList(){
 // ═══════════════════════════════
 // GOOGLE SHEETS SYNC
 // ═══════════════════════════════
-let gsUrl = '';
+let gsUrl = 'https://script.google.com/macros/s/AKfycbwHAAAFgkVIeA-viTNXhRSXBHrDz_yTbb06tf7yLKUPduvz1-3GATqjezHVoLAPPRiX/exec';
 let syncTimer = null;
 
 function loadGSUrl(){
-  try{ gsUrl = localStorage.getItem('ps_gsurl')||''; }catch(e){}
+  try{ gsUrl = localStorage.getItem('ps_gsurl')||'https://script.google.com/macros/s/AKfycbwHAAAFgkVIeA-viTNXhRSXBHrDz_yTbb06tf7yLKUPduvz1-3GATqjezHVoLAPPRiX/exec'; }catch(e){ gsUrl='https://script.google.com/macros/s/AKfycbwHAAAFgkVIeA-viTNXhRSXBHrDz_yTbb06tf7yLKUPduvz1-3GATqjezHVoLAPPRiX/exec'; }
   const inp = document.getElementById('gs-url');
-  if(inp && gsUrl) inp.value = gsUrl;
+  if(inp) inp.value = gsUrl;
   updateSyncDot(gsUrl ? 'idle' : 'off');
 }
 
