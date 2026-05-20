@@ -141,14 +141,31 @@ input,select,textarea{font-family:inherit}
 </style>
 </head>
 <body>
-<div id="app" style="background:#080b12">
+<div id="lock-screen" style="position:fixed;inset:0;z-index:999;background:#080b12;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="width:100%;max-width:320px;text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">🃏</div>
+    <div style="font-size:22px;font-weight:900;color:#c8a96e;margin-bottom:6px">Poker Suite</div>
+    <div style="font-size:12px;color:#5a5870;margin-bottom:28px;letter-spacing:2px">PRIVATE ACCESS</div>
+    <input id="pass-inp" type="password" placeholder="סיסמה..." 
+      onkeydown="if(event.key==='Enter')checkPass()"
+      style="width:100%;padding:13px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:16px;outline:none;text-align:center;margin-bottom:10px;box-sizing:border-box;-webkit-appearance:none">
+    <div id="pass-err" style="font-size:11px;color:#e07b6a;margin-bottom:10px;min-height:16px"></div>
+    <button onclick="checkPass()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#c8a96e,#a07840);color:#0a0d14;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px">כניסה</button>
+    <button onclick="enterAsViewer()" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:13px;cursor:pointer">👁 כניסה כצופה</button>
+  </div>
+</div>
+<div id="app" style="background:#080b12;display:none">
 
 <!-- TOP BAR -->
+<div id="viewer-banner" style="display:none;background:rgba(91,155,213,0.15);border-bottom:1px solid rgba(91,155,213,0.3);padding:5px 12px;align-items:center;justify-content:center;gap:8px;flex-shrink:0">
+  <span style="font-size:11px;color:#5b9bd5;font-weight:700">👁 מצב צפייה בלבד</span>
+</div>
 <div id="topbar">
   <div class="topnav">
     <div style="display:flex;align-items:center;gap:7px">
-      <button onclick="toggleSettings()" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);font-size:14px;cursor:pointer;line-height:1">⚙️</button>
+      <button id="btn-settings" onclick="toggleSettings()" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);font-size:14px;cursor:pointer;line-height:1">⚙️</button>
       <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#3a3650;display:inline-block" title="סטטוס סנכרון"></span>
+      <span id="user-badge" style="font-size:9px;color:#5a5870;background:rgba(255,255,255,0.05);border-radius:10px;padding:2px 7px"></span>
     </div>
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-table" onclick="showView('table')">שולחן</button>
@@ -157,15 +174,18 @@ input,select,textarea{font-family:inherit}
       <button class="nav-tab" id="tab-players" onclick="showView('players')">שחקנים</button>
     </div>
     <div style="display:flex;gap:5px">
-      <button class="btn btn-outline btn-sm" onclick="showActivePlayers()">👥 פעילים</button>
-      <button class="btn btn-gold btn-sm" onclick="newHand()">יד חדשה</button>
+      <button class="btn btn-outline btn-sm" id="btn-active" onclick="showActivePlayers()">👥 פעילים</button>
+      <button class="btn btn-gold btn-sm" onclick="if(isAdmin())newHand();else notify('צופה בלבד')" id="btn-newhand">יד חדשה</button>
+      <button class="btn btn-green btn-sm" id="btn-savehand" onclick="if(isAdmin())showSaveHandPanel();else notify('צופה בלבד')" title="שמור יד">💾</button>
+      <button class="btn btn-outline btn-sm" id="btn-resethand" onclick="if(isAdmin())resetHand();else notify('צופה בלבד')" title="איפוס יד">↺</button>
     </div>
   </div>
   <div id="statsbar">
-    <div class="sbox"><label>עלות כניסה</label><input type="number" id="inp-buyin-cost" value="50" min="0" onchange="S.buyinCost=+this.value;persist();renderStats()"></div>
-    <div class="sbox"><label>שחקנים בשולחן</label><select id="sel-table-size" onchange="setTableSize(+this.value)">
+    <div class="sbox" id="sbox-buyincost"><label>עלות כניסה</label><input type="number" id="inp-buyin-cost" value="50" min="0" onchange="S.buyinCost=+this.value;persist();renderStats()"></div>
+    <div class="sbox" id="sbox-tablesize"><label>שחקנים בשולחן</label><select id="sel-table-size" onchange="setTableSize(+this.value)">
       <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
     </select></div>
+
     <div class="sbox"><label>שחקנים</label><div class="val" id="stat-players">0</div></div>
     <div class="sbox"><label>Rebuy</label><div class="val" id="stat-rebuys">0</div></div>
     <div class="sbox"><label>כניסות</label><div class="val" id="stat-entries">0</div></div>
@@ -371,6 +391,8 @@ function applySnapshot(v){
   if(v.seats) S.seats=v.seats;
   if(v.board) S.board=v.board;
   if(v.btnSeat!==undefined) S.btnSeat=v.btnSeat;
+  if(v.btnLocked!==undefined) S.btnLocked=v.btnLocked;
+  if(v.lastBet!==undefined) S.lastBet=v.lastBet;
   if(v.buyinCost) S.buyinCost=v.buyinCost;
   if(v.buyins) S.buyins=v.buyins;
   if(v.koOrder) S.koOrder=v.koOrder;
@@ -448,7 +470,7 @@ function persist(){
   // Save to both localStorage and sessionStorage
   try{ localStorage.setItem('ps_lib',JSON.stringify(S.playerLib)); }catch(e){}
   try{ localStorage.setItem('ps_seats',JSON.stringify({seats:S.seats,board:S.board,btnSeat:S.btnSeat})); }catch(e){}
-  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,houseRake:S.houseRake,place4:S.place4,place3:S.place3})); }catch(e){}
+  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,houseRake:S.houseRake,place4:S.place4,place3:S.place3,btnLocked:S.btnLocked,lastBet:S.lastBet})); }catch(e){}
   try{ localStorage.setItem('ps_log',JSON.stringify(S.handLog)); }catch(e){}
   try{ localStorage.setItem('ps_tlog',JSON.stringify(S.tournLog)); }catch(e){}
   // Also save full snapshot to sessionStorage (survives refresh, not new tab)
@@ -514,6 +536,19 @@ function getSeatXY(i,count){
 // ═══════════════════════════════════════════════════════
 function render(){
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+  // Show/hide viewer banner
+  const vb = document.getElementById('viewer-banner');
+  if(vb) vb.style.display = isViewer()?'flex':'none';
+  // Hide tabs not available for viewers
+  ['tab-table','tab-hands'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = isViewer()?'none':'';
+  });
+  // Hide action buttons for viewers
+  ['btn-settings','btn-active','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = isViewer()?'none':'';
+  });
 }
 function renderStats(){
   const buy=Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0).length;
@@ -535,8 +570,10 @@ function renderSeats(){
     const isAct=activeSeat===i, isFold=seat?.folded, isAlin=seat?.allin, isBtn=i===S.btnSeat&&seat?.playerId;
     const bb=getBB();
     const sbb=seat?.stack&&bb?(seat.stack/bb).toFixed(1):null;
-    const lastAct=seat?.actions?.slice(-1)[0];
-    const w=seat?.playerId?78:44;
+    const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
+    const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
+    const displayAct = lastAct||blindAct;
+    const w=seat?.playerId?80:44;
     let cls='seat-btn';
     if(seat?.playerId)cls+=' occupied';
     if(isAct)cls+=' active';
@@ -548,13 +585,13 @@ function renderSeats(){
     el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?62:42}px" onclick="clickSeat(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
-          ${seat.pos?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}22;color:${PC[seat.pos]||'#c8a96e'}">${seat.pos}</span>`:''}
+          ${seat.pos?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
           ${isBtn?`<span class="dealer-chip">D</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
         ${seat.stack?`<div class="seat-stack">${seat.stack.toLocaleString()}${sbb?` (${sbb}bb)`:''}</div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
-        ${lastAct?`<div class="seat-action-label" style="color:${ACTIONS.find(a=>a.k===lastAct.type)?.c||'var(--gold)'}">${lastAct.type}${lastAct.amount?' '+Number(lastAct.amount).toLocaleString():''}</div>`:''}
+        ${displayAct?`<div class="seat-action-label" style="color:${displayAct.type==='SB'?'#8b7cb8':displayAct.type==='BB'?'#e07b6a':ACTIONS.find(a=>a.k===displayAct.type)?.c||'var(--gold)'};font-size:${displayAct.type==='SB'||displayAct.type==='BB'?'9':'9'}px">${displayAct.type}${displayAct.amount?' ₪'+Number(displayAct.amount).toLocaleString():''}</div>`:''}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     cont.appendChild(el);
@@ -619,9 +656,11 @@ function renderSeatPanel(){
     </div>
   </div>`;
   // BTN
-  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">עמדת דילר</span>
-    <button class="btn ${S.btnSeat===i?'btn-gold':'btn-outline'} btn-sm" onclick="S.btnSeat=${i};persist();renderSeats();renderSeatPanel()">
-      ${S.btnSeat===i?'✓ BTN':'סמן BTN'}
+  const btnLabel = S.btnLocked ? '🔒 BTN נעול' : S.btnSeat===i ? '✓ BTN מסומן' : '🎯 סמן כ-BTN והתחל יד';
+  const btnStyle = S.btnLocked ? 'background:rgba(90,80,96,0.1);border:1px solid #5a506050;color:#5a5060' : S.btnSeat===i ? 'background:rgba(200,169,110,0.2);border:1px solid rgba(200,169,110,0.5);color:var(--gold)' : 'background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.5);color:#5b9bd5';
+  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">עמדת דילר (BTN)</span>
+    <button class="btn btn-sm" style="${btnStyle}" onclick="if(!S.btnLocked){S.btnSeat=${i};postBlinds(${i});persist();renderSeats();renderSeatPanel();}">
+      ${btnLabel}
     </button></div>`;
   // Cards
   html+=`<div style="margin-bottom:10px"><span class="sec-lbl">קלפים (Showdown)</span>
@@ -634,12 +673,22 @@ function renderSeatPanel(){
   // Actions
   html+=`<div><span class="sec-lbl">פעולות</span>
     <div class="action-block">
-      ${ACTIONS.map(a=>`
-        <div class="action-row">
+      ${ACTIONS.map(a=>{
+        if(a.k==='Fold'||a.k==='Check'){
+          // Instant button - no amount needed
+          return `<div class="action-row">
+            <button style="flex:1;padding:8px 14px;border-radius:8px;border:1.5px solid ${a.c}60;background:${a.c}18;color:${a.c};font-weight:700;font-size:13px;cursor:pointer" onclick="doAction(${i},'${a.k}','')">
+              ${a.k==='Fold'?'🏳️ Fold':'✋ Check'}
+            </button>
+          </div>`;
+        }
+        const defaultAmt = a.k==='Call'?S.lastBet:'';
+        return `<div class="action-row">
           <span class="action-lbl" style="color:${a.c}">${a.k}</span>
-          ${a.amt?`<input class="action-amt" type="number" id="aamt-${i}-${a.k}" placeholder="סכום" min="0" onkeydown="if(event.key==='Enter')doAction(${i},'${a.k}',this.value)">`:`<span style="flex:1"></span>`}
-          <button class="action-go" style="background:${a.c}22;border:1px solid ${a.c}55;color:${a.c}" onclick="doAction(${i},'${a.k}',${a.amt?`document.getElementById('aamt-${i}-${a.k}')?.value||''`:`''`})">✓</button>
-        </div>`).join('')}
+          <input class="action-amt" type="number" id="aamt-${i}-${a.k}" placeholder="סכום" min="0" value="${defaultAmt}" onkeydown="if(event.key==='Enter')doAction(${i},'${a.k}',this.value)">
+          <button class="action-go" style="background:${a.c}22;border:1px solid ${a.c}55;color:${a.c}" onclick="doAction(${i},'${a.k}',document.getElementById('aamt-${i}-${a.k}')?.value||'')">✓</button>
+        </div>`;
+      }).join('')}
     </div>`;
   // Current actions chips
   if((seat.actions||[]).length){
@@ -656,18 +705,23 @@ function renderSeatPanel(){
   document.getElementById('spb').innerHTML=html;
 }
 
-function doAction(seatIdx, type, amount){
+function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלבד');return;}
   const seat=S.seats.find(s=>s.seatIdx===seatIdx); if(!seat)return;
   const amt=parseFloat(amount)||0;
   if(!seat.actions)seat.actions=[];
-  seat.actions.push({street:'',type,amount:amt?String(amt):''});
+  // Determine current street from board
+  const boardCards = S.board.filter(Boolean).length;
+  const street = boardCards===0?'פרה-פלופ':boardCards<=3?'פלופ':boardCards===4?'טורן':'ריבר';
+  seat.actions.push({street,type,amount:amt?String(amt):''});
   if(type==='Fold')seat.folded=true;
   if(type==='All-in')seat.allin=true;
-  // Deduct from stack if amount given
   if(amt>0){
     seat.stack=Math.max(0,(seat.stack||0)-amt);
+    // Track last bet for Call default
+    if(['Open','Raise','3bet','4bet','5bet','All-in','Bet'].includes(type)){
+      S.lastBet=amt;
+    }
   }
-  // Clear input
   const inp=document.getElementById(`aamt-${seatIdx}-${type}`);
   if(inp)inp.value='';
   persist(); renderSeats(); renderBoard(); renderSeatPanel();
@@ -686,6 +740,7 @@ function rmSeatAction(seatIdx,ai){
 // SEAT ACTIONS
 // ═══════════════════════════════════════════════════════
 function clickSeat(i){
+  if(isViewer()){notify('צופה בלבד – אין הרשאת עריכה');return;}
   if(activeSeat===i){activeSeat=null;closePanel('seat-panel');return;}
   if(!S.seats.find(s=>s.seatIdx===i))
     S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:0,pos:'',cards:[null,null],actions:[],folded:false,allin:false});
@@ -705,7 +760,70 @@ function removeSeat(i){
   activeSeat=null; closePanel('seat-panel');
   persist(); render();
 }
-function doKO(){
+function postBlinds(btnSeatIdx){
+  // Auto-post SB and BB after BTN is set
+  const b = getBlinds();
+  const swp = assignPos();
+  const sb = swp.find(s=>s.pos==='SB'||s.pos==='BTN/SB');
+  const bb = swp.find(s=>s.pos==='BB');
+  if(sb && sb.playerId){
+    const seat = S.seats.find(s=>s.seatIdx===sb.seatIdx);
+    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.sb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'SB',amount:String(b.sb)}); }
+  }
+  if(bb && bb.playerId){
+    const seat = S.seats.find(s=>s.seatIdx===bb.seatIdx);
+    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.bb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'BB',amount:String(b.bb)}); S.lastBet=b.bb; }
+  }
+  S.btnLocked = true;
+  persist(); renderSeats(); renderBoard();
+}
+
+function resetHand(){
+  S.btnLocked = false;
+  S.btnSeat = null;
+  S.lastBet = 0;
+  S.board = [null,null,null,null,null];
+  S.seats = S.seats.map(s=>({...s, cards:[null,null], actions:[], folded:false, allin:false}));
+  persist(); render(); notify('יד אופסה');
+}
+
+function saveHandWithLabel(){
+  const label = document.getElementById('hand-label-inp')?.value?.trim()||'';
+  const swp = assignPos();
+  const b = getBlinds();
+  const hand = {
+    id:uid(), date:new Date().toLocaleString('he-IL'),
+    blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
+    label, board:[...S.board],
+    seats: swp.filter(s=>s.playerId).map(s=>({
+      seatIdx:s.seatIdx, playerId:s.playerId, playerName:pName(s.playerId),
+      pos:s.pos, stack:s.stack, cards:[...(s.cards||[null,null])],
+      actions:[...(s.actions||[])], folded:s.folded||false, allin:s.allin||false
+    })),
+    result:null, amount:'', notes:'',
+    finalPot: calcPot()
+  };
+  S.handLog=[hand,...S.handLog];
+  resetHand();
+  syncToSheets(false);
+  notify('יד נשמרה ✓');
+  document.getElementById('save-hand-panel')?.remove();
+}
+
+function showSaveHandPanel(){
+  const existing = document.getElementById('save-hand-panel');
+  if(existing){ existing.remove(); return; }
+  const div = document.createElement('div');
+  div.id = 'save-hand-panel';
+  div.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:60;background:#0a0e18;border-top:1px solid rgba(200,169,110,0.3);padding:14px;display:flex;gap:8px;align-items:center';
+  div.innerHTML = `<input id="hand-label-inp" placeholder="לייבל (אופציונלי)..." style="flex:1;padding:9px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:13px;outline:none;direction:rtl">
+    <button onclick="saveHandWithLabel()" style="padding:9px 16px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer">💾 שמור</button>
+    <button onclick="document.getElementById('save-hand-panel')?.remove()" style="padding:9px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">✕</button>`;
+  document.body.appendChild(div);
+  document.getElementById('hand-label-inp')?.focus();
+}
+
+function doKO(){if(isViewer()){notify('צופה בלבד');return;}
   if(activeSeat===null)return;
   const seat=S.seats.find(s=>s.seatIdx===activeSeat); if(!seat)return;
   const pid=seat.playerId;
@@ -714,7 +832,7 @@ function doKO(){
   activeSeat=null; closePanel('seat-panel');
   persist(); render(); notify('שחקן הוצא 💀');
 }
-function doRebuyActive(){
+function doRebuyActive(){if(isViewer()){notify('צופה בלבד');return;}
   const seat=S.seats.find(s=>s.seatIdx===activeSeat);
   if(seat?.playerId)doRebuy(seat.playerId,1);
 }
@@ -1011,7 +1129,7 @@ function calcPrizes(){
   const rem=Math.max(0,pool-house-p4-p3);
   return{pool,house,p4,p3,p2:rem*0.3,p1:rem*0.7,rem};
 }
-function saveTournament(){
+function saveTournament(){if(isViewer()){notify('צופה בלבד');return;}
   const pr=calcPrizes();
   // Determine places: koOrder = [first KO, second KO, ...]
   // Reverse for placing: last KO = 4th place, second-to-last = 3rd, etc.
@@ -1037,7 +1155,7 @@ function saveTournament(){
   S.tournLog=[t,...S.tournLog];
   persist(); renderTournList(); notify('טורניר נשמר ✓');
 }
-function resetTournament(){
+function resetTournament(){if(isViewer()){notify('צופה בלבד');return;}
   // Show inline confirm inside the app
   const cont = document.getElementById('tourn-list');
   const prev = cont.innerHTML;
@@ -1459,14 +1577,14 @@ function tryLoad(key){
   }catch(e){ notify('שגיאה: '+e.message); }
 }
 function showAddPlayer(){document.getElementById('new-pname')?.focus();}
-function addPlayer(){
+function addPlayer(){if(isViewer()){notify('צופה בלבד');return;}
   const inp=document.getElementById('new-pname');
   const name=inp?.value?.trim(); if(!name)return;
   S.playerLib.push({id:uid(),name});
   inp.value=''; inp.focus();
   persist(); renderPlayerList(); notify('שחקן נוסף ✓');
 }
-function deletePlayer(id){
+function deletePlayer(id){if(isViewer()){notify('צופה בלבד');return;}
   S.playerLib=S.playerLib.filter(p=>p.id!==id);
   persist(); renderPlayerList();
 }
@@ -1534,10 +1652,18 @@ function closeAllPanels(){
 }
 function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
 function showView(v){
+  // Viewers can only see players and tournaments
+  if(isViewer() && (v==='table'||v==='hands')){
+    notify('אין הרשאה לטאב זה');
+    return;
+  }
   ['table','hands','tourn','players'].forEach(vv=>{
     document.getElementById(`${vv}-view`).style.display=vv===v?(vv==='table'?'flex':'block'):'none';
     document.getElementById(`tab-${vv}`)?.classList.toggle('active',vv===v);
   });
+  // Hide table size selector in players/tournaments tabs
+  const tblSize = document.getElementById('sbox-tablesize');
+  if(tblSize) tblSize.style.display = (v==='tourn'||v==='players') ? 'none' : '';
   if(v==='hands')renderHandList();
   if(v==='tourn')renderTournList();
   if(v==='players')renderPlayerList();
@@ -1559,12 +1685,65 @@ try{
 }
 
 // INIT
-try{ loadState(); }catch(e){ console.error('loadState error:',e); render(); }
-try{
-  loadGSUrl();
-  // Auto-pull from Google on startup if URL is configured
-  if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
-}catch(e){}
+// ═══════════════════════════════════════
+// USERS - הוסף/ערוך משתמשים כאן
+// ═══════════════════════════════════════
+const USERS = [
+  { name:'יאיר',   pass:'1234',    role:'admin'  },
+  // מנהלים נוספים:
+  // { name:'שם', pass:'סיסמה', role:'admin' },
+];
+// viewer = read-only (no edit, no save, no delete)
+let currentUser = null;
+
+function checkPass(){
+  const inp = document.getElementById('pass-inp');
+  const val = inp?.value?.trim();
+  const user = USERS.find(u=>u.pass===val);
+  if(user){
+    currentUser = user;
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    // Show username in topbar
+    const dot = document.getElementById('sync-dot');
+    if(dot) dot.title = 'מחובר: '+user.name;
+    const badge = document.getElementById('user-badge');
+    if(badge){
+      badge.textContent = user.name + (user.role==='viewer'?' 👁':'');
+      badge.style.color = user.role==='viewer'?'#5b9bd5':'#5a5870';
+    }
+    inp.value='';
+    try{ loadState(); }catch(e){ console.error('loadState error:',e); render(); }
+    try{
+      loadGSUrl();
+      if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
+      setInterval(()=>{ if(gsUrl) syncFromSheets(); }, 10000);
+    }catch(e){}
+  } else {
+    const err = document.getElementById('pass-err');
+    if(err){ err.textContent='סיסמה שגויה'; setTimeout(()=>err.textContent='',2000); }
+    inp?.select();
+  }
+}
+const isAdmin  = ()=> currentUser?.role==='admin';
+const isViewer = ()=> currentUser?.role==='viewer';
+
+function enterAsViewer(){
+  currentUser = { name:'צופה', role:'viewer' };
+  document.getElementById('lock-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  const badge = document.getElementById('user-badge');
+  if(badge){ badge.textContent='צופה 👁'; badge.style.color='#5b9bd5'; }
+  try{ loadState(); }catch(e){ render(); }
+  try{
+    loadGSUrl();
+    if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
+    setInterval(()=>{ if(gsUrl) syncFromSheets(); }, 10000);
+  }catch(e){}
+}
+
+// Auto-focus password input
+setTimeout(()=>document.getElementById('pass-inp')?.focus(), 100);
 </script>
 
 <!-- BACKUP BOX -->
