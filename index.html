@@ -1708,6 +1708,8 @@ const USERS = [
 ];
 // viewer = read-only (no edit, no save, no delete)
 let currentUser = null;
+const isAdmin  = ()=> currentUser?.role==='admin';
+const isViewer = ()=> currentUser?.role==='viewer';
 
 function checkPass(){
   const inp = document.getElementById('pass-inp');
@@ -1738,8 +1740,7 @@ function checkPass(){
     inp?.select();
   }
 }
-const isAdmin  = ()=> currentUser?.role==='admin';
-const isViewer = ()=> currentUser?.role==='viewer';
+
 
 function enterAsViewer(){
   currentUser = { name:'צופה', role:'viewer' };
