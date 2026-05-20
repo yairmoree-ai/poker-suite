@@ -1465,10 +1465,16 @@ async function syncFromSheets(){
     const r = JSON.parse(text);
     if(r.ok && r.value){
       applySnapshot(r.value);
-      persist(); render();
+      if(!isViewer()) persist();
+      render();
+      // Re-render current active view for viewers
+      if(isViewer()){
+        const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
+        if(activeTab==='tourn') renderTournList();
+        if(activeTab==='players') renderPlayerList();
+      }
       updateSyncDot('ok');
-      setSyncStatus('נטען: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-      notify('נתונים נטענו מ-Google ✓');
+      setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
     } else {
       updateSyncDot('idle');
       setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
