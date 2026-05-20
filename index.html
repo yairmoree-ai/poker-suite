@@ -476,8 +476,8 @@ function persist(){
   try{ sessionStorage.setItem('ps_snap', JSON.stringify(snap)); }catch(e){}
   // Save to all known old keys for migration
   try{ localStorage.setItem('ps_backup', JSON.stringify(snap)); }catch(e){}
-  // Auto-sync to Google Sheets (debounced)
-  if(typeof syncToSheets === 'function' && gsUrl) syncToSheets(false);
+  // Auto-sync to Google Sheets (debounced) - only for admins
+  if(typeof syncToSheets === 'function' && gsUrl && !isViewer()) syncToSheets(false);
 }
 
 function fullSnapshot(){
@@ -865,21 +865,26 @@ function setTableSize(n){
 function showActivePlayers(){
   const pp=document.getElementById('players-popup');
   const cont=document.getElementById('pp-content');
-  const active=S.seats.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId));
-  const activeTP=activeTournPlayers();
-  const winner=activeTP.length===1?activeTP[0]:null;
-  const swp=assignPos();
+  // Active = have buyin AND not KO'd
+  const activePids = Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid));
+  const winner = activePids.length===1?activePids[0]:null;
+  // Get seat data for active players
+  const swpActive = assignPos();
   const ko=[...S.koOrder].reverse(); // last KO first in list
   let html='';
-  if(!active.length&&!ko.length){html='<div style="color:var(--muted);font-size:13px;padding:10px">אין שחקנים פעילים</div>';}
+  if(!activePids.length&&!ko.length){html='<div style="color:var(--muted);font-size:13px;padding:10px">אין שחקנים פעילים</div>';}
   else{
-    if(active.length){
-      html+=`<div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:7px">פעילים (${active.length})</div>`;
-      swp.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId)).forEach(s=>{
-        const isW=winner===s.playerId;
-        html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);${isW?'background:rgba(255,215,0,0.06);border-radius:8px;padding:8px;':''}">
+    if(activePids.length){
+      html+=`<div style="font-size:11px;font-weight:700;margin-bottom:7px;color:${activePids.length===1?'#FFD700':'var(--muted)'}">${activePids.length===1?'🏆 Winner!':'פעילים ('+activePids.length+')'}</div>`;
+      activePids.forEach(pid=>{
+        const s=swpActive.find(s=>s.playerId===pid)||{playerId:pid,pos:'',stack:0};
+        const isW=winner===pid;
+        const playerName = pName(pid)||'?';
+        const rb = (S.buyins[pid]||{}).rebuy||0;
+        html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,0.05);border-radius:${isW?'8px':'0'};background:${isW?'rgba(255,215,0,0.06)':'transparent'}">
           ${isW?`<span style="font-size:18px">🥇</span>`:`<span style="font-size:10px;font-weight:700;color:${PC[s.pos]||'var(--gold)'};background:${PC[s.pos]||'var(--gold)'}18;border-radius:4px;padding:1px 6px;min-width:36px;text-align:center">${s.pos||'-'}</span>`}
-          <span style="font-size:${isW?'15':'13'}px;font-weight:${isW?'800':'700'};flex:1;color:${isW?'#FFD700':'#e2ddd4'}">${pName(s.playerId)}${isW?' 🏆':''}</span>
+          <span style="font-size:${isW?'15':'13'}px;font-weight:${isW?'800':'700'};flex:1;color:${isW?'#FFD700':'#e2ddd4'}">${playerName}${isW?' 🏆':''}</span>
+          ${rb>0?`<span style="font-size:10px;color:var(--muted)">R:${rb}</span>`:''}
           ${s.stack?`<span style="font-size:11px;color:var(--muted)">${s.stack.toLocaleString()}</span>`:''}
         </div>`;
       });
@@ -887,7 +892,7 @@ function showActivePlayers(){
     if(ko.length){
       html+=`<div style="font-size:11px;color:var(--muted);font-weight:600;margin:12px 0 7px">הודחו</div>`;
       // ko[0]=first eliminated=last place, ko[last]=last eliminated=2nd place
-      const activeCnt = S.seats.filter(s=>s.playerId&&!S.koOrder.includes(s.playerId)).length;
+      const activeCnt = activePids.length;
       ko.forEach((pid,i)=>{
         // i=0 is last KO (2nd place), i=last is first KO (last place)
         const place = activeCnt + i + 1;
@@ -1420,6 +1425,7 @@ function setSyncStatus(msg, color){
 
 async function syncToSheets(immediate){
   if(!gsUrl) return;
+  if(isViewer()) return; // viewers don't write
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
