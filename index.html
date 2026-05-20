@@ -176,6 +176,7 @@ input,select,textarea{font-family:inherit}
     <div style="display:flex;gap:5px">
       <button class="btn btn-outline btn-sm" id="btn-active" onclick="showActivePlayers()">👥 פעילים</button>
       <button class="btn btn-gold btn-sm" onclick="if(isAdmin())newHand();else notify('צופה בלבד')" id="btn-newhand">יד חדשה</button>
+      <button id="btn-viewer-refresh" class="btn btn-outline btn-sm" onclick="syncFromSheets()" style="display:none" title="רענן נתונים">🔄</button>
       <button class="btn btn-green btn-sm" id="btn-savehand" onclick="if(isAdmin())showSaveHandPanel();else notify('צופה בלבד')" title="שמור יד">💾</button>
       <button class="btn btn-outline btn-sm" id="btn-resethand" onclick="if(isAdmin())resetHand();else notify('צופה בלבד')" title="איפוס יד">↺</button>
     </div>
@@ -272,9 +273,9 @@ input,select,textarea{font-family:inherit}
   <div id="players-view" class="list-view" style="display:none;background:#080b12">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;color:var(--gold)">👥 שחקנים</div>
-      <button class="btn btn-gold btn-sm" onclick="showAddPlayer()">+ הוסף</button>
-      <button class="btn btn-outline btn-sm" onclick="exportData()">📤 ייצוא</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-box').style.display='flex'">📂 שחזור</button>
+      <button id="btn-addplayer" class="btn btn-gold btn-sm" onclick="showAddPlayer()">+ הוסף</button>
+      <button id="btn-export" class="btn btn-outline btn-sm" onclick="exportData()">📤 ייצוא</button>
+      <button id="btn-restore" class="btn btn-outline btn-sm" onclick="document.getElementById('import-box').style.display='flex'">📂 שחזור</button>
 
     </div>
     <div id="diag-box" style="display:none;background:#141824;border:1px solid rgba(200,169,110,0.3);border-radius:10px;padding:10px;margin-bottom:10px;font-size:11px;color:#e2ddd4;word-break:break-all"></div>
@@ -543,8 +544,11 @@ function render(){
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
+  // Show refresh button only for viewers
+  const vRefresh = document.getElementById('btn-viewer-refresh');
+  if(vRefresh) vRefresh.style.display = isViewer()?'':'none';
   // Hide action buttons for viewers
-  ['btn-settings','btn-active','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost'].forEach(id=>{
+  ['btn-settings','btn-active','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
@@ -1726,7 +1730,7 @@ function checkPass(){
     try{
       loadGSUrl();
       if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
-      setInterval(()=>{ if(gsUrl) syncFromSheets(); }, 10000);
+      setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
     }catch(e){}
   } else {
     const err = document.getElementById('pass-err');
@@ -1747,7 +1751,7 @@ function enterAsViewer(){
   try{
     loadGSUrl();
     if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
-    setInterval(()=>{ if(gsUrl) syncFromSheets(); }, 10000);
+    setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
   }catch(e){}
 }
 
