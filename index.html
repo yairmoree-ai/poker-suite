@@ -1467,12 +1467,11 @@ async function syncFromSheets(){
       applySnapshot(r.value);
       if(!isViewer()) persist();
       render();
-      // Re-render current active view for viewers
-      if(isViewer()){
-        const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
-        if(activeTab==='tourn') renderTournList();
-        if(activeTab==='players') renderPlayerList();
-      }
+      // Re-render current active view
+      const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
+      if(activeTab==='tourn') renderTournList();
+      if(activeTab==='players') renderPlayerList();
+      if(activeTab==='hands') renderHandList();
       updateSyncDot('ok');
       setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
     } else {
