@@ -70,7 +70,7 @@ input,select,textarea{font-family:inherit}
 .panel.open{transform:translateY(0)}
 .panel-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 8px;position:sticky;top:0;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.06);z-index:1}
 .panel-title{font-size:13px;font-weight:800;color:var(--gold)}
-.panel-body{padding:12px 14px 24px}
+.panel-body{padding:8px 12px 16px}
 .panel-close{background:none;border:none;color:var(--muted);font-size:20px;line-height:1;padding:0}
 /* CARD PICKER */
 #card-picker{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:16px}
@@ -85,17 +85,17 @@ input,select,textarea{font-family:inherit}
 .picker-back{width:100%;margin-top:10px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-size:12px}
 /* ACTIONS in seat panel */
 .action-block{margin-bottom:8px}
-.action-row{display:flex;align-items:center;gap:6px;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:4px}
+.action-row{display:flex;align-items:center;gap:5px;padding:4px 7px;background:rgba(255,255,255,0.03);border-radius:7px;margin-bottom:3px}
 .action-lbl{font-size:10px;font-weight:700;min-width:52px}
 .action-amt{width:72px;padding:5px 7px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#c8a96e;font-size:12px;outline:none;text-align:center;direction:ltr;-webkit-appearance:none}
 .action-go{padding:5px 10px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer}
 .action-chip{display:inline-flex;align-items:center;gap:3px;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;margin:2px}
 .action-chip .rm{background:none;border:none;font-size:10px;cursor:pointer;opacity:.5;padding:0}
 /* FORMS */
-.form-row{display:flex;gap:8px;margin-bottom:8px}
+.form-row{display:flex;gap:7px;margin-bottom:6px}
 .form-group{flex:1}
 .form-group label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:600}
-.form-group input,.form-group select,.form-group textarea{width:100%;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#e2ddd4;font-size:12px;outline:none;direction:rtl;-webkit-appearance:none;appearance:none}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:6px 8px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#e2ddd4;font-size:12px;outline:none;direction:rtl;-webkit-appearance:none;appearance:none}
 .form-group input[type=number]{direction:ltr;text-align:center}
 /* BUTTONS */
 .btn{padding:7px 12px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
@@ -128,7 +128,7 @@ input,select,textarea{font-family:inherit}
 #notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* DIVIDER */
 .div{height:1px;background:rgba(255,255,255,0.06);margin:8px 0}
-.sec-lbl{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:5px;display:block}
+.sec-lbl{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px;display:block}
 /* RESULT BTNS */
 .res-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .res-btn{padding:8px 4px;border-radius:9px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:var(--muted2);font-weight:700;font-size:10px;cursor:pointer;text-align:center}
@@ -349,7 +349,6 @@ const ACTIONS=[
   {k:'Raise',  c:'#e0a050', amt:true},
   {k:'3bet',   c:'#e07b6a', amt:true},
   {k:'4bet',   c:'#e05555', amt:true},
-  {k:'5bet',   c:'#cc3333', amt:true},
   {k:'All-in', c:'#ff2222', amt:true}
 ];
 const RESULTS=[
@@ -639,8 +638,8 @@ function renderSeatPanel(){
   const swp=assignPos();
   const seat=swp.find(s=>s.seatIdx===i)||{seatIdx:i,playerId:'',stack:0,pos:'',cards:[null,null],actions:[],folded:false,allin:false};
   const has=!!seat.playerId, pos=seat.pos, bb=getBB();
-  document.getElementById('spt').innerHTML=`מושב ${i+1}${pos?` <span style="font-size:10px;font-weight:700;color:${PC[pos]||'var(--gold)'};background:${PC[pos]||'var(--gold)'}20;border-radius:4px;padding:1px 6px">${pos}</span>`:''}`;
-  document.getElementById('btn-ko').style.display=has?'':'none';
+  const titleName = seat.playerId ? pName(seat.playerId) : `מושב ${i+1}`;
+  document.getElementById('spt').innerHTML=`<span style="font-size:14px;font-weight:800">${titleName}</span>${pos?` <span style="font-size:11px;font-weight:800;color:${PC[pos]||'var(--gold)'};background:${PC[pos]||'var(--gold)'}25;border-radius:6px;padding:2px 8px;margin-right:6px">${pos}</span>`:''}`;  document.getElementById('btn-ko').style.display=has?'':'none';
   document.getElementById('btn-rebuy').style.display=has?'':'none';
   // Player + stack
   const takenPids=S.seats.filter(s=>s.seatIdx!==i&&s.playerId).map(s=>s.playerId);
@@ -652,18 +651,18 @@ function renderSeatPanel(){
       </select>
     </div>
     <div class="form-group"><label>ערימה${seat.stack&&bb?` <span style="color:var(--muted2);font-weight:400">(${(seat.stack/bb).toFixed(1)}bb)</span>`:''}</label>
-      <input type="number" value="${seat.stack||''}" placeholder="0" onchange="updSeat(${i},{stack:+this.value||0})">
+      <input type="number" value="${seat.stack||50000}" placeholder="50000" onchange="updSeat(${i},{stack:+this.value||0})">
     </div>
   </div>`;
   // BTN
   const btnLabel = S.btnLocked ? '🔒 BTN נעול' : S.btnSeat===i ? '✓ BTN מסומן' : '🎯 סמן כ-BTN והתחל יד';
   const btnStyle = S.btnLocked ? 'background:rgba(90,80,96,0.1);border:1px solid #5a506050;color:#5a5060' : S.btnSeat===i ? 'background:rgba(200,169,110,0.2);border:1px solid rgba(200,169,110,0.5);color:var(--gold)' : 'background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.5);color:#5b9bd5';
-  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">עמדת דילר (BTN)</span>
+  html+=`<div style="margin-bottom:7px"><span class="sec-lbl" style="margin-bottom:3px">עמדת דילר (BTN)</span>
     <button class="btn btn-sm" style="${btnStyle}" onclick="if(!S.btnLocked){S.btnSeat=${i};postBlinds(${i});persist();renderSeats();renderSeatPanel();}">
       ${btnLabel}
     </button></div>`;
   // Cards
-  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">קלפים (Showdown)</span>
+  html+=`<div style="margin-bottom:7px"><span class="sec-lbl" style="margin-bottom:3px">קלפים (Showdown)</span>
     <div style="display:flex;gap:5px;align-items:center">
       ${[0,1].map(ci=>{const c=seat.cards?.[ci];return`<button class="board-card-btn${c?' has-card':''}" style="width:36px;height:50px" onclick="openCP('seat${i}_c${ci}')">
         ${c?`<span style="font-size:13px;font-weight:900;color:${SC[c.suit]};line-height:1.1">${c.rank}</span><span style="font-size:10px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:16px;color:rgba(255,255,255,0.12)">+</span>`}
@@ -677,7 +676,7 @@ function renderSeatPanel(){
         if(a.k==='Fold'||a.k==='Check'){
           // Instant button - no amount needed
           return `<div class="action-row">
-            <button style="flex:1;padding:8px 14px;border-radius:8px;border:1.5px solid ${a.c}60;background:${a.c}18;color:${a.c};font-weight:700;font-size:13px;cursor:pointer" onclick="doAction(${i},'${a.k}','')">
+            <button style="flex:1;padding:7px 12px;border-radius:8px;border:1.5px solid ${a.c}60;background:${a.c}18;color:${a.c};font-weight:700;font-size:13px;cursor:pointer" onclick="doAction(${i},'${a.k}','')">
               ${a.k==='Fold'?'🏳️ Fold':'✋ Check'}
             </button>
           </div>`;
@@ -743,7 +742,7 @@ function clickSeat(i){
   if(isViewer()){notify('צופה בלבד – אין הרשאת עריכה');return;}
   if(activeSeat===i){activeSeat=null;closePanel('seat-panel');return;}
   if(!S.seats.find(s=>s.seatIdx===i))
-    S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:0,pos:'',cards:[null,null],actions:[],folded:false,allin:false});
+    S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:50000,pos:'',cards:[null,null],actions:[],folded:false,allin:false});
   activeSeat=i; renderSeatPanel(); openPanel('seat-panel'); renderSeats();
 }
 function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
@@ -1364,7 +1363,7 @@ function renderPlayerList(){
         <div style="font-size:13px;font-weight:700">
           ${isWinner?'🥇 ':''}${p.name}
           ${isWinner?`<span style="font-size:9px;color:#FFD700;background:rgba(255,215,0,0.12);border-radius:10px;padding:1px 8px;margin-right:4px">מקום 1</span>`:''}
-          ${inGame&&!isWinner&&!S.koOrder.includes(p.id)?` <span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}
+          ${b.buyin>0&&!S.koOrder.includes(p.id)&&!isWinner?` <span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}
           ${S.koOrder.includes(p.id)?` <span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
         </div>
         <div style="font-size:10px;color:var(--muted)">${b.buyin?`BuyIn: ${b.buyin}`:'לא נרשם'} ${b.rebuy?`· Rebuy: ${b.rebuy}`:''} ${hands.length?`· ${hands.length} ידיים`:''}</div>
