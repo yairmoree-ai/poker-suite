@@ -387,6 +387,11 @@ let curHand=null, recStreet='פרה-פלופ', recActor='0';
 // STORAGE
 // ═══════════════════════════════════════════════════════
 function applySnapshot(v){
+  // Only apply if incoming snapshot is newer (prevents viewer from overwriting admin changes)
+  if(isAdmin() && v.savedAt && S._lastSaved && v.savedAt < S._lastSaved) {
+    console.log('Skipping older snapshot');
+    return;
+  }
   if(v.playerLib) S.playerLib=v.playerLib;
   if(v.seats) S.seats=v.seats;
   if(v.board) S.board=v.board;
@@ -478,13 +483,14 @@ function persist(){
   try{ sessionStorage.setItem('ps_snap', JSON.stringify(snap)); }catch(e){}
   // Save to all known old keys for migration
   try{ localStorage.setItem('ps_backup', JSON.stringify(snap)); }catch(e){}
-  // Auto-sync to Google Sheets (debounced) - only for admins
-  if(typeof syncToSheets === 'function' && gsUrl && !isViewer()) syncToSheets(false);
+  S._lastSaved = Date.now();
+  // Auto-sync to Google Sheets - only for admins, immediate
+  if(typeof syncToSheets === 'function' && gsUrl && isAdmin()) syncToSheets(true);
 }
 
 function fullSnapshot(){
   return {
-    version:3, ts: Date.now(),
+    version:3, ts: Date.now(), savedAt: Date.now(),
     playerLib:S.playerLib, seats:S.seats, board:S.board, btnSeat:S.btnSeat,
     buyinCost:S.buyinCost, buyins:S.buyins, koOrder:S.koOrder,
     blindLevel:S.blindLevel, customBlinds:S.customBlinds,
@@ -1465,8 +1471,12 @@ async function syncFromSheets(){
     const text = await resp.text();
     const r = JSON.parse(text);
     if(r.ok && r.value){
-      applySnapshot(r.value);
-      persist(); // viewer guard is inside persist()
+      const incoming = r.value;
+      // Always apply for viewers; admins skip if they have newer data
+      if(!isAdmin() || !S._lastSaved || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
+        applySnapshot(incoming);
+        persist();
+      }
       render();
       // Re-render current active view
       const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
