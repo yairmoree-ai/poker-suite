@@ -1432,9 +1432,9 @@ function saveGHToken(){
 }
 
 function loadGHToken(){
-  try{ ghToken = localStorage.getItem('ps_ghtoken')||'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'; }catch(e){ ghToken='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'; }
+  try{ ghToken = localStorage.getItem('ps_ghtoken')||''; }catch(e){ ghToken=''; }
   const inp = document.getElementById('gh-token');
-  if(inp) inp.value = ghToken;
+  if(inp && ghToken) inp.value = ghToken;
 }
 
 function setGHStatus(msg, color){
