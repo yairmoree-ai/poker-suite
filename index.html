@@ -1468,9 +1468,9 @@ function renderTournList(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
           ${[['שחקנים',t.totalBuyins],['Rebuy',`${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys} חינם)`:''}`],['כניסות בתשלום',t.paidEntries||t.totalEntries]].map(([l,v])=>`<div style="font-size:10px;color:var(--muted)">${l}: <span style="color:var(--text);font-weight:600">${v||0}</span></div>`).join('')}
         </div>
-        <div style="display:flex;gap:8px;align-items:flex-start">
-          <!-- Places column -->
-          <div style="flex:1">
+        <div style="display:flex;gap:6px;align-items:flex-start">
+          <!-- Places column - compact -->
+          <div style="flex:1;min-width:0">
             ${finishT.filter(f=>f.place<=4).map(f=>{
               const rb = f.rebuy||0;
               const prize = prizeByPlaceT[f.place]||0;
@@ -1478,35 +1478,41 @@ function renderTournList(){
               const colors={1:'#FFD700',2:'#C0C0C0',3:'#CD7F32'};
               const medal = medals[f.place]||'';
               const color = colors[f.place]||'var(--gold)';
-              return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-                <span style="font-size:${f.place<=3?'14':'11'}px">${medal||f.place+'.'}</span>
-                <span style="font-size:12px;font-weight:700;color:#e2ddd4;flex:1">${f.name||'?'}${rb>0?` <span style="font-size:11px;font-weight:900;color:var(--gold)">(${rb})</span>`:''}</span>
-                ${prize?`<span style="font-size:12px;font-weight:800;color:${color}">₪${prize.toLocaleString()}</span>`:''}
+              return `<div style="display:flex;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <span style="font-size:${f.place<=3?'14':'12'}px;flex-shrink:0;margin-left:4px">${medal||f.place+'.'}</span>
+                <span style="font-size:13px;font-weight:700;color:#e2ddd4;flex:1">${f.name||'?'}${rb>0?` <span style="font-size:12px;font-weight:900;color:var(--gold)">(${rb})</span>`:''}</span>
+                ${prize?`<span style="font-size:13px;font-weight:800;color:${color};flex-shrink:0">₪${prize.toLocaleString()}</span>`:''}
               </div>`;
             }).join('')}
           </div>
-          <!-- Rebuy chart column -->
+          <!-- Rebuy vertical bar chart - same style as current tournament -->
           ${t.finishOrder?.some(f=>f.rebuy>0)?`
-          <div style="width:110px;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.06);padding-right:8px">
-            <div style="font-size:9px;color:var(--muted);margin-bottom:5px;font-weight:600">🔄 Rebuy</div>
-            ${(()=>{
-              const maxR=Math.max(...(t.finishOrder||[]).map(f=>f.rebuy||0),1);
-              return (t.finishOrder||[]).filter(f=>f.rebuy>0).sort((a,b)=>b.rebuy-a.rebuy).map(f=>`
-                <div style="margin-bottom:4px">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:1px">
-                    <span style="font-size:9px;color:#e2ddd4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px">${f.name}</span>
-                    <span style="font-size:9px;font-weight:900;color:var(--gold)">${f.rebuy}</span>
-                  </div>
-                  <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px">
-                    <div style="height:100%;border-radius:2px;background:var(--gold);width:${Math.round(f.rebuy/maxR*100)}%"></div>
-                  </div>
-                </div>`).join('');
-            })()}
+          <div style="flex-shrink:0">
+            <div style="display:flex;align-items:flex-end;gap:3px;padding:0 2px">
+              ${(()=>{
+                const maxR=Math.max(...(t.finishOrder||[]).map(f=>f.rebuy||0),1);
+                return (t.finishOrder||[]).filter(f=>f.rebuy>0).sort((a,b)=>b.rebuy-a.rebuy).map(f=>{
+                  const pct=Math.max(Math.round((f.rebuy/maxR)*100),5);
+                  const hasFree16=f.rebuy>=16, hasFree10=f.rebuy>=10;
+                  const color=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
+                  const badge=hasFree16?'16✓':hasFree10?'10✓':'';
+                  return `<div style="display:flex;flex-direction:column;align-items:center;width:22px;flex-shrink:0">
+                    <div style="font-size:9px;font-weight:900;color:${color};margin-bottom:2px;white-space:nowrap">${f.rebuy}${badge?`<span style="font-size:7px">${badge}</span>`:''}</div>
+                    <div style="width:16px;background:rgba(255,255,255,0.07);border-radius:2px 2px 0 0;height:70px;display:flex;align-items:flex-end">
+                      <div style="width:100%;height:${pct}%;background:${color};border-radius:2px 2px 0 0;min-height:2px"></div>
+                    </div>
+                    <div style="height:36px;display:flex;align-items:flex-start;justify-content:center;margin-top:2px">
+                      <span style="font-size:12px;font-weight:700;color:#e2ddd4;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;letter-spacing:2px">${f.name}</span>
+                    </div>
+                  </div>`;
+                }).join('');
+              })()}
+            </div>
           </div>`:''}
         </div>
         ${t.totalRebuys>0&&t.finishOrder?.some(f=>f.rebuy>0)?`
         <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05)">
-          <div style="font-size:12px;font-weight:700;color:var(--text);line-height:1.8">🔄 Rebuy: ${t.finishOrder.filter(f=>f.rebuy>0).map(f=>`<span style="color:var(--gold)">${f.name}</span> <span style="color:#fff;font-weight:900">(${f.rebuy})</span>`).join(' · ')}</div>
+
         </div>`:''}
       </div>`;
     }).join('');
