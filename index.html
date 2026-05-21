@@ -1290,7 +1290,7 @@ function renderTournList(){
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">💰 חישוב וחלוקת פרסים</div>
     <div class="prize-row">
-      <span class="prize-lbl" style="color:var(--gold);font-weight:700">מקום 1 ${S.place1Override!=null&&pr.pool?`(${Math.round(S.place1Override/pr.pool*100)}%)`:'(70%)'}</span>
+      <span class="prize-lbl" style="color:var(--gold);font-weight:700">מקום 1 ${S.place1Override!=null&&pr.rem?`(${Math.round(S.place1Override/pr.rem*100)}%)`:'(70%)'}</span>
       ${isViewer()?
         `<span class="prize-val" style="color:var(--green);font-size:16px">₪${Math.round(S.place1Override!=null?S.place1Override:pr.p1).toLocaleString()}</span>`
        :`<div style="display:flex;align-items:center;gap:6px">
@@ -1301,7 +1301,7 @@ function renderTournList(){
         </div>`}
     </div>
     <div class="prize-row">
-      <span class="prize-lbl" style="color:var(--text)">מקום 2 ${S.place2Override!=null&&pr.pool?`(${Math.round(S.place2Override/pr.pool*100)}%)`:'(30%)'}</span>
+      <span class="prize-lbl" style="color:var(--text)">מקום 2 ${S.place2Override!=null&&pr.rem?`(${Math.round(S.place2Override/pr.rem*100)}%)`:'(30%)'}</span>
       ${isViewer()?
         `<span class="prize-val">₪${Math.round(S.place2Override!=null?S.place2Override:pr.p2).toLocaleString()}</span>`
        :`<div style="display:flex;align-items:center;gap:6px">
