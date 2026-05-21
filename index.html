@@ -1379,13 +1379,17 @@ function renderPlayerList(){
     return`<div class="card-item" style="display:flex;align-items:center;gap:9px;${inGame?'border-color:rgba(95,196,122,0.25)':''}">
       <div style="width:34px;height:34px;border-radius:17px;background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0">${p.name[0].toUpperCase()}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700">
-          ${isWinner?'🥇 ':''}${p.name}
-          ${isWinner?`<span style="font-size:9px;color:#FFD700;background:rgba(255,215,0,0.12);border-radius:10px;padding:1px 8px;margin-right:4px">מקום 1</span>`:''}
-          ${b.buyin>0&&!S.koOrder.includes(p.id)&&!isWinner?` <span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}
-          ${S.koOrder.includes(p.id)?` <span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
+        <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${isWinner?'🥇 ':''}
+          <span>${p.name}</span>
+          ${b.rebuy>0?`<span style="font-size:13px;font-weight:900;color:var(--gold)">(${b.rebuy})</span>`:''}
+          ${isWinner?`<span style="font-size:9px;color:#FFD700;background:rgba(255,215,0,0.12);border-radius:10px;padding:1px 8px">מקום 1</span>`:''}
+          ${b.buyin>0&&!S.koOrder.includes(p.id)&&!isWinner?`<span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}
+          ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
         </div>
-        <div style="font-size:10px;color:var(--muted)">${b.buyin?`BuyIn: ${b.buyin}`:'לא נרשם'} ${b.rebuy?`· Rebuy: ${b.rebuy}`:''} ${hands.length?`· ${hands.length} ידיים`:''}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px">
+          ${b.buyin?'BuyIn':'לא נרשם'}
+        </div>
       </div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
         ${isViewer()?`
