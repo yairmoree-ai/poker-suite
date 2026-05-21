@@ -895,7 +895,7 @@ function saveHandWithLabel(){
   const swp = assignPos();
   const b = getBlinds();
   const hand = {
-    id:uid(), date:new Date().toLocaleString('he-IL'),
+    id:uid(), date:new Date().toLocaleDateString('he-IL'), name:tournName||'',
     blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
     label, board:[...S.board],
     seats: swp.filter(s=>s.playerId).map(s=>({
@@ -1087,7 +1087,7 @@ function newHand(){
   const swp=assignPos();
   const b=getBlinds();
   curHand={
-    id:uid(), date:new Date().toLocaleString('he-IL'),
+    id:uid(), date:new Date().toLocaleDateString('he-IL'), name:tournName||'',
     blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
     board:[...S.board],
     seats:swp.filter(s=>s.playerId).map(s=>({
@@ -1263,7 +1263,7 @@ function showSaveTournDialog(){
   setTimeout(()=>document.getElementById('tourn-name-inp')?.focus(),100);
 }
 
-function saveTournament(){if(isViewer()){notify('צופה בלבד');return;}
+function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');return;}
   const pr=calcPrizes();
   // Determine places: koOrder = [first KO, second KO, ...]
   // Reverse for placing: last KO = 4th place, second-to-last = 3rd, etc.
@@ -1275,7 +1275,7 @@ function saveTournament(){if(isViewer()){notify('צופה בלבד');return;}
   const nameMap={};
   S.playerLib.forEach(p=>{nameMap[p.id]=p.name;});
   const t={
-    id:uid(), date:new Date().toLocaleString('he-IL'),
+    id:uid(), date:new Date().toLocaleDateString('he-IL'), name:tournName||'',
     buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
     totalEntries:totalEntries(), paidEntries:calcPaidEntries(), freeRebuys:calcFreeRebuys(), prizePool:pr.pool,
     houseRake:pr.house, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
@@ -1471,15 +1471,18 @@ function renderTournList(){
         return found?.rebuy||0;
       };
       return `<div class="card-item">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
           <div>
-            <div style="font-size:12px;color:var(--muted)">${t.date.split(' ')[1]||t.date}${t.name?` · <span style="color:#e2ddd4;font-weight:700">${t.name}</span>`:''}</div>
-            <div style="font-size:18px;font-weight:800;color:var(--gold)">₪${(t.prizePool||0).toLocaleString()}</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+              <span style="font-size:13px;color:#b0a8a0">${t.date}</span>
+              ${t.name?`<span style="font-size:15px;font-weight:800;color:#f0ece4">${t.name}</span>`:''}
+            </div>
+            <div style="font-size:20px;font-weight:900;color:var(--gold)">₪${(t.prizePool||0).toLocaleString()}</div>
           </div>
           <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
-          ${[['שחקנים',t.totalBuyins],['Rebuy',`${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys} חינם)`:''}`],['כניסות בתשלום',t.paidEntries||t.totalEntries]].map(([l,v])=>`<div style="font-size:12px;color:var(--muted)">${l}: <span style="color:var(--text);font-weight:700">${v||0}</span></div>`).join('')}
+          ${[['שחקנים',t.totalBuyins],['Rebuy',`${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys} חינם)`:''}`],['כניסות בתשלום',t.paidEntries||t.totalEntries]].map(([l,v])=>`<div style="font-size:13px;font-weight:600;color:#c0b8b0">${l}: <span style="color:#f0ece4;font-weight:800">${v||0}</span></div>`).join('')}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <!-- Places column -->
