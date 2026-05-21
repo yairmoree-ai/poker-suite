@@ -1330,26 +1330,31 @@ function renderTournList(){
     ${totalRebuys()>0?`
     <div style="margin-bottom:12px">
       <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:6px">🔄 התפלגות Rebuy</div>
-      <div style="display:flex;align-items:flex-end;gap:3px;height:90px;padding:0 2px;overflow-x:auto">
-        ${Object.entries(S.buyins)
-          .filter(([pid,b])=>b.rebuy>0)
-          .sort((a,b)=>b[1].rebuy-a[1].rebuy)
-          .map(([pid,b])=>{
-            const maxR=Math.max(...Object.values(S.buyins).map(x=>x.rebuy||0),1);
-            const pct=Math.max(Math.round((b.rebuy/maxR)*100),5);
-            const hasFree10 = b.rebuy>=10;
-            const hasFree16 = b.rebuy>=16;
-            const color = hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.8)';
-            const badge = hasFree16?' 16✓':hasFree10?' 10✓':'';
-            return `<div style="display:flex;flex-direction:column;align-items:center;width:28px;flex-shrink:0">
-              <div style="font-size:9px;font-weight:900;color:${color};margin-bottom:2px;white-space:nowrap">${b.rebuy}${badge}</div>
-              <div style="width:18px;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0;height:65px;display:flex;align-items:flex-end;position:relative">
-                <div style="width:100%;height:${pct}%;background:${color};border-radius:3px 3px 0 0;min-height:3px;transition:height 0.3s"></div>
-                ${hasFree10?`<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:2px;height:100%;background:rgba(91,155,213,0.3);pointer-events:none"></div>`:''}
-              </div>
-              <div style="font-size:7px;color:var(--muted);margin-top:2px;width:28px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center">${pName(pid)||'?'}</div>
-            </div>`;
-          }).join('')}
+      <div style="overflow-x:auto;padding-bottom:4px">
+        <div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:0 2px;min-width:min-content">
+          ${Object.entries(S.buyins)
+            .filter(([pid,b])=>b.rebuy>0)
+            .sort((a,b)=>b[1].rebuy-a[1].rebuy)
+            .map(([pid,b])=>{
+              const maxR=Math.max(...Object.values(S.buyins).map(x=>x.rebuy||0),1);
+              const pct=Math.max(Math.round((b.rebuy/maxR)*100),5);
+              const hasFree16 = b.rebuy>=16;
+              const hasFree10 = b.rebuy>=10;
+              const color = hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
+              const badge = hasFree16?'16✓':hasFree10?'10✓':'';
+              const name = pName(pid)||'?';
+              return `<div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0">
+                <div style="font-size:10px;font-weight:900;color:${color};margin-bottom:3px;white-space:nowrap">${b.rebuy}${badge?` <span style="font-size:8px">${badge}</span>`:''}</div>
+                <div style="width:26px;background:rgba(255,255,255,0.07);border-radius:3px 3px 0 0;height:80px;display:flex;align-items:flex-end;position:relative;overflow:hidden">
+                  <div style="width:100%;height:${pct}%;background:${color};border-radius:3px 3px 0 0;min-height:3px"></div>
+                </div>
+                <div style="height:52px;display:flex;align-items:flex-start;justify-content:center;margin-top:3px">
+                  <span style="font-size:11px;font-weight:700;color:#d4c9b0;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;line-height:1">${name}</span>
+                </div>
+
+              </div>`;
+            }).join('')}
+        </div>
       </div>
     </div>
     <div style="height:1px;background:rgba(255,255,255,0.06);margin-bottom:10px"></div>
