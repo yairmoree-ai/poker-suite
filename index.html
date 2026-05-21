@@ -1331,7 +1331,7 @@ function renderTournList(){
     <div style="margin-bottom:12px">
       <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:6px">🔄 התפלגות Rebuy</div>
       <div style="overflow-x:auto;padding-bottom:4px">
-        <div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:0 2px;min-width:min-content">
+        <div style="display:flex;align-items:flex-end;gap:4px;padding:0 2px;min-width:min-content">
           ${Object.entries(S.buyins)
             .filter(([pid,b])=>b.rebuy>0)
             .sort((a,b)=>b[1].rebuy-a[1].rebuy)
@@ -1344,7 +1344,7 @@ function renderTournList(){
               const badge = hasFree16?'16✓':hasFree10?'10✓':'';
               const name = pName(pid)||'?';
               return `<div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0">
-                <div style="font-size:10px;font-weight:900;color:${color};margin-bottom:3px;white-space:nowrap">${b.rebuy}${badge?` <span style="font-size:8px">${badge}</span>`:''}</div>
+                <div style="font-size:12px;font-weight:900;color:${color};margin-bottom:3px;white-space:nowrap">${b.rebuy}${badge?` <span style="font-size:9px">${badge}</span>`:''}</div>
                 <div style="width:26px;background:rgba(255,255,255,0.07);border-radius:3px 3px 0 0;height:80px;display:flex;align-items:flex-end;position:relative;overflow:hidden">
                   <div style="width:100%;height:${pct}%;background:${color};border-radius:3px 3px 0 0;min-height:3px"></div>
                 </div>
