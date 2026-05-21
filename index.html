@@ -1415,93 +1415,6 @@ function loadGSUrl(){
   updateSyncDot(gsUrl ? 'idle' : 'off');
 }
 
-// ═══════════════════════════════════════
-// GITHUB AUTO-PUSH
-// ═══════════════════════════════════════
-let ghToken = '';
-const GH_OWNER = 'yairmoree-ai';
-const GH_REPO  = 'poker-suite';
-const GH_FILE  = 'index.html';
-
-function saveGHToken(){
-  const inp = document.getElementById('gh-token');
-  ghToken = inp?.value?.trim()||'';
-  try{ localStorage.setItem('ps_ghtoken', ghToken); }catch(e){}
-  if(ghToken){ setGHStatus('Token נשמר ✓', '#5fc47a'); }
-  else { setGHStatus('Token נמחק', '#5a5870'); }
-}
-
-function loadGHToken(){
-  try{ ghToken = localStorage.getItem('ps_ghtoken')||''; }catch(e){ ghToken=''; }
-  const inp = document.getElementById('gh-token');
-  if(inp && ghToken) inp.value = ghToken;
-}
-
-function setGHStatus(msg, color){
-  const el = document.getElementById('gh-status');
-  if(el){ el.textContent = msg; el.style.color = color||'#5a5870'; }
-}
-
-async function pushCurrentToGitHub(){
-  // Always read latest token from localStorage
-  try{ const t=localStorage.getItem('ps_ghtoken'); if(t) ghToken=t; }catch(e){}
-  if(!ghToken){ setGHStatus('הכנס GitHub Token', '#e07b6a'); return; }
-  const html = document.documentElement.outerHTML;
-  await pushToGitHub(html);
-}
-
-async function pushToGitHub(htmlContent){
-  if(!ghToken){ console.log('No GitHub token'); return; }
-  try{
-    setGHStatus('מעדכן GitHub...', '#c8a96e');
-    // Get current file SHA
-    const getResp = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
-      headers: {
-        'Authorization': `token ${ghToken}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
-    });
-    const fileData = await getResp.json();
-    const sha = fileData.sha;
-    // Push new content
-    const encoded = btoa(unescape(encodeURIComponent(htmlContent)));
-    const pushResp = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${ghToken}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        message: 'Auto-update from Poker Suite ' + new Date().toLocaleString('he-IL'),
-        content: encoded,
-        sha: sha
-      })
-    });
-    const result = await pushResp.json();
-    if(result.content){
-      setGHStatus('GitHub עודכן ✓ ' + new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-      notify('GitHub עודכן ✓');
-    } else {
-      setGHStatus('שגיאה: ' + (result.message||'unknown'), '#e07b6a');
-    }
-  }catch(e){
-    setGHStatus('שגיאה: ' + e.message, '#e07b6a');
-  }
-}
-
-// Called from Claude's updated code
-async function autoUpdateCode(newHtmlUrl){
-  if(!ghToken){ notify('הכנס GitHub Token בהגדרות'); return; }
-  try{
-    const resp = await fetch(newHtmlUrl);
-    const html = await resp.text();
-    await pushToGitHub(html);
-  }catch(e){
-    notify('שגיאה בעדכון: '+e.message);
-  }
-}
-
 function saveGSUrl(){
   const inp = document.getElementById('gs-url');
   gsUrl = inp?.value?.trim()||'';
@@ -1592,7 +1505,7 @@ async function syncFromSheets(){
 function toggleSettings(){
   const box = document.getElementById('settings-box');
   if(!box) return;
-  loadGSUrl(); loadGHToken();
+  loadGSUrl();
   box.style.display = box.style.display==='none' ? 'flex' : 'none';
 }
 
@@ -1898,20 +1811,6 @@ setTimeout(()=>document.getElementById('pass-inp')?.focus(), 100);
 <div id="settings-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
   <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto">
     <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:14px">⚙️ הגדרות סנכרון</div>
-
-    <!-- GitHub Auto-Push -->
-    <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:4px">🐙 GitHub Auto-Update</div>
-      <div style="font-size:10px;color:#5a5870;margin-bottom:8px">עדכון אוטומטי של הקוד ב-GitHub</div>
-      <input id="gh-token" type="password" placeholder="GitHub Token (ghp_...)"
-        style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:11px;outline:none;direction:ltr;box-sizing:border-box;margin-bottom:6px">
-      <div style="font-size:10px;color:#5a5870;margin-bottom:6px">Repository: <span style="color:#e2ddd4">yairmoree-ai/poker-suite</span> | File: <span style="color:#e2ddd4">index.html</span></div>
-      <div style="display:flex;gap:7px">
-        <button onclick="saveGHToken()" style="flex:1;padding:8px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:12px;cursor:pointer">שמור Token</button>
-        <button onclick="pushCurrentToGitHub()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">🚀 דחוף ל-GitHub</button>
-      </div>
-      <div id="gh-status" style="font-size:10px;color:#5a5870;margin-top:6px;min-height:14px"></div>
-    </div>
 
     <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:4px">🔗 Google Sheets</div>
