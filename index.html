@@ -182,8 +182,8 @@ input,select,textarea{font-family:inherit}
     </div>
   </div>
   <div id="statsbar">
-    <div class="sbox" id="sbox-buyincost"><label>עלות כניסה</label><input type="number" id="inp-buyin-cost" value="50" min="0" onchange="S.buyinCost=+this.value;persist();renderStats()"></div>
-    <div class="sbox" id="sbox-tablesize"><label>שחקנים בשולחן</label><select id="sel-table-size" onchange="setTableSize(+this.value)">
+    <div class="sbox" id="sbox-buyincost"><label>עלות כניסה</label><input type="number" id="inp-buyin-cost" value="50" min="0" onchange="if(isAdmin()){S.buyinCost=+this.value;persist();renderStats()}"></div>
+    <div class="sbox" id="sbox-tablesize"><label>שחקנים בשולחן</label><select id="sel-table-size" onchange="if(isAdmin())setTableSize(+this.value)">
       <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
     </select></div>
 
@@ -626,7 +626,7 @@ function renderBoard(){
   if(S.board.some(Boolean)){
     const clr=document.createElement('button');
     clr.style='background:none;border:none;color:rgba(255,255,255,0.2);font-size:9px;cursor:pointer;padding:2px';
-    clr.textContent='✕ נקה'; clr.onclick=()=>{S.board=[null,null,null,null,null];persist();renderBoard();};
+    clr.textContent='✕ נקה'; clr.onclick=()=>{if(isAdmin()){S.board=[null,null,null,null,null];persist();renderBoard();}};
     cont.appendChild(clr);
   }
   // Pot
@@ -959,8 +959,8 @@ function renderBlindsBody(){
       }).join('')}
     </div>`;
 }
-function setBlind(i){S.blindLevel=i;S.customBlinds=null;persist();renderBlindsBtn();renderBlindsBody();}
-function chgBlind(d){S.blindLevel=Math.max(0,Math.min(BLIND_LEVELS.length-1,S.blindLevel+d));S.customBlinds=null;persist();renderBlindsBtn();renderBlindsBody();}
+function setBlind(i){if(isViewer()){notify('צופה בלבד');return;}S.blindLevel=i;S.customBlinds=null;persist();renderBlindsBtn();renderBlindsBody();}
+function chgBlind(d){if(isViewer()){notify('צופה בלבד');return;}S.blindLevel=Math.max(0,Math.min(BLIND_LEVELS.length-1,S.blindLevel+d));S.customBlinds=null;persist();renderBlindsBtn();renderBlindsBody();}
 function saveCustomBL(){
   const sb=parseInt(document.getElementById('cbl-sb')?.value)||0;
   const bb=parseInt(document.getElementById('cbl-bb')?.value)||0;
@@ -1293,15 +1293,15 @@ function renderTournList(){
     </div>
     <div class="prize-row">
       <span class="prize-lbl">מקום 3</span>
-      <input class="prize-inp" type="number" value="${S.place3||0}" placeholder="0" onchange="S.place3=+this.value;persist();renderTournList()">
+      ${isViewer()?`<span class="prize-val">${S.place3?'₪'+S.place3.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place3||0}" placeholder="0" onchange="S.place3=+this.value;persist();renderTournList()">`}
     </div>
     <div class="prize-row">
       <span class="prize-lbl">מקום 4</span>
-      <input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()">
+      ${isViewer()?`<span class="prize-val">${S.place4?'₪'+S.place4.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()">`}
     </div>
     <div class="prize-row">
       <span class="prize-lbl">בית</span>
-      <input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">
+      ${isViewer()?`<span class="prize-val">₪${S.houseRake.toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">`}
     </div>
   </div>`;
 
@@ -1464,6 +1464,8 @@ async function syncToSheets(immediate){
 
 async function syncFromSheets(){
   if(!gsUrl){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
+  // Don't sync if user recently made changes (within 15 seconds)
+  if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 15000) return;
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
@@ -1635,7 +1637,7 @@ function koPlayerFromList(pid){
 // ═══════════════════════════════════════════════════════
 // CARD PICKER
 // ═══════════════════════════════════════════════════════
-function openCP(target){cpTarget=target;cpRank=null;renderCP();document.getElementById('card-picker').classList.add('open');}
+function openCP(target){if(isViewer()){notify('צופה בלבד');return;}cpTarget=target;cpRank=null;renderCP();document.getElementById('card-picker').classList.add('open');}
 function renderCP(){
   const used=cpTarget?.startsWith('__r__')
     ?(curHand?.board||[]).concat(curHand?.seats?.flatMap(s=>s.cards||[])||[]).filter(Boolean)
