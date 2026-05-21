@@ -292,7 +292,7 @@ input,select,textarea{font-family:inherit}
   <div id="tourn-view" class="list-view" style="display:none;background:#080b12">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;color:var(--gold)">🏆 טורנירים</div>
-      <button class="btn btn-gold btn-sm" onclick="saveTournament()">שמור טורניר נוכחי</button>
+      <button class="btn btn-gold btn-sm" onclick="showSaveTournDialog()">שמור טורניר נוכחי</button>
     </div>
     <div style="display:flex;gap:7px;margin-bottom:12px">
       <button class="btn btn-red btn-sm" onclick="resetTournament()">אפס טורניר</button>
@@ -1250,6 +1250,19 @@ function calcPrizes(){
   const p2=S.place2Override!=null?S.place2Override:p2auto;
   return{pool,house,p4,p3,p2,p1,rem,p1auto,p2auto};
 }
+function confirmSaveTournament(){
+  const name = document.getElementById('tourn-name-inp')?.value?.trim()||'';
+  document.getElementById('save-tourn-box').style.display='none';
+  saveTournament(name);
+}
+
+function showSaveTournDialog(){
+  if(isViewer()){notify('צופה בלבד');return;}
+  document.getElementById('save-tourn-box').style.display='flex';
+  document.getElementById('tourn-name-inp').value='';
+  setTimeout(()=>document.getElementById('tourn-name-inp')?.focus(),100);
+}
+
 function saveTournament(){if(isViewer()){notify('צופה בלבד');return;}
   const pr=calcPrizes();
   // Determine places: koOrder = [first KO, second KO, ...]
@@ -1460,17 +1473,17 @@ function renderTournList(){
       return `<div class="card-item">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
           <div>
-            <div style="font-size:10px;color:var(--muted)">${t.date}</div>
-            <div style="font-size:13px;font-weight:700;color:var(--gold)">₪${(t.prizePool||0).toLocaleString()}</div>
+            <div style="font-size:12px;color:var(--muted)">${t.date.split(' ')[1]||t.date}${t.name?` · <span style="color:#e2ddd4;font-weight:700">${t.name}</span>`:''}</div>
+            <div style="font-size:18px;font-weight:800;color:var(--gold)">₪${(t.prizePool||0).toLocaleString()}</div>
           </div>
           <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
-          ${[['שחקנים',t.totalBuyins],['Rebuy',`${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys} חינם)`:''}`],['כניסות בתשלום',t.paidEntries||t.totalEntries]].map(([l,v])=>`<div style="font-size:10px;color:var(--muted)">${l}: <span style="color:var(--text);font-weight:600">${v||0}</span></div>`).join('')}
+          ${[['שחקנים',t.totalBuyins],['Rebuy',`${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys} חינם)`:''}`],['כניסות בתשלום',t.paidEntries||t.totalEntries]].map(([l,v])=>`<div style="font-size:12px;color:var(--muted)">${l}: <span style="color:var(--text);font-weight:700">${v||0}</span></div>`).join('')}
         </div>
-        <div style="display:flex;gap:6px;align-items:flex-start">
-          <!-- Places column - compact -->
-          <div style="flex:1;min-width:0">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <!-- Places column -->
+          <div>
             ${finishT.filter(f=>f.place<=4).map(f=>{
               const rb = f.rebuy||0;
               const prize = prizeByPlaceT[f.place]||0;
@@ -1485,9 +1498,9 @@ function renderTournList(){
               </div>`;
             }).join('')}
           </div>
-          <!-- Rebuy vertical bar chart - same style as current tournament -->
+          <!-- Rebuy vertical bar chart -->
           ${t.finishOrder?.some(f=>f.rebuy>0)?`
-          <div style="flex-shrink:0">
+          <div>
             <div style="display:flex;align-items:flex-end;gap:3px;padding:0 2px">
               ${(()=>{
                 const maxR=Math.max(...(t.finishOrder||[]).map(f=>f.rebuy||0),1);
@@ -2184,6 +2197,20 @@ setTimeout(()=>document.getElementById('pass-inp')?.focus(), 100);
     </div>
 
     <button onclick="document.getElementById('settings-box').style.display='none'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">סגור</button>
+  </div>
+</div>
+
+<!-- SAVE TOURNAMENT DIALOG -->
+<div id="save-tourn-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:380px">
+    <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:12px">💾 שמור טורניר</div>
+    <input id="tourn-name-inp" type="text" placeholder="שם הטורניר (אופציונלי)..."
+      onkeydown="if(event.key==='Enter')confirmSaveTournament()"
+      style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:14px;outline:none;direction:rtl;box-sizing:border-box;margin-bottom:12px">
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmSaveTournament()" style="flex:2;padding:11px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer">💾 שמור</button>
+      <button onclick="document.getElementById('save-tourn-box').style.display='none'" style="flex:1;padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">ביטול</button>
+    </div>
   </div>
 </div>
 </body></html>
