@@ -1294,15 +1294,24 @@ function resetTournament(){if(isViewer()){notify('צופה בלבד');return;}
   const cont = document.getElementById('tourn-list');
   const prev = cont.innerHTML;
   cont.insertAdjacentHTML('afterbegin', `
-    <div id="reset-confirm" style="background:rgba(224,85,85,0.12);border:1px solid rgba(224,85,85,0.4);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center">
-      <div style="font-size:13px;font-weight:700;color:#e07b6a;margin-bottom:10px">לאפס את כל נתוני הטורניר?</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">פעולה זו תמחק BuyIn, Rebuy, סדר הדחה וכל נתוני השולחן</div>
-      <div style="display:flex;gap:8px;justify-content:center">
-        <button class="btn btn-red" onclick="doResetTournament()">כן, אפס</button>
-        <button class="btn btn-gray" onclick="document.getElementById('reset-confirm')?.remove()">ביטול</button>
+    <div id="reset-confirm" style="background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.4);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:700;color:#e07b6a;margin-bottom:6px;text-align:center">לאפס את כל נתוני הטורניר?</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;text-align:center">פעולה זו תמחק BuyIn, Rebuy, סדר הדחה וכל נתוני השולחן</div>
+      <input id="reset-tourn-name" type="text" placeholder="שם הטורניר לשמירה (אופציונלי)..."
+        style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;direction:rtl;box-sizing:border-box;margin-bottom:10px">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-gold" style="flex:2" onclick="doSaveAndReset()">💾 שמור ואפס</button>
+        <button class="btn btn-red" style="flex:1" onclick="doResetTournament()">אפס בלבד</button>
+        <button class="btn btn-gray" style="flex:1" onclick="document.getElementById('reset-confirm')?.remove()">ביטול</button>
       </div>
     </div>`);
 }
+function doSaveAndReset(){
+  const name = document.getElementById('reset-tourn-name')?.value?.trim()||'';
+  saveTournament(name);
+  doResetTournament();
+}
+
 function doResetTournament(){
   document.getElementById('reset-confirm')?.remove();
   S.buyins={}; S.koOrder=[];
@@ -1310,6 +1319,34 @@ function doResetTournament(){
   S.board=[null,null,null,null,null];
   persist(); render(); renderTournList(); notify('טורניר אופס ✓');
 }
+function editTournName(ti){
+  const t = S.tournLog[ti];
+  if(!t) return;
+  const existing = document.getElementById('edit-tourn-name-'+ti);
+  if(existing){ existing.remove(); return; }
+  const card = document.querySelectorAll('#tourn-list .card-item')[ti+1]; // +1 because current tourn is first
+  // Find the name span
+  const nameSpan = document.querySelector('[onclick="editTournName('+ti+')"]');
+  if(!nameSpan) return;
+  const inp = document.createElement('input');
+  inp.id = 'edit-tourn-name-'+ti;
+  inp.value = t.name||'';
+  inp.placeholder = 'שם הטורניר...';
+  inp.style.cssText = 'padding:4px 8px;border-radius:7px;border:1px solid rgba(200,169,110,0.5);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;direction:rtl;width:140px';
+  inp.onkeydown = (e)=>{
+    if(e.key==='Enter'){ saveTournName(ti, inp.value); inp.remove(); renderTournList(); }
+    if(e.key==='Escape'){ inp.remove(); }
+  };
+  inp.onblur = ()=>{ saveTournName(ti, inp.value); inp.remove(); renderTournList(); };
+  nameSpan.replaceWith(inp);
+  inp.focus(); inp.select();
+}
+
+function saveTournName(ti, name){
+  if(S.tournLog[ti]) S.tournLog[ti].name = name.trim();
+  persist();
+}
+
 function deleteTournament(ti){
   S.tournLog.splice(ti,1); persist(); renderTournList();
 }
@@ -1475,14 +1512,18 @@ function renderTournList(){
           <div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
               <span style="font-size:13px;color:#b0a8a0">${t.date}</span>
-              ${t.name?`<span style="font-size:15px;font-weight:800;color:#f0ece4">${t.name}</span>`:''}
+              ${isAdmin()?`<span style="font-size:15px;font-weight:800;color:#f0ece4;cursor:pointer;border-bottom:1px dashed rgba(200,169,110,0.4)" 
+              onclick="editTournName(${ti})" title="לחץ לעריכת שם">${t.name||'+ הוסף שם'}</span>`
+              :t.name?`<span style="font-size:15px;font-weight:800;color:#f0ece4">${t.name}</span>`:''}
             </div>
             <div style="font-size:20px;font-weight:900;color:var(--gold)">₪${(t.prizePool||0).toLocaleString()}</div>
           </div>
           <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
-          ${[['שחקנים',t.totalBuyins],['Rebuy',`${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys} חינם)`:''}`],['כניסות בתשלום',t.paidEntries||t.totalEntries]].map(([l,v])=>`<div style="font-size:13px;font-weight:600;color:#c0b8b0">${l}: <span style="color:#f0ece4;font-weight:800">${v||0}</span></div>`).join('')}
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            ${[['שחקנים',t.totalBuyins],['Rebuy',`${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys} חינם)`:''}`],['כניסות בתשלום',t.paidEntries||t.totalEntries]].map(([l,v])=>`<span style="font-size:13px;font-weight:600;color:#c0b8b0">${l}: <span style="color:#f0ece4;font-weight:800">${v||0}</span></span>`).join('')}
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <!-- Places column -->
