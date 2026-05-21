@@ -1319,11 +1319,40 @@ function renderTournList(){
   // Rebuy per player
   const rebuyByPid = pid => (S.buyins[pid]||{}).rebuy||0;
 
-  let html = `<div class="card-item" style="border-color:rgba(200,169,110,0.3);margin-bottom:14px">
-    <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:12px">טורניר נוכחי</div>
+  // Active players count
+  const activeCnt2 = Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid)).length;
+  const showWinners = activeCnt2 <= 1;
 
-    <!-- TOP 4 PLACES -->
-    ${finishRows.filter(r=>r.place<=4).length ? `
+  let html = `<div class="card-item" style="border-color:rgba(200,169,110,0.3);margin-bottom:14px">
+    <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px">טורניר נוכחי</div>
+
+    <!-- REBUY BAR CHART - always on top -->
+    ${totalRebuys()>0?`
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:6px">🔄 התפלגות Rebuy</div>
+      <div style="display:flex;align-items:flex-end;gap:5px;height:70px;padding:0 2px">
+        ${Object.entries(S.buyins)
+          .filter(([pid,b])=>b.rebuy>0)
+          .sort((a,b)=>b[1].rebuy-a[1].rebuy)
+          .map(([pid,b])=>{
+            const maxR=Math.max(...Object.values(S.buyins).map(x=>x.rebuy||0),1);
+            const pct=Math.round((b.rebuy/maxR)*100);
+            const isFree = b.rebuy>=10||b.rebuy>=16;
+            return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+              <div style="font-size:9px;font-weight:800;color:${isFree?'#5b9bd5':'var(--gold)'};margin-bottom:2px">${b.rebuy}${isFree?'✓':''}</div>
+              <div style="width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0;display:flex;align-items:flex-end;flex:1">
+                <div style="width:100%;height:${pct}%;background:${isFree?'rgba(91,155,213,0.7)':'rgba(200,169,110,0.7)'};border-radius:3px 3px 0 0;min-height:3px;transition:height 0.3s"></div>
+              </div>
+              <div style="font-size:8px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;text-align:center">${pName(pid)||'?'}</div>
+            </div>`;
+          }).join('')}
+      </div>
+    </div>
+    <div style="height:1px;background:rgba(255,255,255,0.06);margin-bottom:10px"></div>
+    `:''}
+
+    <!-- TOP 4 PLACES - only when 1 or 0 active players remain -->
+    ${showWinners && finishRows.filter(r=>r.place<=4).length ? `
     <div style="margin-bottom:14px">
       ${finishRows.filter(r=>r.place<=4).map(r=>{
         const name = pName(r.pid)||'?';
@@ -1368,28 +1397,7 @@ function renderTournList(){
     <div class="prize-row"><span class="prize-lbl">כניסות בתשלום</span><span class="prize-val">${calcPaidEntries()}</span></div>
     <div class="prize-row"><span class="prize-lbl">קופת פרסים</span><span class="prize-val">₪${pr.pool.toLocaleString()}</span></div>
 
-    <!-- REBUY BREAKDOWN -->
-    ${totalRebuys()>0?`
-    <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
-    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">🔄 התפלגות Rebuy לפי שחקן</div>
-    <div>
-      ${Object.entries(S.buyins)
-        .filter(([pid,b])=>b.rebuy>0)
-        .sort((a,b)=>b[1].rebuy-a[1].rebuy)
-        .map(([pid,b])=>{
-          const maxR = Math.max(...Object.values(S.buyins).map(x=>x.rebuy||0),1);
-          const pct = Math.round((b.rebuy/maxR)*100);
-          return `<div style="margin-bottom:6px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:2px">
-              <span style="font-size:11px;color:#e2ddd4">${pName(pid)||'?'}</span>
-              <span style="font-size:11px;font-weight:700;color:var(--gold)">${b.rebuy}</span>
-            </div>
-            <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px">
-              <div style="height:100%;border-radius:2px;background:var(--gold);width:${pct}%;transition:width 0.4s"></div>
-            </div>
-          </div>`;
-        }).join('')}
-    </div>`:''}
+
 
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">💰 חישוב וחלוקת פרסים</div>
@@ -1843,32 +1851,130 @@ function showView(v){
 }
 function generateExplosionImage(name, rebuyNum, callback){
   const canvas = document.createElement('canvas');
-  canvas.width=600; canvas.height=400;
+  canvas.width=600; canvas.height=500;
   const ctx=canvas.getContext('2d');
-  const bg=ctx.createRadialGradient(300,200,20,300,200,280);
-  bg.addColorStop(0,'#1a0800'); bg.addColorStop(1,'#050505');
-  ctx.fillStyle=bg; ctx.fillRect(0,0,600,400);
-  const blobs=[{x:300,y:200,r:130},{x:250,y:170,r:90},{x:350,y:175,r:95},{x:200,y:210,r:75},{x:400,y:205,r:80},{x:300,y:150,r:70},{x:270,y:230,r:85},{x:330,y:228,r:80}];
-  const cols=['#FF4400','#FF6600','#FF8800','#FFAA00','#FFCC00'];
-  blobs.forEach((b,i)=>{
-    const g=ctx.createRadialGradient(b.x,b.y,5,b.x,b.y,b.r);
-    g.addColorStop(0,i<3?'#FFEE88':'#FFAA00'); g.addColorStop(0.5,cols[i%cols.length]); g.addColorStop(1,'transparent');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+
+  // Dark background with radial glow
+  ctx.fillStyle='#0a0510'; ctx.fillRect(0,0,600,500);
+  const glow=ctx.createRadialGradient(300,280,20,300,280,220);
+  glow.addColorStop(0,'rgba(255,180,0,0.25)');
+  glow.addColorStop(1,'transparent');
+  ctx.fillStyle=glow; ctx.fillRect(0,0,600,500);
+
+  // Explosion rays
+  ctx.save();
+  ctx.translate(300,280);
+  for(let i=0;i<16;i++){
+    const angle = (i/16)*Math.PI*2;
+    const len = 120+Math.random()*80;
+    const grad=ctx.createLinearGradient(0,0,Math.cos(angle)*len,Math.sin(angle)*len);
+    grad.addColorStop(0,'rgba(255,200,0,0.8)');
+    grad.addColorStop(1,'transparent');
+    ctx.strokeStyle=grad; ctx.lineWidth=3+Math.random()*4;
+    ctx.beginPath(); ctx.moveTo(0,0);
+    ctx.lineTo(Math.cos(angle)*len, Math.sin(angle)*len);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Explosion center flash
+  const flash=ctx.createRadialGradient(300,280,0,300,280,90);
+  flash.addColorStop(0,'rgba(255,255,200,0.9)');
+  flash.addColorStop(0.4,'rgba(255,160,0,0.7)');
+  flash.addColorStop(1,'transparent');
+  ctx.fillStyle=flash; ctx.beginPath(); ctx.arc(300,280,90,0,Math.PI*2); ctx.fill();
+
+  // Draw 10 flying poker chips
+  function drawChip(cx,cy,r,angle,scale){
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(angle);
+    ctx.scale(scale,scale*0.35); // flattened = perspective
+
+    // Chip body
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
+    const chipGrad=ctx.createRadialGradient(-r*0.3,-r*0.3,2,0,0,r);
+    chipGrad.addColorStop(0,'#4a4a4a');
+    chipGrad.addColorStop(0.5,'#1a1a1a');
+    chipGrad.addColorStop(1,'#0a0a0a');
+    ctx.fillStyle=chipGrad; ctx.fill();
+    ctx.strokeStyle='#888'; ctx.lineWidth=2; ctx.stroke();
+
+    // Edge stripes
+    for(let s=0;s<8;s++){
+      const sa=(s/8)*Math.PI*2;
+      const ea=sa+Math.PI/8;
+      ctx.beginPath();
+      ctx.arc(0,0,r,sa,ea);
+      ctx.arc(0,0,r*0.72,ea,sa,true);
+      ctx.closePath();
+      ctx.fillStyle=s%2===0?'#FFD700':'#1a1a1a';
+      ctx.fill();
+    }
+
+    // Inner circle
+    ctx.beginPath(); ctx.arc(0,0,r*0.58,0,Math.PI*2);
+    ctx.fillStyle='#111'; ctx.fill();
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // Center dot
+    ctx.beginPath(); ctx.arc(0,0,r*0.2,0,Math.PI*2);
+    ctx.fillStyle='#FFD700'; ctx.fill();
+
+    ctx.restore();
+  }
+
+  // 10 chips flying in different directions from center
+  const chips=[
+    {x:160,y:100,r:34,a:0.8,s:1.1},{x:300,y:60,r:30,a:-0.5,s:0.9},
+    {x:440,y:90,r:36,a:1.2,s:1.0},{x:500,y:230,r:32,a:-1.0,s:1.2},
+    {x:460,y:380,r:35,a:0.3,s:0.95},{x:310,y:430,r:33,a:-0.8,s:1.05},
+    {x:150,y:390,r:37,a:1.5,s:1.1},{x:80,y:240,r:31,a:-0.2,s:0.9},
+    {x:200,y:190,r:29,a:0.6,s:0.85},{x:390,y:170,r:33,a:-1.3,s:1.0}
+  ];
+  chips.forEach(c=>drawChip(c.x,c.y,c.r,c.a,c.s));
+
+  // Motion lines for flying chips
+  ctx.strokeStyle='rgba(255,215,0,0.3)'; ctx.lineWidth=1.5;
+  chips.forEach(c=>{
+    const dx=c.x-300, dy=c.y-280;
+    const len=0.3;
+    ctx.beginPath();
+    ctx.moveTo(c.x-dx*len-10,c.y-dy*len-5);
+    ctx.lineTo(c.x,c.y);
+    ctx.stroke();
   });
-  ctx.strokeStyle='#FF6600'; ctx.lineWidth=4;
-  [[300,55],[425,88],[472,200],[425,312],[300,352],[175,312],[128,200],[175,88]].forEach(([x,y])=>{
-    ctx.beginPath(); ctx.moveTo(300,200); ctx.lineTo(x,y); ctx.stroke();
-  });
-  const cg=ctx.createRadialGradient(300,200,0,300,200,80);
-  cg.addColorStop(0,'rgba(255,255,220,0.95)'); cg.addColorStop(1,'transparent');
-  ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(300,200,80,0,Math.PI*2); ctx.fill();
-  ctx.font='64px serif'; ctx.textAlign='center'; ctx.fillText('💣',300,195);
-  ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(342,148,26,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#000'; ctx.font='bold 20px Arial'; ctx.fillText(String(rebuyNum),342,156);
-  ctx.shadowColor='#FF6600'; ctx.shadowBlur=18;
-  ctx.fillStyle='#FFD700'; ctx.font='bold 36px Arial'; ctx.fillText(name,300,352);
-  ctx.shadowBlur=0;
-  ctx.fillStyle='#fff'; ctx.font='bold 26px Arial'; ctx.fillText('חינם! 🎉',300,388);
+
+  // Player name - large gold
+  ctx.save();
+  ctx.shadowColor='#FF8800'; ctx.shadowBlur=25;
+  ctx.fillStyle='#FFD700';
+  ctx.font='bold 44px Arial';
+  ctx.textAlign='center';
+  ctx.fillText(name, 300, 345);
+  ctx.restore();
+
+  // Rebuy number badge
+  ctx.save();
+  ctx.shadowColor='#FF4400'; ctx.shadowBlur=20;
+  ctx.fillStyle='#FF4400';
+  ctx.beginPath(); ctx.arc(490,55,38,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#FFD700'; ctx.lineWidth=3; ctx.stroke();
+  ctx.fillStyle='#FFD700';
+  ctx.font='bold 32px Arial'; ctx.textAlign='center';
+  ctx.fillText(String(rebuyNum),490,65);
+  ctx.font='bold 11px Arial';
+  ctx.fillText('REBUY',490,82);
+  ctx.restore();
+
+  // "חינם!" text
+  ctx.save();
+  ctx.shadowColor='#FFD700'; ctx.shadowBlur=20;
+  ctx.fillStyle='#fff';
+  ctx.font='bold 32px Arial'; ctx.textAlign='center';
+  ctx.fillText('חינם!  🎉',300,395);
+  ctx.restore();
+
   callback(canvas.toDataURL('image/png'));
 }
 
