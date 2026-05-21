@@ -1521,8 +1521,18 @@ function renderTournList(){
           <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            ${[['שחקנים',t.totalBuyins],['Rebuy',`${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys} חינם)`:''}`],['כניסות בתשלום',t.paidEntries||t.totalEntries]].map(([l,v])=>`<span style="font-size:13px;font-weight:600;color:#c0b8b0">${l}: <span style="color:#f0ece4;font-weight:800">${v||0}</span></span>`).join('')}
+          <div style="display:flex;gap:8px;flex-wrap:nowrap">
+            <span style="font-size:12px;color:#c0b8b0;white-space:nowrap">👥 <span style="color:#f0ece4;font-weight:800">${t.totalBuyins}</span></span>
+            <span style="color:#3a3650">·</span>
+            <span style="font-size:12px;color:#c0b8b0;white-space:nowrap;display:inline-flex;align-items:center;gap:3px">
+              <span style="display:inline-flex;align-items:center;justify-content:center;background:#5a3a8a;border:1px solid #9b6fd4;border-radius:4px;width:20px;height:14px;font-size:9px;font-weight:900;color:#e2c4ff;line-height:1;flex-shrink:0">R</span>
+              <span style="color:#f0ece4;font-weight:800">${t.totalRebuys}${t.freeRebuys?` (${t.freeRebuys}🎁)`:''}</span>
+            </span>
+            <span style="color:#3a3650">·</span>
+            <span style="font-size:12px;color:#c0b8b0;white-space:nowrap;display:inline-flex;align-items:center;gap:3px">
+              <span style="display:inline-flex;align-items:center;justify-content:center;background:#c8a96e;border-radius:50%;width:20px;height:20px;font-size:8px;font-weight:900;color:#0a0d14;line-height:1;flex-shrink:0">50</span>
+              <span style="color:#f0ece4;font-weight:800">${t.paidEntries||t.totalEntries}</span>
+            </span>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
