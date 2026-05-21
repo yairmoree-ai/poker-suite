@@ -1843,26 +1843,25 @@ function showView(v){
 }
 function showWhatsAppFreeRebuy(name, rebuyNum){
   const gif = 'https://media.giphy.com/media/xT77Y6OO4Qp2KNBoPu/giphy.gif';
-  const text = encodeURIComponent(
-    '💣 BOOM! ' + name + ' קיבל Rebuy חינם! 🎉\n' +
-    'Rebuy מס\' ' + rebuyNum + ' - חינם! 🆓\n' +
-    gif
-  );
-  // Show WA button overlay
+  const msg = ['💣 BOOM!', name, 'קיבל Rebuy חינם! 🎉', '', 'Rebuy ' + rebuyNum + ' - חינם! 🆓', gif].join('\n');
+  const waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  // Remove old button if exists
+  document.getElementById('wa-free-btn')?.remove();
   const btn = document.createElement('div');
   btn.id = 'wa-free-btn';
   btn.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;gap:10px';
-  btn.innerHTML = `
-    <button onclick="window.open('https://wa.me/?text=${encodeURIComponent('💣 BOOM! ' + name + ' קיבל Rebuy חינם! 🎉 Rebuy מס\' ' + rebuyNum + ' - חינם! 🆓 ' + gif)}','_blank')" 
-      style="padding:12px 22px;border-radius:25px;border:none;background:#25D366;color:#fff;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 20px rgba(37,211,102,0.5);display:flex;align-items:center;gap:8px">
-      <span style="font-size:20px">📱</span> שלח ב-WhatsApp
-    </button>
-    <button onclick="document.getElementById('wa-free-btn')?.remove()" 
-      style="padding:12px 16px;border-radius:25px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:14px;cursor:pointer">
-      דלג
-    </button>`;
+  const waBtn = document.createElement('button');
+  waBtn.style.cssText = 'padding:12px 22px;border-radius:25px;border:none;background:#25D366;color:#fff;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 20px rgba(37,211,102,0.5);display:flex;align-items:center;gap:8px';
+  waBtn.innerHTML = '<span style="font-size:20px">📱</span> שלח ב-WhatsApp';
+  waBtn.onclick = ()=>window.open(waUrl, '_blank');
+  const skipBtn = document.createElement('button');
+  skipBtn.style.cssText = 'padding:12px 16px;border-radius:25px;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:14px;cursor:pointer';
+  skipBtn.textContent = 'דלג';
+  skipBtn.onclick = ()=>btn.remove();
+  btn.appendChild(waBtn);
+  btn.appendChild(skipBtn);
   document.body.appendChild(btn);
-  setTimeout(()=>document.getElementById('wa-free-btn')?.remove(), 8000);
+  setTimeout(()=>btn.remove(), 10000);
 }
 
 function showExplosion(name, rebuyNum){
