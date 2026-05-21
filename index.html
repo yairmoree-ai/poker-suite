@@ -292,10 +292,10 @@ input,select,textarea{font-family:inherit}
   <div id="tourn-view" class="list-view" style="display:none;background:#080b12">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;color:var(--gold)">🏆 טורנירים</div>
-      <button class="btn btn-gold btn-sm" onclick="showSaveTournDialog()">שמור טורניר נוכחי</button>
+      <button id="btn-save-tourn" class="btn btn-gold btn-sm" onclick="showSaveTournDialog()">שמור טורניר נוכחי</button>
     </div>
     <div style="display:flex;gap:7px;margin-bottom:12px">
-      <button class="btn btn-red btn-sm" onclick="resetTournament()">אפס טורניר</button>
+      <button id="btn-reset-tourn" class="btn btn-red btn-sm" onclick="resetTournament()">אפס טורניר</button>
     </div>
     <div id="tourn-list"></div>
   </div>
@@ -641,7 +641,7 @@ function render(){
   const vRefresh = document.getElementById('btn-viewer-refresh');
   if(vRefresh) vRefresh.style.display = isViewer()?'':'none';
   // Hide action buttons for viewers
-  ['btn-settings','btn-active','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row'].forEach(id=>{
+  ['btn-settings','btn-active','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
