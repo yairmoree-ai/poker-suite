@@ -1443,7 +1443,9 @@ function setGHStatus(msg, color){
 }
 
 async function pushCurrentToGitHub(){
-  // Push the current page HTML to GitHub
+  // Always read latest token from localStorage
+  try{ const t=localStorage.getItem('ps_ghtoken'); if(t) ghToken=t; }catch(e){}
+  if(!ghToken){ setGHStatus('הכנס GitHub Token', '#e07b6a'); return; }
   const html = document.documentElement.outerHTML;
   await pushToGitHub(html);
 }
