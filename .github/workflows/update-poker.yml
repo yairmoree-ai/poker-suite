@@ -1,0 +1,25 @@
+name: Update Poker Suite
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_url:
+        description: 'URL of the new HTML file'
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download new file
+        run: curl -L "${{ github.event.inputs.file_url }}" -o index.html
+      
+      - name: Commit and push
+        run: |
+          git config user.name "Poker Suite Bot"
+          git config user.email "bot@poker-suite.com"
+          git add index.html
+          git commit -m "Auto-update $(date '+%Y-%m-%d %H:%M')"
+          git push
