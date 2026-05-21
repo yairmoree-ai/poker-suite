@@ -1347,34 +1347,45 @@ function renderTournList(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
           ${[['שחקנים',t.totalBuyins],['Rebuy',t.totalRebuys],['כניסות',t.totalEntries]].map(([l,v])=>`<div style="font-size:10px;color:var(--muted)">${l}: <span style="color:var(--text);font-weight:600">${v||0}</span></div>`).join('')}
         </div>
-        ${finishT.filter(f=>f.place<=4).map(f=>{
-          const rb = f.rebuy||0;
-          const prize = prizeByPlaceT[f.place]||0;
-          if(f.place<=3){
-            const medals={1:'🏆',2:'🥈',3:'🥉'};
-            const colors={1:'#FFD700',2:'#C0C0C0',3:'#CD7F32'};
-            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:4px;border-radius:9px;background:rgba(255,255,255,0.03)">
-              <span style="font-size:16px">${medals[f.place]}</span>
-              <div style="flex:1">
-                <span style="font-size:12px;font-weight:700;color:#e2ddd4">${f.name||'?'}</span>
-                ${rb>0?`<span style="font-size:10px;color:var(--muted);margin-right:4px"> (R:${rb})</span>`:''}
-              </div>
-              ${prize?`<span style="font-size:12px;font-weight:800;color:${colors[f.place]}">₪${prize.toLocaleString()}</span>`:''}
-            </div>`;
-          } else {
-            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;margin-bottom:4px;border-radius:8px;background:rgba(255,255,255,0.02)">
-              <span style="font-size:11px;color:var(--muted);min-width:52px">מקום 4</span>
-              <div style="flex:1">
-                <span style="font-size:11px;font-weight:600;color:#e2ddd4">${f.name||'?'}</span>
-                ${rb>0?`<span style="font-size:10px;color:var(--muted);margin-right:4px"> (R:${rb})</span>`:''}
-              </div>
-              ${prize?`<span style="font-size:11px;font-weight:700;color:var(--gold)">₪${prize.toLocaleString()}</span>`:''}
-            </div>`;
-          }
-        }).join('')}
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <!-- Places column -->
+          <div style="flex:1">
+            ${finishT.filter(f=>f.place<=4).map(f=>{
+              const rb = f.rebuy||0;
+              const prize = prizeByPlaceT[f.place]||0;
+              const medals={1:'🏆',2:'🥈',3:'🥉'};
+              const colors={1:'#FFD700',2:'#C0C0C0',3:'#CD7F32'};
+              const medal = medals[f.place]||'';
+              const color = colors[f.place]||'var(--gold)';
+              return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <span style="font-size:${f.place<=3?'14':'11'}px">${medal||f.place+'.'}</span>
+                <span style="font-size:12px;font-weight:700;color:#e2ddd4;flex:1">${f.name||'?'}${rb>0?` <span style="font-size:11px;font-weight:900;color:var(--gold)">(${rb})</span>`:''}</span>
+                ${prize?`<span style="font-size:12px;font-weight:800;color:${color}">₪${prize.toLocaleString()}</span>`:''}
+              </div>`;
+            }).join('')}
+          </div>
+          <!-- Rebuy chart column -->
+          ${t.finishOrder?.some(f=>f.rebuy>0)?`
+          <div style="width:110px;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.06);padding-right:8px">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:5px;font-weight:600">🔄 Rebuy</div>
+            ${(()=>{
+              const maxR=Math.max(...(t.finishOrder||[]).map(f=>f.rebuy||0),1);
+              return (t.finishOrder||[]).filter(f=>f.rebuy>0).sort((a,b)=>b.rebuy-a.rebuy).map(f=>`
+                <div style="margin-bottom:4px">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:1px">
+                    <span style="font-size:9px;color:#e2ddd4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px">${f.name}</span>
+                    <span style="font-size:9px;font-weight:900;color:var(--gold)">${f.rebuy}</span>
+                  </div>
+                  <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px">
+                    <div style="height:100%;border-radius:2px;background:var(--gold);width:${Math.round(f.rebuy/maxR*100)}%"></div>
+                  </div>
+                </div>`).join('');
+            })()}
+          </div>`:''}
+        </div>
         ${t.totalRebuys>0&&t.finishOrder?.some(f=>f.rebuy>0)?`
         <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05)">
-          <div style="font-size:9px;color:var(--muted2);margin-bottom:3px">Rebuy: ${t.finishOrder.filter(f=>f.rebuy>0).map(f=>`${f.name} (${f.rebuy})`).join(', ')}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);line-height:1.8">🔄 Rebuy: ${t.finishOrder.filter(f=>f.rebuy>0).map(f=>`<span style="color:var(--gold)">${f.name}</span> <span style="color:#fff;font-weight:900">(${f.rebuy})</span>`).join(' · ')}</div>
         </div>`:''}
       </div>`;
     }).join('');
