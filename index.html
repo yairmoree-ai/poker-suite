@@ -1851,7 +1851,7 @@ function showWhatsAppFreeRebuy(name, rebuyNum){
   // Show WA button overlay
   const btn = document.createElement('div');
   btn.id = 'wa-free-btn';
-  btn.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;gap:10px;animation:freePopup 0.3s ease-out forwards';
+  btn.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;gap:10px';
   btn.innerHTML = `
     <button onclick="window.open('https://wa.me/?text=${encodeURIComponent('💣 BOOM! ' + name + ' קיבל Rebuy חינם! 🎉 Rebuy מס\' ' + rebuyNum + ' - חינם! 🆓 ' + gif)}','_blank')" 
       style="padding:12px 22px;border-radius:25px;border:none;background:#25D366;color:#fff;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 20px rgba(37,211,102,0.5);display:flex;align-items:center;gap:8px">
