@@ -379,6 +379,7 @@ let S={
   tournLog:[],
   houseRake:200,
   place4:0, place3:0,
+  place1Override:null, place2Override:null,
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
 let curHand=null, recStreet='פרה-פלופ', recActor='0';
@@ -408,6 +409,8 @@ function applySnapshot(v){
   if(v.houseRake!==undefined) S.houseRake=v.houseRake;
   if(v.place4!==undefined) S.place4=v.place4;
   if(v.place3!==undefined) S.place3=v.place3;
+  if(v.place1Override!==undefined) S.place1Override=v.place1Override;
+  if(v.place2Override!==undefined) S.place2Override=v.place2Override;
   if(v.handLog) S.handLog=v.handLog;
   if(v.tournLog) S.tournLog=v.tournLog;
   BLIND_LEVELS=[...DEF_BLINDS,...(S.customBlindLevels||[])];
@@ -476,7 +479,7 @@ function persist(){
   // Save to both localStorage and sessionStorage
   try{ localStorage.setItem('ps_lib',JSON.stringify(S.playerLib)); }catch(e){}
   try{ localStorage.setItem('ps_seats',JSON.stringify({seats:S.seats,board:S.board,btnSeat:S.btnSeat})); }catch(e){}
-  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,houseRake:S.houseRake,place4:S.place4,place3:S.place3,btnLocked:S.btnLocked,lastBet:S.lastBet})); }catch(e){}
+  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,houseRake:S.houseRake,place4:S.place4,place3:S.place3,place1Override:S.place1Override,place2Override:S.place2Override,btnLocked:S.btnLocked,lastBet:S.lastBet})); }catch(e){}
   try{ localStorage.setItem('ps_log',JSON.stringify(S.handLog)); }catch(e){}
   try{ localStorage.setItem('ps_tlog',JSON.stringify(S.tournLog)); }catch(e){}
   // Also save full snapshot to sessionStorage (survives refresh, not new tab)
@@ -1142,7 +1145,10 @@ function calcPrizes(){
   const p4=parseFloat(S.place4)||0;
   const p3=parseFloat(S.place3)||0;
   const rem=Math.max(0,pool-house-p4-p3);
-  return{pool,house,p4,p3,p2:rem*0.3,p1:rem*0.7,rem};
+  const p1auto=rem*0.7, p2auto=rem*0.3;
+  const p1=S.place1Override!=null?S.place1Override:p1auto;
+  const p2=S.place2Override!=null?S.place2Override:p2auto;
+  return{pool,house,p4,p3,p2,p1,rem,p1auto,p2auto};
 }
 function saveTournament(){if(isViewer()){notify('צופה בלבד');return;}
   const pr=calcPrizes();
@@ -1285,11 +1291,25 @@ function renderTournList(){
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">💰 חישוב וחלוקת פרסים</div>
     <div class="prize-row">
       <span class="prize-lbl" style="color:var(--gold);font-weight:700">מקום 1 (70%)</span>
-      <span class="prize-val" style="color:var(--green);font-size:16px">₪${Math.round(pr.p1).toLocaleString()}</span>
+      ${isViewer()?
+        `<span class="prize-val" style="color:var(--green);font-size:16px">₪${Math.round(S.place1Override||pr.p1).toLocaleString()}</span>`
+       :`<div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--muted)">₪${Math.round(pr.p1).toLocaleString()}</span>
+          <input class="prize-inp" type="number" placeholder="עקוף" value="${S.place1Override||''}"
+            onchange="S.place1Override=this.value?+this.value:null;persist();renderTournList()"
+            style="width:80px" title="השאר ריק לחישוב אוטומטי 70%">
+        </div>`}
     </div>
     <div class="prize-row">
       <span class="prize-lbl" style="color:var(--text)">מקום 2 (30%)</span>
-      <span class="prize-val">₪${Math.round(pr.p2).toLocaleString()}</span>
+      ${isViewer()?
+        `<span class="prize-val">₪${Math.round(S.place2Override||pr.p2).toLocaleString()}</span>`
+       :`<div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--muted)">₪${Math.round(pr.p2).toLocaleString()}</span>
+          <input class="prize-inp" type="number" placeholder="עקוף" value="${S.place2Override||''}"
+            onchange="S.place2Override=this.value?+this.value:null;persist();renderTournList()"
+            style="width:80px" title="השאר ריק לחישוב אוטומטי 30%">
+        </div>`}
     </div>
     <div class="prize-row">
       <span class="prize-lbl">מקום 3</span>
