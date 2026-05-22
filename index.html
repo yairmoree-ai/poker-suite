@@ -802,40 +802,37 @@ function renderSeats(){
       btns.id = 'seat-actions-'+i;
       btns.style.cssText = 'position:absolute;top:50%;left:50%;width:0;height:0;pointer-events:all;z-index:20';
       // Place buttons in arc around the seat circle
-      // New button layout:
-      // F = outside bottom-left corner of seat
-      // CH, C, R = below seat horizontally
-      // AI = outside bottom-right corner of seat
-      const sw=76, sh=76, bSize=28, gap=4;
+      // F, CH = above seat | C, R, AI = below seat
+      const sw=76, sh=76, bSize=28, gap=5;
       btns.style.cssText = 'position:absolute;top:0;left:0;width:'+sw+'px;height:'+sh+'px;pointer-events:none;z-index:20';
-      
-      // Bottom row: CH, C, R
-      const bottomDefs=[
-        {lbl:'CH',fn:'quickAction('+i+',\'Check\')',bg:'rgba(50,120,60,0.95)'},
-        {lbl:'C', fn:'quickAction('+i+',\'Call\')', bg:'rgba(40,80,160,0.95)'},
-        {lbl:'R', fn:'showQuickInput('+i+',\'Raise\')',bg:'rgba(160,110,30,0.95)'},
+      // TOP: F, CH
+      const seatI=i;
+      const topDefs=[
+        {lbl:'F', cb:function(){quickAction(seatI,'Fold');},  bg:'rgba(140,50,50,0.95)'},
+        {lbl:'CH',cb:function(){quickAction(seatI,'Check');}, bg:'rgba(50,120,60,0.95)'},
       ];
-      const totalW=bottomDefs.length*(bSize+gap)-gap;
-      const startX=(sw-totalW)/2;
-      bottomDefs.forEach((b,bi)=>{
+      const topTW=topDefs.length*(bSize+gap)-gap, topSX=(sw-topTW)/2;
+      topDefs.forEach((b,bi)=>{
         const btn=document.createElement('button');
-        btn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:'+b.bg+';color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(startX+bi*(bSize+gap))+'px;top:'+(sh+5)+'px;pointer-events:all';
+        btn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:'+b.bg+';color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(topSX+bi*(bSize+gap))+'px;top:'+(-bSize-5)+'px;pointer-events:all';
         btn.textContent=b.lbl;
-        (function(fn){btn.addEventListener('click',function(e){e.stopPropagation();eval(fn);});})(b.fn);
+        (function(cb){btn.addEventListener('click',function(e){e.stopPropagation();cb();});})(b.cb);
         btns.appendChild(btn);
       });
-      // F = outside bottom-left
-      const fBtn=document.createElement('button');
-      fBtn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:rgba(140,50,50,0.95);color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(-bSize-4)+'px;top:'+(sh-bSize)+'px;pointer-events:all';
-      fBtn.textContent='F';
-      (function(fn){fBtn.addEventListener('click',function(e){e.stopPropagation();eval(fn);});})('quickAction('+i+',\'Fold\')');
-      btns.appendChild(fBtn);
-      // AI = outside bottom-right
-      const aiBtn=document.createElement('button');
-      aiBtn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:rgba(160,40,40,0.95);color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(sw+4)+'px;top:'+(sh-bSize)+'px;pointer-events:all';
-      aiBtn.textContent='AI';
-      (function(fn){aiBtn.addEventListener('click',function(e){e.stopPropagation();eval(fn);});})('showQuickInput('+i+',\'All-in\')');
-      btns.appendChild(aiBtn);
+      // BOTTOM: C, R, AI
+      const botDefs=[
+        {lbl:'C', cb:function(){quickAction(seatI,'Call');},       bg:'rgba(40,80,160,0.95)'},
+        {lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},   bg:'rgba(160,110,30,0.95)'},
+        {lbl:'AI',cb:function(){showQuickInput(seatI,'All-in');},  bg:'rgba(160,40,40,0.95)'},
+      ];
+      const botTW=botDefs.length*(bSize+gap)-gap, botSX=(sw-botTW)/2;
+      botDefs.forEach((b,bi)=>{
+        const btn=document.createElement('button');
+        btn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:'+b.bg+';color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(botSX+bi*(bSize+gap))+'px;top:'+(sh+5)+'px;pointer-events:all';
+        btn.textContent=b.lbl;
+        (function(cb){btn.addEventListener('click',function(e){e.stopPropagation();cb();});})(b.cb);
+        btns.appendChild(btn);
+      });
       el.appendChild(btns);
     }
     cont.appendChild(el);
@@ -874,6 +871,7 @@ function renderSeats(){
     betsContainer.appendChild(chip);
   });
 }
+
 function renderBoard(){
   const cont=document.getElementById('board-cards'); cont.innerHTML='';
   const labels=['F1','F2','F3','T','R'];
@@ -2298,7 +2296,7 @@ function showView(v){
   // Show live actions bar only in table tab
   const liveBar = document.getElementById('live-actions-bar');
   if(liveBar) liveBar.style.display = v==='table' ? 'block' : 'none';
-  if(v==='table') renderLiveActions();
+  if(v==='table') try{ renderLiveActions(); }catch(e){ console.error('renderLiveActions error:',e); }
   if(v==='hands')renderHandList();
   if(v==='tourn')renderTournList();
   if(v==='players')renderPlayerList();
@@ -2535,8 +2533,8 @@ function checkPass(){
       badge.style.color = user.role==='viewer'?'#5b9bd5':'#5a5870';
     }
     inp.value='';
-    try{ loadState(); }catch(e){ console.error('loadState error:',e); render(); }
-try{ showView('table'); }catch(e){}
+    try{ loadState(); }catch(e){ console.error('loadState error:',e); try{render();}catch(e2){} }
+    try{ showView('table'); }catch(e){ console.error('showView error:',e); }
     try{
       loadGSUrl();
       if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
