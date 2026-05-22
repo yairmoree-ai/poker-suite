@@ -253,8 +253,7 @@ input,select,textarea{font-family:inherit}
       <div class="panel-header">
         <div class="panel-title" id="spt"></div>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="btn btn-green btn-sm" id="btn-rebuy" onclick="doRebuyActive()" style="display:none">Rebuy +</button>
-          <button class="btn btn-red btn-sm" id="btn-ko" onclick="doKO()" style="display:none">KO 💀</button>
+          <button id="btn-remove-seat" class="btn btn-gray btn-sm" onclick="removeSeat(activeSeat)" style="display:none;font-size:11px">הסר מושב</button>
           <button class="panel-close" onclick="closeSeatPanel()">✕</button>
         </div>
       </div>
@@ -699,7 +698,6 @@ function renderSeats(){
         <div class="seat-name">${name||'?'}</div>
         ${seat.stack?`<div class="seat-stack">${seat.stack.toLocaleString()}${sbb?` (${sbb}bb)`:''}</div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
-        ${displayAct?`<div class="seat-action-label" style="color:${displayAct.type==='SB'?'#8b7cb8':displayAct.type==='BB'?'#e07b6a':ACTIONS.find(a=>a.k===displayAct.type)?.c||'var(--gold)'};font-size:${displayAct.type==='SB'||displayAct.type==='BB'?'9':'9'}px">${displayAct.type}${displayAct.amount?' ₪'+Number(displayAct.amount).toLocaleString():''}</div>`:''}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     cont.appendChild(el);
@@ -748,8 +746,8 @@ function renderSeatPanel(){
   const seat=swp.find(s=>s.seatIdx===i)||{seatIdx:i,playerId:'',stack:0,pos:'',cards:[null,null],actions:[],folded:false,allin:false};
   const has=!!seat.playerId, pos=seat.pos, bb=getBB();
   const titleName = seat.playerId ? pName(seat.playerId) : `מושב ${i+1}`;
-  document.getElementById('spt').innerHTML=`<span style="font-size:14px;font-weight:800">${titleName}</span>${pos?` <span style="font-size:11px;font-weight:800;color:${PC[pos]||'var(--gold)'};background:${PC[pos]||'var(--gold)'}25;border-radius:6px;padding:2px 8px;margin-right:6px">${pos}</span>`:''}`;  document.getElementById('btn-ko').style.display=has?'':'none';
-  document.getElementById('btn-rebuy').style.display=has?'':'none';
+  document.getElementById('spt').innerHTML=`<span style="font-size:14px;font-weight:800">${titleName}</span>${pos?` <span style="font-size:11px;font-weight:800;color:${PC[pos]||'var(--gold)'};background:${PC[pos]||'var(--gold)'}25;border-radius:6px;padding:2px 8px;margin-right:6px">${pos}</span>`:''}`;  const rmBtn = document.getElementById('btn-remove-seat');
+  if(rmBtn) rmBtn.style.display = seat.playerId ? '' : 'none';
   // Player + stack
   const takenPids=S.seats.filter(s=>s.seatIdx!==i&&s.playerId).map(s=>s.playerId);
   let html=`<div class="form-row">
@@ -808,8 +806,7 @@ function renderSeatPanel(){
       <button class="btn btn-gray btn-xs" style="margin:2px" onclick="updSeat(${i},{actions:[],folded:false,allin:false})">איפוס</button>
     </div>`;
   }
-  html+=`</div><div class="div"></div>
-    <button class="btn btn-red" style="width:100%;margin-top:4px" onclick="removeSeat(${i})">הסר מושב</button>`;
+  html+=`</div>`;
   document.getElementById('spb').innerHTML=html;
 }
 
@@ -1459,7 +1456,7 @@ function renderTournList(){
       <span class="prize-val">${totalRebuys()}${calcFreeRebuys()>0?` <span style="font-size:10px;color:#5b9bd5;font-weight:600">(${calcFreeRebuys()} חינם)</span>`:''}</span>
     </div>
     <div class="prize-row"><span class="prize-lbl">כניסות בתשלום</span><span class="prize-val">${calcPaidEntries()}</span></div>
-    ${isAdmin()?`<div class="prize-row"><span class="prize-lbl" style="color:#7fd47f">🃏 צ'יפים כולל</span><span class="prize-val" style="color:#7fd47f">${totalChips().toLocaleString()}</span></div>`:''}
+    ${isAdmin()?`<div class="prize-row"><span class="prize-lbl" style="color:#7fd47f">🃏 צ׳יפים כולל</span><span class="prize-val" style="color:#7fd47f">${totalChips().toLocaleString()}</span></div>`:''}
     <div class="prize-row"><span class="prize-lbl">קופת פרסים</span><span class="prize-val">₪${pr.pool.toLocaleString()}</span></div>
 
 
@@ -1541,7 +1538,7 @@ function renderTournList(){
           </div>
           ${isAdmin()?`
           <div style="background:rgba(26,58,26,0.3);border:1px solid rgba(74,138,74,0.3);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
-            <div style="font-size:10px;color:#4a8a4a;margin-bottom:1px">🃏 צ'יפים</div>
+            <div style="font-size:10px;color:#4a8a4a;margin-bottom:1px">🃏 צ׳יפים</div>
             <div style="font-size:16px;font-weight:900;color:#7fd47f">${((t.totalEntries||0)*50/1000).toFixed(1)}M</div>
           </div>`:''}
         </div>
