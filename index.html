@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -40,16 +40,19 @@ input,select,textarea{font-family:inherit}
 /* MAIN */
 #main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
 /* TABLE */
-#table-view{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
-#table-wrap{position:relative;overflow:hidden;background:#080b12;width:min(100vw, calc(100vh - 145px));height:min(100vw, calc(100vh - 145px));margin:0 auto;flex-shrink:0}
+#table-view{flex:1;overflow:visible;display:flex;flex-direction:column;position:relative}
+#table-wrap{position:relative;overflow:visible;background:#080b12;width:min(92vw, calc(100vh - 170px));height:min(115vw, calc(100vh - 110px));margin:auto;flex-shrink:0}
 #table-svg{display:block}
-#seats-container{position:absolute;inset:0;z-index:10;pointer-events:none}
-.seat-el{position:absolute;transform:translate(-50%,-50%);z-index:10;pointer-events:auto;transition:transform .1s}
-.seat-btn{border-radius:10px;border:1.5px dashed rgba(255,255,255,0.18);background:#080b12;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:4px}
+#seats-container{position:absolute;inset:0;z-index:10;pointer-events:none;overflow:visible}
+#bet-chips-container{position:absolute;inset:0;z-index:15;pointer-events:none;overflow:visible}
+.seat-el{position:absolute;transform:translate(-50%,-50%);z-index:10;pointer-events:auto;transition:transform .1s;overflow:visible}
+.seat-btn{border-radius:14px;border:1.5px dashed rgba(255,255,255,0.18);background:#080b12;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:4px;overflow:visible}
 .seat-btn.occupied{background:#0a0e1c;border:1.5px solid rgba(200,169,110,0.3);padding:5px 4px;box-shadow:0 2px 12px rgba(0,0,0,0.6)}
 .seat-btn.active{border-color:var(--gold)!important;box-shadow:0 0 14px rgba(200,169,110,0.35)}
 .seat-btn.folded{opacity:.35}
 .seat-btn.allin{border-color:var(--red)!important}
+.seat-btn.current-actor{border-color:#fff!important;box-shadow:0 0 18px rgba(255,255,255,0.6),0 0 6px rgba(255,255,255,0.4)!important;animation:pulse-actor 1.2s ease-in-out infinite}
+@keyframes pulse-actor{0%,100%{box-shadow:0 0 18px rgba(255,255,255,0.6)}50%{box-shadow:0 0 28px rgba(255,255,255,0.9),0 0 10px rgba(255,255,255,0.5)}}
 .seat-name{font-size:10px;font-weight:700;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;color:var(--text)}
 .seat-stack{font-size:9px;color:#6a9060;text-align:center}
 .seat-pos{font-size:8px;font-weight:700;border-radius:4px;padding:1px 5px}
@@ -205,7 +208,7 @@ input,select,textarea{font-family:inherit}
     </div>
     <div style="display:flex;gap:5px">
       <button class="btn btn-outline btn-sm" id="btn-active" onclick="showActivePlayers()">👥 פעילים</button>
-      <button class="btn btn-gold btn-sm" onclick="if(isAdmin())newHand();else notify('צופה בלבד')" id="btn-newhand">יד חדשה</button>
+      <!-- btn-newhand hidden -->
       <button id="btn-viewer-refresh" class="btn btn-outline btn-sm" onclick="syncFromSheets()" style="display:none" title="רענן נתונים">🔄</button>
       <button class="btn btn-green btn-sm" id="btn-savehand" onclick="if(isAdmin())showSaveHandPanel();else notify('צופה בלבד')" title="שמור יד">💾</button>
       <button class="btn btn-outline btn-sm" id="btn-resethand" onclick="if(isAdmin())resetHand();else notify('צופה בלבד')" title="איפוס יד">↺</button>
@@ -213,7 +216,7 @@ input,select,textarea{font-family:inherit}
   </div>
   <div id="statsbar">
     <div class="sbox" id="sbox-buyincost"><label>עלות כניסה</label><input type="number" id="inp-buyin-cost" value="50" min="0" onchange="if(isAdmin()){S.buyinCost=+this.value;persist();renderStats()}"></div>
-    <div class="sbox" id="sbox-tablesize"><label>שחקנים בשולחן</label><select id="sel-table-size" onchange="if(isAdmin())setTableSize(+this.value)">
+    <div class="sbox" id="sbox-tablesize"><label>שחקנים בשולחן</label><select id="sel-table-size-stats" onchange="if(isAdmin())setTableSize(+this.value)">
       <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
     </select></div>
 
@@ -227,19 +230,26 @@ input,select,textarea{font-family:inherit}
 <!-- MAIN -->
 <div id="main" style="background:#080b12">
   <!-- TABLE -->
-  <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow:hidden">
+  <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow:visible">
+  <div id="table-size-bar" style="display:flex;align-items:center;justify-content:flex-end;padding:4px 10px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+    <span style="font-size:11px;color:var(--muted);margin-left:8px">שחקנים בשולחן:</span>
+    <select id="sel-table-size" onchange="if(isAdmin())setTableSize(+this.value)" style="background:#141824;border:1px solid rgba(255,255,255,0.12);color:#e2ddd4;border-radius:6px;padding:3px 6px;font-size:12px;outline:none">
+      <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+    </select>
+  </div>
+  <div id="live-actions-bar" style="display:none;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.07);padding:6px 10px;overflow-x:auto;flex-shrink:0;min-height:52px;display:none;align-items:stretch;gap:6px"></div>
     <div id="table-wrap">
       <svg id="table-svg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
         <defs>
           <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
           <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#164828"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
         </defs>
-        <circle cx="50" cy="50" r="47" fill="#060a10"/>
-        <circle cx="50" cy="50" r="46" fill="url(#gF)" opacity=".55"/>
-        <circle cx="50" cy="50" r="46" fill="none" stroke="#1e5535" stroke-width="1.5"/>
-        <circle cx="50" cy="50" r="42" fill="url(#gF2)"/>
-        <circle cx="50" cy="50" r="42" fill="none" stroke="#164030" stroke-width=".5"/>
-        <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>
+        <ellipse cx="50" cy="50" rx="43" ry="49" fill="#060a10"/>
+        <ellipse cx="50" cy="50" rx="42" ry="48" fill="url(#gF)" opacity=".55"/>
+        <ellipse cx="50" cy="50" rx="42" ry="48" fill="none" stroke="#1e5535" stroke-width="1.5"/>
+        <ellipse cx="50" cy="50" rx="38" ry="44" fill="url(#gF2)"/>
+        <ellipse cx="50" cy="50" rx="38" ry="44" fill="none" stroke="#164030" stroke-width=".5"/>
+        <ellipse cx="50" cy="50" rx="34" ry="40" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>
       </svg>
       <div id="seats-container"></div>
       <div id="board-center">
@@ -623,7 +633,7 @@ function assignPos(){
 }
 
 function getSeatXY(i,count){
-  const cx=50,cy=50,rx=42,ry=42;
+  const cx=50,cy=50,rx=40,ry=47;
   const angle=(Math.PI/2)+(2*Math.PI*i/count);
   return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
 }
@@ -631,6 +641,79 @@ function getSeatXY(i,count){
 // ═══════════════════════════════════════════════════════
 // RENDER
 // ═══════════════════════════════════════════════════════
+function renderLiveActions(){
+  const bar = document.getElementById('live-actions-bar');
+  if(!bar) return;
+  const swp = assignPos();
+  const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
+  const colFn = t=>t==='Fold'?'#555':t==='SB'?'#8b7cb8':t==='BB'?'#e07b6a':t==='Check'?'#5fc47a':t==='Call'?'#5b9bd5':t==='All-in'?'#e05555':'#c8a96e';
+  const typeShortFn = t=>t==='Raise'?'R':t==='Check'?'CH':t==='Call'?'C':t==='All-in'?'AI':t==='Fold'?'F':t;
+  const posColFn = p=>p==='BTN'?'#c8a96e':p==='SB'?'#8b7cb8':p==='BB'?'#e07b6a':'#6a8090';
+
+  // Build flat timeline per street: [{name,pos,type,amt,col,time}]
+  // Use action index within each seat as proxy for time
+  // We simulate order by going around table in posOrder
+
+  let html = '';
+  let hasAny = false;
+
+  streets.forEach(st=>{
+    // Collect all actions for this street with seat info
+    const allActs = [];
+    swp.filter(s=>s.playerId).forEach(s=>{
+      const seat = S.seats.find(st2=>st2.seatIdx===s.seatIdx)||{};
+      (seat.actions||[]).forEach((a,idx)=>{
+        if(a.street===st){
+          allActs.push({
+            name:pName(s.playerId)||'?',
+            pos:s.pos,
+            type:a.type,
+            amt:a.amount,
+            raiseRound:a.raiseRound||0,
+            seatIdx:s.seatIdx,
+            actionIdx:idx
+          });
+        }
+      });
+    });
+    if(!allActs.length) return;
+
+    // Sort by raiseRound first, then by posOrder within round
+    const posOrder = st==='פרה-פלופ'
+      ? ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB']
+      : ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB'];
+    
+    allActs.sort((a,b)=>{
+      if(a.raiseRound!==b.raiseRound) return a.raiseRound-b.raiseRound;
+      return (posOrder.indexOf(a.pos)===-1?99:posOrder.indexOf(a.pos))-(posOrder.indexOf(b.pos)===-1?99:posOrder.indexOf(b.pos));
+    });
+
+    hasAny=true;
+    html+=`<div style="display:inline-flex;align-items:stretch;gap:0;flex-shrink:0">`;
+    
+    allActs.forEach(item=>{
+      const col=colFn(item.type);
+      const rawAmt=Number(item.amt)||0;
+      const amt=rawAmt?(rawAmt>=1000?(rawAmt/1000)+'K':String(rawAmt)):'';
+      const typeShort=typeShortFn(item.type);
+      const posCol=posColFn(item.pos);
+      html+=`<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);border-right:1px solid rgba(255,255,255,0.06);padding:3px 8px;flex-shrink:0;min-width:46px;border-top:2px solid ${col}">
+        <span style="font-size:8px;font-weight:800;color:${posCol};white-space:nowrap">${item.pos||''}</span>
+        <span style="font-size:10px;font-weight:700;color:#e2ddd4;white-space:nowrap">${item.name}</span>
+        <span style="font-size:10px;font-weight:900;color:${col};white-space:nowrap">${typeShort}${amt?' '+amt:''}</span>
+      </div>`;
+    });
+
+    html+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);border-radius:0 6px 6px 0;padding:3px 6px;min-width:36px;flex-shrink:0">
+      <span style="font-size:9px;font-weight:800;color:#8a8090">${streetLabels[st]}</span>
+    </div></div><div style="display:inline-flex;width:8px;flex-shrink:0"></div>`;
+  });
+
+  bar.style.display='flex';
+  bar.innerHTML=hasAny?html:'<div style="font-size:11px;color:#3a3650;padding:4px 6px;align-self:center">אין פעולות עדיין</div>';
+}
+
 function render(){
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
   // Show/hide viewer banner
@@ -641,11 +724,19 @@ function render(){
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
+  // Check current active tab and apply hide logic
+  const curTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','') || 'table';
+  const sb2 = document.getElementById('statsbar');
+  if(sb2) sb2.style.display = curTab==='table' ? 'none' : '';
+  const lb2 = document.getElementById('live-actions-bar');
+  if(lb2) lb2.style.display = curTab==='table' ? 'block' : 'none';
+  const ab2 = document.getElementById('btn-active');
+  if(ab2) ab2.style.display = (curTab==='table'||curTab==='hands'||isViewer()) ? 'none' : '';
   // Show refresh button only for viewers
   const vRefresh = document.getElementById('btn-viewer-refresh');
   if(vRefresh) vRefresh.style.display = isViewer()?'':'none';
   // Hide action buttons for viewers
-  ['btn-settings','btn-active','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
+  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
@@ -665,6 +756,7 @@ function renderStats(){
   document.getElementById('stat-active').textContent=`${activeTournPlayers().length}/${totalEntries()}`;
   document.getElementById('stat-prize').textContent=`₪${prizePool().toLocaleString()}`;
   document.getElementById('inp-buyin-cost').value=S.buyinCost;
+  document.querySelectorAll('#sel-table-size,#sel-table-size-stats').forEach(el=>el.value=S.tableSize);
   document.getElementById('sel-table-size').value=S.tableSize;
 }
 function renderSeats(){
@@ -680,28 +772,107 @@ function renderSeats(){
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
     const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
     const displayAct = lastAct||blindAct;
-    const w=seat?.playerId?80:44;
+    const w=seat?.playerId?76:40;
+    const isCurrentActor = i===S.currentActor;
     let cls='seat-btn';
     if(seat?.playerId)cls+=' occupied';
     if(isAct)cls+=' active';
     if(isFold)cls+=' folded';
     if(isAlin)cls+=' allin';
+    if(isCurrentActor&&seat?.playerId&&!isFold)cls+=' current-actor';
     const el=document.createElement('div');
     el.className='seat-el';
+    el.dataset.seat=i;
     el.style=`left:${x}%;top:${y}%`;
-    el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?62:42}px" onclick="clickSeat(${i})">
+    el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?76:40}px" onclick="clickSeat(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
           ${seat.pos?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
           ${isBtn?`<span class="dealer-chip">D</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
-        ${seat.stack?`<div class="seat-stack">${seat.stack.toLocaleString()}${sbb?` (${sbb}bb)`:''}</div>`:''}
+        ${seat.stack>0?`<div class="seat-stack">${seat.stack.toLocaleString()}${sbb?` (${sbb}bb)`:''}</div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
+    // Add action buttons arc above occupied seats
+    const isCurActor = !S.bettingClosed && (S.currentActor===null || S.currentActor===i);
+    if(seat?.playerId && !seat?.folded && !seat?.allin && isCurActor){
+      const btns = document.createElement('div');
+      btns.id = 'seat-actions-'+i;
+      btns.style.cssText = 'position:absolute;top:50%;left:50%;width:0;height:0;pointer-events:all;z-index:20';
+      // Place buttons in arc around the seat circle
+      // New button layout:
+      // F = outside bottom-left corner of seat
+      // CH, C, R = below seat horizontally
+      // AI = outside bottom-right corner of seat
+      const sw=76, sh=76, bSize=28, gap=4;
+      btns.style.cssText = 'position:absolute;top:0;left:0;width:'+sw+'px;height:'+sh+'px;pointer-events:none;z-index:20';
+      
+      // Bottom row: CH, C, R
+      const bottomDefs=[
+        {lbl:'CH',fn:'quickAction('+i+',\'Check\')',bg:'rgba(50,120,60,0.95)'},
+        {lbl:'C', fn:'quickAction('+i+',\'Call\')', bg:'rgba(40,80,160,0.95)'},
+        {lbl:'R', fn:'showQuickInput('+i+',\'Raise\')',bg:'rgba(160,110,30,0.95)'},
+      ];
+      const totalW=bottomDefs.length*(bSize+gap)-gap;
+      const startX=(sw-totalW)/2;
+      bottomDefs.forEach((b,bi)=>{
+        const btn=document.createElement('button');
+        btn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:'+b.bg+';color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(startX+bi*(bSize+gap))+'px;top:'+(sh+5)+'px;pointer-events:all';
+        btn.textContent=b.lbl;
+        (function(fn){btn.addEventListener('click',function(e){e.stopPropagation();eval(fn);});})(b.fn);
+        btns.appendChild(btn);
+      });
+      // F = outside bottom-left
+      const fBtn=document.createElement('button');
+      fBtn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:rgba(140,50,50,0.95);color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(-bSize-4)+'px;top:'+(sh-bSize)+'px;pointer-events:all';
+      fBtn.textContent='F';
+      (function(fn){fBtn.addEventListener('click',function(e){e.stopPropagation();eval(fn);});})('quickAction('+i+',\'Fold\')');
+      btns.appendChild(fBtn);
+      // AI = outside bottom-right
+      const aiBtn=document.createElement('button');
+      aiBtn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:rgba(160,40,40,0.95);color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(sw+4)+'px;top:'+(sh-bSize)+'px;pointer-events:all';
+      aiBtn.textContent='AI';
+      (function(fn){aiBtn.addEventListener('click',function(e){e.stopPropagation();eval(fn);});})('showQuickInput('+i+',\'All-in\')');
+      btns.appendChild(aiBtn);
+      el.appendChild(btns);
+    }
     cont.appendChild(el);
   }
+
+  // Render floating bet chips
+  let betsContainer = document.getElementById('bet-chips-container');
+  if(!betsContainer){
+    betsContainer = document.createElement('div');
+    betsContainer.id = 'bet-chips-container';
+    betsContainer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:15;overflow:visible';
+    const tableWrap = document.getElementById('table-wrap');
+    if(tableWrap) tableWrap.appendChild(betsContainer);
+    else cont.parentElement.appendChild(betsContainer);
+  }
+  betsContainer.innerHTML = '';
+  swp.forEach(s=>{
+    if(!s.playerId) return;
+    const seat = S.seats.find(st=>st.seatIdx===s.seatIdx)||{};
+    const actions = seat.actions||[];
+    const lastAct = actions.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
+    const blindAct = actions.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
+    const act = lastAct||blindAct;
+    if(!act||!act.amount) return;
+    // Get seat position using getSeatXY
+    const {x:sx, y:sy} = getSeatXY(s.seatIdx, S.tableSize);
+    const cx=50, cy=50;
+    const dx = cx - sx, dy = cy - sy;
+    const len = Math.sqrt(dx*dx+dy*dy)||1;
+    const bx = sx + (dx/len)*20;
+    const by = sy + (dy/len)*20;
+    const col = act.type==='SB'?'#7b5cb8':act.type==='BB'?'#c05a4a':act.type==='Fold'?'#444':'#a07830';
+    const chip = document.createElement('div');
+    chip.style.cssText = 'position:absolute;left:'+bx+'%;top:'+by+'%;transform:translate(-50%,-50%);background:'+col+';border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:1px 5px;font-size:7.5px;font-weight:900;color:#fff;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.6)';
+    chip.textContent = '₪'+Number(act.amount).toLocaleString();
+    betsContainer.appendChild(chip);
+  });
 }
 function renderBoard(){
   const cont=document.getElementById('board-cards'); cont.innerHTML='';
@@ -743,7 +914,7 @@ function renderBlindsBtn(){
 function renderSeatPanel(){
   const i=activeSeat; if(i===null)return;
   const swp=assignPos();
-  const seat=swp.find(s=>s.seatIdx===i)||{seatIdx:i,playerId:'',stack:0,pos:'',cards:[null,null],actions:[],folded:false,allin:false};
+  const seat=swp.find(s=>s.seatIdx===i)||{seatIdx:i,playerId:'',stack:50000,pos:'',cards:[null,null],actions:[],folded:false,allin:false};
   const has=!!seat.playerId, pos=seat.pos, bb=getBB();
   const titleName = seat.playerId ? pName(seat.playerId) : `מושב ${i+1}`;
   document.getElementById('spt').innerHTML=`<span style="font-size:14px;font-weight:800">${titleName}</span>${pos?` <span style="font-size:11px;font-weight:800;color:${PC[pos]||'var(--gold)'};background:${PC[pos]||'var(--gold)'}25;border-radius:6px;padding:2px 8px;margin-right:6px">${pos}</span>`:''}`;  const rmBtn = document.getElementById('btn-remove-seat');
@@ -810,6 +981,42 @@ function renderSeatPanel(){
   document.getElementById('spb').innerHTML=html;
 }
 
+function quickAction(seatIdx, type){
+  if(isViewer()){notify('צופה בלבד');return;}
+  let amount = '';
+  if(type==='Call') amount = String(S.lastBet||0);
+  doAction(seatIdx, type, amount);
+}
+
+function showQuickInput(seatIdx, type){
+  if(isViewer()){notify('צופה בלבד');return;}
+  // Remove existing quick input
+  document.getElementById('quick-input-overlay')?.remove();
+  const seatEl = document.querySelector('.seat-el[data-seat="'+seatIdx+'"]') || 
+                 document.querySelectorAll('.seat-el')[seatIdx];
+  const overlay = document.createElement('div');
+  overlay.id = 'quick-input-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5)';
+  overlay.onclick = ()=>overlay.remove();
+  const box = document.createElement('div');
+  const defaultAmt = type==='Call'?S.lastBet:type==='All-in'?(S.seats.find(s=>s.seatIdx===seatIdx)?.stack||0):'';
+  box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:16px;width:220px;text-align:center';
+  box.onclick = e=>e.stopPropagation();
+  box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#c8a96e;margin-bottom:10px">'+type+'</div>' +
+    '<input id="quick-amt-inp" type="number" value="'+defaultAmt+'" placeholder="סכום..."' +
+    ' style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:16px;text-align:center;outline:none;box-sizing:border-box;margin-bottom:10px;-webkit-appearance:none"' +
+    ' onkeydown="if(event.key===\'Enter\'){doAction('+seatIdx+',\''+type+'\',this.value);document.getElementById(\'quick-input-overlay\')?.remove();}">' +
+    '<div style="display:flex;gap:8px">' +
+    '<button onclick="doAction('+seatIdx+',\''+type+'\',document.getElementById(\'quick-amt-inp\').value);document.getElementById(\'quick-input-overlay\')?.remove()"' +
+    ' style="flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer">✓</button>' +
+    '<button onclick="document.getElementById(\'quick-input-overlay\')?.remove()"' +
+    ' style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:14px;cursor:pointer">✕</button>' +
+    '</div>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('quick-amt-inp')?.focus(),100);
+}
+
 function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלבד');return;}
   const seat=S.seats.find(s=>s.seatIdx===seatIdx); if(!seat)return;
   const amt=parseFloat(amount)||0;
@@ -817,7 +1024,15 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   // Determine current street from board
   const boardCards = S.board.filter(Boolean).length;
   const street = boardCards===0?'פרה-פלופ':boardCards<=3?'פלופ':boardCards===4?'טורן':'ריבר';
-  seat.actions.push({street,type,amount:amt?String(amt):''});
+  const isRaise = ['Open','Raise','3bet','4bet','All-in'].includes(type);
+  if(isRaise) S.raiseRound = (S.raiseRound||0)+1;
+  const currentRound = S.raiseRound||0;
+  seat.actions.push({street,type,amount:amt?String(amt):'',raiseRound:currentRound});
+  if(isRaise){
+    S.lastRaiser = {seat:seatIdx, round:currentRound};
+    // After a raise, next actor starts from player AFTER the raiser
+    // advanceTurn will handle this naturally since afterSeatIdx=seatIdx (the raiser)
+  }
   if(type==='Fold')seat.folded=true;
   if(type==='All-in')seat.allin=true;
   if(amt>0){
@@ -829,7 +1044,21 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   }
   const inp=document.getElementById(`aamt-${seatIdx}-${type}`);
   if(inp)inp.value='';
-  persist(); renderSeats(); renderBoard(); renderSeatPanel();
+  // After fold, recompute order with folded player excluded
+  if(type==='Fold'){
+    const boardCount2 = S.board.filter(Boolean).length;
+    const street2 = boardCount2===0?'פרה-פלופ':boardCount2<=3?'פלופ':boardCount2===4?'טורן':'ריבר';
+    const newOrder = getActingOrder(street2); // now excludes folded player
+    const curIdx = newOrder.indexOf(seatIdx);
+    // Find next after this seat in the NEW order
+    const nextAfterFold = newOrder[curIdx>=0?curIdx:0]||newOrder[0]||null;
+    // But we want the NEXT one, not the current
+    // Actually just advance normally - getActingOrder already excludes folded
+    advanceTurn(seatIdx);
+  } else {
+    advanceTurn(seatIdx);
+  }
+  persist(); renderSeats(); renderBoard(); renderSeatPanel(); renderLiveActions();
 }
 function rmSeatAction(seatIdx,ai){
   const seat=S.seats.find(s=>s.seatIdx===seatIdx);
@@ -853,7 +1082,9 @@ function clickSeat(i){
 }
 function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
 function setSeatPlayer(i,pid){
-  updSeat(i,{playerId:pid});
+  const existing = S.seats.find(s=>s.seatIdx===i);
+  const stack = existing?.stack||50000;
+  updSeat(i,{playerId:pid, stack:stack});
 }
 function updSeat(i,upd){
   const idx=S.seats.findIndex(s=>s.seatIdx===i);
@@ -865,6 +1096,91 @@ function removeSeat(i){
   activeSeat=null; closePanel('seat-panel');
   persist(); render();
 }
+// ═══════════════════════════════
+// TURN ORDER MANAGEMENT
+// ═══════════════════════════════
+function getActingOrder(street){
+  // Get seat indices in action order for given street
+  const swp = assignPos();
+  const active = swp.filter(s=>{
+    if(!s.playerId) return false;
+    const seat = S.seats.find(st=>st.seatIdx===s.seatIdx);
+    if(seat?.folded || seat?.allin) return false;
+    // In preflop: always include SB and BB (they need to act voluntarily)
+    return true;
+  });
+  const posOrder = street==='פרה-פלופ'
+    ? ['UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB','SB','BB']
+    : ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB'];
+  return active.sort((a,b)=>{
+    const ai=posOrder.indexOf(a.pos); const bi=posOrder.indexOf(b.pos);
+    return (ai===-1?99:ai)-(bi===-1?99:bi);
+  }).map(s=>s.seatIdx);
+}
+
+function getNextActor(afterSeatIdx){
+  const boardCount = S.board.filter(Boolean).length;
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const swp = assignPos();
+  const posOrder = street==='פרה-פלופ'
+    ? ['UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB','SB','BB']
+    : ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB'];
+
+  const active = swp.filter(s=>{
+    const seat = S.seats.find(st=>st.seatIdx===s.seatIdx);
+    return s.playerId && !seat?.folded && !seat?.allin;
+  }).sort((a,b)=>(posOrder.indexOf(a.pos)===-1?99:posOrder.indexOf(a.pos))-(posOrder.indexOf(b.pos)===-1?99:posOrder.indexOf(b.pos)));
+
+  if(active.length<=1) return null;
+
+  const lastRaiserSeat = S.lastRaiser?.seat??null;
+  const lastRaiseRound = S.lastRaiser?.round??0;
+
+  const afterIdx = active.findIndex(s=>s.seatIdx===afterSeatIdx);
+  const start = afterIdx===-1?0:(afterIdx+1)%active.length;
+
+  for(let i=0;i<active.length;i++){
+    const cand = active[(start+i)%active.length];
+    if(cand.seatIdx===afterSeatIdx) continue;
+
+    // When we circle back to raiser, close betting
+    if(lastRaiserSeat!==null && cand.seatIdx===lastRaiserSeat) return null;
+
+    const cSeat = S.seats.find(s=>s.seatIdx===cand.seatIdx);
+    const myVolActs = (cSeat?.actions||[]).filter(a=>
+      a.street===street && a.type!=='SB' && a.type!=='BB'
+    );
+
+    if(lastRaiserSeat===null){
+      // No raise - everyone needs one voluntary action
+      if(myVolActs.length===0) return cand.seatIdx;
+    } else {
+      // Check if player has acted in the CURRENT raise round
+      const actsThisRound = myVolActs.filter(a=>(a.raiseRound||0)===lastRaiseRound);
+      if(actsThisRound.length===0) return cand.seatIdx;
+    }
+  }
+  return null;
+}
+
+
+function setCurrentActor(seatIdx){
+  S.currentActor = seatIdx;
+  renderSeats(); // re-render to show highlight
+  renderLiveActions();
+}
+
+function advanceTurn(fromSeatIdx){
+  const next = getNextActor(fromSeatIdx);
+  S.currentActor = next;
+  if(next===null){
+    // Betting round closed - hide all buttons
+    S.bettingClosed = true;
+  }
+  renderSeats();
+  renderLiveActions();
+}
+
 function postBlinds(btnSeatIdx){
   // Auto-post SB and BB after BTN is set
   const b = getBlinds();
@@ -873,14 +1189,24 @@ function postBlinds(btnSeatIdx){
   const bb = swp.find(s=>s.pos==='BB');
   if(sb && sb.playerId){
     const seat = S.seats.find(s=>s.seatIdx===sb.seatIdx);
-    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.sb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'SB',amount:String(b.sb)}); }
+    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.sb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'SB',amount:String(b.sb),raiseRound:0}); }
   }
   if(bb && bb.playerId){
     const seat = S.seats.find(s=>s.seatIdx===bb.seatIdx);
-    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.bb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'BB',amount:String(b.bb)}); S.lastBet=b.bb; }
+    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.bb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'BB',amount:String(b.bb),raiseRound:0}); S.lastBet=b.bb; }
   }
   S.btnLocked = true;
-  persist(); renderSeats(); renderBoard();
+  S.bettingClosed = false;
+  S.lastRaiser = null;
+  S.actionCount = 0;
+  S.raiseRound = 0;
+  // Set first actor to UTG (first after BB)
+  setTimeout(()=>{
+    const boardCount = S.board.filter(Boolean).length;
+    const order = getActingOrder('פרה-פלופ');
+    S.currentActor = order[0]||null;
+    persist(); renderSeats(); renderBoard(); renderLiveActions();
+  },50);
 }
 
 function resetHand(){
@@ -889,7 +1215,11 @@ function resetHand(){
   S.lastBet = 0;
   S.board = [null,null,null,null,null];
   S.seats = S.seats.map(s=>({...s, cards:[null,null], actions:[], folded:false, allin:false}));
-  persist(); render(); notify('יד אופסה');
+  persist(); render();
+  // Re-apply tab visibility
+  const ct = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
+  if(ct) showView(ct);
+  notify('יד אופסה');
 }
 
 function saveHandWithLabel(){
@@ -897,7 +1227,7 @@ function saveHandWithLabel(){
   const swp = assignPos();
   const b = getBlinds();
   const hand = {
-    id:uid(), date:new Date().toLocaleDateString('he-IL'), name:tournName||'',
+    id:uid(), date:new Date().toLocaleDateString('he-IL'),
     blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
     label, board:[...S.board],
     seats: swp.filter(s=>s.playerId).map(s=>({
@@ -1089,7 +1419,7 @@ function newHand(){
   const swp=assignPos();
   const b=getBlinds();
   curHand={
-    id:uid(), date:new Date().toLocaleDateString('he-IL'), name:tournName||'',
+    id:uid(), date:new Date().toLocaleDateString('he-IL'),
     blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
     board:[...S.board],
     seats:swp.filter(s=>s.playerId).map(s=>({
@@ -1277,7 +1607,7 @@ function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');re
   const nameMap={};
   S.playerLib.forEach(p=>{nameMap[p.id]=p.name;});
   const t={
-    id:uid(), date:new Date().toLocaleDateString('he-IL'), name:tournName||'',
+    id:uid(), date:new Date().toLocaleDateString('he-IL'),
     buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
     totalEntries:totalEntries(), paidEntries:calcPaidEntries(), freeRebuys:calcFreeRebuys(), prizePool:pr.pool,
     houseRake:pr.house, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
@@ -1893,7 +2223,32 @@ function pickCard(s){
     else{const m=rt.match(/rs(\d+)_c(\d+)/);if(m)curHand.seats[+m[1]].cards[+m[2]]=card;}
     renderRecordPanel(); return;
   }
-  if(t?.startsWith('board')){S.board[+t.replace('board','')]=card;}
+  if(t?.startsWith('board')){
+    const boardIdx = +t.replace('board','');
+    S.board[boardIdx]=card;
+    // Clear bet chips when new betting round starts: after 3rd flop card, turn, river
+    if(boardIdx===2||boardIdx===3||boardIdx===4){
+      // Reset actor to first post-street position (SB or first active)
+      const newStreet = boardIdx===2?'פלופ':boardIdx===3?'טורן':'ריבר';
+      const newOrder = getActingOrder(newStreet);
+      S.currentActor = newOrder[0]||null;
+      S.bettingClosed = false;
+      S.lastRaiser = null;
+      S.actionCount = 0;
+      S.raiseRound = 0;
+      // Clear only the bet amounts (SB/BB stay, only last non-blind action cleared)
+      S.seats.forEach(seat=>{
+        if(seat.actions&&seat.actions.length>0){
+          // Keep cards and position info but clear bet actions for new street display
+          seat._streetCleared = (seat._streetCleared||0)+1;
+        }
+      });
+      // Clear bet chips container
+      const bc=document.getElementById('bet-chips-container');
+      if(bc) bc.innerHTML='';
+      renderLiveActions();
+    }
+  }
   else if(t?.startsWith('seat')){
     const m=t.match(/seat(\d+)_c(\d+)/);
     if(m){const seat=S.seats.find(s=>s.seatIdx===+m[1]);if(seat){if(!seat.cards)seat.cards=[null,null];seat.cards[+m[2]]=card;}}
@@ -1934,6 +2289,16 @@ function showView(v){
   // Hide table size selector in players/tournaments tabs
   const tblSize = document.getElementById('sbox-tablesize');
   if(tblSize) tblSize.style.display = (v==='tourn'||v==='players') ? 'none' : '';
+  // Hide active players button in table and hands tabs, and for viewers
+  const activeBtn = document.getElementById('btn-active');
+  if(activeBtn) activeBtn.style.display = (v==='table'||v==='hands'||isViewer()) ? 'none' : '';
+  // Hide stats bar in table tab, show in others
+  const statsBar = document.getElementById('statsbar');
+  if(statsBar) statsBar.style.display = v==='table' ? 'none' : '';
+  // Show live actions bar only in table tab
+  const liveBar = document.getElementById('live-actions-bar');
+  if(liveBar) liveBar.style.display = v==='table' ? 'block' : 'none';
+  if(v==='table') renderLiveActions();
   if(v==='hands')renderHandList();
   if(v==='tourn')renderTournList();
   if(v==='players')renderPlayerList();
@@ -2171,6 +2536,7 @@ function checkPass(){
     }
     inp.value='';
     try{ loadState(); }catch(e){ console.error('loadState error:',e); render(); }
+try{ showView('table'); }catch(e){}
     try{
       loadGSUrl();
       if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
