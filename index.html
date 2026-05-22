@@ -40,8 +40,8 @@ input,select,textarea{font-family:inherit}
 /* MAIN */
 #main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
 /* TABLE */
-#table-view{flex:1;overflow:visible;display:flex;flex-direction:column;position:relative}
-#table-wrap{position:relative;overflow:visible;background:#080b12;width:min(92vw, calc(100vh - 170px));height:min(115vw, calc(100vh - 110px));margin:0 auto;flex-shrink:0}
+#table-view{flex:1;overflow-x:hidden;overflow-y:visible;display:flex;flex-direction:column;position:relative}
+#table-wrap{position:relative;overflow:visible;background:#080b12;width:min(92vw, calc(100vh - 170px));height:min(115vw, calc(100vh - 110px));margin:auto;flex-shrink:0}
 #table-svg{display:block}
 #seats-container{position:absolute;inset:0;z-index:10;pointer-events:none;overflow:visible}
 #bet-chips-container{position:absolute;inset:0;z-index:15;pointer-events:none;overflow:visible}
@@ -230,14 +230,15 @@ input,select,textarea{font-family:inherit}
 <!-- MAIN -->
 <div id="main" style="background:#080b12">
   <!-- TABLE -->
-  <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow:visible">
+  <div id="live-actions-bar" style="display:none;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.06);padding:6px 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;min-height:52px;white-space:nowrap;max-width:100vw;box-sizing:border-box"></div>
+  <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow-x:clip;overflow-y:visible;justify-content:center;align-items:center">
   <div id="table-size-bar" style="display:flex;align-items:center;justify-content:flex-end;padding:4px 10px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
     <span style="font-size:11px;color:var(--muted);margin-left:8px">שחקנים בשולחן:</span>
     <select id="sel-table-size" onchange="if(isAdmin())setTableSize(+this.value)" style="background:#141824;border:1px solid rgba(255,255,255,0.12);color:#e2ddd4;border-radius:6px;padding:3px 6px;font-size:12px;outline:none">
       <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
     </select>
   </div>
-  <div id="live-actions-bar" style="display:none;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.07);padding:6px 10px;overflow-x:auto;flex-shrink:0;min-height:52px;display:none;align-items:stretch;gap:6px"></div>
+  <div id="live-actions-bar" style="display:none;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.07);padding:6px 10px;overflow-x:scroll;-webkit-overflow-scrolling:touch;flex-shrink:0;min-height:52px;white-space:nowrap;scrollbar-width:none"></div>
     <div id="table-wrap">
       <svg id="table-svg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
         <defs>
@@ -457,6 +458,12 @@ let S={
   houseRake:200,
   place4:0, place3:0,
   place1Override:null, place2Override:null,
+  currentActor:null,
+  bettingClosed:false,
+  lastRaiser:null,
+  raiseRound:0,
+  actionCount:0,
+  btnLocked:false,
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
 let curHand=null, recStreet='פרה-פלופ', recActor='0';
@@ -710,7 +717,7 @@ function renderLiveActions(){
     </div></div><div style="display:inline-flex;width:8px;flex-shrink:0"></div>`;
   });
 
-  bar.style.display='flex';
+  bar.style.display='block';
   bar.innerHTML=hasAny?html:'<div style="font-size:11px;color:#3a3650;padding:4px 6px;align-self:center">אין פעולות עדיין</div>';
 }
 
@@ -796,7 +803,7 @@ function renderSeats(){
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     // Add action buttons arc above occupied seats
-    const isCurActor = !S.bettingClosed && (S.currentActor===null || S.currentActor===i);
+    const isCurActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor===i;
     if(seat?.playerId && !seat?.folded && !seat?.allin && isCurActor){
       const btns = document.createElement('div');
       btns.id = 'seat-actions-'+i;
@@ -805,7 +812,7 @@ function renderSeats(){
       // F, CH = above seat | C, R, AI = below seat
       const sw=76, sh=76, bSize=28, gap=5;
       btns.style.cssText = 'position:absolute;top:0;left:0;width:'+sw+'px;height:'+sh+'px;pointer-events:none;z-index:20';
-      // TOP: F, CH
+      // TOP: F, CH above seat
       const seatI=i;
       const topDefs=[
         {lbl:'F', cb:function(){quickAction(seatI,'Fold');},  bg:'rgba(140,50,50,0.95)'},
@@ -819,7 +826,7 @@ function renderSeats(){
         (function(cb){btn.addEventListener('click',function(e){e.stopPropagation();cb();});})(b.cb);
         btns.appendChild(btn);
       });
-      // BOTTOM: C, R, AI
+      // BOTTOM: C, R, AI below seat
       const botDefs=[
         {lbl:'C', cb:function(){quickAction(seatI,'Call');},       bg:'rgba(40,80,160,0.95)'},
         {lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},   bg:'rgba(160,110,30,0.95)'},
@@ -1098,64 +1105,63 @@ function removeSeat(i){
 // TURN ORDER MANAGEMENT
 // ═══════════════════════════════
 function getActingOrder(street){
-  // Get seat indices in action order for given street
   const swp = assignPos();
-  const active = swp.filter(s=>{
-    if(!s.playerId) return false;
-    const seat = S.seats.find(st=>st.seatIdx===s.seatIdx);
-    if(seat?.folded || seat?.allin) return false;
-    // In preflop: always include SB and BB (they need to act voluntarily)
-    return true;
-  });
   const posOrder = street==='פרה-פלופ'
     ? ['UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB','SB','BB']
     : ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB'];
-  return active.sort((a,b)=>{
-    const ai=posOrder.indexOf(a.pos); const bi=posOrder.indexOf(b.pos);
-    return (ai===-1?99:ai)-(bi===-1?99:bi);
-  }).map(s=>s.seatIdx);
+  return swp
+    .filter(s=>{
+      if(!s.playerId) return false;
+      const seat = S.seats.find(st=>st.seatIdx===s.seatIdx);
+      return !seat?.folded && !seat?.allin;
+    })
+    .sort((a,b)=>(posOrder.indexOf(a.pos)===-1?99:posOrder.indexOf(a.pos))-(posOrder.indexOf(b.pos)===-1?99:posOrder.indexOf(b.pos)))
+    .map(s=>s.seatIdx);
 }
 
 function getNextActor(afterSeatIdx){
   const boardCount = S.board.filter(Boolean).length;
   const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
-  const swp = assignPos();
-  const posOrder = street==='פרה-פלופ'
-    ? ['UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB','SB','BB']
-    : ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB'];
+  const order = getActingOrder(street);
+  if(!order.length) return null;
 
-  const active = swp.filter(s=>{
-    const seat = S.seats.find(st=>st.seatIdx===s.seatIdx);
-    return s.playerId && !seat?.folded && !seat?.allin;
-  }).sort((a,b)=>(posOrder.indexOf(a.pos)===-1?99:posOrder.indexOf(a.pos))-(posOrder.indexOf(b.pos)===-1?99:posOrder.indexOf(b.pos)));
+  const raiseTypes = ['Open','Raise','3bet','4bet','All-in'];
+  const lastRaiserSeat = S.lastRaiser?.seat ?? null;
+  const lastRaiseRound = S.lastRaiser?.round ?? 0;
 
-  if(active.length<=1) return null;
+  // Find position of afterSeatIdx in order (may not be there if folded)
+  let startIdx = 0;
+  const afterIdx = order.indexOf(afterSeatIdx);
+  if(afterIdx !== -1) startIdx = (afterIdx + 1) % order.length;
+  else {
+    // afterSeatIdx was removed (folded) – find next seat by seatIdx value
+    const allIdxs = S.seats.map(s=>s.seatIdx).sort((a,b)=>a-b);
+    const pos = allIdxs.indexOf(afterSeatIdx);
+    for(let k=1;k<=allIdxs.length;k++){
+      const cand = allIdxs[(pos+k)%allIdxs.length];
+      const ci = order.indexOf(cand);
+      if(ci !== -1){ startIdx = ci; break; }
+    }
+  }
 
-  const lastRaiserSeat = S.lastRaiser?.seat??null;
-  const lastRaiseRound = S.lastRaiser?.round??0;
+  for(let i=0;i<order.length;i++){
+    const cand = order[(startIdx+i)%order.length];
 
-  const afterIdx = active.findIndex(s=>s.seatIdx===afterSeatIdx);
-  const start = afterIdx===-1?0:(afterIdx+1)%active.length;
+    // If we've gone all the way back to the last raiser – betting is closed
+    if(lastRaiserSeat !== null && cand === lastRaiserSeat) return null;
 
-  for(let i=0;i<active.length;i++){
-    const cand = active[(start+i)%active.length];
-    if(cand.seatIdx===afterSeatIdx) continue;
-
-    // When we circle back to raiser, close betting
-    if(lastRaiserSeat!==null && cand.seatIdx===lastRaiserSeat) return null;
-
-    const cSeat = S.seats.find(s=>s.seatIdx===cand.seatIdx);
+    const cSeat = S.seats.find(s=>s.seatIdx===cand);
     const myVolActs = (cSeat?.actions||[]).filter(a=>
       a.street===street && a.type!=='SB' && a.type!=='BB'
     );
 
-    if(lastRaiserSeat===null){
-      // No raise - everyone needs one voluntary action
-      if(myVolActs.length===0) return cand.seatIdx;
+    if(lastRaiserSeat === null){
+      // No raise yet – everyone needs one voluntary action
+      if(myVolActs.length === 0) return cand;
     } else {
-      // Check if player has acted in the CURRENT raise round
-      const actsThisRound = myVolActs.filter(a=>(a.raiseRound||0)===lastRaiseRound);
-      if(actsThisRound.length===0) return cand.seatIdx;
+      // After a raise – need action in current raise round
+      const actsThisRound = myVolActs.filter(a=>(a.raiseRound||0) === lastRaiseRound);
+      if(actsThisRound.length === 0) return cand;
     }
   }
   return null;
@@ -1172,7 +1178,6 @@ function advanceTurn(fromSeatIdx){
   const next = getNextActor(fromSeatIdx);
   S.currentActor = next;
   if(next===null){
-    // Betting round closed - hide all buttons
     S.bettingClosed = true;
   }
   renderSeats();
