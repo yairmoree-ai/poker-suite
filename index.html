@@ -231,14 +231,14 @@ input,select,textarea{font-family:inherit}
 <div id="main" style="background:#080b12">
   <!-- TABLE -->
   <div id="live-actions-bar" style="display:none;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.06);padding:6px 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;min-height:52px;white-space:nowrap;max-width:100vw;box-sizing:border-box"></div>
-  <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow-x:clip;overflow-y:visible;justify-content:center;align-items:center">
-  <div id="table-size-bar" style="display:flex;align-items:center;justify-content:flex-end;padding:4px 10px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
-    <span style="font-size:11px;color:var(--muted);margin-left:8px">שחקנים בשולחן:</span>
-    <select id="sel-table-size" onchange="if(isAdmin())setTableSize(+this.value)" style="background:#141824;border:1px solid rgba(255,255,255,0.12);color:#e2ddd4;border-radius:6px;padding:3px 6px;font-size:12px;outline:none">
+  <div id="table-size-bar" style="display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:4px 10px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+    <span style="font-size:11px;color:var(--muted)">שחקנים בשולחן:</span>
+    <select id="sel-table-size" onchange="if(isAdmin())setTableSize(+this.value)" style="background:#141824;border:1px solid rgba(255,255,255,0.12);color:#e2ddd4;border-radius:6px;padding:3px 6px;font-size:12px;outline:none;-webkit-appearance:none;text-align:center;width:44px">
       <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
     </select>
   </div>
-  <div id="live-actions-bar" style="display:none;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.07);padding:6px 10px;overflow-x:scroll;-webkit-overflow-scrolling:touch;flex-shrink:0;min-height:52px;white-space:nowrap;scrollbar-width:none"></div>
+  <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow-x:clip;overflow-y:visible;justify-content:center;align-items:center;padding-top:10px">
+
     <div id="table-wrap">
       <svg id="table-svg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
         <defs>
@@ -497,6 +497,12 @@ function applySnapshot(v){
   if(v.place2Override!==undefined) S.place2Override=v.place2Override;
   if(v.handLog) S.handLog=v.handLog;
   if(v.tournLog) S.tournLog=v.tournLog;
+  // Ensure new fields always have defaults
+  if(S.currentActor===undefined) S.currentActor=null;
+  if(S.bettingClosed===undefined) S.bettingClosed=false;
+  if(S.lastRaiser===undefined) S.lastRaiser=null;
+  if(S.raiseRound===undefined) S.raiseRound=0;
+  if(S.actionCount===undefined) S.actionCount=0;
   BLIND_LEVELS=[...DEF_BLINDS,...(S.customBlindLevels||[])];
 }
 
@@ -1204,12 +1210,8 @@ function postBlinds(btnSeatIdx){
   S.actionCount = 0;
   S.raiseRound = 0;
   // Set first actor to UTG (first after BB)
-  setTimeout(()=>{
-    const boardCount = S.board.filter(Boolean).length;
-    const order = getActingOrder('פרה-פלופ');
-    S.currentActor = order[0]||null;
-    persist(); renderSeats(); renderBoard(); renderLiveActions();
-  },50);
+  const preflopOrder = getActingOrder('פרה-פלופ');
+  S.currentActor = preflopOrder[0]??null;
 }
 
 function resetHand(){
