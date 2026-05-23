@@ -532,13 +532,21 @@ function applySnapshot(v){
   }
   if(v.blindTimer){
     Object.assign(S.blindTimer, v.blindTimer);
+    // Calculate current secondsLeft from timestamp
+    if(S.blindTimer.running && S.blindTimer.startedAt){
+      const elapsed = Math.floor((Date.now() - S.blindTimer.startedAt)/1000);
+      S.blindTimer.secondsLeft = Math.max(0, (S.blindTimer.pausedAt||getLevelDuration(S.blindLevel)) - elapsed);
+    }
     updateTimerDisplay();
-    // Start/stop local timer for viewer to interpolate
-    if(S.blindTimer.running && !_timerInterval){
-      startBlindTimer();
-    } else if(!S.blindTimer.running && _timerInterval){
-      clearInterval(_timerInterval);
-      _timerInterval = null;
+    if(!isAdmin()){
+      // Viewer runs local countdown (accurate because we calculated from timestamp)
+      clearInterval(_timerInterval); _timerInterval = null;
+      if(S.blindTimer.running){
+        _timerInterval = setInterval(()=>{
+          if(S.blindTimer.secondsLeft>0){ S.blindTimer.secondsLeft--; updateTimerDisplay(); }
+          else { clearInterval(_timerInterval); _timerInterval=null; }
+        },1000);
+      }
     }
   }
   if(v.customBlinds!==undefined) S.customBlinds=v.customBlinds;
@@ -796,11 +804,9 @@ function startBlindTimer(){
   if(_timerInterval) clearInterval(_timerInterval);
   _timerInterval = setInterval(()=>{
     if(!S.blindTimer.running){ clearInterval(_timerInterval); _timerInterval=null; return; }
+    if(!isAdmin()) return; // only admin controls the real timer
     S.blindTimer.secondsLeft--;
-    // Admin: sync every 30 seconds
-    if(isAdmin() && S.blindTimer.secondsLeft % 30 === 0 && gsUrl){
-      syncToSheets(true);
-    }
+
     if(S.blindTimer.secondsLeft <= 0){
       // Auto advance to next level
       nextBlindLevel(true);
@@ -816,16 +822,21 @@ function startBlindTimer(){
 function toggleBlindTimer(){
   S.blindTimer.running = !S.blindTimer.running;
   if(S.blindTimer.running){
-    S.blindTimer.lastStartedAt = Date.now();
+    // Record when we started (for viewer timestamp calculation)
+    S.blindTimer.startedAt = Date.now();
+    S.blindTimer.pausedAt = S.blindTimer.secondsLeft; // seconds remaining when started
   } else {
-    // Save remaining seconds at pause time
-    S.blindTimer.lastStartedAt = null;
+    // Save current remaining time
+    const elapsed = S.blindTimer.startedAt ? Math.floor((Date.now()-S.blindTimer.startedAt)/1000) : 0;
+    S.blindTimer.secondsLeft = Math.max(0, (S.blindTimer.pausedAt||S.blindTimer.secondsLeft) - elapsed);
+    S.blindTimer.startedAt = null;
+    S.blindTimer.pausedAt = S.blindTimer.secondsLeft;
   }
   const btn = document.getElementById('btn-timer-toggle');
   if(btn) btn.textContent = S.blindTimer.running ? '⏸' : '▶';
   if(S.blindTimer.running && !_timerInterval) startBlindTimer();
   persist();
-  syncToSheets(true); // sync immediately so viewer sees it
+  syncToSheets(true);
 }
 
 function announceBlindLevel(level, sb, bb){
@@ -855,6 +866,8 @@ function nextBlindLevel(auto=false){
   if(next >= BLIND_LEVELS.length){ notify('הגעת לרמה האחרונה'); return; }
   S.blindLevel = next;
   S.blindTimer.secondsLeft = getLevelDuration(next);
+  // Update timestamp for new level
+  if(S.blindTimer.running){ S.blindTimer.startedAt=Date.now(); S.blindTimer.pausedAt=getLevelDuration(next); }
   // Flash animation on blind-up
   const bar = document.getElementById('blind-timer-bar');
   if(bar){
@@ -869,6 +882,7 @@ function nextBlindLevel(auto=false){
   renderStats();
   persist();
   notify('רמה '+(next+1)+': '+BLIND_LEVELS[next].sb.toLocaleString()+'/'+BLIND_LEVELS[next].bb.toLocaleString());
+  persist(); syncToSheets(true);
   // Announce new blinds
   const nb = BLIND_LEVELS[next];
   setTimeout(()=>announceBlindLevel(next+1, nb.sb, nb.bb), 500);
@@ -3125,6 +3139,36 @@ function checkPass(){
     try{ loadState(); }catch(e){ console.error('loadState error:',e); try{render();}catch(e2){} }
 startBlindTimer();
 updateTimerDisplay();
+
+// When returning to app - recalculate from timestamp and advance levels if needed
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && S.blindTimer.running && S.blindTimer.startedAt){
+    const elapsed = Math.floor((Date.now() - S.blindTimer.startedAt)/1000);
+    let remaining = Math.max(0, (S.blindTimer.pausedAt||getLevelDuration(S.blindLevel)) - elapsed);
+    
+    if(isAdmin()){
+      // Advance levels as needed for time passed
+      let timeLeft = elapsed;
+      while(timeLeft > 0 && S.blindLevel < BLIND_LEVELS.length - 1){
+        const dur = getLevelDuration(S.blindLevel);
+        const levelRemaining = S.blindTimer.pausedAt || dur;
+        if(timeLeft >= levelRemaining){
+          timeLeft -= levelRemaining;
+          S.blindLevel++;
+          S.blindTimer.pausedAt = getLevelDuration(S.blindLevel);
+          notify('עלית לרמה '+(S.blindLevel+1));
+        } else { break; }
+      }
+      S.blindTimer.secondsLeft = Math.max(0, (S.blindTimer.pausedAt||getLevelDuration(S.blindLevel)) - timeLeft);
+      S.blindTimer.startedAt = Date.now();
+      S.blindTimer.pausedAt = S.blindTimer.secondsLeft;
+      persist(); syncToSheets(true);
+    }
+    updateTimerDisplay();
+    clearInterval(_timerInterval); _timerInterval = null;
+    startBlindTimer();
+  }
+});
     try{ showView('table'); }catch(e){ console.error('showView error:',e); }
     try{
       loadGSUrl();
