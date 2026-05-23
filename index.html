@@ -543,8 +543,23 @@ function applySnapshot(v){
       clearInterval(_timerInterval); _timerInterval = null;
       if(S.blindTimer.running){
         _timerInterval = setInterval(()=>{
-          if(S.blindTimer.secondsLeft>0){ S.blindTimer.secondsLeft--; updateTimerDisplay(); }
-          else { clearInterval(_timerInterval); _timerInterval=null; }
+          if(S.blindTimer.secondsLeft>0){
+            S.blindTimer.secondsLeft--;
+            updateTimerDisplay();
+          } else {
+            // Level up for viewer too
+            const next = S.blindLevel + 1;
+            if(next < BLIND_LEVELS.length){
+              S.blindLevel = next;
+              S.blindTimer.secondsLeft = getLevelDuration(next);
+              S.blindTimer.pausedAt = S.blindTimer.secondsLeft;
+              updateTimerDisplay();
+              const nb = BLIND_LEVELS[next];
+              if(nb) setTimeout(()=>announceBlindLevel(next+1, nb.sb, nb.bb), 300);
+            } else {
+              clearInterval(_timerInterval); _timerInterval=null;
+            }
+          }
         },1000);
       }
     }
