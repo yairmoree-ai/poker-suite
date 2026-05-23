@@ -464,6 +464,7 @@ let S={
   lastRaiser:null,
   raiseRound:0,
   actionCount:0,
+  lastRaiseSize:0,  // size of last raise increment
   btnLocked:false,
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
@@ -802,11 +803,11 @@ function renderSeats(){
     el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?76:40}px" onclick="clickSeat(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
-          ${seat.pos?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
+          ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
           ${isBtn?`<span class="dealer-chip">D</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
-        ${seat.stack>0?`<div class="seat-stack">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
+        ${seat.stack>0?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
         ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טורן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');return(!isViewer()&&cSa.length>0)?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid #e07b6a;background:#7a2020;color:#ffaaaa;font-size:8px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:5">↩ בטל</button>`:'';})()}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
@@ -1059,6 +1060,76 @@ function undoLastAction(seatIdx){
   notify('פעולה בוטלה ↩');
 }
 
+function inlineEditStack(seatIdx, el){
+  if(!isAdmin()) return;
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat) return;
+  const inp = document.createElement('input');
+  inp.type = 'number';
+  inp.inputMode = 'numeric';
+  inp.value = seat.stack;
+  inp.style.cssText = 'width:100%;font-size:11px;font-weight:700;color:#e2ddd4;background:#0a0e18;border:1px solid #c8a96e;border-radius:4px;text-align:center;outline:none;padding:2px;box-sizing:border-box;-webkit-appearance:none';
+  inp.onblur = ()=>{
+    const n=parseInt(inp.value);
+    if(!isNaN(n)&&n>=0){ seat.stack=n; persist(); renderSeats(); }
+    else renderSeats();
+  };
+  inp.onkeydown = e=>{
+    if(e.key==='Enter'){ inp.blur(); }
+    if(e.key==='Escape'){ renderSeats(); }
+  };
+  el.replaceWith(inp);
+  inp.focus();
+  inp.select();
+}
+
+function applyStackEdit(seatIdx){
+  const n=parseInt(document.getElementById('stack-edit-inp')?.value);
+  document.getElementById('quick-input-overlay')?.remove();
+  if(!isNaN(n)&&n>=0){
+    const seat=S.seats.find(s=>s.seatIdx===seatIdx);
+    if(seat){ seat.stack=n; persist(); renderSeats(); renderBoard(); }
+  }
+}
+function editStack(seatIdx){
+  if(!isAdmin()) return;
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat) return;
+  document.getElementById('quick-input-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'quick-input-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6)';
+  overlay.onclick = ()=>overlay.remove();
+  const box = document.createElement('div');
+  box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:16px;width:220px;text-align:center';
+  box.onclick = e=>e.stopPropagation();
+  const inp = document.createElement('input');
+  inp.id = 'stack-edit-inp';
+  inp.type = 'number';
+  inp.inputMode = 'numeric';
+  inp.value = seat.stack;
+  inp.style.cssText = 'width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:18px;text-align:center;outline:none;box-sizing:border-box;margin-bottom:10px;-webkit-appearance:none';
+  inp.onkeydown = e=>{ if(e.key==='Enter') applyStackEdit(seatIdx); };
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:13px;font-weight:700;color:#c8a96e;margin-bottom:10px';
+  title.textContent = 'ערימה – '+(pName(seat.playerId)||'שחקן');
+  const btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px';
+  const ok = document.createElement('button');
+  ok.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer';
+  ok.textContent = '✓';
+  ok.onclick = ()=>applyStackEdit(seatIdx);
+  const cancel = document.createElement('button');
+  cancel.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:14px;cursor:pointer';
+  cancel.textContent = '✕';
+  cancel.onclick = ()=>overlay.remove();
+  btns.appendChild(ok); btns.appendChild(cancel);
+  box.appendChild(title); box.appendChild(inp); box.appendChild(btns);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  setTimeout(()=>{inp.focus();inp.select();inp.click();},200);
+}
+
 function getStreetInvested(seatIdx){
   // How much has this player already put in during current street
   const boardCount = S.board.filter(Boolean).length;
@@ -1093,7 +1164,9 @@ function showQuickInput(seatIdx, type){
   overlay.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5)';
   overlay.onclick = ()=>overlay.remove();
   const box = document.createElement('div');
-  const defaultAmt = type==='Call'?getCallAmount(seatIdx):type==='All-in'?(S.seats.find(s=>s.seatIdx===seatIdx)?.stack||0):'';
+  const bb2 = getBlinds()?.bb||0;
+  const minRaise = S.lastBet + Math.max(S.lastRaiseSize||0, bb2);
+  const defaultAmt = type==='Call'?getCallAmount(seatIdx):type==='All-in'?(S.seats.find(s=>s.seatIdx===seatIdx)?.stack||0):type==='Raise'?minRaise:'';
   box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:16px;width:220px;text-align:center';
   box.onclick = e=>e.stopPropagation();
   box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#c8a96e;margin-bottom:10px">'+type+'</div>' +
@@ -1125,6 +1198,15 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   const isRaiseType2 = ['Open','Raise','3bet','4bet','5bet','All-in','Bet'].includes(type);
   const alreadyInvested = isRaiseType2 ? getStreetInvested(seatIdx) : 0;
   const deltaAmt = isRaiseType2 ? Math.max(0, amt - alreadyInvested) : amt;
+  // Validate raise: min = lastBet + lastRaiseSize (or lastBet + BB if first raise)
+  if(isRaiseType2 && type!=='All-in'){
+    const bb = getBlinds()?.bb||0;
+    const minRaise = S.lastBet + Math.max(S.lastRaiseSize||0, bb);
+    if(amt < minRaise){
+      notify('מינימום רייז: '+minRaise.toLocaleString());
+      return;
+    }
+  }
   seat.actions.push({street,type,amount:deltaAmt?String(deltaAmt):'',raiseRound:currentRound});
   if(isRaise){
     S.lastRaiser = {seat:seatIdx, round:currentRound};
@@ -1137,7 +1219,8 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
     seat.stack=Math.max(0,(seat.stack||0)-deltaAmt);
     // Track last bet for Call default
     if(['Open','Raise','3bet','4bet','5bet','All-in','Bet'].includes(type)){
-      S.lastBet = amt; // amt = total entered by user = new call benchmark
+      S.lastRaiseSize = amt - S.lastBet; // increment size
+      S.lastBet = amt;
     }
   }
   const inp=document.getElementById(`aamt-${seatIdx}-${type}`);
@@ -1183,6 +1266,9 @@ function setSeatPlayer(i,pid){
   const existing = S.seats.find(s=>s.seatIdx===i);
   const stack = existing?.stack||50000;
   updSeat(i,{playerId:pid, stack:stack});
+  // Close panel and return to table view
+  closeSeatPanel();
+  setTimeout(()=>showView('table'), 100);
 }
 function updSeat(i,upd){
   const idx=S.seats.findIndex(s=>s.seatIdx===i);
@@ -1296,6 +1382,7 @@ function postBlinds(btnSeatIdx){
   S.lastRaiser = null;
   S.actionCount = 0;
   S.raiseRound = 0;
+  S.lastRaiseSize = 0;
   // Set first actor to UTG (first after BB)
   const preflopOrder = getActingOrder('פרה-פלופ');
   S.currentActor = preflopOrder[0]??null;
@@ -2341,6 +2428,7 @@ function pickCard(s){
       S.lastRaiser = null;
       S.actionCount = 0;
       S.raiseRound = 0;
+      S.lastRaiseSize = 0;
       // Clear only the bet amounts (SB/BB stay, only last non-blind action cleared)
       S.seats.forEach(seat=>{
         if(seat.actions&&seat.actions.length>0){
