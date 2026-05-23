@@ -532,11 +532,13 @@ function applySnapshot(v){
   }
   if(v.blindTimer){
     const bt = v.blindTimer;
-    if(bt.running && bt.lastStartedAt){
-      // Calculate how much time has elapsed since timer started
-      const elapsed = Math.floor((Date.now() - bt.lastStartedAt)/1000);
-      bt.secondsLeft = Math.max(0, (bt.secondsLeft||1200) - elapsed);
-      bt.lastStartedAt = null; // reset so we don't re-calculate
+    Object.assign(S.blindTimer, bt);
+    // Start/stop local timer for viewer to interpolate
+    if(S.blindTimer.running && !_timerInterval){
+      startBlindTimer();
+    } else if(!S.blindTimer.running && _timerInterval){
+      clearInterval(_timerInterval);
+      _timerInterval = null;
     }
   }
   if(v.customBlinds!==undefined) S.customBlinds=v.customBlinds;
@@ -792,9 +794,12 @@ let _timerInterval = null;
 function startBlindTimer(){
   if(_timerInterval) clearInterval(_timerInterval);
   _timerInterval = setInterval(()=>{
-    if(!S.blindTimer.running) return;
+    if(!S.blindTimer.running){ clearInterval(_timerInterval); _timerInterval=null; return; }
     S.blindTimer.secondsLeft--;
-    S.blindTimer.lastStartedAt = null; // clear so sync sends current secondsLeft
+    // Admin: sync every 30 seconds
+    if(isAdmin() && S.blindTimer.secondsLeft % 30 === 0 && gsUrl){
+      syncToSheets(true);
+    }
     if(S.blindTimer.secondsLeft <= 0){
       // Auto advance to next level
       nextBlindLevel(true);
