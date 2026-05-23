@@ -301,6 +301,37 @@ input,select,textarea{font-family:inherit}
   </div>
   <!-- TOURNAMENTS -->
   <div id="tourn-view" class="list-view" style="display:none;background:#080b12">
+  <!-- BLIND TIMER -->
+  <div id="blind-timer-bar" style="background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;padding:10px 14px">
+    <!-- Admin controls row -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div id="timer-display" style="font-size:32px;font-weight:900;color:#c8a96e;font-variant-numeric:tabular-nums;min-width:80px;letter-spacing:-1px">20:00</div>
+      <div style="flex:1">
+        <div id="timer-level" style="font-size:11px;color:var(--muted)">רמה 1 / 12</div>
+        <div id="timer-blinds" style="font-size:16px;font-weight:800;color:#e2ddd4">500 / 1,000</div>
+        <div id="timer-next" style="font-size:10px;color:#5a5870;margin-top:1px">הבא: —</div>
+      </div>
+      <span id="timer-controls" style="display:flex;gap:6px;align-items:center">
+        <button id="btn-timer-toggle" onclick="toggleBlindTimer()" style="padding:8px 14px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:900;font-size:14px;cursor:pointer">▶</button>
+        <button onclick="nextBlindLevel()" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#e2ddd4;font-size:12px;cursor:pointer">⏭</button>
+        <button onclick="showStructureEditor()" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;cursor:pointer">📋</button>
+        <button onclick="resetBlindTimer()" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#e2ddd4;font-size:12px;cursor:pointer">↺</button>
+      </span>
+    </div>
+    <!-- Progress bar -->
+    <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden">
+      <div id="timer-progress" style="height:100%;background:#c8a96e;border-radius:2px;transition:width 1s linear;width:100%"></div>
+    </div>
+    <!-- Prize pool row -->
+    <div id="timer-prize-row" style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,0.05)">
+      <span style="font-size:11px;color:var(--muted)">קופה</span>
+      <span id="timer-prize" style="font-size:14px;font-weight:800;color:#5fc47a">₪0</span>
+      <span style="font-size:11px;color:var(--muted)">פעילים</span>
+      <span id="timer-active" style="font-size:14px;font-weight:800;color:#e2ddd4">0</span>
+      <span style="font-size:11px;color:var(--muted)">1מקום</span>
+      <span id="timer-place1" style="font-size:14px;font-weight:800;color:#c8a96e">₪0</span>
+    </div>
+  </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;color:var(--gold)">🏆 טורנירים</div>
       <button id="btn-save-tourn" class="btn btn-gold btn-sm" onclick="showSaveTournDialog()">שמור טורניר נוכחי</button>
@@ -449,6 +480,8 @@ let S={
   buyins:{},       // {pid:{buyin:n,rebuy:n}}
   koOrder:[],      // pids in order of KO (first KO = last place)
   blindLevel:0,
+  blindTimer:{running:false, secondsLeft:1200, levelDuration:1200}, // 20 min default
+  blindStructure:null, // custom per-level durations [{sb,bb,ante,duration}]
   customBlinds:null,
   customBlindLevels:[],
   btnSeat:0,
@@ -600,7 +633,11 @@ function fullSnapshot(){
 // ═══════════════════════════════════════════════════════
 // DERIVED
 // ═══════════════════════════════════════════════════════
-const getBlinds=()=>S.customBlinds||BLIND_LEVELS[S.blindLevel]||DEF_BLINDS[0];
+const getBlinds=()=>S.customBlinds||(S.blindStructure?S.blindStructure[S.blindLevel]:null)||BLIND_LEVELS[S.blindLevel]||DEF_BLINDS[0];
+const getLevelDuration=(lvl)=>{
+  if(S.blindStructure?.[lvl]?.duration) return S.blindStructure[lvl].duration;
+  return S.blindTimer.levelDuration;
+};
 const getBB=()=>getBlinds().bb;
 const pName=pid=>S.playerLib.find(p=>p.id===pid)?.name||'';
 const sortedLib=()=>[...S.playerLib].sort((a,b)=>a.name.localeCompare(b.name,'he'));
@@ -731,6 +768,234 @@ function renderLiveActions(){
   bar.innerHTML=hasAny?html:'<div style="font-size:11px;color:#3a3650;padding:4px 6px;align-self:center">אין פעולות עדיין</div>';
 }
 
+// ═══════════════════════════
+// BLIND TIMER
+// ═══════════════════════════
+let _timerInterval = null;
+
+function startBlindTimer(){
+  if(_timerInterval) clearInterval(_timerInterval);
+  _timerInterval = setInterval(()=>{
+    if(!S.blindTimer.running) return;
+    S.blindTimer.secondsLeft--;
+    if(S.blindTimer.secondsLeft <= 0){
+      // Auto advance to next level
+      nextBlindLevel(true);
+    }
+    updateTimerDisplay();
+    // Warning at 60 seconds
+    if(S.blindTimer.secondsLeft === 60){
+      notify('⚠️ דקה אחרונה לרמה '+(S.blindLevel+1));
+    }
+  }, 1000);
+}
+
+function toggleBlindTimer(){
+  S.blindTimer.running = !S.blindTimer.running;
+  const btn = document.getElementById('btn-timer-toggle');
+  if(btn) btn.textContent = S.blindTimer.running ? '⏸' : '▶';
+  if(S.blindTimer.running && !_timerInterval) startBlindTimer();
+  persist();
+}
+
+function nextBlindLevel(auto=false){
+  const next = S.blindLevel + 1;
+  if(next >= BLIND_LEVELS.length){ notify('הגעת לרמה האחרונה'); return; }
+  S.blindLevel = next;
+  S.blindTimer.secondsLeft = getLevelDuration(next);
+  // Flash animation on blind-up
+  const bar = document.getElementById('blind-timer-bar');
+  if(bar){
+    bar.style.transition='background 0.3s';
+    bar.style.background='rgba(200,169,110,0.2)';
+    setTimeout(()=>{ bar.style.background='#0a0e18'; },800);
+  }
+  if(!auto) S.blindTimer.running = false;
+  const btn = document.getElementById('btn-timer-toggle');
+  if(btn) btn.textContent = S.blindTimer.running ? '⏸' : '▶';
+  updateTimerDisplay();
+  renderStats();
+  persist();
+  notify('רמה '+(next+1)+': '+BLIND_LEVELS[next].sb.toLocaleString()+'/'+BLIND_LEVELS[next].bb.toLocaleString());
+}
+
+function updateTimerDisplay(){
+  const el = document.getElementById('timer-display');
+  if(!el) return;
+  const s = S.blindTimer.secondsLeft;
+  const m = Math.floor(s/60), sec = s%60;
+  el.textContent = m+':'+(sec<10?'0':'')+sec;
+  el.style.color = s<=60?'#e07b6a':s<=120?'#FFB347':'#5fc47a';
+
+  const lvl = document.getElementById('timer-level');
+  if(lvl) lvl.textContent = 'רמה '+(S.blindLevel+1)+' / '+BLIND_LEVELS.length;
+
+  const b = getBlinds();
+  const bl = document.getElementById('timer-blinds');
+  if(bl) bl.textContent = b.sb.toLocaleString()+' / '+b.bb.toLocaleString()+(b.ante?' · ante '+b.ante.toLocaleString():'');
+
+  // Next level
+  const nextB = BLIND_LEVELS[S.blindLevel+1];
+  const nextEl = document.getElementById('timer-next');
+  if(nextEl) nextEl.textContent = nextB ? 'הבא: '+nextB.sb.toLocaleString()+' / '+nextB.bb.toLocaleString() : 'רמה אחרונה';
+
+  // Progress bar
+  const dur = getLevelDuration(S.blindLevel);
+  const pct = dur>0 ? Math.max(0,(s/dur)*100) : 0;
+  const prog = document.getElementById('timer-progress');
+  if(prog){ prog.style.width=pct+'%'; prog.style.background=s<=60?'#e07b6a':s<=120?'#FFB347':'#c8a96e'; }
+
+  // Prize & active
+  const prizeEl = document.getElementById('timer-prize');
+  if(prizeEl) prizeEl.textContent = '₪'+(prizePool()||0).toLocaleString();
+  const activeEl = document.getElementById('timer-active');
+  if(activeEl) activeEl.textContent = activeTournPlayers().length;
+  const p1El = document.getElementById('timer-place1');
+  if(p1El){
+    const pp = prizePool()||0;
+    const p1 = Math.round(pp*0.7);
+    p1El.textContent = '₪'+p1.toLocaleString();
+  }
+}
+
+function showTimerSettings(){
+  const cur = S.blindTimer.levelDuration;
+  const mins = Math.round(cur/60);
+  const overlay = document.createElement('div');
+  overlay.id = 'timer-settings-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7)';
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:18px;width:260px';
+  box.onclick = e=>e.stopPropagation();
+  const opts = [5,10,15,20,25,30].map(m=>{
+    const btn2 = document.createElement('button');
+    btn2.style.cssText = 'padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:'+(mins===m?'#c8a96e':'rgba(255,255,255,0.05)')+';color:'+(mins===m?'#0a0d14':'#e2ddd4')+';font-size:13px;font-weight:700;cursor:pointer';
+    btn2.textContent = m+" דק'";
+    btn2.onclick = ()=>{ setLevelDuration(m*60); overlay.remove(); };
+    return btn2.outerHTML;
+  }).join('');
+  const title2 = document.createElement('div');
+  title2.style.cssText = 'font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:12px;text-align:center';
+  title2.textContent = 'משך כל רמה';
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px';
+  grid.innerHTML = opts;
+  const closeBtn2 = document.createElement('button');
+  closeBtn2.style.cssText = 'width:100%;padding:10px;border-radius:9px;border:none;background:rgba(255,255,255,0.08);color:#5a5870;cursor:pointer';
+  closeBtn2.textContent = 'סגור';
+  closeBtn2.onclick = ()=>overlay.remove();
+  box.appendChild(title2); box.appendChild(grid); box.appendChild(closeBtn2);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function showStructureEditor(){
+  document.getElementById('structure-editor-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'structure-editor-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);overflow-y:auto';
+  
+  const struct = S.blindStructure || BLIND_LEVELS.map(b=>({...b, duration:S.blindTimer.levelDuration}));
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:14px;padding:16px;max-width:400px';
+  
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center';
+  title.textContent = '📋 מבנה בליינדים';
+  const closeX = document.createElement('button');
+  closeX.style.cssText = 'background:none;border:none;color:#5a5870;font-size:18px;cursor:pointer';
+  closeX.textContent = '✕';
+  closeX.onclick = ()=>overlay.remove();
+  title.appendChild(closeX);
+  
+  // Build rows
+  const rows = document.createElement('div');
+  rows.id = 'struct-rows';
+  
+  function buildRows(){
+    rows.innerHTML = '';
+    struct.forEach((lvl,idx)=>{
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:24px 1fr 1fr 1fr 80px 28px;gap:4px;align-items:center;margin-bottom:6px';
+      const durMins = Math.round((lvl.duration||S.blindTimer.levelDuration)/60);
+      row.innerHTML = 
+        '<span style="font-size:11px;color:#5a5870;text-align:center">'+(idx+1)+'</span>'+
+        '<input type="number" value="'+lvl.sb+'" placeholder="SB" data-field="sb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
+        '<input type="number" value="'+lvl.bb+'" placeholder="BB" data-field="bb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
+        '<input type="number" value="'+(lvl.ante||0)+'" placeholder="Ante" data-field="ante" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
+        '<input type="number" value="'+durMins+'" placeholder="דק׳" data-field="duration" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(200,169,110,0.3);background:#0a0e18;color:#c8a96e;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
+        '<button data-del="'+idx+'" style="padding:4px;border-radius:6px;border:none;background:rgba(224,123,106,0.2);color:#e07b6a;font-size:14px;cursor:pointer;width:100%">✕</button>';
+      rows.appendChild(row);
+    });
+    // Input change handlers
+    rows.querySelectorAll('input').forEach(inp=>{
+      inp.oninput = ()=>{
+        const i=+inp.dataset.idx, f=inp.dataset.field;
+        struct[i][f] = f==='duration'? (+inp.value||20)*60 : +inp.value||0;
+      };
+    });
+    rows.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.onclick = ()=>{ struct.splice(+btn.dataset.del,1); buildRows(); };
+    });
+  }
+  buildRows();
+  
+  // Header
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:grid;grid-template-columns:24px 1fr 1fr 1fr 80px 28px;gap:4px;margin-bottom:4px';
+  hdr.innerHTML = '<span></span><span style="font-size:10px;color:#5a5870;text-align:center">SB</span><span style="font-size:10px;color:#5a5870;text-align:center">BB</span><span style="font-size:10px;color:#5a5870;text-align:center">Ante</span><span style="font-size:10px;color:#c8a96e;text-align:center">דק׳</span><span></span>';
+  
+  // Add level button
+  const addBtn = document.createElement('button');
+  addBtn.style.cssText = 'width:100%;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:#5a5870;font-size:13px;cursor:pointer;margin-top:6px';
+  addBtn.textContent = '+ הוסף רמה';
+  addBtn.onclick = ()=>{ const last=struct[struct.length-1]||{sb:500,bb:1000,ante:0}; struct.push({sb:last.sb*2,bb:last.bb*2,ante:last.ante,duration:S.blindTimer.levelDuration}); buildRows(); };
+  
+  // Save button
+  const saveBtn = document.createElement('button');
+  saveBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-top:10px';
+  saveBtn.textContent = '💾 שמור מבנה';
+  saveBtn.onclick = ()=>{
+    S.blindStructure = struct.map(l=>({sb:l.sb,bb:l.bb,ante:l.ante||0,duration:l.duration||S.blindTimer.levelDuration}));
+    // Update BLIND_LEVELS but don't change current level or timer
+    BLIND_LEVELS = S.blindStructure;
+    persist();
+    overlay.remove();
+    notify('מבנה נשמר ✓ (לא הופעל)');
+  };
+  
+  // Reset button
+  const resetBtn = document.createElement('button');
+  resetBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer;margin-top:6px';
+  resetBtn.textContent = 'איפוס למבנה ברירת מחדל';
+  resetBtn.onclick = ()=>{ S.blindStructure=null; BLIND_LEVELS=[...DEF_BLINDS]; persist(); overlay.remove(); notify('מבנה אופס'); };
+  
+  box.appendChild(title); box.appendChild(hdr); box.appendChild(rows);
+  box.appendChild(addBtn); box.appendChild(saveBtn); box.appendChild(resetBtn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function resetBlindTimer(){
+  S.blindLevel = 0;
+  S.blindTimer.running = false;
+  S.blindTimer.secondsLeft = getLevelDuration(0);
+  const btn = document.getElementById('btn-timer-toggle');
+  if(btn) btn.textContent = '▶';
+  updateTimerDisplay();
+  persist();
+  notify('טיימר אופס ↺');
+}
+
+function setLevelDuration(secs){
+  S.blindTimer.levelDuration = secs;
+  S.blindTimer.secondsLeft = secs;
+  updateTimerDisplay();
+  persist();
+}
+
 function render(){
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
   // Show/hide viewer banner
@@ -743,6 +1008,8 @@ function render(){
   });
   // Check current active tab and apply hide logic
   const curTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','') || 'table';
+  const timerCtrl = document.getElementById('timer-controls');
+  if(timerCtrl) timerCtrl.style.display = isViewer() ? 'none' : 'flex';
   const sb2 = document.getElementById('statsbar');
   if(sb2) sb2.style.display = curTab==='table' ? 'none' : '';
   const lb2 = document.getElementById('live-actions-bar');
@@ -1852,6 +2119,13 @@ function doSaveAndReset(){
 }
 
 function doResetTournament(){
+  // Reset blind timer
+  S.blindLevel = 0;
+  S.blindTimer.running = false;
+  S.blindTimer.secondsLeft = getLevelDuration(0);
+  const btn = document.getElementById('btn-timer-toggle');
+  if(btn) btn.textContent = '▶';
+  updateTimerDisplay();
   document.getElementById('reset-confirm')?.remove();
   S.buyins={}; S.koOrder=[];
   S.seats=S.seats.map(s=>({...s,playerId:'',stack:0,cards:[null,null],actions:[],folded:false,allin:false}));
@@ -2747,6 +3021,8 @@ function checkPass(){
     }
     inp.value='';
     try{ loadState(); }catch(e){ console.error('loadState error:',e); try{render();}catch(e2){} }
+startBlindTimer();
+updateTimerDisplay();
     try{ showView('table'); }catch(e){ console.error('showView error:',e); }
     try{
       loadGSUrl();
