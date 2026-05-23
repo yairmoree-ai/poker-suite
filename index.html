@@ -199,6 +199,7 @@ input,select,textarea{font-family:inherit}
       <button id="btn-settings" onclick="toggleSettings()" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);font-size:14px;cursor:pointer;line-height:1">⚙️</button>
       <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#3a3650;display:inline-block" title="סטטוס סנכרון"></span>
       <span id="user-badge" style="font-size:9px;color:#5a5870;background:rgba(255,255,255,0.05);border-radius:10px;padding:2px 7px"></span>
+      <button id="btn-upgrade-to-admin" onclick="showUpgradeDialog()" style="display:none;padding:3px 8px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:10px;font-weight:700;cursor:pointer">🔑</button>
     </div>
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-table" onclick="showView('table')">שולחן</button>
@@ -480,7 +481,7 @@ let S={
   buyins:{},       // {pid:{buyin:n,rebuy:n}}
   koOrder:[],      // pids in order of KO (first KO = last place)
   blindLevel:0,
-  blindTimer:{running:false, secondsLeft:1200, levelDuration:1200}, // 20 min default
+  blindTimer:{running:false, secondsLeft:1200, levelDuration:1200, lastStartedAt:null}, // 20 min default
   blindStructure:null, // custom per-level durations [{sb,bb,ante,duration}]
   customBlinds:null,
   customBlindLevels:[],
@@ -522,7 +523,22 @@ function applySnapshot(v){
   if(v.buyinCost) S.buyinCost=v.buyinCost;
   if(v.buyins) S.buyins=v.buyins;
   if(v.koOrder) S.koOrder=v.koOrder;
+  const prevLevel = S.blindLevel;
   if(v.blindLevel!==undefined) S.blindLevel=v.blindLevel;
+  // If level changed, announce for viewer
+  if(v.blindLevel!==undefined && v.blindLevel !== prevLevel && v.blindLevel > prevLevel){
+    const nb2 = BLIND_LEVELS[v.blindLevel];
+    if(nb2) setTimeout(()=>announceBlindLevel(v.blindLevel+1, nb2.sb, nb2.bb), 300);
+  }
+  if(v.blindTimer){
+    const bt = v.blindTimer;
+    if(bt.running && bt.lastStartedAt){
+      // Calculate how much time has elapsed since timer started
+      const elapsed = Math.floor((Date.now() - bt.lastStartedAt)/1000);
+      bt.secondsLeft = Math.max(0, (bt.secondsLeft||1200) - elapsed);
+      bt.lastStartedAt = null; // reset so we don't re-calculate
+    }
+  }
   if(v.customBlinds!==undefined) S.customBlinds=v.customBlinds;
   if(v.customBlindLevels) S.customBlindLevels=v.customBlindLevels;
   if(v.tableSize) S.tableSize=v.tableSize;
@@ -778,6 +794,7 @@ function startBlindTimer(){
   _timerInterval = setInterval(()=>{
     if(!S.blindTimer.running) return;
     S.blindTimer.secondsLeft--;
+    S.blindTimer.lastStartedAt = null; // clear so sync sends current secondsLeft
     if(S.blindTimer.secondsLeft <= 0){
       // Auto advance to next level
       nextBlindLevel(true);
@@ -792,10 +809,39 @@ function startBlindTimer(){
 
 function toggleBlindTimer(){
   S.blindTimer.running = !S.blindTimer.running;
+  if(S.blindTimer.running){
+    S.blindTimer.lastStartedAt = Date.now();
+  } else {
+    // Save remaining seconds at pause time
+    S.blindTimer.lastStartedAt = null;
+  }
   const btn = document.getElementById('btn-timer-toggle');
   if(btn) btn.textContent = S.blindTimer.running ? '⏸' : '▶';
   if(S.blindTimer.running && !_timerInterval) startBlindTimer();
   persist();
+  syncToSheets(true); // sync immediately so viewer sees it
+}
+
+function announceBlindLevel(level, sb, bb){
+  if(!window.speechSynthesis) return;
+  function numToEn(n){
+    if(n>=1000000) return (n/1000000)+' million';
+    if(n>=1000) return (n/1000)+' thousand';
+    return String(n);
+  }
+  const text = 'Blinds: ' + numToEn(sb) + ', ' + numToEn(bb);
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'en-US';
+  utter.rate = 0.85;
+  utter.pitch = 1;
+  // Prefer a clear English voice
+  const voices = speechSynthesis.getVoices();
+  const preferred = voices.find(v=>v.lang==='en-US'&&v.name.includes('Samantha'))
+    || voices.find(v=>v.lang==='en-US')
+    || null;
+  if(preferred) utter.voice = preferred;
+  speechSynthesis.speak(utter);
 }
 
 function nextBlindLevel(auto=false){
@@ -817,6 +863,9 @@ function nextBlindLevel(auto=false){
   renderStats();
   persist();
   notify('רמה '+(next+1)+': '+BLIND_LEVELS[next].sb.toLocaleString()+'/'+BLIND_LEVELS[next].bb.toLocaleString());
+  // Announce new blinds
+  const nb = BLIND_LEVELS[next];
+  setTimeout(()=>announceBlindLevel(next+1, nb.sb, nb.bb), 500);
 }
 
 function updateTimerDisplay(){
@@ -3003,6 +3052,51 @@ const isAdmin  = ()=> currentUser?.role==='admin' || currentUser?.role==='local'
 const isViewer = ()=> currentUser?.role==='viewer';
 const isLocal  = ()=> currentUser?.role==='local'; // admin without sync
 
+function showUpgradeDialog(){
+  document.getElementById('upgrade-dialog')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'upgrade-dialog';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:20px;width:100%;max-width:300px;text-align:center';
+  box.onclick = e=>e.stopPropagation();
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:14px';
+  title.textContent = '🔑 כניסה כמנהל';
+  const inp = document.createElement('input');
+  inp.type = 'password';
+  inp.placeholder = 'סיסמה...';
+  inp.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:18px;text-align:center;outline:none;box-sizing:border-box;margin-bottom:12px;-webkit-appearance:none;direction:ltr';
+  inp.onkeydown = e=>{ if(e.key==='Enter') tryUpgrade(inp.value); };
+  const btn = document.createElement('button');
+  btn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:15px;cursor:pointer;margin-bottom:8px';
+  btn.textContent = 'כניסה';
+  btn.onclick = ()=>tryUpgrade(inp.value);
+  const cancel = document.createElement('button');
+  cancel.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer';
+  cancel.textContent = 'ביטול';
+  cancel.onclick = ()=>overlay.remove();
+  box.appendChild(title); box.appendChild(inp); box.appendChild(btn); box.appendChild(cancel);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  setTimeout(()=>inp.focus(), 100);
+}
+
+function tryUpgrade(pass){
+  const u = USERS.find(u=>u.pass===pass && (u.role==='admin'||u.role==='local'));
+  if(!u){ notify('סיסמה שגויה'); return; }
+  document.getElementById('upgrade-dialog')?.remove();
+  currentUser = {name:u.name, role:u.role};
+  const badge = document.getElementById('user-badge');
+  if(badge){ badge.textContent=u.name+(u.role==='local'?' 🔒':' 🔑'); badge.style.color=u.role==='local'?'#5b9bd5':'#c8a96e'; }
+  const upBtn = document.getElementById('btn-upgrade-to-admin');
+  if(upBtn) upBtn.style.display='none';
+  try{ loadState(); }catch(e){ render(); }
+  try{ showView('tourn'); }catch(e){}
+  notify('ברוך הבא '+u.name+' 🔑');
+}
+
 function checkPass(){
   const inp = document.getElementById('pass-inp');
   const val = inp?.value?.trim();
@@ -3019,6 +3113,8 @@ function checkPass(){
       badge.textContent = user.name + (user.role==='viewer'?' 👁':user.role==='local'?' 🔒':' 🔑');
       badge.style.color = user.role==='viewer'?'#5b9bd5':user.role==='local'?'#5b9bd5':'#c8a96e';
     }
+    const upBtn2 = document.getElementById('btn-upgrade-to-admin');
+    if(upBtn2) upBtn2.style.display='none';
     inp.value='';
     try{ loadState(); }catch(e){ console.error('loadState error:',e); try{render();}catch(e2){} }
 startBlindTimer();
@@ -3043,6 +3139,9 @@ function enterAsViewer(){
   document.getElementById('app').style.display='flex';
   const badge = document.getElementById('user-badge');
   if(badge){ badge.textContent='צופה 👁'; badge.style.color='#5b9bd5'; }
+  // Show upgrade button for viewers
+  const upBtn = document.getElementById('btn-upgrade-to-admin');
+  if(upBtn) upBtn.style.display='';
   try{ loadState(); }catch(e){ render(); }
   // Open tournaments tab by default for viewers
   setTimeout(()=>showView('tourn'), 50);
