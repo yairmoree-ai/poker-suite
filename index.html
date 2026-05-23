@@ -531,8 +531,8 @@ function applySnapshot(v){
     if(nb2) setTimeout(()=>announceBlindLevel(v.blindLevel+1, nb2.sb, nb2.bb), 300);
   }
   if(v.blindTimer){
-    const bt = v.blindTimer;
-    Object.assign(S.blindTimer, bt);
+    Object.assign(S.blindTimer, v.blindTimer);
+    updateTimerDisplay();
     // Start/stop local timer for viewer to interpolate
     if(S.blindTimer.running && !_timerInterval){
       startBlindTimer();
@@ -624,7 +624,7 @@ function persist(){
   // Save to both localStorage and sessionStorage
   try{ localStorage.setItem('ps_lib',JSON.stringify(S.playerLib)); }catch(e){}
   try{ localStorage.setItem('ps_seats',JSON.stringify({seats:S.seats,board:S.board,btnSeat:S.btnSeat})); }catch(e){}
-  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,houseRake:S.houseRake,place4:S.place4,place3:S.place3,place1Override:S.place1Override,place2Override:S.place2Override,btnLocked:S.btnLocked,lastBet:S.lastBet})); }catch(e){}
+  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,houseRake:S.houseRake,place4:S.place4,place3:S.place3,place1Override:S.place1Override,place2Override:S.place2Override,btnLocked:S.btnLocked,lastBet:S.lastBet,blindTimer:S.blindTimer,blindStructure:S.blindStructure})); }catch(e){}
   try{ localStorage.setItem('ps_log',JSON.stringify(S.handLog)); }catch(e){}
   try{ localStorage.setItem('ps_tlog',JSON.stringify(S.tournLog)); }catch(e){}
   // Also save full snapshot to sessionStorage (survives refresh, not new tab)
@@ -644,7 +644,8 @@ function fullSnapshot(){
     blindLevel:S.blindLevel, customBlinds:S.customBlinds,
     customBlindLevels:S.customBlindLevels, tableSize:S.tableSize,
     houseRake:S.houseRake, place4:S.place4, place3:S.place3,
-    handLog:S.handLog, tournLog:S.tournLog
+    handLog:S.handLog, tournLog:S.tournLog,
+    blindTimer:S.blindTimer, blindStructure:S.blindStructure
   };
 }
 
