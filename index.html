@@ -2072,7 +2072,7 @@ async function syncFromSheets(){
     if(r.ok && r.value){
       const incoming = r.value;
       // Always apply for viewers; admins skip if they have newer data
-      if(!isAdmin() || !S._lastSaved || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
+      if(!isAdmin() || !S._lastSaved || !S.playerLib?.length || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
         applySnapshot(incoming);
         persist();
       }
@@ -2636,7 +2636,7 @@ setTimeout(()=>document.getElementById('pass-inp')?.focus(), 100);
         style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:11px;outline:none;direction:ltr;box-sizing:border-box;margin-bottom:8px">
       <div style="display:flex;gap:7px">
         <button onclick="saveGSUrl()" style="flex:1;padding:8px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:12px;cursor:pointer">שמור URL</button>
-        <button onclick="syncFromSheets()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">📥 משוך נתונים</button>
+        <button onclick="if(confirm('⚠️ משיכת נתונים תדרוס את כל הנתונים המקומיים. להמשיך?'))syncFromSheets()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">📥 משוך נתונים</button>
         <button onclick="syncToSheets(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:12px;cursor:pointer">📤 שלח נתונים</button>
       </div>
       <div id="sync-status" style="font-size:10px;color:#5a5870;margin-top:6px;min-height:14px"></div>
