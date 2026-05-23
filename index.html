@@ -465,6 +465,7 @@ let S={
   raiseRound:0,
   actionCount:0,
   lastRaiseSize:0,  // size of last raise increment
+  lastRaiseWasFull:true, // was last raise a full raise?
   btnLocked:false,
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
@@ -837,11 +838,10 @@ function renderSeats(){
         btns.appendChild(btn);
       });
       // BOTTOM: C, R, AI below seat
-      const botDefs=[
-        {lbl:'C', cb:function(){quickAction(seatI,'Call');},       bg:'rgba(40,80,160,0.95)'},
-        {lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},   bg:'rgba(160,110,30,0.95)'},
-        {lbl:'AI',cb:function(){showQuickInput(seatI,'All-in');},  bg:'rgba(160,40,40,0.95)'},
-      ];
+      const botDefs=[];
+      botDefs.push({lbl:'C', cb:function(){quickAction(seatI,'Call');},      bg:'rgba(40,80,160,0.95)'});
+      if(canPlayerRaise(seatI)) botDefs.push({lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},  bg:'rgba(160,110,30,0.95)'});
+      botDefs.push({lbl:'AI',cb:function(){showQuickInput(seatI,'All-in');},  bg:'rgba(160,40,40,0.95)'});
       const botTW=botDefs.length*(bSize+gap)-gap, botSX=(sw-botTW)/2;
       botDefs.forEach((b,bi)=>{
         const btn=document.createElement('button');
@@ -1219,7 +1219,12 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
     seat.stack=Math.max(0,(seat.stack||0)-deltaAmt);
     // Track last bet for Call default
     if(['Open','Raise','3bet','4bet','5bet','All-in','Bet'].includes(type)){
-      S.lastRaiseSize = amt - S.lastBet; // increment size
+      const raiseIncrement = amt - S.lastBet;
+      const bb3 = getBlinds()?.bb||0;
+      const prevRaiseSize = S.lastRaiseSize||bb3;
+      // Full raise = increment >= previous raise size (or BB if first raise)
+      S.lastRaiseWasFull = raiseIncrement >= Math.max(prevRaiseSize, bb3);
+      S.lastRaiseSize = S.lastRaiseWasFull ? raiseIncrement : prevRaiseSize; // keep previous if not full
       S.lastBet = amt;
     }
   }
@@ -1296,6 +1301,17 @@ function getActingOrder(street){
     })
     .sort((a,b)=>(posOrder.indexOf(a.pos)===-1?99:posOrder.indexOf(a.pos))-(posOrder.indexOf(b.pos)===-1?99:posOrder.indexOf(b.pos)))
     .map(s=>s.seatIdx);
+}
+
+function canPlayerRaise(seatIdx){
+  // If last all-in was not a full raise, only players who haven't voluntarily acted can raise
+  if(S.lastRaiseWasFull!==false) return true; // full raise or no raise = everyone can raise
+  const boardCount = S.board.filter(Boolean).length;
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  const volActs = (seat?.actions||[]).filter(a=>a.street===street&&a.type!=='SB'&&a.type!=='BB');
+  // If player has already acted voluntarily this street before the all-in, they cannot raise
+  return volActs.length === 0;
 }
 
 function getNextActor(afterSeatIdx){
