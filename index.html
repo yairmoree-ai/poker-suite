@@ -564,6 +564,7 @@ function loadState(){
 
 }
 function persist(){
+  if(isViewer()) return; // viewers never save locally
   if(isViewer()) return; // viewers never write
   const snap = fullSnapshot();
   // Save to both localStorage and sessionStorage
@@ -806,6 +807,7 @@ function renderSeats(){
         <div class="seat-name">${name||'?'}</div>
         ${seat.stack>0?`<div class="seat-stack">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
+        ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טורן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');return(!isViewer()&&cSa.length>0)?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:1px 6px;border-radius:4px;border:1px solid rgba(255,100,100,0.4);background:rgba(255,80,80,0.12);color:#e07b6a;font-size:8px;font-weight:700;cursor:pointer;width:100%">↩ בטל</button>`:'';})()}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     // Add action buttons arc above occupied seats
@@ -993,6 +995,67 @@ function renderSeatPanel(){
   }
   html+=`</div>`;
   document.getElementById('spb').innerHTML=html;
+}
+
+function undoLastAction(seatIdx){
+  if(isViewer()){notify('צופה בלבד');return;}
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat||!seat.actions?.length) return;
+
+  const boardCount = S.board.filter(Boolean).length;
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const streetActs = seat.actions.filter(a=>a.street===street);
+  if(!streetActs.length) return;
+
+  const last = streetActs[streetActs.length-1];
+  // Don't undo SB/BB blinds
+  if(last.type==='SB'||last.type==='BB'){ notify('לא ניתן לבטל בליינד'); return; }
+
+  // Restore stack
+  const amt = Number(last.amount)||0;
+  seat.stack = (seat.stack||0) + amt;
+
+  // Remove last action
+  const idx = seat.actions.lastIndexOf(last);
+  seat.actions.splice(idx, 1);
+
+  // Restore folded/allin state
+  if(last.type==='Fold') seat.folded = false;
+  if(last.type==='All-in') seat.allin = false;
+
+  // Restore lastBet - recalculate from remaining actions
+  const raiseTypes = ['Open','Raise','3bet','4bet','5bet','All-in','Bet'];
+  let maxBet = S.buyins ? (getBlinds()?.bb||0) : 0;
+  S.seats.forEach(s=>{
+    (s.actions||[]).filter(a=>a.street===street&&raiseTypes.includes(a.type)).forEach(a=>{
+      const total = getStreetInvested(s.seatIdx);
+      if(total > maxBet) maxBet = total;
+    });
+  });
+  S.lastBet = maxBet;
+
+  // Restore raiseRound if needed
+  if(raiseTypes.includes(last.type)){
+    S.raiseRound = Math.max(0, (S.raiseRound||0)-1);
+    // Recalculate lastRaiser
+    let lastRaiserSeat = null, lastRaiseRound = 0;
+    S.seats.forEach(s=>{
+      (s.actions||[]).filter(a=>a.street===street&&raiseTypes.includes(a.type)).forEach((a,i)=>{
+        if((a.raiseRound||0) >= lastRaiseRound){
+          lastRaiseRound = a.raiseRound||0;
+          lastRaiserSeat = s.seatIdx;
+        }
+      });
+    });
+    S.lastRaiser = lastRaiserSeat!==null ? {seat:lastRaiserSeat, round:lastRaiseRound} : null;
+  }
+
+  // Return turn to this player
+  S.currentActor = seatIdx;
+  S.bettingClosed = false;
+
+  persist(); renderSeats(); renderBoard(); renderLiveActions();
+  notify('פעולה בוטלה ↩');
 }
 
 function getStreetInvested(seatIdx){
@@ -2032,6 +2095,7 @@ function setSyncStatus(msg, color){
 }
 
 async function syncToSheets(immediate){
+  if(isViewer()) return; // viewers never send data
   if(!gsUrl) return;
   if(isViewer() || !currentUser) return; // viewers and unauthenticated don't write
   if(!immediate){
@@ -2071,8 +2135,7 @@ async function syncFromSheets(){
     const r = JSON.parse(text);
     if(r.ok && r.value){
       const incoming = r.value;
-      // Always apply for viewers; admins skip if they have newer data
-      if(!isAdmin() || !S._lastSaved || !S.playerLib?.length || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
+      if(!isAdmin() || !S._lastSaved || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
         applySnapshot(incoming);
         persist();
       }
@@ -2636,7 +2699,7 @@ setTimeout(()=>document.getElementById('pass-inp')?.focus(), 100);
         style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:11px;outline:none;direction:ltr;box-sizing:border-box;margin-bottom:8px">
       <div style="display:flex;gap:7px">
         <button onclick="saveGSUrl()" style="flex:1;padding:8px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:12px;cursor:pointer">שמור URL</button>
-        <button onclick="if(confirm('⚠️ משיכת נתונים תדרוס את כל הנתונים המקומיים. להמשיך?'))syncFromSheets()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">📥 משוך נתונים</button>
+        <button onclick="syncFromSheets()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">📥 משוך נתונים</button>
         <button onclick="syncToSheets(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:12px;cursor:pointer">📤 שלח נתונים</button>
       </div>
       <div id="sync-status" style="font-size:10px;color:#5a5870;margin-top:6px;min-height:14px"></div>
