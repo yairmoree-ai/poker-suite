@@ -1609,7 +1609,9 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
       return;
     }
   }
-  seat.actions.push({street,type,amount:deltaAmt?String(deltaAmt):'',raiseRound:currentRound});
+  // Give each action a global index for ordering
+  const allActCount = S.seats.reduce((n,s)=>(s.actions||[]).length+n, 0);
+  seat.actions.push({street,type,amount:deltaAmt?String(deltaAmt):'',raiseRound:currentRound,idx:allActCount});
   if(isRaise){
     S.lastRaiser = {seat:seatIdx, round:currentRound};
     // After a raise, next actor starts from player AFTER the raiser
@@ -2145,6 +2147,146 @@ function saveHandRecord(){
 // ═══════════════════════════════════════════════════════
 // HAND LIST
 // ═══════════════════════════════════════════════════════
+function showHandDetail(hid){
+  const h = (S.handLog||[]).find(x=>x.id===hid);
+  if(!h) return;
+  document.getElementById('hand-detail-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'hand-detail-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.92);overflow-y:auto;direction:rtl';
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:480px;margin:0 auto;padding:12px';
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
+  hdr.innerHTML = '<div><div style="font-size:14px;font-weight:800;color:#c8a96e">'+h.date+'</div><div style="font-size:11px;color:#5a5870">'+h.blinds+(h.anteStr?' · '+h.anteStr:'')+(h.label?' · '+h.label:'')+'</div></div>';
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer;padding:4px';
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = ()=>overlay.remove();
+  hdr.appendChild(closeBtn);
+  box.appendChild(hdr);
+
+  // Board cards
+  if((h.board||[]).some(Boolean)){
+    const boardDiv = document.createElement('div');
+    boardDiv.style.cssText = 'display:flex;gap:6px;justify-content:center;margin-bottom:12px';
+    (h.board||[]).forEach(c=>{
+      const card = document.createElement('div');
+      const isRed = c&&(c.suit==='♥'||c.suit==='♦');
+      card.style.cssText = 'width:36px;height:52px;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5)';
+      card.innerHTML = c ? '<span style="font-size:14px;font-weight:900;color:'+(isRed?'#e05555':'#111')+'">'+c.rank+'</span><span style="font-size:12px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>' : '<span style="color:#ccc;font-size:18px">+</span>';
+      boardDiv.appendChild(card);
+    });
+    box.appendChild(boardDiv);
+  }
+
+  // Pot
+  const potDiv = document.createElement('div');
+  potDiv.style.cssText = 'text-align:center;font-size:13px;color:#5fc47a;font-weight:700;margin-bottom:12px';
+  potDiv.textContent = 'Pot: '+(h.finalPot||0).toLocaleString();
+  box.appendChild(potDiv);
+
+  // Streets - column layout like poker client
+  const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
+  const actionColors = {Fold:'#666',Check:'#5fc47a',Call:'#5b9bd5',Raise:'#c8a96e','3bet':'#e0a030','4bet':'#e07b6a','All-in':'#e05555',BB:'#e07b6a',SB:'#8b7cb8',Bet:'#c8a96e',Open:'#c8a96e'};
+
+  // Build columns grid
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#0a0d14;border-radius:10px;overflow:hidden;margin-bottom:10px;direction:ltr';
+
+  // Check which streets have actions
+  const activeStreets = streets.filter(street=>
+    (h.seats||[]).some(s=>(s.actions||[]).some(a=>a.street===street))
+  );
+  if(!activeStreets.length){ box.appendChild(grid); }
+  else {
+    const colCount = activeStreets.length;
+    grid.style.gridTemplateColumns = 'repeat('+colCount+',1fr)';
+
+    activeStreets.forEach(street=>{
+      const col = document.createElement('div');
+      col.style.cssText = 'background:#0d1120;min-width:0';
+
+      // Street header with pot
+      const potAtStreet = (()=>{
+        let sum=0;
+        const allStreets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+        const upTo = allStreets.slice(0, allStreets.indexOf(street)+1);
+        (h.seats||[]).forEach(s=>{
+          (s.actions||[]).filter(a=>upTo.includes(a.street)).forEach(a=>sum+=(Number(a.amount)||0));
+        });
+        return sum;
+      })();
+
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'padding:5px 6px;background:#141824;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06)';
+      hdr.innerHTML = '<div style="font-size:10px;font-weight:800;color:#c8a96e">'+streetLabels[street]+'</div>'+
+        (potAtStreet?'<div style="font-size:9px;color:#5fc47a">₪'+potAtStreet.toLocaleString()+'</div>':'');
+      col.appendChild(hdr);
+
+      // Actions in this street
+      const allActs = [];
+      (h.seats||[]).forEach(s=>{
+        (s.actions||[]).filter(a=>a.street===street).forEach(a=>{
+          allActs.push({...a, playerName:s.playerName||s.playerId, pos:s.pos, folded:s.folded});
+        });
+      });
+      // Sort by action index (order performed)
+      allActs.sort((a,b)=>(a.idx??999)-(b.idx??999));
+
+      allActs.forEach(a=>{
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:5px 6px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center';
+        const c = actionColors[a.type]||'#e2ddd4';
+        const isFold = a.type==='Fold';
+        row.innerHTML =
+          '<div style="font-size:9px;color:#5a5870;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+
+          '<div style="font-size:10px;font-weight:700;color:'+(isFold?'#555':'#e2ddd4')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.playerName+'</div>'+
+          '<div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:5px;background:'+c+'22;color:'+c+';font-size:9px;font-weight:800">'+a.type+'</div>'+
+          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'');
+        col.appendChild(row);
+      });
+      // Add player cards at bottom of this column
+      const allStreetsList2 = ['פרה-פלופ','פלופ','טורן','ריבר'];
+      const seatsWithCards = (h.seats||[]).filter(s=>(s.cards||[]).some(Boolean)).filter(s=>{
+        let lastSt = 'פרה-פלופ';
+        allStreetsList2.forEach(st=>{ if((s.actions||[]).some(a=>a.street===st)) lastSt=st; });
+        return lastSt === street;
+      });
+      if(seatsWithCards.length){
+        const sep = document.createElement('div');
+        sep.style.cssText = 'border-top:1px solid rgba(255,255,255,0.15);margin:4px 0';
+        col.appendChild(sep);
+        seatsWithCards.forEach(s=>{
+          const cardRow = document.createElement('div');
+          cardRow.style.cssText = 'padding:4px 6px;text-align:center';
+          const cardHtml = (s.cards||[]).filter(Boolean).map(c=>{
+            const isRed=c.suit==='♥'||c.suit==='♦';
+            return '<div style="width:20px;height:28px;border-radius:3px;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.5);margin:0 1px"><span style="font-size:8px;font-weight:900;color:'+(isRed?'#e05555':'#111')+';line-height:1">'+c.rank+'</span><span style="font-size:6px;color:'+(isRed?'#e05555':'#111')+';line-height:1">'+c.suit+'</span></div>';
+          }).join('');
+          cardRow.innerHTML =
+            '<div style="font-size:9px;color:'+(s.folded?'#555':'#aaa')+';margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.playerName+'</div>'+
+            '<div style="display:flex;gap:1px;justify-content:center;direction:ltr">'+cardHtml+'</div>';
+          col.appendChild(cardRow);
+        });
+      }
+
+      grid.appendChild(col);
+    });
+    box.appendChild(grid);
+  }
+
+
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
 function renderHandList(){
   const cont=document.getElementById('hand-list');
   document.getElementById('hands-count').textContent=`${S.handLog.length} ידיים`;
@@ -2152,7 +2294,7 @@ function renderHandList(){
   cont.innerHTML=S.handLog.map((h,hi)=>{
     const res=RESULTS.find(r=>r.k===h.result);
     const boardCards=(h.board||[]).filter(Boolean);
-    return`<div class="card-item">
+    return`<div class="card-item" onclick="showHandDetail('${h.id}')" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div><div style="font-size:10px;color:var(--muted)">${h.date}</div>
           <div style="font-size:11px;color:var(--gold)">${h.blinds}${h.anteStr?' '+h.anteStr:''}</div>
@@ -2854,6 +2996,8 @@ function pickCard(s){
       S.actionCount = 0;
       S.raiseRound = 0;
       S.lastRaiseSize = 0;
+      S.lastBet = 0;
+      S.lastRaiseWasFull = true;
       // Clear only the bet amounts (SB/BB stay, only last non-blind action cleared)
       S.seats.forEach(seat=>{
         if(seat.actions&&seat.actions.length>0){
