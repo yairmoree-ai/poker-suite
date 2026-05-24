@@ -1317,9 +1317,9 @@ function renderBoard(){
     btn.className='board-card-btn'+(card?' has-card':'');
     btn.style=`width:${sw}px;height:${Math.round(sw*1.4)}px`;
     btn.onclick=()=>{
-      if(i===3&&!S.board[2]){notify('צריך פלופ קודם');return;}
+if(i===3&&!S.board[2]){notify('צריך פלופ קודם');return;}
       if(i===4&&!S.board[3]){notify('צריך טורן קודם');return;}
-      if(S.btnLocked&&!S.bettingClosed&&S.currentActor!==null){notify('סיים את סיבוב ההימורים קודם');return;}
+      if(S.btnLocked && S.currentActor!==null && !S.bettingClosed){notify('סיים את סיבוב ההימורים קודם');return;}
       openCP(`board${i}`);
     };
     btn.innerHTML=card
@@ -1595,6 +1595,10 @@ function autoOpenNextCard(){
   else if(boardCount===1) slotIdx=1;
   else if(boardCount===2) slotIdx=2;
   if(slotIdx===-1) return;
+  // Check if blocked by active betting
+  if(S.btnLocked && !S.bettingClosed && S.currentActor!==null){
+    notify('סיים את סיבוב ההימורים קודם'); return;
+  }
   openCP('board'+slotIdx);
 }
 
@@ -1879,11 +1883,14 @@ function getNextActor(afterSeatIdx){
     }
   }
 
+  // If lastRaiser is all-in (not in order), check if all active players acted this round
+  const lastRaiserAllin = lastRaiserSeat !== null && !order.includes(lastRaiserSeat);
+  
   for(let i=0;i<order.length;i++){
     const cand = order[(startIdx+i)%order.length];
 
     // If we've gone all the way back to the last raiser – betting is closed
-    if(lastRaiserSeat !== null && cand === lastRaiserSeat) return null;
+    if(!lastRaiserAllin && lastRaiserSeat !== null && cand === lastRaiserSeat) return null;
 
     const cSeat = S.seats.find(s=>s.seatIdx===cand);
     const myVolActs = (cSeat?.actions||[]).filter(a=>
@@ -1891,10 +1898,8 @@ function getNextActor(afterSeatIdx){
     );
 
     if(lastRaiserSeat === null){
-      // No raise yet – everyone needs one voluntary action
       if(myVolActs.length === 0) return cand;
     } else {
-      // After a raise – need action in current raise round
       const actsThisRound = myVolActs.filter(a=>(a.raiseRound||0) === lastRaiseRound);
       if(actsThisRound.length === 0) return cand;
     }
@@ -2017,10 +2022,18 @@ function advanceTurn(fromSeatIdx){
     S.lastBet = 0;
     // Auto-open card picker for next street after short delay
     setTimeout(()=>{
-      // Don't open cards if hand is already over
       const active = S.seats.filter(s=>s.playerId&&!s.folded);
-      if(active.length<=1) return; // winner already determined
+      if(active.length<=1) return; // auto win already handled
       const bCnt = S.board.filter(Boolean).length;
+      const hasAllin = active.some(s=>s.allin);
+      // All-in situation: at least one player is all-in
+      // After calling an all-in → deal remaining cards then showdown
+      if(hasAllin){
+if(bCnt===5) showShowdownPanel();
+        else autoOpenNextCard();
+        return;
+      }
+      // Normal betting close
       if(bCnt===5){
         showShowdownPanel();
       } else {
@@ -3382,17 +3395,33 @@ function pickCard(s){
     else if(boardIdx===1&&!S.board[2]) setTimeout(()=>openCP('board2'),80);
     // Clear bet chips when new betting round starts: after 3rd flop card, turn, river
     if(boardIdx===2||boardIdx===3||boardIdx===4){
-      // Reset actor to first post-street position (SB or first active)
       const newStreet = boardIdx===2?'פלופ':boardIdx===3?'טורן':'ריבר';
-      const newOrder = getActingOrder(newStreet);
-      S.currentActor = newOrder[0]||null;
-      S.bettingClosed = false;
-      S.lastRaiser = null;
-      S.actionCount = 0;
-      S.raiseRound = 0;
-      S.lastRaiseSize = 0;
-      S.lastBet = 0;
-      S.lastRaiseWasFull = true;
+      // Check if all-in situation – no betting needed
+      const activeAfter = S.seats.filter(s=>s.playerId&&!s.folded);
+      const canActAfter = activeAfter.filter(s=>!s.allin);
+      const isAllinSituation = canActAfter.length <= 1 && activeAfter.some(s=>s.allin);
+      
+      if(isAllinSituation){
+        // Skip betting – auto open next card or showdown
+        S.currentActor = null;
+        S.bettingClosed = true;
+        S.lastBet = 0;
+        setTimeout(()=>{
+          const bCnt = S.board.filter(Boolean).length;
+          if(bCnt===5) showShowdownPanel();
+          else autoOpenNextCard();
+        }, 150);
+      } else {
+        // Normal street – reset for new betting round
+        const newOrder = getActingOrder(newStreet);
+        S.currentActor = newOrder[0]||null;
+        S.bettingClosed = false;
+        S.lastRaiser = null;
+        S.actionCount = 0;
+        S.raiseRound = 0;
+        S.lastRaiseSize = 0;
+        S.lastBet = 0;
+        S.lastRaiseWasFull = true;
       // Clear only the bet amounts (SB/BB stay, only last non-blind action cleared)
       S.seats.forEach(seat=>{
         if(seat.actions&&seat.actions.length>0){
@@ -3413,6 +3442,7 @@ function pickCard(s){
   persist(); renderSeats(); renderBoard();
   if(activeSeat!==null)renderSeatPanel();
 }
+} // close missing brace
 try{document.getElementById('card-picker').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});}catch(e){}
 
 // ═══════════════════════════════════════════════════════
