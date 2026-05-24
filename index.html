@@ -2859,12 +2859,15 @@ function showView(v){
   // Hide active players button in table and hands tabs, and for viewers
   const activeBtn = document.getElementById('btn-active');
   if(activeBtn) activeBtn.style.display = (v==='table'||v==='hands'||isViewer()) ? 'none' : '';
-  // Hide stats bar in table tab, show in others
+  // Stats bar: hide in table and hands tabs
   const statsBar = document.getElementById('statsbar');
-  if(statsBar) statsBar.style.display = v==='table' ? 'none' : '';
+  if(statsBar) statsBar.style.display = (v==='table'||v==='hands') ? 'none' : '';
   // Show live actions bar only in table tab
   const liveBar = document.getElementById('live-actions-bar');
   if(liveBar) liveBar.style.display = v==='table' ? 'block' : 'none';
+  // table-size-bar: only in table tab
+  const tableSizeBar = document.getElementById('table-size-bar');
+  if(tableSizeBar) tableSizeBar.style.display = v==='table' ? 'flex' : 'none';
   if(v==='table') try{ renderLiveActions(); }catch(e){ console.error('renderLiveActions error:',e); }
   if(v==='hands')renderHandList();
   if(v==='tourn')renderTournList();
