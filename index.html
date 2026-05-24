@@ -294,6 +294,9 @@ input,select,textarea{font-family:inherit}
   </div>
   <!-- HANDS -->
   <div id="hands-view" class="list-view" style="display:none;background:#080b12">
+  <div style="display:flex;justify-content:flex-end;padding:6px 12px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05)">
+    <button onclick="exportHandsToCSV()" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer">📥 ייצוא לExcel</button>
+  </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;color:var(--gold)">📋 ידיים</div>
       <div id="hands-count" style="font-size:11px;color:var(--muted)"></div>
@@ -340,7 +343,10 @@ input,select,textarea{font-family:inherit}
     <div style="display:flex;gap:7px;margin-bottom:12px">
       <button id="btn-reset-tourn" class="btn btn-red btn-sm" onclick="resetTournament()">אפס טורניר</button>
     </div>
-    <div id="tourn-list"></div>
+    <div style="display:flex;justify-content:flex-end;padding:6px 12px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05)">
+    <button onclick="exportTournsToCSV()" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer">📥 ייצוא לExcel</button>
+  </div>
+  <div id="tourn-list"></div>
   </div>
   <!-- PLAYERS -->
   <div id="players-view" class="list-view" style="display:none;background:#080b12">
@@ -852,6 +858,51 @@ function toggleBlindTimer(){
   if(S.blindTimer.running && !_timerInterval) startBlindTimer();
   persist();
   syncToSheets(true);
+}
+
+function exportHandsToCSV(){
+  const rows = [['תאריך','בליינדים','לוח','שחקן','עמדה','פעולות','תוצאה']];
+  (S.handLog||[]).forEach(h=>{
+    const board = (h.board||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
+    if(!h.seats?.length){ rows.push([h.date,h.blinds,board,'','','',h.result||'']); return; }
+    h.seats.forEach(s=>{
+      const acts = (s.actions||[]).map(a=>a.type+(a.amount?'('+a.amount+')':'')).join(', ');
+      rows.push([h.date, h.blinds, board, s.playerName||s.playerId, s.pos, acts, h.result||'']);
+    });
+  });
+  downloadCSV(rows, 'hands.csv');
+}
+
+function exportTournsToCSV(){
+  const rows = [['תאריך','שם','Buy-in','Buyins','Rebuys','כניסות','קופה','1מקום','2מקום','3מקום']];
+  (S.tournLog||[]).forEach(t=>{
+    rows.push([t.date, t.name||'', t.buyinCost, t.totalBuyins, t.totalRebuys,
+      t.totalEntries, t.prizePool, t.place1||'', t.place2||'', t.place3||'']);
+  });
+  // Add finish order per tournament
+  (S.tournLog||[]).forEach(t=>{
+    if(t.finishOrder?.length){
+      rows.push([]);
+      rows.push([t.date+' – סדר סיום']);
+      rows.push(['מקום','שחקן','Rebuy']);
+      t.finishOrder.forEach(f=>rows.push([f.place, f.name, f.rebuy||0]));
+    }
+  });
+  downloadCSV(rows, 'tournaments.csv');
+}
+
+function downloadCSV(rows, filename){
+  const sep = ',', nl = String.fromCharCode(10);
+  const BOM = String.fromCharCode(0xFEFF);
+  const esc = v=>{ const s=String(v==null?'':v); return '"'+s.replace(/"/g,'""')+'"'; };
+  const csv = BOM + rows.map(r=>r.map(esc).join(sep)).join(nl);
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  notify('מוריד '+filename+' ✓');
 }
 
 function announceBlindLevel(level, sb, bb){
