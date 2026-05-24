@@ -1253,7 +1253,8 @@ function renderSeats(){
       });
       // BOTTOM: C, R, AI below seat
       const botDefs=[];
-      botDefs.push({lbl:'C', cb:function(){quickAction(seatI,'Call');},      bg:'rgba(40,80,160,0.95)'});
+      const callAmt = getCallAmount(seatI);
+      if(callAmt > 0) botDefs.push({lbl:'C', cb:function(){quickAction(seatI,'Call');}, bg:'rgba(40,80,160,0.95)'});
       if(canPlayerRaise(seatI)) botDefs.push({lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},  bg:'rgba(160,110,30,0.95)'});
       botDefs.push({lbl:'AI',cb:function(){showQuickInput(seatI,'All-in');},  bg:'rgba(160,40,40,0.95)'});
       const botTW=botDefs.length*(bSize+gap)-gap, botSX=(sw-botTW)/2;
@@ -1939,6 +1940,12 @@ function awardPot(winnerSeatIdxs, showAnim=true){
   // Flash winner
   S._winners = winnerSeatIdxs;
   S._winPot = pot;
+  // Save winner for hand log
+  S._lastWinners = winnerSeatIdxs.map(idx=>({
+    seatIdx:idx,
+    playerId:S.seats.find(s=>s.seatIdx===idx)?.playerId,
+    name:pName(S.seats.find(s=>s.seatIdx===idx)?.playerId)||'?'
+  }));
   persist();
   renderSeats(); renderBoard();
   setTimeout(()=>{ S._winners=null; S._winPot=null; renderSeats(); },3000);
@@ -2079,7 +2086,8 @@ function saveHandWithLabel(){
       actions:[...(s.actions||[])], folded:s.folded||false, allin:s.allin||false
     })),
     result:null, amount:'', notes:'',
-    finalPot: calcPot()
+    finalPot: calcPot(),
+    winners: (S._lastWinners||[]).map(w=>({...w}))
   };
   S.handLog=[hand,...S.handLog];
   resetHand();
@@ -2406,7 +2414,8 @@ function showHandDetail(hid){
   // Header
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
-  hdr.innerHTML = '<div><div style="font-size:14px;font-weight:800;color:#c8a96e">'+h.date+'</div><div style="font-size:11px;color:#5a5870">'+h.blinds+(h.anteStr?' · '+h.anteStr:'')+(h.label?' · '+h.label:'')+'</div></div>';
+  const winnerNames = (h.winners||[]).map(w=>w.name).join(' + ');
+  hdr.innerHTML = '<div><div style="font-size:14px;font-weight:800;color:#c8a96e">'+h.date+'</div><div style="font-size:11px;color:#5a5870">'+h.blinds+(h.anteStr?' · '+h.anteStr:'')+(h.label?' · '+h.label:'')+'</div>'+(winnerNames?'<div style="font-size:12px;font-weight:700;color:#5fc47a;margin-top:3px">🏆 '+winnerNames+'</div>':'')+'</div>';
   const closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
@@ -2460,7 +2469,7 @@ function showHandDetail(hid){
     seatEl.style.cssText = 'position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;left:'+px+'%;top:'+py+'%';
     
     const isMe = s.playerName===myNameDet2||(s.playerId&&pName(s.playerId)===myNameDet2);
-    const hasWon = h.result&&!s.folded&&(h.seats||[]).filter(x=>!x.folded).length===1&&!s.folded;
+    const hasWon = (h.winners||[]).some(w=>w.seatIdx===s.seatIdx||w.playerId===s.playerId);
     const posColor = s.pos==='BTN'?'#c8a96e':s.pos==='SB'?'#8b7cb8':s.pos==='BB'?'#e07b6a':'#6a8090';
     
     const circle = document.createElement('div');
@@ -2670,6 +2679,7 @@ function renderHandList(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div>
           <div style="font-size:11px;font-weight:700;color:#e2ddd4">${h.label||h.blinds}</div>
+          ${(h.winners||[]).length?`<div style="font-size:10px;color:#5fc47a">🏆 ${h.winners.map(w=>w.name).join(' + ')}</div>`:'' }
           <div style="font-size:10px;color:var(--muted)">${h.date} · ${h.blinds}</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
