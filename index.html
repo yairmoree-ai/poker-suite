@@ -1141,6 +1141,62 @@ function setLevelDuration(secs){
   persist();
 }
 
+// ═══════════════════════
+// VOICE COMMANDS
+// ═══════════════════════
+let _voiceRecog = null;
+let _voiceActive = false;
+
+function initVoice(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ notify('זיהוי קול לא נתמך בדפדפן זה'); return false; }
+  _voiceRecog = new SR();
+  _voiceRecog.lang = 'en-US';
+  _voiceRecog.continuous = true;
+  _voiceRecog.interimResults = false;
+  _voiceRecog.onresult = e=>{
+    const transcript = e.results[e.results.length-1][0].transcript.toLowerCase().trim();
+    console.log('Voice:', transcript);
+    handleVoiceCommand(transcript);
+  };
+  _voiceRecog.onerror = e=>{ console.log('Voice error:', e.error); if(e.error==='not-allowed') notify('אין הרשאת מיקרופון'); };
+  _voiceRecog.onend = ()=>{ if(_voiceActive) _voiceRecog.start(); }; // keep listening
+  return true;
+}
+
+function toggleVoice(){
+  if(!_voiceActive){
+    if(!_voiceRecog && !initVoice()) return;
+    _voiceActive = true;
+    _voiceRecog.start();
+    document.getElementById('btn-voice').style.background='rgba(95,196,122,0.3)';
+    document.getElementById('btn-voice').style.color='#5fc47a';
+    notify('🎤 האזנה מופעלת – Fold / Check / Call / Raise / All in');
+  } else {
+    _voiceActive = false;
+    _voiceRecog.stop();
+    document.getElementById('btn-voice').style.background='';
+    document.getElementById('btn-voice').style.color='';
+    notify('🎤 האזנה כבויה');
+  }
+}
+
+function handleVoiceCommand(cmd){
+  const actor = S.currentActor;
+  if(actor===null||S.bettingClosed) return;
+  if(cmd.includes('fold')) { quickAction(actor,'Fold'); notify('🎤 Fold'); }
+  else if(cmd.includes('check')) { quickAction(actor,'Check'); notify('🎤 Check'); }
+  else if(cmd.includes('call')) { quickAction(actor,'Call'); notify('🎤 Call'); }
+  else if(cmd.includes('all in')||cmd.includes('allin')||cmd.includes('all-in')) { showQuickInput(actor,'All-in'); notify('🎤 All-in'); }
+  else if(cmd.includes('raise')) { showQuickInput(actor,'Raise'); notify('🎤 Raise'); }
+}
+
+// Show voice button only if SpeechRecognition available
+if(window.SpeechRecognition||window.webkitSpeechRecognition){
+  const vb = document.getElementById('btn-voice');
+  if(vb) vb.style.display='';
+}
+
 function render(){
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
   // Show/hide viewer banner
