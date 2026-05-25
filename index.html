@@ -1208,6 +1208,7 @@ function renderSeats(){
     if(seat?.playerId)cls+=' occupied';
     if(isAct)cls+=' active';
     if(isFold)cls+=' folded';
+    if(!isFold&&!isAlin&&seat?.playerId&&(seat?.stack||0)===0)cls+=' broke';
     if(isAlin)cls+=' allin';
     if(isCurrentActor&&seat?.playerId&&!isFold)cls+=' current-actor';
     if(isWinner)cls+=' winner';
@@ -1222,9 +1223,12 @@ function renderSeats(){
           ${isBtn?`<span class="dealer-chip">D</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
-        ${seat.stack>0?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
+        ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
-        ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טורן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טורן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId;return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(200,169,110,0.5);background:rgba(200,169,110,0.15);color:#c8a96e;font-size:8px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')+(showUndo?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid #e07b6a;background:#7a2020;color:#ffaaaa;font-size:8px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:5">↩ בטל</button>`:'');})()}
+        ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טורן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טורן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
+    const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&!S.btnLocked;
+    return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(200,169,110,0.5);background:rgba(200,169,110,0.15);color:#c8a96e;font-size:8px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')
+    +(showRebuy?`<button onclick="event.stopPropagation();doRebuy(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(95,196,122,0.6);background:rgba(95,196,122,0.2);color:#5fc47a;font-size:9px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:10">+ Rebuy</button><button onclick="event.stopPropagation();rmSeat(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(224,123,106,0.5);background:rgba(224,123,106,0.15);color:#e07b6a;font-size:9px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:10">✕ הסר</button>`:'')+(showUndo?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid #e07b6a;background:#7a2020;color:#ffaaaa;font-size:8px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:5">↩ בטל</button>`:'');})()}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     // Add action buttons arc above occupied seats
@@ -1391,7 +1395,7 @@ function renderSeatPanel(){
       </select>
     </div>
     <div class="form-group"><label>ערימה${seat.stack&&bb?` <span style="color:var(--muted2);font-weight:400">(${(seat.stack/bb).toFixed(1)}bb)</span>`:''}</label>
-      <input type="number" value="${seat.stack||50000}" placeholder="50000" onchange="updSeat(${i},{stack:+this.value||0})">
+      <input type="number" value="${seat.stack??0}" placeholder="0" onchange="updSeat(${i},{stack:+this.value||0})">
     </div>
   </div>`;
   // BTN
@@ -1668,6 +1672,65 @@ function showQuickPlayerPicker(seatIdx){
   document.body.appendChild(overlay);
 }
 
+function rmSeat(seatIdx){
+  if(!isAdmin()) return;
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(seat){ seat.playerId=''; seat.stack=50000; seat.cards=[null,null]; seat.actions=[]; seat.folded=false; seat.allin=false; }
+  persist(); renderSeats();
+  notify('שחקן הוסר ✓');
+}
+
+function doRebuy(seatIdx){
+  if(!isAdmin()) return;
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat) return;
+  const bb = getBlinds()?.bb||1000;
+  const defaultRebuy = 50000;
+  // Show inline edit overlay
+  document.getElementById('quick-input-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'quick-input-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7)';
+  overlay.onclick = ()=>overlay.remove();
+  const box = document.createElement('div');
+  box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(95,196,122,0.4);border-radius:14px;padding:16px;width:240px;text-align:center';
+  box.onclick = e=>e.stopPropagation();
+  const name = pName(seat.playerId)||'שחקן';
+  const inp = document.createElement('input');
+  inp.id = 'rebuy-inp';
+  inp.type = 'number';
+  inp.inputMode = 'numeric';
+  inp.value = defaultRebuy;
+  inp.style.cssText = 'width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:20px;text-align:center;outline:none;box-sizing:border-box;margin-bottom:10px;-webkit-appearance:none';
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:13px;font-weight:700;color:#5fc47a;margin-bottom:10px';
+  title.textContent = '+ Rebuy – '+name;
+  const btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px';
+  const ok = document.createElement('button');
+  ok.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#5fc47a;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer';
+  ok.textContent = '✓ Rebuy';
+  ok.onclick = ()=>{
+    const n = parseInt(inp.value)||defaultRebuy;
+    seat.stack = n;
+    // Record rebuy in buyins
+    if(!S.buyins[seat.playerId]) S.buyins[seat.playerId]={buyin:0,rebuy:0};
+    S.buyins[seat.playerId].rebuy = (S.buyins[seat.playerId].rebuy||0)+1;
+    persist(); renderSeats(); overlay.remove();
+    notify('Rebuy ✓ '+name+' – ₪'+n.toLocaleString());
+  };
+  inp.onkeydown = e=>{ if(e.key==='Enter') ok.click(); };
+  const cancel = document.createElement('button');
+  cancel.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:14px;cursor:pointer';
+  cancel.textContent = '✕';
+  cancel.onclick = ()=>overlay.remove();
+  btns.appendChild(ok); btns.appendChild(cancel);
+  box.appendChild(title); box.appendChild(inp); box.appendChild(btns);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  setTimeout(()=>{inp.focus();inp.select();},150);
+}
+
 function setBTN(seatIdx){
   if(!isAdmin()) return;
   S.btnSeat = seatIdx;
@@ -1702,7 +1765,9 @@ function showQuickInput(seatIdx, type){
   const box = document.createElement('div');
   const bb2 = getBlinds()?.bb||0;
   const minRaise = S.lastBet + Math.max(S.lastRaiseSize||0, bb2);
-  const defaultAmt = type==='Call'?getCallAmount(seatIdx):type==='All-in'?(S.seats.find(s=>s.seatIdx===seatIdx)?.stack||0):type==='Raise'?minRaise:'';
+  const seat4Allin = S.seats.find(s=>s.seatIdx===seatIdx);
+  const allinTotal = (seat4Allin?.stack||0) + getStreetInvested(seatIdx);
+  const defaultAmt = type==='Call'?getCallAmount(seatIdx):type==='All-in'?allinTotal:type==='Raise'?minRaise:'';
   box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:16px;width:220px;text-align:center';
   box.onclick = e=>e.stopPropagation();
   box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#c8a96e;margin-bottom:10px">'+type+'</div>' +
@@ -2073,16 +2138,29 @@ function postBlinds(btnSeatIdx){
 }
 
 function resetHand(){
+  // Restore stacks to pre-hand state (only if hand not yet won)
+  if(S.btnLocked && !S._lastWinners?.length){
+    S.seats.forEach(s=>{
+      const totalPaid = (s.actions||[]).reduce((sum,a)=>sum+(Number(a.amount)||0),0);
+      if(totalPaid>0) s.stack = (s.stack||0) + totalPaid;
+    });
+  }
   S.btnLocked = false;
   S.btnSeat = null;
   S.lastBet = 0;
+  S.lastRaiseSize = 0;
+  S.lastRaiser = null;
+  S.raiseRound = 0;
+  S.currentActor = null;
+  S.bettingClosed = false;
+  S._lastWinners = null;
+  S._winners = null;
   S.board = [null,null,null,null,null];
   S.seats = S.seats.map(s=>({...s, cards:[null,null], actions:[], folded:false, allin:false}));
   persist(); render();
-  // Re-apply tab visibility
   const ct = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
   if(ct) showView(ct);
-  notify('יד אופסה');
+  notify('יד אופסה – ערימות שוחזרו');
 }
 
 function saveHandWithLabel(){
