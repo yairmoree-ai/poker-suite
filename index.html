@@ -212,8 +212,7 @@ input,select,textarea{font-family:inherit}
       <button class="btn btn-outline btn-sm" id="btn-active" onclick="showActivePlayers()">👥 פעילים</button>
       <!-- btn-newhand hidden -->
       <button id="btn-viewer-refresh" class="btn btn-outline btn-sm" onclick="syncFromSheets()" style="display:none" title="רענן נתונים">🔄</button>
-      <button class="btn btn-green btn-sm" id="btn-savehand" onclick="if(isAdmin())showSaveHandPanel();else notify('צופה בלבד')" title="שמור יד">💾</button>
-      <button class="btn btn-outline btn-sm" id="btn-resethand" onclick="if(isAdmin())resetHand();else notify('צופה בלבד')" title="איפוס יד">↺</button>
+
     </div>
   </div>
   <div id="statsbar">
@@ -238,7 +237,9 @@ input,select,textarea{font-family:inherit}
     <select id="sel-table-size" onchange="if(isAdmin())setTableSize(+this.value)" style="background:#141824;border:1px solid rgba(255,255,255,0.12);color:#e2ddd4;border-radius:6px;padding:3px 6px;font-size:12px;outline:none;-webkit-appearance:none;text-align:center;width:44px;direction:ltr">
       <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
     </select>
-    <button onclick="if(isAdmin())clearTable()" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.1);color:#e07b6a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 נקה שולחן</button>
+    <button onclick="if(isAdmin())clearTable()" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.1);color:#e07b6a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 נקה</button>
+    <button id="btn-savehand" onclick="if(isAdmin())showSaveHandPanel();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">💾 שמור</button>
+    <button id="btn-resethand" onclick="if(isAdmin())resetHand();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↺ אפס</button>
   </div>
   <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow-x:clip;overflow-y:visible;justify-content:center;align-items:center;padding-bottom:105px">
 
@@ -1184,14 +1185,78 @@ function toggleVoice(){
   }
 }
 
+function parseVoiceAmount(cmd){
+  // Extract number from command e.g. "raise 3000" or "raise 3k"
+  const m = cmd.match(/(\d+)\s*k/i);
+  if(m) return parseInt(m[1])*1000;
+  const m2 = cmd.match(/(\d+)/);
+  if(m2) return parseInt(m2[1]);
+  return null;
+}
+
+function voiceCard(cmd){
+  // Parse card name: "ace of hearts", "king spades", "ten clubs"
+  const rankMap = {'ace':'A','king':'K','queen':'Q','jack':'J','ten':'10','nine':'9','eight':'8','seven':'7','six':'6','five':'5','four':'4','three':'3','two':'2'};
+  const suitMap = {'hearts':'♥','heart':'♥','diamonds':'♦','diamond':'♦','clubs':'♣','club':'♣','spades':'♠','spade':'♠'};
+  let rank=null, suit=null;
+  for(const [k,v] of Object.entries(rankMap)){ if(cmd.includes(k)){rank=v;break;} }
+  for(const [k,v] of Object.entries(suitMap)){ if(cmd.includes(k)){suit=v;break;} }
+  return rank&&suit?{rank,suit}:null;
+}
+
 function handleVoiceCommand(cmd){
+  const c = cmd.trim().toLowerCase();
+  
+  // Management commands (always available)
+  if(c.includes('save hand')||c.includes('save')) { if(isAdmin()) showSaveHandPanel(); notify('🎤 שמור יד'); return; }
+  if(c.includes('reset hand')||c.includes('reset')) { if(isAdmin()) resetHand(); notify('🎤 איפוס יד'); return; }
+  if(c.includes('clear table')) { if(isAdmin()) clearTable(); notify('🎤 נקה שולחן'); return; }
+  
+  // Card commands for board
+  const card = voiceCard(c);
+  if(card){
+    // Find next empty board slot
+    const slot = S.board.findIndex(b=>!b);
+    if(slot>=0&&slot<5){
+      // Check valid (not flop before having flop etc)
+      if(slot===3&&!S.board[2]){notify('צריך פלופ קודם');return;}
+      if(slot===4&&!S.board[3]){notify('צריך טורן קודם');return;}
+      // Check not used
+      const used = [...(S.board||[]),...(S.seats.flatMap(s=>s.cards||[]))].filter(Boolean);
+      if(used.some(u=>u.rank===card.rank&&u.suit===card.suit)){notify('קלף תפוס');return;}
+      S.board[slot]=card; persist(); renderBoard();
+      notify('🎤 '+card.rank+card.suit);
+    }
+    return;
+  }
+
+  // Action commands - need active actor
   const actor = S.currentActor;
   if(actor===null||S.bettingClosed) return;
-  if(cmd.includes('fold')) { quickAction(actor,'Fold'); notify('🎤 Fold'); }
-  else if(cmd.includes('check')) { quickAction(actor,'Check'); notify('🎤 Check'); }
-  else if(cmd.includes('call')) { quickAction(actor,'Call'); notify('🎤 Call'); }
-  else if(cmd.includes('all in')||cmd.includes('allin')||cmd.includes('all-in')) { showQuickInput(actor,'All-in'); notify('🎤 All-in'); }
-  else if(cmd.includes('raise')) { showQuickInput(actor,'Raise'); notify('🎤 Raise'); }
+
+  if(c==='f'||c==='fold') { quickAction(actor,'Fold'); notify('🎤 Fold'); }
+  else if(c==='ch'||c==='check') { quickAction(actor,'Check'); notify('🎤 Check'); }
+  else if(c==='c'||c==='call') { quickAction(actor,'Call'); notify('🎤 Call'); }
+  else if(c==='ai'||c.includes('all in')||c.includes('all-in')) { 
+    const seat4=S.seats.find(s=>s.seatIdx===actor);
+    const aiAmt=(seat4?.stack||0)+getStreetInvested(actor);
+    doAction(actor,'All-in',String(aiAmt)); notify('🎤 All-in'); 
+  }
+  else if(c==='r'||c==='raise'||c.startsWith('raise')){
+    const amt = parseVoiceAmount(c);
+    if(amt){ doAction(actor,'Raise',String(amt)); notify('🎤 Raise '+amt.toLocaleString()); }
+    else { showQuickInput(actor,'Raise'); notify('🎤 Raise'); }
+  }
+  // Player name + action e.g. "יאיר fold"
+  else {
+    const swp = assignPos();
+    const seat = swp.find(s=>s.playerId&&pName(s.playerId)&&c.includes((pName(s.playerId)||'').toLowerCase()));
+    if(seat){
+      if(c.includes('fold')||c.includes('f ')) { quickAction(seat.seatIdx,'Fold'); notify('🎤 '+pName(seat.playerId)+' Fold'); }
+      else if(c.includes('check')||c.includes('ch ')) { quickAction(seat.seatIdx,'Check'); notify('🎤 '+pName(seat.playerId)+' Check'); }
+      else if(c.includes('call')||c.includes(' c ')) { quickAction(seat.seatIdx,'Call'); notify('🎤 '+pName(seat.playerId)+' Call'); }
+    }
+  }
 }
 
 // Show voice button always - handle unsupported in toggleVoice
