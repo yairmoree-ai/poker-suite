@@ -11,6 +11,32 @@
 <title>Poker Suite</title>
 <style>
 :root{
+  --bg-main:#080b12; --bg-card:#121824; --bg-alt:#0a0e18;
+  --text:#e2ddd4; --muted:#5a5870; --muted2:#8a8090;
+  --border:rgba(255,255,255,0.08); --gold:#c8a96e; --green:#5fc47a;
+}
+:root.light-mode{
+  --bg-main:#f5f5f5; --bg-card:#ffffff; --bg-alt:#ebebeb;
+  --text:#1a1a2e; --muted:#666677; --muted2:#888899;
+  --border:rgba(0,0,0,0.12); --gold:#8a6a20; --green:#2a7a3a;
+}
+.light-mode body,
+.light-mode #app { background:#f5f5f5 !important; color:#1a1a2e !important; }
+.light-mode .nav-bar { background:#ffffff !important; border-bottom:1px solid rgba(0,0,0,0.1) !important; }
+.light-mode .nav-tab { color:#555 !important; }
+.light-mode .nav-tab.active { background:#e8e8e8 !important; color:#1a1a2e !important; }
+.light-mode .nav-btn { background:#f0f0f0 !important; border-color:rgba(0,0,0,0.15) !important; color:#333 !important; }
+.light-mode #statsbar, .light-mode #blind-timer-bar,
+.light-mode #table-size-bar, .light-mode #live-actions-bar { background:#ffffff !important; border-color:rgba(0,0,0,0.08) !important; }
+.light-mode .card-item { background:#ffffff !important; border-color:rgba(0,0,0,0.1) !important; color:#1a1a2e !important; }
+.light-mode .list-view { background:#f0f0f0 !important; }
+.light-mode .seat-panel { background:#ffffff !important; }
+.light-mode #table-wrap { background:#f0f0f0 !important; }
+.light-mode .seat-btn { border-color:rgba(0,0,0,0.15) !important; }
+.light-mode .seat-btn.occupied { background:#ffffff !important; color:#1a1a2e !important; }
+.light-mode .seat-name { color:#1a1a2e !important; }
+.light-mode .seat-stack { color:#2a6a2a !important; }
+:root{
   --gold:#c8a96e;--gold2:#a07840;--bg:#080b12;--bg2:#0f1320;
   --felt:#14422a;--felt2:#0e2e1c;--red:#e05555;--blue:#5b9bd5;--green:#5fc47a;
   --panel:#0d1220;--border:rgba(200,169,110,0.18);
@@ -213,6 +239,7 @@ input,select,textarea{font-family:inherit}
   <div class="topnav">
     <div style="display:flex;align-items:center;gap:7px">
       <button id="btn-voice" onclick="toggleVoice()" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);font-size:14px;cursor:pointer;line-height:1">🎤</button>
+      <button id="btn-theme" onclick="toggleTheme()" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);font-size:14px;cursor:pointer;line-height:1" title="מצב יום/לילה">🌙</button>
       <button id="btn-settings" onclick="toggleSettings()" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);font-size:14px;cursor:pointer;line-height:1">⚙️</button>
       <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#3a3650;display:inline-block" title="סטטוס סנכרון"></span>
       <span id="user-badge" style="font-size:9px;color:#5a5870;background:rgba(255,255,255,0.05);border-radius:10px;padding:2px 7px"></span>
@@ -312,14 +339,21 @@ input,select,textarea{font-family:inherit}
   </div>
   <!-- HANDS -->
   <div id="hands-view" class="list-view" style="display:none;background:#080b12">
-  <div style="display:flex;justify-content:flex-end;padding:6px 12px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05)">
-    <button onclick="exportHandsToCSV()" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer">📥 ייצוא לExcel</button>
+  <!-- Filter + export bar -->
+  <div style="padding:8px 12px;background:#0a0e18;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <input id="hand-search" type="text" placeholder="🔍 חיפוש שחקן / שם..." oninput="renderHandList()" style="flex:1;min-width:120px;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:12px;outline:none;direction:rtl">
+    <select id="hand-filter-player" onchange="renderHandList()" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:12px;outline:none">
+      <option value="">כל השחקנים</option>
+    </select>
+    <button onclick="exportHandsToCSV()" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer">📥</button>
   </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:14px;font-weight:800;color:var(--gold)">📋 ידיים</div>
-      <div id="hands-count" style="font-size:11px;color:var(--muted)"></div>
-    </div>
-    <div id="hand-list"></div>
+  <!-- Stats bar -->
+  <div id="hands-stats-bar" style="display:flex;gap:0;background:#0d1120;border-bottom:1px solid rgba(255,255,255,0.06)"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px">
+    <div style="font-size:13px;font-weight:800;color:var(--gold)">📋 ידיים</div>
+    <div id="hands-count" style="font-size:11px;color:var(--muted)"></div>
+  </div>
+  <div id="hand-list"></div>
   </div>
   <!-- TOURNAMENTS -->
   <div id="tourn-view" class="list-view" style="display:none;background:#080b12">
@@ -1233,6 +1267,22 @@ function initVoice(){
   _voiceRecog.onend = ()=>{ if(_voiceActive) _voiceRecog.start(); }; // keep listening
   return true;
 }
+
+function toggleTheme(){
+  const isLight = document.documentElement.classList.toggle('light-mode');
+  const btn = document.getElementById('btn-theme');
+  if(btn) btn.textContent = isLight ? '🌙' : '☀️';
+  localStorage.setItem('theme', isLight?'light':'dark');
+}
+
+// Load saved theme
+(function(){
+  if(localStorage.getItem('theme')==='light'){
+    document.documentElement.classList.add('light-mode');
+    const btn = document.getElementById('btn-theme');
+    if(btn) btn.textContent = '🌙';
+  }
+})();
 
 function toggleVoice(){
   if(!_voiceActive){
@@ -2222,13 +2272,17 @@ function setCurrentActor(seatIdx){
 
 function undoAward(){
   if(!S._preAwardState){ notify('אין מה לבטל'); return; }
-  const { seats, lastWinners, pot } = S._preAwardState;
-  S.seats = seats;
+  const { seats, pot } = S._preAwardState;
+  S.seats = seats.map(s=>({...s, actions:[...(s.actions||[])], cards:[...(s.cards||[null,null])]}));
   S._lastWinners = null;
   S._winners = null;
   S._preAwardState = null;
-  persist(); renderSeats(); renderBoard();
-  notify('↩ הכרזה בוטלה – ₪'+pot.toLocaleString()+' הוחזרו');
+  S.bettingClosed = true;
+  S.currentActor = null;
+  persist(); renderSeats(); renderBoard(); renderLiveActions();
+  notify('↩ הכרזה בוטלה');
+  // Re-show showdown panel
+  setTimeout(()=>showShowdownPanel(), 300);
 }
 
 function checkAutoWin(){
@@ -3050,9 +3104,43 @@ function showHandDetail(hid){
 
 function renderHandList(){
   const cont=document.getElementById('hand-list');
-  document.getElementById('hands-count').textContent=`${S.handLog.length} ידיים`;
-  if(!S.handLog.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">🃏</div>אין ידיים עדיין</div>';return;}
-  cont.innerHTML=S.handLog.map((h,hi)=>{
+  
+  // Update player filter options
+  const playerSel = document.getElementById('hand-filter-player');
+  if(playerSel){
+    const allPlayers = [...new Set((S.handLog||[]).flatMap(h=>(h.seats||[]).map(s=>s.playerName||'')).filter(Boolean))].sort();
+    const curVal = playerSel.value;
+    playerSel.innerHTML = '<option value="">כל השחקנים</option>' + allPlayers.map(p=>`<option value="${p}" ${p===curVal?'selected':''}>${p}</option>`).join('');
+  }
+
+  // Filter
+  const search = (document.getElementById('hand-search')?.value||'').toLowerCase();
+  const filterPlayer = document.getElementById('hand-filter-player')?.value||'';
+  let hands = S.handLog||[];
+  if(search) hands = hands.filter(h=>(h.label||'').toLowerCase().includes(search)||(h.seats||[]).some(s=>(s.playerName||'').toLowerCase().includes(search)));
+  if(filterPlayer) hands = hands.filter(h=>(h.seats||[]).some(s=>s.playerName===filterPlayer));
+
+  // Stats for filtered hands
+  const statsBar = document.getElementById('hands-stats-bar');
+  if(statsBar && filterPlayer){
+    const wins = hands.filter(h=>(h.winners||[]).some(w=>w.name===filterPlayer)).length;
+    const total = hands.length;
+    const pct = total>0?Math.round(wins/total*100):0;
+    const avgPot = total>0?Math.round(hands.reduce((s,h)=>s+(h.finalPot||0),0)/total):0;
+    statsBar.innerHTML = 
+      `<div style="flex:1;padding:8px 12px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)"><div style="font-size:10px;color:#5a5870">ידיים</div><div style="font-size:16px;font-weight:800;color:#e2ddd4">${total}</div></div>`+
+      `<div style="flex:1;padding:8px 12px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)"><div style="font-size:10px;color:#5a5870">ניצחונות</div><div style="font-size:16px;font-weight:800;color:#5fc47a">${wins}</div></div>`+
+      `<div style="flex:1;padding:8px 12px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)"><div style="font-size:10px;color:#5a5870">% ניצחון</div><div style="font-size:16px;font-weight:800;color:#c8a96e">${pct}%</div></div>`+
+      `<div style="flex:1;padding:8px 12px;text-align:center"><div style="font-size:10px;color:#5a5870">קופה ממוצעת</div><div style="font-size:14px;font-weight:800;color:#5b9bd5">₪${avgPot.toLocaleString()}</div></div>`;
+    statsBar.style.display = 'flex';
+  } else if(statsBar) {
+    statsBar.style.display = 'none';
+  }
+
+  document.getElementById('hands-count').textContent=`${hands.length} מתוך ${S.handLog.length} ידיים`;
+  if(!hands.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">🃏</div>לא נמצאו ידיים</div>';return;}
+  const allHands = hands; // use filtered list below
+  cont.innerHTML=allHands.map((h,hi)=>{
     const boardCards=(h.board||[]).filter(Boolean);
     // Find my cards (current user)
     const myName = currentUser?.name||'';
@@ -3860,7 +3948,7 @@ function showView(v){
   const tableSizeBar = document.getElementById('table-size-bar');
   if(tableSizeBar) tableSizeBar.style.display = v==='table' ? 'flex' : 'none';
   if(v==='table') try{ renderLiveActions(); }catch(e){ console.error('renderLiveActions error:',e); }
-  if(v==='hands')renderHandList();
+  if(v==='hands'){ renderHandList(); }
   if(v==='tourn')renderTournList();
   if(v==='players')renderPlayerList();
 }
