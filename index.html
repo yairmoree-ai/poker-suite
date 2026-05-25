@@ -1144,6 +1144,58 @@ function setLevelDuration(secs){
 }
 
 // ═══════════════════════
+// HELP SYSTEM
+// ═══════════════════════
+const POKER_HELP = {
+  Fold:{ title:'🏳️ Fold – קיפול', rules:[
+    {t:'מה זה?', d:'ויתור על היד. השחקן מוסר את קלפיו ואינו יכול לזכות בקופה.', e:'BTN מחזיק 7-2, UTG מעלה → BTN קופל ומפסיד רק מה שכבר שם.'},
+    {t:'חוק TDA', d:'לאחר קיפול לא ניתן לחזור. הקלפים הופכים למאק.'}
+  ]},
+  Check:{ title:'✋ Check – צק', rules:[
+    {t:'מה זה?', d:'העברת התור ללא הימור – רק כשאין הימור פתוח.', e:'תחילת פלופ: SB צק, BB צק – אין עלות.'},
+    {t:'Check-Raise', d:'אפשר לצק ואז לעלות כשמנגד מהמר – לגיטימי לחלוטין.'}
+  ]},
+  Call:{ title:'📞 Call – השוואה', rules:[
+    {t:'מה זה?', d:'השוואת ההימור. משלמים את ההפרש בין מה שכבר שולם לבין ההימור הנוכחי.', e:'BB שילם 1K, UTG העלה ל-3K → Call עולה 2K בלבד.'},
+    {t:'All-in חלקי', d:'אם שחקן all-in בפחות – שאר השחקנים משלמים רק עד הסכום שלו.'}
+  ]},
+  Raise:{ title:'📈 Raise – העלאה', rules:[
+    {t:'מינימום', d:'מינימום raise = גודל ה-raise הקודם.', e:'BB=1K → Open 3K (raise 2K) → 3bet מינ 5K (עוד 2K).'},
+    {t:'All-in חלקי', d:'All-in מתחת למינימום לא פותח מחדש לשחקנים שכבר פעלו.'},
+    {t:'חוק TDA', d:'String bet אסור – הסכום חייב להיאמר לפני ביצוע.'}
+  ]},
+  'All-in':{ title:'🔥 All-in – כל הכסף', rules:[
+    {t:'מה זה?', d:'הימור של כל הערימה. ממשיכים עד הסוף ללא הימורים נוספים.', e:'ערימה 8K נגד raise 15K → all-in ב-8K.'},
+    {t:'Side pot', d:'All-in חלקי יוצר סייד פוט – שחקן יכול לזכות רק עד מה שהשקיע.'},
+    {t:'Showdown', d:'לאחר all-in + call, שאר הקלפים מחולקים ואז נבחר מנצח.'}
+  ]}
+};
+
+function showHelp(topic){
+  const h = POKER_HELP[topic]; if(!h) return;
+  // Remove existing overlay
+  document.getElementById('help-overlay')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'help-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;display:flex;align-items:flex-end;justify-content:center';
+  ov.onclick = e=>{ if(e.target===ov) ov.remove(); };
+  const rulesHtml = h.rules.map(r=>
+    '<div style="background:#0d1120;border-radius:10px;padding:12px;margin-bottom:8px">'+
+    '<div style="font-size:11px;font-weight:800;color:#5b9bd5;margin-bottom:5px">'+r.t+'</div>'+
+    '<div style="font-size:12px;color:#aaa;line-height:1.6">'+r.d+'</div>'+
+    (r.e?'<div style="background:rgba(200,169,110,0.08);border-right:3px solid #c8a96e;padding:7px 10px;border-radius:0 6px 6px 0;margin-top:7px;font-size:11px;color:#c8a96e">💡 '+r.e+'</div>':'')+
+    '</div>'
+  ).join('');
+  ov.innerHTML = '<div style="background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px;max-height:70vh;overflow-y:auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+    '<span style="font-size:16px;font-weight:800;color:#c8a96e">'+h.title+'</span>'+
+    '<button onclick="closeHelp()" style="background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer">✕</button>'+
+    '</div>'+rulesHtml+'</div>';
+  document.body.appendChild(ov);
+}
+function closeHelp(){ document.getElementById('help-overlay')?.remove(); }
+
+// ═══════════════════════
 // VOICE COMMANDS
 // ═══════════════════════
 let _voiceRecog = null;
@@ -1280,7 +1332,7 @@ function render(){
   const timerCtrl = document.getElementById('timer-controls');
   if(timerCtrl) timerCtrl.style.display = isViewer() ? 'none' : 'flex';
   const sb2 = document.getElementById('statsbar');
-  if(sb2) sb2.style.display = curTab==='table' ? 'none' : '';
+  if(sb2) sb2.style.display = (curTab==='table'||curTab==='hands') ? 'none' : '';
   const lb2 = document.getElementById('live-actions-bar');
   if(lb2) lb2.style.display = curTab==='table' ? 'block' : 'none';
   const ab2 = document.getElementById('btn-active');
@@ -1369,28 +1421,71 @@ function renderSeats(){
       const seatI=i;
       const canCheck = getCallAmount(seatI)===0;
       const topDefs=[];
-      topDefs.push({lbl:'F', cb:function(){quickAction(seatI,'Fold');},  bg:'rgba(140,50,50,0.95)'});
-      if(canCheck) topDefs.push({lbl:'CH',cb:function(){quickAction(seatI,'Check');}, bg:'rgba(50,120,60,0.95)'});
+      topDefs.push({lbl:'F', cb:function(){quickAction(seatI,'Fold');},  bg:'rgba(140,50,50,0.95)', help:'Fold'});
+      if(canCheck) topDefs.push({lbl:'CH',cb:function(){quickAction(seatI,'Check');}, bg:'rgba(50,120,60,0.95)', help:'Check'});
       const topTW=topDefs.length*(bSize+gap)-gap, topSX=(sw-topTW)/2;
       topDefs.forEach((b,bi)=>{
         const btn=document.createElement('button');
         btn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:'+b.bg+';color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(topSX+bi*(bSize+gap))+'px;top:'+(-bSize-5)+'px;pointer-events:all';
         btn.textContent=b.lbl;
-        (function(cb){btn.addEventListener('click',function(e){e.stopPropagation();cb();});})(b.cb);
+        (function(cb, helpTopic){
+          let pressTimer = null;
+          let didLongPress = false;
+          function startPress(e){
+            didLongPress = false;
+            pressTimer = setTimeout(function(){
+              didLongPress = true;
+              pressTimer = null;
+              if(helpTopic){ try{ showHelp(helpTopic); }catch(err){ console.log(err); } }
+            }, 500);
+          }
+          function endPress(e){
+            if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
+            if(!didLongPress){ e.stopPropagation(); try{ cb(); }catch(err){ console.log(err); } }
+            didLongPress = false;
+          }
+          function cancelPress(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } didLongPress=false; }
+          btn.addEventListener('touchstart', startPress, {passive:true});
+          btn.addEventListener('touchend', endPress);
+          btn.addEventListener('touchcancel', cancelPress);
+          btn.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+        })(b.cb, b.help||null);
         btns.appendChild(btn);
+
       });
       // BOTTOM: C, R, AI below seat
       const botDefs=[];
       const callAmt = getCallAmount(seatI);
-      if(callAmt > 0) botDefs.push({lbl:'C', cb:function(){quickAction(seatI,'Call');}, bg:'rgba(40,80,160,0.95)'});
-      if(canPlayerRaise(seatI)) botDefs.push({lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},  bg:'rgba(160,110,30,0.95)'});
-      botDefs.push({lbl:'AI',cb:function(){showQuickInput(seatI,'All-in');},  bg:'rgba(160,40,40,0.95)'});
+      if(callAmt > 0) botDefs.push({lbl:'C', cb:function(){quickAction(seatI,'Call');}, bg:'rgba(40,80,160,0.95)', help:'Call'});
+      if(canPlayerRaise(seatI)) botDefs.push({lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},  bg:'rgba(160,110,30,0.95)', help:'Raise'});
+      botDefs.push({lbl:'AI',cb:function(){showQuickInput(seatI,'All-in');},  bg:'rgba(160,40,40,0.95)', help:'All-in'});
       const botTW=botDefs.length*(bSize+gap)-gap, botSX=(sw-botTW)/2;
       botDefs.forEach((b,bi)=>{
         const btn=document.createElement('button');
         btn.style.cssText='position:absolute;width:'+bSize+'px;height:'+bSize+'px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.25);background:'+b.bg+';color:#fff;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.7);left:'+(botSX+bi*(bSize+gap))+'px;top:'+(sh+5)+'px;pointer-events:all';
         btn.textContent=b.lbl;
-        (function(cb){btn.addEventListener('click',function(e){e.stopPropagation();cb();});})(b.cb);
+        (function(cb, helpTopic){
+          let pressTimer = null;
+          let didLongPress = false;
+          function startPress(e){
+            didLongPress = false;
+            pressTimer = setTimeout(function(){
+              didLongPress = true;
+              pressTimer = null;
+              if(helpTopic){ try{ showHelp(helpTopic); }catch(err){ console.log(err); } }
+            }, 500);
+          }
+          function endPress(e){
+            if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
+            if(!didLongPress){ e.stopPropagation(); try{ cb(); }catch(err){ console.log(err); } }
+            didLongPress = false;
+          }
+          function cancelPress(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } didLongPress=false; }
+          btn.addEventListener('touchstart', startPress, {passive:true});
+          btn.addEventListener('touchend', endPress);
+          btn.addEventListener('touchcancel', cancelPress);
+          btn.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+        })(b.cb, b.help||null);
         btns.appendChild(btn);
       });
       el.appendChild(btns);
