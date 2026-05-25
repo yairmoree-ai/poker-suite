@@ -1191,11 +1191,11 @@ function handleVoiceCommand(cmd){
   else if(cmd.includes('raise')) { showQuickInput(actor,'Raise'); notify('🎤 Raise'); }
 }
 
-// Show voice button only if SpeechRecognition available
-if(window.SpeechRecognition||window.webkitSpeechRecognition){
+// Show voice button always - handle unsupported in toggleVoice
+document.addEventListener('DOMContentLoaded',()=>{
   const vb = document.getElementById('btn-voice');
   if(vb) vb.style.display='';
-}
+});
 
 function render(){
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
