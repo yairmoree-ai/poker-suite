@@ -1167,18 +1167,20 @@ function initVoice(){
 
 function toggleVoice(){
   if(!_voiceActive){
+    if(!confirm('להפעיל פקודות קוליות?\nפקודות: Fold / Check / Call / Raise / All in\n\nלחץ ביטול לכיבוי בכל עת.')) return;
     if(!_voiceRecog && !initVoice()) return;
     _voiceActive = true;
-    _voiceRecog.start();
-    document.getElementById('btn-voice').style.background='rgba(95,196,122,0.3)';
-    document.getElementById('btn-voice').style.color='#5fc47a';
-    notify('🎤 האזנה מופעלת – Fold / Check / Call / Raise / All in');
+    try { _voiceRecog.start(); } catch(e){}
+    const btn = document.getElementById('btn-voice');
+    if(btn){ btn.style.background='rgba(95,196,122,0.3)'; btn.style.color='#5fc47a'; btn.textContent='🔴'; }
+    notify('🎤 מופעל – לחץ 🔴 לכיבוי');
   } else {
     _voiceActive = false;
-    _voiceRecog.stop();
-    document.getElementById('btn-voice').style.background='';
-    document.getElementById('btn-voice').style.color='';
-    notify('🎤 האזנה כבויה');
+    try { _voiceRecog.stop(); _voiceRecog.abort(); } catch(e){}
+    _voiceRecog = null;
+    const btn = document.getElementById('btn-voice');
+    if(btn){ btn.style.background=''; btn.style.color=''; btn.textContent='🎤'; }
+    notify('🎤 כבוי');
   }
 }
 
