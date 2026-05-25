@@ -2001,15 +2001,13 @@ function showQuickInput(seatIdx, type){
     '</div>';
   overlay.appendChild(box);
   document.body.appendChild(overlay);
-  setTimeout(()=>{
-    const inp=document.getElementById('quick-amt-inp');
-    if(inp){
-      inp.setAttribute('inputmode','numeric');
-      inp.focus();
-      inp.select();
-      inp.click();
-    }
-  },150);
+  // Focus immediately - must be in same call stack as user gesture
+  const inp=document.getElementById('quick-amt-inp');
+  if(inp){
+    inp.setAttribute('inputmode','numeric');
+    inp.focus();
+    inp.select();
+  }
 }
 
 function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלבד');return;}
