@@ -1895,7 +1895,7 @@ function showQuickInput(seatIdx, type){
   box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:16px;width:220px;text-align:center';
   box.onclick = e=>e.stopPropagation();
   box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#c8a96e;margin-bottom:10px">'+type+'</div>' +
-    '<input id="quick-amt-inp" type="number" value="'+defaultAmt+'" placeholder="סכום..."' +
+    '<input id="quick-amt-inp" type="number" inputmode="numeric" value="'+defaultAmt+'" placeholder="סכום..."' +
     ' style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:16px;text-align:center;outline:none;box-sizing:border-box;margin-bottom:10px;-webkit-appearance:none"' +
     ' onkeydown="if(event.key===\'Enter\'){doAction('+seatIdx+',\''+type+'\',this.value);document.getElementById(\'quick-input-overlay\')?.remove();}">' +
     '<div style="display:flex;gap:8px">' +
@@ -1906,7 +1906,15 @@ function showQuickInput(seatIdx, type){
     '</div>';
   overlay.appendChild(box);
   document.body.appendChild(overlay);
-  setTimeout(()=>document.getElementById('quick-amt-inp')?.focus(),100);
+  setTimeout(()=>{
+    const inp=document.getElementById('quick-amt-inp');
+    if(inp){
+      inp.setAttribute('inputmode','numeric');
+      inp.focus();
+      inp.select();
+      inp.click();
+    }
+  },150);
 }
 
 function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלבד');return;}
