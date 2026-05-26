@@ -1207,7 +1207,7 @@ async function openCameraForCards(target){
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body: JSON.stringify({
-          model:'claude-opus-4-5',
+          model:'claude-sonnet-4-20250514',
           max_tokens:200,
           messages:[{role:'user',content:[
             {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
@@ -4628,9 +4628,8 @@ try{
 // ═══════════════════════════════════════
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
-const ANTHROPIC_KEY = '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';
 const USERS = [
-  { name:'יאיר',   pass:'1q234',    role:'admin'  },
+  { name:'יאיר',   pass:'1234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
