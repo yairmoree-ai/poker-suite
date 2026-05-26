@@ -282,7 +282,7 @@ input,select,textarea{font-family:inherit}
     </select>
     <button onclick="if(isAdmin())clearTable()" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.1);color:#e07b6a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 נקה</button>
     <button id="btn-savehand" onclick="if(isAdmin())showSaveHandPanel();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">💾 שמור</button>
-    <button id="btn-resethand" onclick="if(isAdmin())resetHand();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↺ אפס</button>
+    <button id="btn-resethand" onclick="if(isAdmin())confirmResetHand();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↺ אפס</button>
   </div>
   <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow-x:clip;overflow-y:visible;justify-content:center;align-items:center;padding-bottom:105px">
 
@@ -2691,6 +2691,76 @@ function postBlinds(btnSeatIdx){
   persist(); render();
 }
 
+function confirmResetHand(){
+  if(!S.btnLocked){ resetHand(); return; } // no hand in progress
+  
+  document.getElementById('reset-confirm-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'reset-confirm-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:14px;padding:18px;width:100%;max-width:320px;direction:rtl';
+  box.onclick = e=>e.stopPropagation();
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:6px';
+  title.textContent = '💾 שמור יד לפני איפוס';
+  const sub = document.createElement('div');
+  sub.style.cssText = 'font-size:11px;color:#5a5870;margin-bottom:12px';
+  sub.textContent = 'חובה לתת שם ליד לפני האיפוס';
+
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.placeholder = 'שם היד (חובה)...';
+  inp.style.cssText = 'width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:14px;outline:none;box-sizing:border-box;text-align:right;margin-bottom:10px';
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px';
+
+  const saveBtn = document.createElement('button');
+  saveBtn.style.cssText = 'flex:1;padding:11px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer';
+  saveBtn.textContent = '💾 שמור ואפס';
+  saveBtn.onclick = ()=>{
+    const label = inp.value.trim();
+    if(!label){ inp.style.borderColor='#e07b6a'; inp.focus(); return; }
+    // Save hand with label then reset
+    const swp = assignPos();
+    const b = getBlinds();
+    const hand = {
+      id:uid(), date:new Date().toLocaleDateString('he-IL'),
+      blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
+      label, board:[...S.board],
+      seats: swp.filter(s=>s.playerId).map(s=>({
+        seatIdx:s.seatIdx, playerId:s.playerId, playerName:pName(s.playerId),
+        pos:s.pos, stack:s.stack, cards:[...(s.cards||[null,null])],
+        actions:[...(s.actions||[])], folded:s.folded||false, allin:s.allin||false
+      })),
+      result:null, amount:'', notes:'',
+      finalPot: calcPot(),
+      winners: (S._lastWinners||[]).map(w=>({...w}))
+    };
+    S.handLog=[hand,...S.handLog];
+    overlay.remove();
+    resetHand();
+    notify('💾 '+label+' נשמרה');
+  };
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.style.cssText = 'padding:11px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer';
+  cancelBtn.textContent = 'ביטול';
+  cancelBtn.onclick = ()=>overlay.remove();
+
+  inp.onkeydown = e=>{ if(e.key==='Enter') saveBtn.click(); };
+
+  btnRow.appendChild(saveBtn); btnRow.appendChild(cancelBtn);
+  box.appendChild(title); box.appendChild(sub); box.appendChild(inp); box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  setTimeout(()=>{ inp.focus(); }, 150);
+}
+
 function resetHand(){
   // Restore stacks to pre-hand state (only if hand not yet won)
   if(S.btnLocked && !S._lastWinners?.length){
@@ -3334,14 +3404,51 @@ function renderHandList(){
     const total = hands.length;
     const pct = total>0?Math.round(wins/total*100):0;
     const avgPot = total>0?Math.round(hands.reduce((s,h)=>s+(h.finalPot||0),0)/total):0;
-    statsBar.innerHTML = 
-      `<div style="flex:1;padding:8px 12px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)"><div style="font-size:10px;color:#5a5870">ידיים</div><div style="font-size:16px;font-weight:800;color:#e2ddd4">${total}</div></div>`+
-      `<div style="flex:1;padding:8px 12px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)"><div style="font-size:10px;color:#5a5870">ניצחונות</div><div style="font-size:16px;font-weight:800;color:#5fc47a">${wins}</div></div>`+
-      `<div style="flex:1;padding:8px 12px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)"><div style="font-size:10px;color:#5a5870">% ניצחון</div><div style="font-size:16px;font-weight:800;color:#c8a96e">${pct}%</div></div>`+
-      `<div style="flex:1;padding:8px 12px;text-align:center"><div style="font-size:10px;color:#5a5870">קופה ממוצעת</div><div style="font-size:14px;font-weight:800;color:#5b9bd5">₪${avgPot.toLocaleString()}</div></div>`;
-    statsBar.style.display = 'flex';
+    // Calculate advanced stats
+    const allActions = hands.flatMap(h=>(h.seats||[])
+      .filter(s=>s.playerName===filterPlayer)
+      .flatMap(s=>(s.actions||[]).map(a=>({...a, handId:h.id}))));
+    
+    const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+    const vpip = hands.filter(h=>(h.seats||[]).some(s=>s.playerName===filterPlayer&&(s.actions||[]).some(a=>a.type==='Call'||a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet'))).length;
+    const pfr = hands.filter(h=>(h.seats||[]).some(s=>s.playerName===filterPlayer&&(s.actions||[]).some(a=>a.street==='פרה-פלופ'&&(a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet')))).length;
+    const raises = allActions.filter(a=>a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet'||a.type==='All-in');
+    const calls  = allActions.filter(a=>a.type==='Call');
+    const af = calls.length>0 ? (raises.length/calls.length).toFixed(1) : raises.length>0?'∞':'0';
+    
+    const raisesByStreet = streets.map(st=>allActions.filter(a=>a.street===st&&(a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet'||a.type==='All-in')).length);
+
+    const statCell = (label,val,color='#e2ddd4',sub='')=>
+      `<div style="flex:1;padding:6px 8px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)">
+        <div style="font-size:9px;color:#5a5870;margin-bottom:2px">${label}</div>
+        <div style="font-size:15px;font-weight:800;color:${color}">${val}</div>
+        ${sub?`<div style="font-size:9px;color:#5a5870">${sub}</div>`:''}
+      </div>`;
+
+    statsBar.innerHTML =
+      statCell('ידיים', total)+
+      statCell('ניצחונות', wins, '#5fc47a', pct+'%')+
+      statCell('VPIP', total>0?Math.round(vpip/total*100)+'%':'–', '#c8a96e')+
+      statCell('PFR', total>0?Math.round(pfr/total*100)+'%':'–', '#5b9bd5')+
+      statCell('AF', af, '#FFB347');
+
+    // Street raises breakdown
+    const streetBar = document.createElement('div');
+    streetBar.style.cssText = 'display:flex;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.06)';
+    streetBar.innerHTML = streets.map((st,i)=>
+      `<div style="flex:1;padding:5px 8px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)">
+        <div style="font-size:9px;color:#5a5870">${st.slice(0,2)} רייז</div>
+        <div style="font-size:13px;font-weight:700;color:#e2ddd4">${raisesByStreet[i]}</div>
+      </div>`
+    ).join('');
+    statsBar.style.display='flex';
+    // Remove old street bar if exists
+    document.getElementById('hands-street-bar')?.remove();
+    statsBar.insertAdjacentElement('afterend', streetBar);
+    streetBar.id = 'hands-street-bar';
   } else if(statsBar) {
     statsBar.style.display = 'none';
+    document.getElementById('hands-street-bar')?.remove();
   }
 
   document.getElementById('hands-count').textContent=`${hands.length} מתוך ${S.handLog.length} ידיים`;
