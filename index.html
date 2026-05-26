@@ -1203,24 +1203,21 @@ async function openCameraForCards(target){
         ? 'זהה את קלפי הפוקר בתמונה. החזר JSON בלבד: {"cards":[{"rank":"A","suit":"♥"},...]}'
         : 'זהה את 2 קלפי הפוקר של השחקן בתמונה. החזר JSON בלבד: {"cards":[{"rank":"A","suit":"♥"},{"rank":"K","suit":"♠"}]}';
 
-      const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      // Use Google Apps Script as proxy to avoid CORS
+      if(!gsUrl){ notify('הגדר Google Sheets URL קודם'); return; }
+      const resp = await fetch(gsUrl, {
         method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body: JSON.stringify({
-          model:'claude-sonnet-4-20250514',
-          max_tokens:200,
-          messages:[{role:'user',content:[
-            {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
-            {type:'text',text:prompt}
-          ]}]
+          action:'identify_cards',
+          image: base64,
+          prompt: prompt
         })
       });
       
       const data = await resp.json();
-      const text = data.content?.[0]?.text||'';
-      const clean = text.replace(/```json|```/g,'').trim();
-      const parsed = JSON.parse(clean);
-      const cards = parsed.cards||[];
+      if(!data.ok) throw new Error(data.error||'שגיאה לא ידועה');
+      const cards = data.cards||[];
+
       
       if(!cards.length){ notify('לא זוהו קלפים'); return; }
       
@@ -4627,10 +4624,11 @@ try{
 // INIT
 // ═══════════════════════════════════════
 // USERS - הוסף/ערוך משתמשים כאן
+
 // ═══════════════════════════════════════
-const ANTHROPIC_KEY = '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';
+const ANTHROPIC_KEY = ‘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';
 const USERS = [
-  { name:'יאיר',   pass:'1q234',    role:'admin'  },
+  { name:'יאיר',   pass:'1234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
