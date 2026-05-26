@@ -153,7 +153,7 @@ input,select,textarea{font-family:inherit}
 #overlay{position:fixed;inset:0;z-index:49;background:rgba(0,0,0,0.6);display:none}
 #overlay.open{display:block}
 /* NOTIF */
-#notif{position:fixed;top:55px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(200,169,110,0.15);border:1px solid rgba(200,169,110,0.4);border-radius:8px;padding:7px 16px;font-size:12px;color:var(--gold);z-index:400;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
+#notif{position:fixed;top:55px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1a1200;border:2px solid #c8a96e;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;color:#ffe080;z-index:400;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.8)}
 #notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* EXPLOSION */
 @keyframes bombShake{
@@ -372,6 +372,7 @@ input,select,textarea{font-family:inherit}
         <button onclick="nextBlindLevel()" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#e2ddd4;font-size:12px;cursor:pointer">⏭</button>
         <button onclick="showStructureEditor()" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;cursor:pointer">📋</button>
         <button onclick="resetBlindTimer()" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#e2ddd4;font-size:12px;cursor:pointer">↺</button>
+    <button onclick="showICM()" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:11px;font-weight:700;cursor:pointer">ICM</button>
       </span>
     </div>
     <!-- Progress bar -->
@@ -1175,6 +1176,185 @@ function showStructureEditor(){
   document.body.appendChild(overlay);
 }
 
+function closeICM(){ document.getElementById('icm-overlay')?.remove(); }
+function calcICM(stacks, prizes){
+  const total = stacks.reduce((s,v)=>s+v,0);
+  const n = stacks.length;
+  const ev = new Array(n).fill(0);
+  
+  function simulate(remaining, prizeIdx, prob){
+    if(prizeIdx >= prizes.length || remaining.length===0) return;
+    remaining.forEach((stackIdx,i)=>{
+      const p = stacks[stackIdx]/remaining.reduce((s,j)=>s+stacks[j],0);
+      ev[stackIdx] += prob * p * prizes[prizeIdx];
+      const nextRemaining = remaining.filter((_,j)=>j!==i);
+      simulate(nextRemaining, prizeIdx+1, prob*p);
+    });
+  }
+  simulate(stacks.map((_,i)=>i), 0, 1);
+  return ev;
+}
+
+function showICM(){
+  // Use tournament active players (not in koOrder, have buyins)
+  const activePids = S.playerLib.filter(p=>!S.koOrder.includes(p.id)&&S.buyins[p.id]?.buyin>0);
+  if(activePids.length<2){ notify('נדרשים לפחות 2 שחקנים פעילים בטורניר'); return; }
+  
+  // Show stack input form first
+  showICMStackForm(activePids);
+}
+
+function showICMStackForm(activePids){
+  document.getElementById('icm-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'icm-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:360px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:16px';
+  box.onclick = e=>e.stopPropagation();
+  
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:14px';
+  hdr.innerHTML = '<span style="font-size:15px;font-weight:800;color:#c8a96e">ICM – הזן ערימות</span>';
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer';
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = ()=>overlay.remove();
+  hdr.appendChild(closeBtn);
+  box.appendChild(hdr);
+  
+  // Total chips in tournament
+  const icmTotalChips = Object.values(S.buyins||{}).reduce((s,b)=>s+(b.buyin||0)+(b.rebuy||0),0)*50000;
+  const defaultStack = activePids.length>0 ? Math.round(icmTotalChips/activePids.length) : 50000;
+  const stacks = {};
+  activePids.forEach(p=>{ stacks[p.id] = defaultStack||50000; });
+
+  // Show total chips
+  const totalDiv = document.createElement('div');
+  totalDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#0d1120;border-radius:8px;margin-bottom:10px';
+  const tl = document.createElement('span'); tl.style.cssText='font-size:11px;color:#5a5870'; tl.textContent='ציפים בטורניר:';
+  const tv = document.createElement('span'); tv.style.cssText='font-size:14px;font-weight:800;color:#c8a96e'; tv.textContent=icmTotalChips.toLocaleString();
+  totalDiv.appendChild(tl); totalDiv.appendChild(tv);
+  box.appendChild(totalDiv);
+
+  // Status line
+  const statusDiv = document.createElement('div');
+  statusDiv.id='icm-status';
+  statusDiv.style.cssText='font-size:11px;text-align:center;margin-bottom:8px';
+  box.appendChild(statusDiv);
+
+  function updateTotal(){
+    const sum = Object.values(stacks).reduce((a,b)=>a+b,0);
+    const el = document.getElementById('icm-status'); if(!el) return;
+    const diff = sum-icmTotalChips;
+    if(diff===0){ el.style.color='#5fc47a'; el.textContent='✓ מוזן: '+sum.toLocaleString(); }
+    else if(diff>0){ el.style.color='#e07b6a'; el.textContent='⚠️ עודף '+diff.toLocaleString()+' | מוזן: '+sum.toLocaleString(); }
+    else { el.style.color='#FFB347'; el.textContent='⚠️ חסר '+Math.abs(diff).toLocaleString()+' | מוזן: '+sum.toLocaleString(); }
+  }
+
+  activePids.forEach(p=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
+    row.innerHTML = '<span style="flex:1;font-size:13px;font-weight:700;color:#e2ddd4">'+p.name+'</span>';
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.inputMode = 'numeric';
+    inp.value = 50000;
+    inp.style.cssText = 'width:110px;padding:7px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:13px;text-align:center;outline:none;-webkit-appearance:none';
+    inp.oninput = ()=>{ stacks[p.id]=parseInt(inp.value)||0; updateTotal(); };
+    row.appendChild(inp);
+    box.appendChild(row);
+  });
+
+  updateTotal(); // show initial status
+  
+  const calcBtn = document.createElement('button');
+  calcBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px';
+  calcBtn.textContent = 'חשב ICM';
+  calcBtn.onclick = ()=>{
+    const active = activePids.map(p=>({playerId:p.id, stack:stacks[p.id]||0}));
+    const total = active.reduce((s,a)=>s+a.stack,0);
+    if(total===0){ notify('הזן ערימות'); return; }
+    overlay.remove();
+    showICMResult(active);
+  };
+  box.appendChild(calcBtn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function showICMResult(active){
+  const stacks = active.map(s=>s.stack||0);
+  const total = stacks.reduce((a,b)=>a+b,0);
+  const pp = prizePool()||0;
+  const p1 = S.place1Override||Math.round(pp*(active.length<=2?0.7:0.5));
+  const p2 = S.place2Override||Math.round(pp*(active.length<=2?0.3:0.3));
+  const p3 = active.length>=3?(S.place3||0):0;
+  const prizes = [p1,p2,p3].filter(p=>p>0);
+  const icmEV = calcICM(stacks, prizes);
+  
+  // Build overlay
+  document.getElementById('icm-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'icm-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:420px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:16px';
+  box.onclick = e=>e.stopPropagation();
+  
+  // Header
+  box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+    '<div><div style="font-size:15px;font-weight:800;color:#c8a96e">ICM</div>'+
+    '<div style="font-size:11px;color:#5a5870">קופה: ₪'+pp.toLocaleString()+'</div></div>'+
+    '<button onclick="closeICM()" style="background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer">✕</button></div>';
+  
+  // Prizes row
+  const prizesRow = document.createElement('div');
+  prizesRow.style.cssText = 'display:flex;gap:6px;margin-bottom:14px';
+  prizes.forEach((p,i)=>{
+    prizesRow.innerHTML += '<div style="flex:1;background:#0d1120;border-radius:8px;padding:6px;text-align:center">'+
+      '<div style="font-size:10px;color:#5a5870">מקום '+(i+1)+'</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#c8a96e">₪'+p.toLocaleString()+'</div></div>';
+  });
+  box.appendChild(prizesRow);
+  
+  // Table
+  const table = document.createElement('table');
+  table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px';
+  table.innerHTML = '<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08)">'+
+    '<th style="padding:6px 8px;text-align:right;color:#5a5870;font-weight:600">שחקן</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#5a5870;font-weight:600">ערימה</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#5a5870;font-weight:600">% צ יפים</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#5a5870;font-weight:600">שווי ICM</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#5a5870;font-weight:600">% פרסים</th>'+
+    '</tr></thead><tbody id="icm-tbody"></tbody>';
+  box.appendChild(table);
+  
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  
+  const tbody = document.getElementById('icm-tbody');
+  active.forEach((seat,i)=>{
+    const chipPct = total>0?Math.round(seat.stack/total*1000)/10:0;
+    const icmVal = Math.round(icmEV[i]);
+    const icmPct = pp>0?Math.round(icmEV[i]/pp*1000)/10:0;
+    const diff = icmPct - chipPct;
+    const diffColor = diff>0?'#5fc47a':diff<0?'#e07b6a':'#5a5870';
+    const row = document.createElement('tr');
+    row.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.04)';
+    row.innerHTML = '<td style="padding:8px;font-weight:700;color:#e2ddd4">'+pName(seat.playerId)+'</td>'+
+      '<td style="padding:8px;text-align:center;color:#aaa">'+seat.stack.toLocaleString()+'</td>'+
+      '<td style="padding:8px;text-align:center;color:#aaa">'+chipPct+'%</td>'+
+      '<td style="padding:8px;text-align:center;font-weight:800;color:#5fc47a">₪'+icmVal.toLocaleString()+'</td>'+
+      '<td style="padding:8px;text-align:center"><span style="font-weight:700;color:#e2ddd4">'+icmPct+'%</span> <span style="font-size:10px;color:'+diffColor+'">'+(diff>0?'+':'')+diff.toFixed(1)+'%</span></td>';
+    tbody.appendChild(row);
+  });
+}
+
 function resetBlindTimer(){
   S.blindLevel = 0;
   S.blindTimer.running = false;
@@ -1384,6 +1564,14 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 function render(){
+  // Safety: if currentActor is set and hand is active, ensure bettingClosed is correct
+  if(S.btnLocked && S.currentActor!==null && S.bettingClosed){
+    // Check if there really is a player who needs to act
+    const boardCount = S.board.filter(Boolean).length;
+    const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+    const order = getActingOrder(street);
+    if(order.includes(S.currentActor)) S.bettingClosed = false;
+  }
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
   // Show/hide viewer banner
   const vb = document.getElementById('viewer-banner');
@@ -3611,6 +3799,27 @@ function setSyncStatus(msg, color){
 
 async function syncToSheets(immediate){
   if(isViewer()||isLocal()) return; // viewers and local never send
+  // NEVER send if no players in library (would erase data on Sheets)
+  if(!S.playerLib?.length) return;
+  // Don't send if local data is older than Sheets data
+  if(S._sheetsTimestamp && S._lastSaved && S._sheetsTimestamp > S._lastSaved) return;
+  // Before sending, check if Sheets was updated since our last pull
+  try {
+    const checkResp = await fetch(gsUrl+'?key=poker_data&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
+    const checkText = await checkResp.text();
+    const checkData = JSON.parse(checkText);
+    if(checkData.ok && checkData.value?.savedAt){
+      const sheetsSavedAt = checkData.value.savedAt;
+      if(sheetsSavedAt > (S._lastSaved||0)){
+        // Sheets is newer - pull instead of push
+        setSyncStatus('⚠️ קונפליקט – מושך גרסה חדשה יותר', '#e07b6a');
+        applySnapshot(checkData.value);
+        S._sheetsTimestamp = sheetsSavedAt;
+        persist(); render();
+        return;
+      }
+    }
+  } catch(e){ /* network error - proceed with push */ }
   if(!gsUrl) return;
   if(isViewer() || !currentUser) return; // viewers and unauthenticated don't write
   if(!immediate){
@@ -3653,6 +3862,7 @@ async function syncFromSheets(){
       const incoming = r.value;
       if(!isAdmin() || !S._lastSaved || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
         applySnapshot(incoming);
+        S._sheetsTimestamp = incoming.savedAt||Date.now();
         persist();
       }
       render();
@@ -4159,7 +4369,7 @@ try{
 // ═══════════════════════════════════════
 const USERS = [
   { name:'יאיר',   pass:'1q234',    role:'admin'  },
-  { name:'אורח',   pass:'4321',    role:'local'  },
+  { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
@@ -4270,7 +4480,15 @@ document.addEventListener('visibilitychange', ()=>{
     try{
       loadGSUrl();
       if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
-      setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+      // On first load: pull from Sheets before any push
+if(gsUrl && currentUser && isAdmin()){
+  syncFromSheets().then(()=>{
+    // Only start auto-sync after initial pull
+    setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+  });
+} else {
+  setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+}
     }catch(e){}
   } else {
     const err = document.getElementById('pass-err');
@@ -4295,7 +4513,15 @@ function enterAsViewer(){
   try{
     loadGSUrl();
     if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
+    // On first load: pull from Sheets before any push
+if(gsUrl && currentUser && isAdmin()){
+  syncFromSheets().then(()=>{
+    // Only start auto-sync after initial pull
     setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+  });
+} else {
+  setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+}
   }catch(e){}
 }
 
