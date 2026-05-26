@@ -2185,8 +2185,10 @@ function doRebuy(seatIdx){
   ok.textContent = '✓ Rebuy';
   ok.onclick = ()=>{
     const n = parseInt(inp.value)||defaultRebuy;
-    seat.stack = n;
-    // Record rebuy in buyins
+    // Update directly in S.seats
+    const seatRef = S.seats.find(s=>s.seatIdx===seatIdx);
+    if(seatRef){ seatRef.stack = n; seatRef.allin = false; }
+    if(!S.buyins[seatIdx+'']) S.buyins[seatIdx+'']={buyin:0,rebuy:0};
     if(!S.buyins[seat.playerId]) S.buyins[seat.playerId]={buyin:0,rebuy:0};
     S.buyins[seat.playerId].rebuy = (S.buyins[seat.playerId].rebuy||0)+1;
     persist(); renderSeats(); overlay.remove();
@@ -2206,8 +2208,15 @@ function doRebuy(seatIdx){
 
 function setBTN(seatIdx){
   if(!isAdmin()) return;
+  // Check for players with 0 chips
+  const broke = S.seats.filter(s=>s.playerId&&(s.stack||0)===0);
+  if(broke.length){
+    const names = broke.map(s=>pName(s.playerId)).join(', ');
+    notify('⚠️ '+names+' חסרי ציפים – Rebuy נדרש');
+    return;
+  }
   S.btnSeat = seatIdx;
-  S._suppressAutoCard = true; // don't auto-open during initial setup
+  S._suppressAutoCard = true;
   postBlinds(seatIdx);
   setTimeout(()=>{ S._suppressAutoCard = false; }, 500);
 }
@@ -2385,7 +2394,7 @@ function getActingOrder(street){
     .filter(s=>{
       if(!s.playerId) return false;
       const seat = S.seats.find(st=>st.seatIdx===s.seatIdx);
-      return !seat?.folded && !seat?.allin;
+      return !seat?.folded && !seat?.allin && (seat?.stack||0)>0;
     })
     .sort((a,b)=>(posOrder.indexOf(a.pos)===-1?99:posOrder.indexOf(a.pos))-(posOrder.indexOf(b.pos)===-1?99:posOrder.indexOf(b.pos)))
     .map(s=>s.seatIdx);
@@ -3067,8 +3076,8 @@ function showHandDetail(hid){
     boardCards2.forEach(c=>{
       const isRed=c.suit==='♥'||c.suit==='♦';
       const bc2=document.createElement('div');
-      bc2.style.cssText = 'width:32px;height:46px;border-radius:5px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6)';
-      bc2.innerHTML='<span style="color:'+(isRed?'#e05555':'#111')+'">'+c.rank+'</span><span style="font-size:10px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
+      bc2.style.cssText = 'width:32px;height:46px;border-radius:5px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6);opacity:1';
+      bc2.innerHTML='<span style="color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:10px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
       brow.appendChild(bc2);
     });
     const potLbl = document.createElement('div');
@@ -3124,8 +3133,8 @@ function showHandDetail(hid){
       seatCards.forEach(c=>{
         const isRed=c.suit==='♥'||c.suit==='♦';
         const cd=document.createElement('div');
-        cd.style.cssText = 'width:20px;height:28px;border-radius:3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6)';
-        cd.innerHTML='<span style="color:'+(isRed?'#e05555':'#111')+'">'+c.rank+'</span><span style="font-size:6px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
+        cd.style.cssText = 'width:20px;height:28px;border-radius:3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);opacity:1';
+        cd.innerHTML='<span style="color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:6px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
         cContainer.appendChild(cd);
       });
       tableDiv.appendChild(cContainer);
@@ -3270,7 +3279,7 @@ function showHandDetail(hid){
           cardRow.style.cssText = 'padding:4px 6px;text-align:center';
           const cardHtml = (s.cards||[]).filter(Boolean).map(c=>{
             const isRed=c.suit==='♥'||c.suit==='♦';
-            return '<div style="width:20px;height:28px;border-radius:3px;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.5);margin:0 1px"><span style="font-size:8px;font-weight:900;color:'+(isRed?'#e05555':'#111')+';line-height:1">'+c.rank+'</span><span style="font-size:6px;color:'+(isRed?'#e05555':'#111')+';line-height:1">'+c.suit+'</span></div>';
+            return '<div style="width:22px;height:30px;border-radius:4px;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.6);margin:0 1px"><span style="font-size:9px;font-weight:900;color:'+(isRed?'#d42020':'#111')+';line-height:1">'+c.rank+'</span><span style="font-size:7px;color:'+(isRed?'#d42020':'#111')+';line-height:1">'+c.suit+'</span></div>';
           }).join('');
           cardRow.innerHTML =
             '<div style="font-size:9px;color:'+(s.folded?'#555':'#aaa')+';margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.playerName+'</div>'+
