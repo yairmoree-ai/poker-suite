@@ -807,7 +807,7 @@ function renderLiveActions(){
   const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
   const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
   const colFn = t=>t==='Fold'?'#555':t==='SB'?'#8b7cb8':t==='BB'?'#e07b6a':t==='Check'?'#5fc47a':t==='Call'?'#5b9bd5':t==='All-in'?'#e05555':'#c8a96e';
-  const typeShortFn = t=>t==='Raise'?'R':t==='Check'?'CH':t==='Call'?'C':t==='All-in'?'AI':t==='Fold'?'F':t;
+  const typeShortFn = (t,a)=>a?.displayType||(t==='Raise'?'R':t==='Check'?'CH':t==='Call'?'C':t==='All-in'?'AI':t==='Fold'?'F':t);
   const posColFn = p=>p==='BTN'?'#c8a96e':p==='SB'?'#8b7cb8':p==='BB'?'#e07b6a':'#6a8090';
 
   // Pre-flop order: SB→BB→UTG→...→BTN
@@ -828,6 +828,7 @@ function renderLiveActions(){
             name:pName(s.playerId)||'?',
             pos:s.pos,
             type:a.type,
+            displayType:a.displayType,
             amt:a.amount,
             idx:a.idx??999
           });
@@ -860,7 +861,7 @@ function renderLiveActions(){
       const col=colFn(item.type);
       const rawAmt=Number(item.amt)||0;
       const amt=rawAmt?(rawAmt>=1000?Math.round(rawAmt/100)/10+'K':String(rawAmt)):'';
-      const typeShort=typeShortFn(item.type);
+      const typeShort=typeShortFn(item.type,item);
       const posCol=posColFn(item.pos);
       html+=`<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);border-right:1px solid rgba(255,255,255,0.06);padding:3px 8px;flex-shrink:0;min-width:46px;border-top:2px solid ${col}">
         <span style="font-size:8px;font-weight:800;color:${posCol};white-space:nowrap">${item.pos||''}</span>
@@ -2178,7 +2179,46 @@ function showQuickPlayerPicker(seatIdx){
   document.getElementById('quick-player-picker')?.remove();
   const taken = S.seats.filter(s=>s.seatIdx!==seatIdx&&s.playerId).map(s=>s.playerId);
   const avail = sortedLib().filter(p=>!taken.includes(p.id));
-  if(!avail.length){ notify('אין שחקנים זמינים'); return; }
+  if(!avail.length){
+    // No players available - show add new player directly
+    document.getElementById('quick-player-picker')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'quick-player-picker';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:14px;padding:14px;width:100%;max-width:320px';
+    box.onclick = e=>e.stopPropagation();
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:13px;font-weight:800;color:#c8a96e;margin-bottom:10px;text-align:center';
+    title.textContent = '+ הוסף שחקן חדש';
+    const addRow = document.createElement('div');
+    addRow.style.cssText = 'display:flex;gap:6px';
+    const newInp = document.createElement('input');
+    newInp.type = 'text';
+    newInp.placeholder = 'שם השחקן...';
+    newInp.style.cssText = 'flex:1;padding:9px 12px;border-radius:9px;border:1px solid rgba(200,169,110,0.3);background:#0a0e18;color:#e2ddd4;font-size:14px;outline:none;text-align:right';
+    const addBtn = document.createElement('button');
+    addBtn.style.cssText = 'padding:9px 14px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer';
+    addBtn.textContent = '✓';
+    addBtn.onclick = ()=>{
+      const name = newInp.value.trim();
+      if(!name){ notify('הכנס שם'); return; }
+      if(S.playerLib.some(p=>p.name===name)){ notify('שחקן קיים'); return; }
+      const id = uid();
+      S.playerLib.push({id, name});
+      persist();
+      setSeatPlayer(seatIdx, id);
+      overlay.remove();
+    };
+    newInp.onkeydown = e=>{ if(e.key==='Enter') addBtn.click(); };
+    addRow.appendChild(newInp); addRow.appendChild(addBtn);
+    box.appendChild(title); box.appendChild(addRow);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    setTimeout(()=>newInp.focus(), 150);
+    return;
+  }
 
   const overlay = document.createElement('div');
   overlay.id = 'quick-player-picker';
@@ -2368,6 +2408,20 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   const isRaise = ['Open','Raise','3bet','4bet','All-in'].includes(type);
   if(isRaise) S.raiseRound = (S.raiseRound||0)+1;
   const currentRound = S.raiseRound||0;
+  // Determine display label based on street and raise count
+  const isPreflop = street==='פרה-פלופ';
+  let displayType = type;
+  if(type==='Raise'||type==='Open'){
+    if(isPreflop){
+      // Preflop: first raise=R, then 3b,4b,5b...
+      displayType = currentRound===1?'R':currentRound===2?'3b':currentRound===3?'4b':(currentRound+1)+'b';
+    } else {
+      // Postflop: first=B, then R, 2R, 3R...
+      const streetRaises = S.seats.flatMap(s=>(s.actions||[]).filter(a=>a.street===street&&['Raise','Open','Bet'].includes(a.type))).length;
+      displayType = streetRaises===0?'B':streetRaises===1?'R':(streetRaises)+'R';
+    }
+  } else if(type==='3bet') displayType='3b';
+  else if(type==='4bet') displayType='4b';
   // For raises: user enters TOTAL, store DELTA for correct pot calculation
   const isRaiseType2 = ['Open','Raise','3bet','4bet','5bet','All-in','Bet'].includes(type);
   const alreadyInvested = isRaiseType2 ? getStreetInvested(seatIdx) : 0;
@@ -2383,7 +2437,7 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   }
   // Give each action a global index for ordering
   const allActCount = S.seats.reduce((n,s)=>(s.actions||[]).length+n, 0);
-  seat.actions.push({street,type,amount:deltaAmt?String(deltaAmt):'',raiseRound:currentRound,idx:allActCount});
+  seat.actions.push({street,type,displayType,amount:deltaAmt?String(deltaAmt):'',raiseRound:currentRound,idx:allActCount});
   if(isRaise){
     S.lastRaiser = {seat:seatIdx, round:currentRound};
     // After a raise, next actor starts from player AFTER the raiser
@@ -4568,8 +4622,8 @@ try{
 // ═══════════════════════════════════════
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
-const ANTHROPIC_KEY = 'sk-ant-api03-...'; // המפתח שלך
-const USERS = [
+  const ANTHROPIC_KEY = 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 '; // המפתח שלך
+  const USERS = [
   { name:'יאיר',   pass:'1q234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
