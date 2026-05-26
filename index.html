@@ -428,7 +428,7 @@ input,select,textarea{font-family:inherit}
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
     <button onclick="document.getElementById('card-picker').classList.remove('open')" style="background:none;border:none;color:#5a5870;font-size:13px;cursor:pointer;padding:4px">← חזור</button>
     <div style="font-size:13px;color:var(--gold);font-weight:700" id="cp-title">בחר קלף</div>
-    <div style="width:60px"></div>
+    <button onclick="openCameraForCards('board')" style="background:none;border:1px solid rgba(200,169,110,0.3);border-radius:8px;color:#c8a96e;font-size:16px;cursor:pointer;padding:4px 8px" title="זיהוי קלפים מצילום">📷</button>
   </div>
   <div id="cp-content"></div>
 </div></div>
@@ -1177,6 +1177,78 @@ function showStructureEditor(){
 }
 
 function closeICM(){ document.getElementById('icm-overlay')?.remove(); }
+
+async function openCameraForCards(target){
+  if(typeof ANTHROPIC_KEY==='undefined'||!ANTHROPIC_KEY||ANTHROPIC_KEY.includes('...')){
+    notify('הגדר ANTHROPIC_KEY בקוד קודם'); return;
+  }
+  // Create file input for camera
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment'; // rear camera
+  input.onchange = async ()=>{
+    if(!input.files[0]) return;
+    notify('🔍 מזהה קלפים...');
+    try {
+      const base64 = await new Promise((res,rej)=>{
+        const r = new FileReader();
+        r.onload = ()=>res(r.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(input.files[0]);
+      });
+      
+      const prompt = target==='board'
+        ? 'זהה את קלפי הפוקר בתמונה. החזר JSON בלבד: {"cards":[{"rank":"A","suit":"♥"},...]}'
+        : 'זהה את 2 קלפי הפוקר של השחקן בתמונה. החזר JSON בלבד: {"cards":[{"rank":"A","suit":"♥"},{"rank":"K","suit":"♠"}]}';
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body: JSON.stringify({
+          model:'claude-opus-4-5',
+          max_tokens:200,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
+            {type:'text',text:prompt}
+          ]}]
+        })
+      });
+      
+      const data = await resp.json();
+      const text = data.content?.[0]?.text||'';
+      const clean = text.replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(clean);
+      const cards = parsed.cards||[];
+      
+      if(!cards.length){ notify('לא זוהו קלפים'); return; }
+      
+      if(target==='board'){
+        // Fill next empty board slots
+        let filled = 0;
+        cards.forEach(c=>{
+          const slot = S.board.findIndex(b=>!b);
+          if(slot>=0&&slot<5){ S.board[slot]=c; filled++; }
+        });
+        persist(); renderBoard();
+        notify('✓ זוהו '+filled+' קלפים');
+        document.getElementById('card-picker').classList.remove('open');
+      } else {
+        // Fill seat cards (target = seatIdx)
+        const seat = S.seats.find(s=>s.seatIdx===parseInt(target));
+        if(seat){
+          seat.cards = [cards[0]||null, cards[1]||null];
+          persist(); renderSeats(); renderSeatPanel();
+          notify('✓ קלפי שחקן זוהו');
+        }
+      }
+    } catch(e){
+      console.error(e);
+      notify('שגיאה בזיהוי: '+e.message);
+    }
+  };
+  input.click();
+}
 function calcICM(stacks, prizes){
   const total = stacks.reduce((s,v)=>s+v,0);
   const n = stacks.length;
@@ -1913,7 +1985,10 @@ function renderSeatPanel(){
   }).join('');
   
   html+=`<div style="margin-bottom:8px">
-    <span class="sec-lbl" style="margin-bottom:4px">קלפי שחקן</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <span class="sec-lbl">קלפי שחקן</span>
+      <button onclick="openCameraForCards('${i}')" style="background:none;border:1px solid rgba(200,169,110,0.3);border-radius:8px;color:#c8a96e;font-size:14px;cursor:pointer;padding:3px 8px">📷</button>
+    </div>
     <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
       ${[0,1].map(ci=>{
         const c=seat.cards?.[ci];
@@ -4493,7 +4568,6 @@ try{
 // ═══════════════════════════════════════
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
-const ANTHROPIC_KEY = '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'; // המפתח שלך
 const USERS = [
   { name:'יאיר',   pass:'1q234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
