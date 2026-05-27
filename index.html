@@ -4314,6 +4314,22 @@ async function syncFromSheets(){
 
 
 
+async function manualBackup(){
+  if(!gsUrl){ notify('הגדר Google Sheets URL קודם'); return; }
+  notify('💾 מגבה...');
+  try {
+    const resp = await fetch(gsUrl, {
+      method:'POST',
+      body: JSON.stringify({ action:'manual_backup' })
+    });
+    const data = await resp.json();
+    if(data.ok) notify('✓ גיבוי הושלם – ' + (data.sheet||''));
+    else notify('שגיאה בגיבוי: ' + (data.error||''));
+  } catch(e) {
+    notify('שגיאה: ' + e.message);
+  }
+}
+
 function toggleSettings(){
   const box = document.getElementById('settings-box');
   if(!box) return;
@@ -4797,7 +4813,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1q234',    role:'admin'  },
+  { name:'יאיר',   pass:'1234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
