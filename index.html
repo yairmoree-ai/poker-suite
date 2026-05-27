@@ -1715,6 +1715,7 @@ function renderSeats(){
     if(isAct)cls+=' active';
     if(isFold)cls+=' folded';
     if(!isFold&&!isAlin&&seat?.playerId&&(seat?.stack||0)===0)cls+=' broke';
+    if(seat?.sittingOut)cls+=' sitting-out';
     if(isAlin)cls+=' allin';
     if(isCurrentActor&&seat?.playerId&&!isFold)cls+=' current-actor';
     if(isWinner)cls+=' winner';
@@ -1732,9 +1733,14 @@ function renderSeats(){
         ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
         ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טורן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טורן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
-    const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&!S.btnLocked;
+    const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&(seat.folded||seat.sittingOut||!S.btnLocked);
+    const isSittingOut = seat.sittingOut||false;
     return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(200,169,110,0.5);background:rgba(200,169,110,0.15);color:#c8a96e;font-size:8px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')
-    +(showRebuy?`<button onclick="event.stopPropagation();doRebuy(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(95,196,122,0.6);background:rgba(95,196,122,0.2);color:#5fc47a;font-size:9px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:10">+ Rebuy</button><button onclick="event.stopPropagation();rmSeat(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(224,123,106,0.5);background:rgba(224,123,106,0.15);color:#e07b6a;font-size:9px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:10">✕ הסר</button>`:'')+(showUndo?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid #e07b6a;background:#7a2020;color:#ffaaaa;font-size:8px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:5">↩ בטל</button>`:'');})()}
+    +(showRebuy?`
+      <button onclick="event.stopPropagation();doSeatRebuy(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(95,196,122,0.6);background:rgba(95,196,122,0.2);color:#5fc47a;font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">+ Rebuy</button>
+      <button onclick="event.stopPropagation();setSittingOut(${seat.seatIdx},${!isSittingOut})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid ${isSittingOut?'rgba(91,155,213,0.6)':'rgba(255,200,50,0.5)'};background:${isSittingOut?'rgba(91,155,213,0.2)':'rgba(255,200,50,0.1)'};color:${isSittingOut?'#5b9bd5':'#FFB347'};font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">${isSittingOut?'▶ חזור':'⏸ Sit Out'}</button>
+      <button onclick="event.stopPropagation();rmSeat(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(224,123,106,0.5);background:rgba(224,123,106,0.15);color:#e07b6a;font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">✕ יציאה</button>
+    `:'')+(showUndo?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid #e07b6a;background:#7a2020;color:#ffaaaa;font-size:8px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:5">↩ בטל</button>`:'');})()}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     // Add action buttons arc above occupied seats
@@ -1912,6 +1918,19 @@ function renderBlindsBtn(){
 // ═══════════════════════════════════════════════════════
 // SEAT PANEL
 // ═══════════════════════════════════════════════════════
+function getPlayerNote(playerId){
+  if(!playerId) return '';
+  return (S.playerNotes||{})[playerId]||'';
+}
+
+function savePlayerNote(seatIdx, note){
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat?.playerId) return;
+  if(!S.playerNotes) S.playerNotes={};
+  S.playerNotes[seat.playerId] = note;
+  persist();
+}
+
 function pickSeatCard(seatIdx, rank, suit, forceSlot){
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat) return;
@@ -1955,6 +1974,9 @@ function renderSeatPanel(){
     </div>
     <div class="form-group"><label>ערימה${seat.stack&&bb?` <span style="color:var(--muted2);font-weight:400">(${(seat.stack/bb).toFixed(1)}bb)</span>`:''}</label>
       <input type="number" value="${seat.stack??0}" placeholder="0" onchange="updSeat(${i},{stack:+this.value||0})">
+    </div>
+    <div class="form-group"><label style="font-size:11px">📝 הערות</label>
+      <textarea rows="2" placeholder="הערות על השחקן..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:12px;resize:none;outline:none;box-sizing:border-box;direction:rtl" onchange="savePlayerNote(${i},this.value)">${getPlayerNote(seat.playerId)}</textarea>
     </div>
   </div>`;
   // BTN
@@ -2281,12 +2303,11 @@ function rmSeat(seatIdx){
   notify('שחקן הוסר ✓');
 }
 
-function doRebuy(seatIdx){
+function doSeatRebuy(seatIdx){
   if(!isAdmin()) return;
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat) return;
-  const bb = getBlinds()?.bb||1000;
-  const defaultRebuy = 50000;
+  const defaultRebuy = S.defaultRebuyAmount||50000;
   // Show inline edit overlay
   document.getElementById('quick-input-overlay')?.remove();
   const overlay = document.createElement('div');
@@ -2315,12 +2336,23 @@ function doRebuy(seatIdx){
     const n = parseInt(inp.value)||defaultRebuy;
     // Update directly in S.seats
     const seatRef = S.seats.find(s=>s.seatIdx===seatIdx);
-    if(seatRef){ seatRef.stack = n; seatRef.allin = false; }
-    if(!S.buyins[seatIdx+'']) S.buyins[seatIdx+'']={buyin:0,rebuy:0};
+    if(seatRef){
+      seatRef.stack = n;
+      seatRef.sittingOut = false; // back in game after rebuy
+      // Only reset allin/folded if no active hand
+      if(!S.btnLocked){
+        seatRef.allin = false;
+        seatRef.folded = false;
+      }
+    }
     if(!S.buyins[seat.playerId]) S.buyins[seat.playerId]={buyin:0,rebuy:0};
     S.buyins[seat.playerId].rebuy = (S.buyins[seat.playerId].rebuy||0)+1;
     persist(); renderSeats(); overlay.remove();
     notify('Rebuy ✓ '+name+' – ₪'+n.toLocaleString());
+    // If no active hand - show start next hand prompt
+    if(!S.btnLocked){
+      setTimeout(()=>showPostRebuyPrompt(), 300);
+    }
   };
   inp.onkeydown = e=>{ if(e.key==='Enter') ok.click(); };
   const cancel = document.createElement('button');
@@ -2334,13 +2366,61 @@ function doRebuy(seatIdx){
   setTimeout(()=>{inp.focus();inp.select();},150);
 }
 
+function showPostRebuyPrompt(){
+  // Check if all players have chips now
+  const broke = S.seats.filter(s=>s.playerId&&(s.stack||0)===0&&!s.sittingOut);
+  if(broke.length) return; // still players with 0 chips
+
+  document.getElementById('post-rebuy-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'post-rebuy-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:20px;width:100%;max-width:300px;text-align:center';
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:14px';
+  title.textContent = '🃏 להתחיל יד חדשה?';
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px';
+
+  const yesBtn = document.createElement('button');
+  yesBtn.style.cssText = 'flex:1;padding:12px;border-radius:10px;border:none;background:#5fc47a;color:#0a0d14;font-weight:800;font-size:15px;cursor:pointer';
+  yesBtn.textContent = 'כן';
+  yesBtn.onclick = ()=>{
+    overlay.remove();
+    const nextBtn = getNextBtnSeat(S.btnSeat||S.seats.find(s=>s.playerId)?.seatIdx||0);
+    setBTN(nextBtn);
+  };
+
+  const noBtn = document.createElement('button');
+  noBtn.style.cssText = 'flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#e2ddd4;font-size:15px;cursor:pointer';
+  noBtn.textContent = 'לא';
+  noBtn.onclick = ()=>overlay.remove();
+
+  btnRow.appendChild(yesBtn); btnRow.appendChild(noBtn);
+  box.appendChild(title); box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function setSittingOut(seatIdx, val){
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat) return;
+  seat.sittingOut = val;
+  persist(); renderSeats();
+  notify(val ? '⏸ Sitting Out' : '▶ חזר לשולחן');
+}
+
 function setBTN(seatIdx){
   if(!isAdmin()) return;
   // Check for players with 0 chips
-  const broke = S.seats.filter(s=>s.playerId&&(s.stack||0)===0);
+  const broke = S.seats.filter(s=>s.playerId&&(s.stack||0)===0&&!s.sittingOut);
   if(broke.length){
     const names = broke.map(s=>pName(s.playerId)).join(', ');
-    notify('⚠️ '+names+' חסרי ציפים – Rebuy נדרש');
+    notify('⚠️ '+names+' חסרי ציפים – Rebuy או Sit Out נדרש');
     return;
   }
   S.btnSeat = seatIdx;
@@ -2496,7 +2576,7 @@ function clickSeat(i){
   if(isViewer()){notify('צופה בלבד – אין הרשאת עריכה');return;}
   if(activeSeat===i){activeSeat=null;closePanel('seat-panel');return;}
   if(!S.seats.find(s=>s.seatIdx===i))
-    S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:50000,pos:'',cards:[null,null],actions:[],folded:false,allin:false});
+    S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:(S.defaultRebuyAmount||50000),pos:'',cards:[null,null],actions:[],folded:false,allin:false});
   const seat = S.seats.find(s=>s.seatIdx===i);
   if(!seat?.playerId){
     // Empty seat - show quick player picker
@@ -2508,7 +2588,7 @@ function clickSeat(i){
 function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
 function setSeatPlayer(i,pid){
   const existing = S.seats.find(s=>s.seatIdx===i);
-  const stack = existing?.stack||50000;
+  const stack = existing?.stack||(S.defaultRebuyAmount||50000);
   updSeat(i,{playerId:pid, stack:stack});
   // Close panel and return to table view
   closeSeatPanel();
@@ -2536,7 +2616,7 @@ function getActingOrder(street){
     .filter(s=>{
       if(!s.playerId) return false;
       const seat = S.seats.find(st=>st.seatIdx===s.seatIdx);
-      return !seat?.folded && !seat?.allin && (seat?.stack||0)>0;
+      return !seat?.folded && !seat?.allin && (seat?.stack||0)>0 && !seat?.sittingOut;
     })
     .sort((a,b)=>(posOrder.indexOf(a.pos)===-1?99:posOrder.indexOf(a.pos))-(posOrder.indexOf(b.pos)===-1?99:posOrder.indexOf(b.pos)))
     .map(s=>s.seatIdx);
@@ -2609,6 +2689,82 @@ function setCurrentActor(seatIdx){
   renderLiveActions();
 }
 
+function getNextBtnSeat(currentBtnSeat){
+  // Get all occupied seats sorted by seatIdx
+  const occupied = S.seats.filter(s=>s.playerId&&(s.stack||0)>0).map(s=>s.seatIdx).sort((a,b)=>a-b);
+  if(!occupied.length) return currentBtnSeat;
+  const curIdx = occupied.indexOf(currentBtnSeat);
+  // Next in clockwise order (ascending seatIdx, wrap around)
+  return occupied[(curIdx+1)%occupied.length];
+}
+
+function autoSaveAndPromptReset(winnerSeatIdxs){
+  // Auto-save with winner name
+  const winnerNames = (winnerSeatIdxs||[]).map(i=>pName(S.seats.find(s=>s.seatIdx===i)?.playerId)||'?').join(' + ');
+  const label = winnerNames || 'יד';
+  
+  const swp = assignPos();
+  const b = getBlinds();
+  const hand = {
+    id:uid(), date:new Date().toLocaleDateString('he-IL'),
+    blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
+    label, board:[...S.board],
+    seats: swp.filter(s=>s.playerId).map(s=>({
+      seatIdx:s.seatIdx, playerId:s.playerId, playerName:pName(s.playerId),
+      pos:s.pos, stack:s.stack, cards:[...(s.cards||[null,null])],
+      actions:[...(s.actions||[])], folded:s.folded||false, allin:s.allin||false
+    })),
+    result:null, amount:'', notes:'',
+    finalPot: S._winPot||calcPot(),
+    winners: (S._lastWinners||[]).map(w=>({...w}))
+  };
+  S.handLog=[hand,...S.handLog];
+  syncToSheets(false);
+  notify('💾 יד נשמרה – '+label);
+
+  // Show reset prompt
+  setTimeout(()=>{
+    document.getElementById('reset-prompt-overlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'reset-prompt-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
+    
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:20px;width:100%;max-width:320px;text-align:center';
+    
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:16px;font-weight:800;color:#c8a96e;margin-bottom:6px';
+    title.textContent = '🃏 האם לאפס את היד?';
+    
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:12px;color:#5a5870;margin-bottom:16px';
+    sub.textContent = 'היד נשמרה – '+label;
+    
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:10px;justify-content:center';
+    
+    const yesBtn = document.createElement('button');
+    yesBtn.style.cssText = 'flex:1;padding:12px;border-radius:10px;border:none;background:#5fc47a;color:#0a0d14;font-weight:800;font-size:15px;cursor:pointer';
+    yesBtn.textContent = 'כן ↺';
+    yesBtn.onclick = ()=>{
+      overlay.remove();
+      const nextBtn = getNextBtnSeat(S.btnSeat);
+      resetHand();
+      setTimeout(()=>setBTN(nextBtn), 100);
+    };
+    
+    const noBtn = document.createElement('button');
+    noBtn.style.cssText = 'flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#e2ddd4;font-size:15px;cursor:pointer';
+    noBtn.textContent = 'לא';
+    noBtn.onclick = ()=>overlay.remove();
+    
+    btnRow.appendChild(yesBtn); btnRow.appendChild(noBtn);
+    box.appendChild(title); box.appendChild(sub); box.appendChild(btnRow);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  }, 800);
+}
+
 function undoAward(){
   if(!S._preAwardState){ notify('אין מה לבטל'); return; }
   const { seats, pot } = S._preAwardState;
@@ -2652,6 +2808,15 @@ function awardPot(winnerSeatIdxs, showAnim=true){
     pot
   };
 
+  // Set winner highlight immediately
+  S._winners = winnerSeatIdxs;
+  S._lastWinners = winnerSeatIdxs.map(idx=>({
+    seatIdx:idx,
+    playerId:S.seats.find(s=>s.seatIdx===idx)?.playerId,
+    name:pName(S.seats.find(s=>s.seatIdx===idx)?.playerId)||'?'
+  }));
+  renderSeats();
+
   // Animate pot flying to winner(s)
   const tableWrap = document.getElementById('table-wrap');
   const potEl = document.getElementById('pot-display');
@@ -2682,29 +2847,26 @@ function awardPot(winnerSeatIdxs, showAnim=true){
     });
     const bc = document.getElementById('bet-chips-container');
     if(bc) bc.innerHTML='';
-  // Flash winner
-  S._winners = winnerSeatIdxs;
   S._winPot = pot;
-  // Save winner for hand log
-  S._lastWinners = winnerSeatIdxs.map(idx=>({
-    seatIdx:idx,
-    playerId:S.seats.find(s=>s.seatIdx===idx)?.playerId,
-    name:pName(S.seats.find(s=>s.seatIdx===idx)?.playerId)||'?'
-  }));
   persist();
   renderSeats(); renderBoard();
-  setTimeout(()=>{ S._winners=null; S._winPot=null; renderSeats(); },3000);
+  // Keep winners highlighted until hand is reset
+  // S._winners will be cleared in resetHand()
   const names = winnerSeatIdxs.map(i=>pName(S.seats.find(s=>s.seatIdx===i)?.playerId)||'?').join(' + ');
     notify('🏆 '+names+' זכה בקופה ₪'+pot.toLocaleString());
-    // Show undo button briefly
+    // Show undo button, then auto-save after 8 seconds
     setTimeout(()=>{
       const nb = document.createElement('button');
       nb.id = 'undo-award-btn';
       nb.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:12px;border:1px solid rgba(224,123,106,0.5);background:rgba(224,123,106,0.15);color:#e07b6a;font-size:13px;font-weight:800;cursor:pointer;z-index:200';
       nb.textContent = '↩ בטל הכרזה';
-      nb.onclick = ()=>{ undoAward(); nb.remove(); };
+      nb.onclick = ()=>{ undoAward(); nb.remove(); clearTimeout(nb._saveTimer); };
       document.body.appendChild(nb);
-      setTimeout(()=>nb.remove(), 8000); // disappears after 8 seconds
+      // Auto-save after 8 seconds
+      nb._saveTimer = setTimeout(()=>{
+        nb.remove();
+        autoSaveAndPromptReset(winnerSeatIdxs);
+      }, 8000);
     }, 800);
   }, 400);
 }
@@ -2820,6 +2982,7 @@ function postBlinds(btnSeatIdx){
   // Set first actor to UTG (first after BB)
   const preflopOrder = getActingOrder('פרה-פלופ');
   S.currentActor = preflopOrder[0]??null;
+
   persist(); render();
 }
 
@@ -2838,10 +3001,10 @@ function confirmResetHand(){
 
   const title = document.createElement('div');
   title.style.cssText = 'font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:6px';
-  title.textContent = '💾 שמור יד לפני איפוס';
+  title.textContent = '↺ אפס יד';
   const sub = document.createElement('div');
   sub.style.cssText = 'font-size:11px;color:#5a5870;margin-bottom:12px';
-  sub.textContent = 'חובה לתת שם ליד לפני האיפוס';
+  sub.textContent = 'אפשר לתת שם ליד לפני האיפוס (אופציונלי)';
 
   const inp = document.createElement('input');
   inp.type = 'text';
@@ -2854,9 +3017,12 @@ function confirmResetHand(){
   const saveBtn = document.createElement('button');
   saveBtn.style.cssText = 'flex:1;padding:11px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer';
   saveBtn.textContent = '💾 שמור ואפס';
+  const skipBtn = document.createElement('button');
+  skipBtn.style.cssText = 'width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer;margin-top:6px';
+  skipBtn.textContent = '↺ אפס בלי לשמור';
+  skipBtn.onclick = ()=>{ overlay.remove(); resetHand(); };
   saveBtn.onclick = ()=>{
-    const label = inp.value.trim();
-    if(!label){ inp.style.borderColor='#e07b6a'; inp.focus(); return; }
+    const label = inp.value.trim() || new Date().toLocaleDateString('he-IL');
     // Save hand with label then reset
     const swp = assignPos();
     const b = getBlinds();
@@ -2887,7 +3053,7 @@ function confirmResetHand(){
   inp.onkeydown = e=>{ if(e.key==='Enter') saveBtn.click(); };
 
   btnRow.appendChild(saveBtn); btnRow.appendChild(cancelBtn);
-  box.appendChild(title); box.appendChild(sub); box.appendChild(inp); box.appendChild(btnRow);
+  box.appendChild(title); box.appendChild(sub); box.appendChild(inp); box.appendChild(btnRow); box.appendChild(skipBtn);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
   setTimeout(()=>{ inp.focus(); }, 150);
@@ -2912,7 +3078,7 @@ function resetHand(){
   S._lastWinners = null;
   S._winners = null;
   S.board = [null,null,null,null,null];
-  S.seats = S.seats.map(s=>({...s, cards:[null,null], actions:[], folded:false, allin:false}));
+  S.seats = S.seats.map(s=>({...s, cards:[null,null], actions:[], folded:false, allin:false, sittingOut:(s.stack||0)===0?s.sittingOut:false}));
   persist(); render();
   const ct = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
   if(ct) showView(ct);
@@ -3001,11 +3167,14 @@ function doRebuy(pid,d){
 function clearTable(){
   if(!isAdmin()){notify('צופה בלבד');return;}
   S.seats.forEach(s=>{
-    s.playerId=''; s.stack=50000; s.cards=[null,null];
-    s.actions=[]; s.folded=false; s.allin=false;
+    s.playerId=''; s.stack=S.defaultRebuyAmount||50000; s.cards=[null,null];
+    s.actions=[]; s.folded=false; s.allin=false; s.sittingOut=false;
   });
   S.btnSeat=null; S.btnLocked=false; S.currentActor=null;
   S.bettingClosed=false; S.lastRaiser=null; S.raiseRound=0; S.lastBet=0;
+  S.lastRaiseSize=0; S.lastRaiseWasFull=true;
+  S.board=[null,null,null,null,null];
+  S._winners=null; S._lastWinners=null; S._preAwardState=null;
   persist(); render();
   notify('השולחן נוקה ✓');
 }
@@ -4149,6 +4318,8 @@ function toggleSettings(){
   const box = document.getElementById('settings-box');
   if(!box) return;
   loadGSUrl();
+  const rebuyInp = document.getElementById('rebuy-default-inp');
+  if(rebuyInp) rebuyInp.value = S.defaultRebuyAmount||50000;
   box.style.display = box.style.display==='none' ? 'flex' : 'none';
 }
 
@@ -4624,10 +4795,8 @@ try{
 // INIT
 // ═══════════════════════════════════════
 // USERS - הוסף/ערוך משתמשים כאן
-
 // ═══════════════════════════════════════
-  const ANTHROPIC_KEY = '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'
- const USERS = [
+const USERS = [
   { name:'יאיר',   pass:'1q234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
@@ -4767,12 +4936,12 @@ function enterAsViewer(){
   // Show upgrade button for viewers
   const upBtn = document.getElementById('btn-upgrade-to-admin');
   if(upBtn) upBtn.style.display='';
-  try{ loadState(); }catch(e){ render(); }
+  try{ render(); }catch(e){} // viewer doesn't load localStorage
   // Open tournaments tab by default for viewers
   setTimeout(()=>showView('tourn'), 50);
   try{
     loadGSUrl();
-    if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
+    if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); } // pull from Sheets only
     // On first load: pull from Sheets before any push
 if(gsUrl && currentUser && isAdmin()){
   syncFromSheets().then(()=>{
@@ -4820,6 +4989,13 @@ setTimeout(()=>document.getElementById('pass-inp')?.focus(), 100);
   <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:14px">⚙️ הגדרות סנכרון</div>
 
+    <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:6px">🔄 ברירת מחדל Rebuy</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="rebuy-default-inp" value="50000" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;text-align:center;-webkit-appearance:none" onchange="S.defaultRebuyAmount=parseInt(this.value)||50000;persist();notify('ברירת מחדל עודכנה ✓')">
+        <span style="font-size:11px;color:#5a5870">₪</span>
+      </div>
+    </div>
     <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:4px">🔗 Google Sheets</div>
       <div style="font-size:10px;color:#5a5870;margin-bottom:8px">הדבק את ה-URL של ה-Apps Script לסנכרון אוטומטי</div>
