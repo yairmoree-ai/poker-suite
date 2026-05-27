@@ -2719,6 +2719,7 @@ function autoSaveAndPromptReset(winnerSeatIdxs){
     winners: (S._lastWinners||[]).map(w=>({...w}))
   };
   S.handLog=[hand,...S.handLog];
+  persist();
   syncToSheets(false);
   notify('💾 יד נשמרה – '+label);
 
