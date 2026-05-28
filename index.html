@@ -243,11 +243,11 @@ const certExamBank = [
   
   // ── כלל 12-20: קלפים ושואדאון ──,
   { q:"דילר קרא יד שגויה לטובת אבי (A). בן (B) ראה את הטעות לאחר שנלקחה הקופה. מה הדין?", options:["הקופה ל-B אוטומטית","ה-TD יחליט לפי הנסיבות","הקופה נשארת ל-A","נדרש שחקן נוסף שיאשר"], answer:1, rule:"כלל 12" },
-  { q:"שחקן ניצח בשואדאון אך קימץ ידו לפני שנלקחה הקופה. מה הדין?", options:["זוכה בכל מקרה","מפסיד את הקופה אם הקלפים לא ניתנים לאחזור 100%","ה-TD יחזיר הקלפים","זוכה אם שחקן אחר ראה"], answer:1, rule:"כלל 13" },
+  { q:"שחקן ניצח בשואדאון אך אסף את קלפיו לפני שנלקחה הקופה. מה הדין?", options:["זוכה בכל מקרה","מפסיד את הקופה אם הקלפים לא ניתנים לאחזור 100%","ה-TD יחזיר הקלפים","זוכה אם שחקן אחר ראה"], answer:1, rule:"כלל 13" },
   { q:"אבי (A) מניח קלפים ומכריז 'פלאש'. בן (B) רואה שיש ל-A סטרייט טוב יותר. מי חייב להגיד?", options:["בן חייב לשתוק – זה לא עניינו","בן יכול לומר, כל שחקן יכול לעזור בקריאת ידיים","רק הדילר חייב","רק ה-TD חייב"], answer:1, rule:"כלל 12" },
   { q:"מה הסדר הנכון בשואדאון – מי מציג ראשון?", options:["הגדול ביותר","המהמר/המעלה האחרון בסיבוב האחרון","הקרוב לבאטון","מי שרוצה"], answer:1, rule:"כלל 17" },
   { q:"כל השחקנים קיפלו. מה קורה?", options:["מיסדיל","השחקן שהיה אגרסיבי אחרון מנצח ואינו חייב להציג","הקופה מתחלקת","ה-TD מחליט"], answer:1, rule:"כלל 17" },
-  { q:"שחקן השווה ברפר, היריב קיפל. שחקן שהשווה רוצה לראות את היד שהונחה. האם מותר?", options:["כן תמיד","לא, קיפל = ויתר","כן אם לא קימץ ידו והיה הימור ברפר","רק ב-TD's discretion"], answer:2, rule:"כלל 18" },
+  { q:"שחקן השווה ברפר, היריב קיפל. שחקן שהשווה רוצה לראות את היד שהונחה. האם מותר?", options:["כן תמיד","לא, קיפל = ויתר","כן אם לא אסף קלפיו והיה הימור ברפר","רק ב-TD's discretion"], answer:2, rule:"כלל 18" },
   { q:"צ'יפ בודד נשאר לאחר פיצול קופה שווה ב-Hold'em. לאן הולך?", options:["לשחקן עם יד גבוהה יותר","למושב הראשון משמאל הבאטון","מתחלק שוב","נשאר לקופה הבאה"], answer:1, rule:"כלל 20" },
   { q:"צ'יפ בודד נשאר אחרי פיצול קופה שווה ב-Stud. לאן הולך?", options:["למושב הראשון משמאל הבאטון","לשחקן עם היד הגבוהה ביותר","לשחקן הזוכה בקופה הנמוכה","מתחלק שוב"], answer:1, rule:"כלל 20" },
   // ── כלל 21-29: ניהול צ'יפים ורמות ──,
@@ -266,7 +266,7 @@ const certExamBank = [
   { q:"שחקן ראה את ה-Burn Card. מה הדין?", options:["מיסדיל אוטומטי","ידו נפסלת","ה-TD יחליט; המשחק עשוי להמשיך","עונש של 2 ידיים"], answer:2, rule:"כלל 33" },
   { q:"מה מגדיר Misdeal?", options:["כל טעות בדיל","רשימה ספציפית של מצבים כגון: 2+ קלפים גלויים, קלף לשחקן הלא נכון, דיל לפני SB","כל קלף גלוי","דיל שהוא לא אוהב"], answer:1, rule:"כלל 35" },
   { q:"מתי לא ניתן להכריז Misdeal גם אם הייתה טעות?", options:["לאחר שהדילר הכריז 'deal'","לאחר Substantial Action (SA)","לאחר שהבאטון הונח","לאחר שה-BB שולם"], answer:1, rule:"כלל 35" },
-  { q:"מה נחשב Substantial Action (SA)?", options:["2 שחקנים קימצו","כל 2 פעולות (לפחות אחת מכניסה צ'יפים) או כל 3 פעולות","פוסט-פלופ בלבד","כשהקופה עברת 1,000"], answer:1, rule:"כלל 36" },
+  { q:"מה נחשב Substantial Action (SA)?", options:["2 שחקנים קיפלו","כל 2 פעולות (לפחות אחת מכניסה צ'יפים) או כל 3 פעולות","פוסט-פלופ בלבד","כשהקופה עברת 1,000"], answer:1, rule:"כלל 36" },
   { q:"הפלופ נחשף עם 4 קלפים (לא 3). מה הדין?", options:["מיסדיל","הדילר מחזיר קלף אחד אקראי לחפיסה, מערבב, ומוציא Burn + Turn רגיל","ה-TD בוחר איזה קלף לבטל","הדילר בוחר את הקלף הכי גבוה להסיר"], answer:1, rule:"כלל 39" },
   { q:"ה-Turn נחשף לפני שכל ההימורים הסתיימו בפלופ. מה הדין?", options:["מיסדיל","קלף ה-Turn מוחזר לחפיסה, ממשיכים הימורי פלופ, ואז Turn מחדש עם Burn","נפסל ומיסדיל","הקלף נשאר"], answer:1, rule:"כלל 39" },
   // ── כלל 40-50: הימורים ──,
@@ -308,7 +308,7 @@ const certExamBank = [
   { q:"אבי (A) אול-אין ב-5,000. בן (B) מעלה ל-15,000. C כבר השווה ל-5,000. האם C יכול לעשות Re-raise?", options:["לא – כבר השווה","כן – RAISE של B פתח מחדש את ההימור","רק אם C הכריז כוונה","ה-TD מחליט"], answer:1, rule:"כלל 43" },
   { q:"ה-River נחשף בטעות לפני שהימורי Turn הסתיימו. מה הדין?", options:["מיסדיל","קלף ה-River מוחזר, ממשיכים הימורי Turn, ואז River מחדש עם Burn","קלף הרייבר נשאר","ה-TD יבחר קלף אחר"], answer:1, rule:"כלל 39" },
   { q:"שחקן יצא לשירותים. תורו לפעול. מה קורה?", options:["ידו נפסלת","ממתינים לו","הדילר מפעיל Clock אוטומטית","הדיל ממשיך, ידו חיה, עלולה לקבל עונש"], answer:3, rule:"כלל 31" },
-  { q:"2 שחקנים נותרו. שניהם All-In. עוד 3 רחובות לחשוף. מה קורה?", options:["מניחים ידיים, חושפים את כל הקהילה","כל רחוב עם הימורים כרגיל (0)","ממתינים להחלטת TD","מיסדיל"], answer:0, rule:"כלל 16" },
+  { q:"2 שחקנים נותרו. שניהם All-In. עוד 3 רחובות לחשוף. מה קורה?", options:["חושפים את כל הקלפים, פורשים את כל לוח הקהילה","כל רחוב עם הימורים כרגיל (0)","ממתינים להחלטת TD","מיסדיל"], answer:0, rule:"כלל 16" },
   { q:"אבי (A) השווה ברחוב האחרון. בן (B) קיפל מיד. אבי (A) רוצה לקפל. האם מותר?", options:["כן – A השווה, לא הימר","לא – A השווה לפעולה אגרסיבית, לכן חייב לקפל","כן אם B כבר קיפל","תלוי ב-TD"], answer:1, rule:"כלל 17" },
   { q:"מה ההבדל בין 'Exposed Card' ל-'Boxed Card'?", options:["אין הבדל","Exposed = נחשף בטעות לשחקן אחר; Boxed = קלף עם פנים למעלה בחפיסה","Boxed = נחשף בטעות; Exposed = גלוי לשחקן אחר","שניהם גורמים למיסדיל"], answer:1, rule:"כלל 54" },
   { q:"מה הדין של Boxed Card (קלף פנים למעלה בחפיסה)?", options:["מיסדיל אוטומטי","הקלף מוצא ומשחק ממשיך; אם גורם לשחקן לקבל פחות מ-2 קלפים = מיסדיל","שחקן שקיבל אותו מפסיד","ה-TD מחליט"], answer:1, rule:"כלל 37" },
@@ -334,7 +334,7 @@ const certExamBank = [
   { q:"פרה-פלופ: שחקן עושה All-In עם פחות מה-BB. כמה חייב היריב לשלם?", options:["את סכום ה-All-In בלבד","את ה-BB המלא – זהו המינימום פרה-פלופ","תלוי בהחלטת TD","כלום – All-In קטן מ-BB אינו תקף"], answer:1, rule:"כלל 43" },
   { q:"מה ההגדרה של 'Fouled Deck'?", options:["חפיסה שנרטבה","חפיסה עם מספר שגוי של קלפים או קלפים כפולים","חפיסה ישנה","חפיסה לא מותג TDA"], answer:1, rule:"כלל 35" },
   { q:"שחקן הכריז 'All-In' בעל פה אך לא הזיז צ'יפים. האם ההכרזה מחייבת?", options:["כן – הכרזה מילולית מחייבת","לא – חייב גם לדחוף צ'יפים","מחייב רק אם יריב השווה","ה-TD מחליט"], answer:0, rule:"כלל 40" },
-  { q:"אבי (A) הציג יד בשואדאון. בן (B) (שצריך להציג אחריו) קימץ מבלי להציג. מה הדין?", options:["בן זוכה כי אבי הציג ראשון","אבי זוכה – בן ויתר על ידו","ה-TD יחליט מי זוכה","מיסדיל"], answer:1, rule:"כלל 17" },
+  { q:"אבי (A) הציג יד בשואדאון. בן (B) (שצריך להציג אחריו) אסף קלפיו מבלי להציג. מה הדין?", options:["בן זוכה כי אבי הציג ראשון","אבי זוכה – בן ויתר על ידו","ה-TD יחליט מי זוכה","מיסדיל"], answer:1, rule:"כלל 17" },
   { q:"מה ההגדרה של 'Angling' לפי TDA?", options:["זווית דחיפת צ'יפים","פעולות המיועדות להטעות שחקנים אחרים לגבי מצב היד","סוג של bluff לגיטימי","אסטרטגיה של slow play"], answer:1, rule:"כלל 71" },
   { q:"שחקן קיבל BB אך לא שם לב ולא שילם. מה הדין?", options:["ידו נפסלת","הסכום נגבה מהערימה שלו אוטומטית","הדיל בטל","עונש של יד אחת"], answer:1, rule:"כלל 8" },
   { q:"ב-Heads Up (1 על 1) – מי הוא ה-SB?", options:["השחקן עם הבאטון","השחקן בלי הבאטון","מתחלף כל יד","ה-TD מחליט"], answer:0, rule:"כלל 32" },
@@ -467,6 +467,8 @@ function App() {
   const [examRegError, setExamRegError] = useState("");
   const [examName, setExamName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
+  const [editIdx, setEditIdx] = useState(null);
+  const [editData, setEditData] = useState(null);
   const [examResults, setExamResults] = useState(() => {
     try { return JSON.parse(localStorage.getItem("tdaResults") || "[]"); } catch(e){ return []; }
   });
@@ -743,6 +745,7 @@ function App() {
           <NavBtn m="practice" ic="🎯" lb="תרגול" />
           <NavBtn m="exam" ic="🏆" lb="הסמכה" />
           <NavBtn m="scenario" ic="🤖" lb="שאל AI" />
+          <NavBtn m="edit" ic="✏️" lb="עריכה" />
           <button onClick={() => setDark(d => !d)} style={{ padding:"5px 10px", borderRadius:20, border:`1px solid ${dark?"rgba(200,169,110,0.3)":"rgba(0,0,0,0.15)"}`, background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.06)", color:dark?"#c8a96e":"#7a6020", fontWeight:700, fontSize:13, cursor:"pointer", marginRight:2 }}>
             {dark ? "☀️" : "🌙"}
           </button>
@@ -1201,6 +1204,72 @@ function App() {
               );
             })}
             <button onClick={() => setCeReview(false)} style={{ width:"100%", marginTop:8, padding:"12px", borderRadius:11, border:"none", background:"#e07b6a", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>← חזרה לתוצאות</button>
+          </div>
+        )}
+
+
+        {/* EDIT */}
+        {mode==="edit" && editIdx===null && (
+          <div>
+            <div style={{ fontSize:16, fontWeight:800, color:"#e0a050", marginBottom:5 }}>✏️ עריכת שאלות מבחן</div>
+            <div style={{ fontSize:12, color:T.text2, marginBottom:13 }}>{certExamBank.length} שאלות במאגר – לחץ לעריכה</div>
+            {certExamBank.map((q,i) => (
+              <button key={i} onClick={() => { setEditIdx(i); setEditData({...q, options:[...q.options]}); }}
+                style={{ background:T.bgCard, border:`1px solid rgba(224,160,80,0.25)`, boxShadow:T.shadow, borderRadius:11, padding:"10px 13px", marginBottom:7, cursor:"pointer", width:"100%", textAlign:"right", color:T.text }}>
+                <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
+                  <span style={{ fontSize:11, color:"#e0a050", fontWeight:700, minWidth:24 }}>{i+1}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:600, lineHeight:1.5 }}>{q.q}</div>
+                    <div style={{ fontSize:11, color:T.textMuted, marginTop:3 }}>✓ {q.options[q.answer]} • {q.rule}</div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {mode==="edit" && editIdx!==null && editData && (
+          <div>
+            <button onClick={() => { setEditIdx(null); setEditData(null); }} style={S.back("#e0a050")}>→ חזרה לרשימה</button>
+            <div style={{ fontSize:13, color:"#e0a050", fontWeight:700, marginBottom:10 }}>שאלה {editIdx+1} מתוך {certExamBank.length}</div>
+
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, color:T.text2, marginBottom:5 }}>שאלה:</div>
+              <textarea value={editData.q} onChange={e => setEditData({...editData, q:e.target.value})}
+                rows={3} style={{ width:"100%", padding:"10px 12px", borderRadius:9, border:`1px solid rgba(224,160,80,0.4)`, background:T.bg, color:T.text, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box", resize:"vertical", direction:"rtl" }} />
+            </div>
+
+            {editData.options.map((opt,i) => (
+              <div key={i} style={{ marginBottom:8 }}>
+                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:4 }}>
+                  <button onClick={() => setEditData({...editData, answer:i})}
+                    style={{ minWidth:22, height:22, borderRadius:11, border:`2px solid ${editData.answer===i?"#e0a050":"rgba(255,255,255,0.2)"}`, background:editData.answer===i?"#e0a050":"transparent", cursor:"pointer", flexShrink:0 }} />
+                  <div style={{ fontSize:12, color:editData.answer===i?"#e0a050":T.text2 }}>{editData.answer===i?"✓ נכונה":"שגויה"}</div>
+                </div>
+                <input value={opt} onChange={e => { const o=[...editData.options]; o[i]=e.target.value; setEditData({...editData, options:o}); }}
+                  style={{ width:"100%", padding:"9px 12px", borderRadius:9, border:`1px solid ${editData.answer===i?"rgba(224,160,80,0.5)":"rgba(255,255,255,0.1)"}`, background:T.bg, color:T.text, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box", direction:"rtl" }} />
+              </div>
+            ))}
+
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, color:T.text2, marginBottom:5 }}>כלל:</div>
+              <input value={editData.rule} onChange={e => setEditData({...editData, rule:e.target.value})}
+                style={{ width:"100%", padding:"9px 12px", borderRadius:9, border:`1px solid rgba(255,255,255,0.1)`, background:T.bg, color:T.text, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box", direction:"rtl" }} />
+            </div>
+
+            <div style={{ display:"flex", gap:8, marginTop:4 }}>
+              <button onClick={() => {
+                certExamBank[editIdx] = {...editData};
+                setEditIdx(null); setEditData(null);
+              }} style={{ flex:1, padding:"12px", borderRadius:11, border:"none", background:"#e0a050", color:"#0f0c1a", fontWeight:800, fontSize:14, cursor:"pointer" }}>
+                💾 שמור
+              </button>
+              <button onClick={() => { setEditIdx(Math.max(0,editIdx-1)); setEditData({...certExamBank[Math.max(0,editIdx-1)], options:[...certExamBank[Math.max(0,editIdx-1)].options]}); }}
+                disabled={editIdx===0}
+                style={{ padding:"12px 16px", borderRadius:11, border:"1px solid rgba(224,160,80,0.3)", background:"transparent", color:editIdx===0?T.textMuted:"#e0a050", cursor:editIdx===0?"default":"pointer", fontSize:13 }}>→</button>
+              <button onClick={() => { setEditIdx(Math.min(certExamBank.length-1,editIdx+1)); setEditData({...certExamBank[Math.min(certExamBank.length-1,editIdx+1)], options:[...certExamBank[Math.min(certExamBank.length-1,editIdx+1)].options]}); }}
+                disabled={editIdx===certExamBank.length-1}
+                style={{ padding:"12px 16px", borderRadius:11, border:"1px solid rgba(224,160,80,0.3)", background:"transparent", color:editIdx===certExamBank.length-1?T.textMuted:"#e0a050", cursor:editIdx===certExamBank.length-1?"default":"pointer", fontSize:13 }}>←</button>
+            </div>
           </div>
         )}
 
