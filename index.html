@@ -4570,12 +4570,11 @@ function koPlayerFromList(pid){
   const totalPlayers = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0).length;
   const place = activePids.length + S.koOrder.length;
   const name = pName(pid)||'שחקן';
-  // Show KO notification with share button
-  console.log('KO: calling playKOAnimation for '+name);
   playKOAnimation(name, place, totalPlayers);
 }
 
 function playKOAnimation(name, place, total) {
+  console.log('ANIMATION START for '+name);
   // Create black hole
   const hole = document.createElement('div');
   hole.className = 'black-hole';
@@ -5007,7 +5006,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'123e4',    role:'admin'  },
+  { name:'יאיר',   pass:'1234r',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
