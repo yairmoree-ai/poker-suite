@@ -4508,15 +4508,49 @@ function deletePlayer(id){if(isViewer()){notify('צופה בלבד');return;}
   persist(); renderPlayerList();
 }
 function koPlayerFromList(pid){
-  // Add to KO order if not already there
   if(!S.koOrder.includes(pid)) S.koOrder.push(pid);
-  // Remove from any seat
   const seat=S.seats.find(s=>s.playerId===pid);
   if(seat){
     seat.playerId=''; seat.stack=0; seat.cards=[null,null];
     seat.actions=[]; seat.folded=false; seat.allin=false;
   }
-  persist(); render(); renderPlayerList(); notify('שחקן הוצא 💀');
+  persist(); render(); renderPlayerList();
+  // Calculate place
+  const activePids = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id));
+  const totalPlayers = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0).length;
+  const place = activePids.length + S.koOrder.length;
+  const name = pName(pid)||'שחקן';
+  // Show KO notification with share button
+  showKONotification(name, place, totalPlayers);
+}
+
+function showKONotification(name, place, total){
+  document.getElementById('ko-notif')?.remove();
+  const div = document.createElement('div');
+  div.id = 'ko-notif';
+  div.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:300;background:#1a0a0a;border:1px solid rgba(224,85,85,0.5);border-radius:14px;padding:12px 16px;text-align:center;direction:rtl;min-width:220px;box-shadow:0 4px 20px rgba(0,0,0,0.6)';
+  
+  const ordinal = place===1?'🥇 מקום ראשון':place===2?'🥈 מקום שני':place===3?'🥉 מקום שלישי':'מקום '+place;
+  const msg = '💀 '+name+' הודח\n'+ordinal+' מתוך '+total+' שחקנים 🃏';
+  
+  div.innerHTML = 
+    '<div style="font-size:13px;font-weight:800;color:#e07b6a;margin-bottom:4px">💀 '+name+' הודח</div>'+
+    '<div style="font-size:11px;color:#aaa;margin-bottom:10px">'+ordinal+' (מתוך '+total+')</div>'+
+    '<div style="display:flex;gap:8px;justify-content:center">'+
+    '<button id="ko-share-btn" style="padding:7px 14px;border-radius:8px;border:none;background:#25D366;color:#fff;font-size:12px;font-weight:700;cursor:pointer">📲 שתף</button>'+
+    '<button onclick="document.getElementById(\'ko-notif\').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#aaa;font-size:12px;cursor:pointer">✕</button>'+
+    '</div>';
+  document.body.appendChild(div);
+  document.getElementById('ko-share-btn').onclick = ()=>shareKO(msg);
+  div.__koMsg = msg; // store for later
+  
+  setTimeout(()=>div?.remove(), 15000);
+}
+
+function shareKO(encodedMsg){
+  const msg = decodeURIComponent(encodedMsg);
+  const waUrl = 'https://wa.me/?text='+encodeURIComponent(msg);
+  window.open(waUrl, '_blank');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -4870,7 +4904,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1q234',    role:'admin'  },
+  { name:'יאיר',   pass:'1234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
