@@ -4571,6 +4571,7 @@ function koPlayerFromList(pid){
   const place = activePids.length + S.koOrder.length;
   const name = pName(pid)||'שחקן';
   // Show KO notification with share button
+  console.log('KO: calling playKOAnimation for '+name);
   playKOAnimation(name, place, totalPlayers);
 }
 
@@ -5006,7 +5007,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'12w34',    role:'admin'  },
+  { name:'יאיר',   pass:'123e4',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
