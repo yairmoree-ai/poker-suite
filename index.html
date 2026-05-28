@@ -213,6 +213,51 @@ input,select,textarea{font-family:inherit}
   50%     { box-shadow:0 0 20px 8px rgba(95,196,122,0.5); }
 }
 .seat-btn.winner { animation: winGlow 0.6s ease-in-out 3; }
+
+/* KO Animation */
+@keyframes chipSpin {
+  0%   { transform: translate(var(--sx), var(--sy)) scale(1) rotate(0deg); opacity:1; }
+  70%  { transform: translate(calc(var(--sx)*0.3 + 50vw - var(--cx)), calc(var(--sy)*0.3 + 50vh - var(--cy))) scale(0.6) rotate(360deg); opacity:0.8; }
+  100% { transform: translate(calc(50vw - var(--cx)), calc(50vh - var(--cy))) scale(0) rotate(720deg); opacity:0; }
+}
+@keyframes blackHolePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.8), 0 0 30px 10px rgba(100,0,200,0.3); }
+  50%      { box-shadow: 0 0 0 20px rgba(0,0,0,0), 0 0 60px 20px rgba(150,0,255,0.5); }
+}
+@keyframes blackHoleAppear {
+  0%   { transform:translate(-50%,-50%) scale(0); opacity:0; }
+  50%  { transform:translate(-50%,-50%) scale(1.2); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(1); opacity:1; }
+}
+@keyframes blackHoleDisappear {
+  0%   { transform:translate(-50%,-50%) scale(1); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(0); opacity:0; }
+}
+.ko-chip {
+  position:fixed;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  pointer-events:none;
+  z-index:500;
+  animation: chipSpin 1.2s cubic-bezier(0.4,0,0.8,1) forwards;
+}
+.black-hole {
+  position:fixed;
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  background:radial-gradient(circle, #000 30%, #1a0040 60%, #000 100%);
+  left:50%; top:50%;
+  transform:translate(-50%,-50%) scale(0);
+  pointer-events:none;
+  z-index:499;
+  animation: blackHoleAppear 0.4s ease-out forwards, blackHolePulse 0.8s ease-in-out 0.4s infinite;
+}
 </style>
 </head>
 <body>
@@ -4521,7 +4566,59 @@ function koPlayerFromList(pid){
   const place = activePids.length + S.koOrder.length;
   const name = pName(pid)||'שחקן';
   // Show KO notification with share button
-  showKONotification(name, place, totalPlayers);
+  playKOAnimation(name, place, totalPlayers);
+}
+
+function playKOAnimation(name, place, total) {
+  // Create black hole
+  const hole = document.createElement('div');
+  hole.className = 'black-hole';
+  document.body.appendChild(hole);
+
+  // Chip colors and emojis
+  const chips = ['🔴','🔵','⚫','🟡','🟢','🔴','🔵','⚫','🟡','🟢','🔴','🔵'];
+  const colors = ['#e05555','#5b9bd5','#333','#c8a96e','#5fc47a'];
+  
+  // Spawn chips from random positions around the screen
+  chips.forEach((emoji, i) => {
+    setTimeout(() => {
+      const chip = document.createElement('div');
+      chip.className = 'ko-chip';
+      
+      // Random starting position around edges
+      const angle = (i / chips.length) * Math.PI * 2;
+      const radius = Math.min(window.innerWidth, window.innerHeight) * 0.4;
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const startX = cx + Math.cos(angle) * radius * (0.7 + Math.random() * 0.6);
+      const startY = cy + Math.sin(angle) * radius * (0.7 + Math.random() * 0.6);
+      
+      chip.style.left = startX + 'px';
+      chip.style.top = startY + 'px';
+      chip.style.setProperty('--sx', '0px');
+      chip.style.setProperty('--sy', '0px');
+      chip.style.setProperty('--cx', cx + 'px');
+      chip.style.setProperty('--cy', cy + 'px');
+      chip.style.background = colors[i % colors.length];
+      chip.style.border = '2px solid rgba(255,255,255,0.3)';
+      chip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.5)';
+      chip.textContent = '💰';
+      chip.style.animationDelay = (i * 0.08) + 's';
+      chip.style.animationDuration = (0.9 + Math.random() * 0.5) + 's';
+      
+      document.body.appendChild(chip);
+      setTimeout(() => chip.remove(), 2000);
+    }, i * 80);
+  });
+
+  // After chips disappear, show black hole shrinking then KO notification
+  setTimeout(() => {
+    hole.style.animation = 'blackHoleDisappear 0.3s ease-in forwards';
+    setTimeout(() => {
+      hole.remove();
+      showKONotification(name, place, total);
+    }, 300);
+  }, 2200);
 }
 
 function showKONotification(name, place, total){
