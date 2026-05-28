@@ -3231,7 +3231,7 @@ function doKO(){if(isViewer()){notify('צופה בלבד');return;}
   if(pid&&!S.koOrder.includes(pid))S.koOrder.push(pid);
   seat.playerId='';seat.stack=0;seat.cards=[null,null];seat.actions=[];seat.folded=false;seat.allin=false;
   activeSeat=null; closePanel('seat-panel');
-  persist(); render(); notify('שחקן הוצא 💀');
+  persist(); render();
 }
 function doRebuyActive(){if(isViewer()){notify('צופה בלבד');return;}
   const seat=S.seats.find(s=>s.seatIdx===activeSeat);
@@ -5001,7 +5001,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1234',    role:'admin'  },
+  { name:'יאיר',   pass:'1q234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
