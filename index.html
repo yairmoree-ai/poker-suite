@@ -4576,6 +4576,13 @@ function koPlayerFromList(pid){
 function playKOAnimation(name, place, total) {
   console.log('ANIMATION START for '+name);
   
+  // TEST - big red div
+  const test = document.createElement('div');
+  test.style.cssText = 'position:fixed;inset:0;background:red;z-index:99999;display:flex;align-items:center;justify-content:center;font-size:40px;color:white';
+  test.textContent = '💀 KO TEST';
+  document.body.appendChild(test);
+  setTimeout(()=>test.remove(), 2000);
+
   // Dark overlay
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:998;pointer-events:none';
@@ -5015,7 +5022,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1q234',    role:'admin'  },
+  { name:'יאיר',   pass:'12w34',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
