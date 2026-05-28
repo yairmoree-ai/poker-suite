@@ -3228,10 +3228,15 @@ function doKO(){if(isViewer()){notify('צופה בלבד');return;}
   if(activeSeat===null)return;
   const seat=S.seats.find(s=>s.seatIdx===activeSeat); if(!seat)return;
   const pid=seat.playerId;
+  const name = pName(pid)||'שחקן';
   if(pid&&!S.koOrder.includes(pid))S.koOrder.push(pid);
   seat.playerId='';seat.stack=0;seat.cards=[null,null];seat.actions=[];seat.folded=false;seat.allin=false;
   activeSeat=null; closePanel('seat-panel');
+  const activePids = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id));
+  const totalPlayers = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0).length;
+  const place = activePids.length + S.koOrder.length;
   persist(); render();
+  playKOAnimation(name, place, totalPlayers);
 }
 function doRebuyActive(){if(isViewer()){notify('צופה בלבד');return;}
   const seat=S.seats.find(s=>s.seatIdx===activeSeat);
@@ -5001,7 +5006,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1q234',    role:'admin'  },
+  { name:'יאיר',   pass:'12w34',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
