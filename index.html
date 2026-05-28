@@ -4575,9 +4575,17 @@ function koPlayerFromList(pid){
 
 function playKOAnimation(name, place, total) {
   console.log('ANIMATION START for '+name);
+  
+  // Dark overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:998;pointer-events:none';
+  document.body.appendChild(overlay);
+  setTimeout(()=>overlay.remove(), 3000);
+
   // Create black hole
   const hole = document.createElement('div');
   hole.className = 'black-hole';
+  hole.style.zIndex = '999';
   document.body.appendChild(hole);
 
   // Chip colors and emojis
@@ -4608,6 +4616,7 @@ function playKOAnimation(name, place, total) {
       chip.style.border = '2px solid rgba(255,255,255,0.3)';
       chip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.5)';
       chip.textContent = '💰';
+      chip.style.zIndex = '1000';
       chip.style.animationDelay = (i * 0.08) + 's';
       chip.style.animationDuration = (0.9 + Math.random() * 0.5) + 's';
       
@@ -5006,7 +5015,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1234r',    role:'admin'  },
+  { name:'יאיר',   pass:'1q234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
