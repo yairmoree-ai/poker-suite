@@ -1282,6 +1282,127 @@ function showStructureEditor(){
 
 function closeICM(){ document.getElementById('icm-overlay')?.remove(); }
 
+function calcPlayerHUD(playerId){
+  const hands = S.handLog||[];
+  if(!hands.length) return null;
+  
+  const playerHands = hands.filter(h=>(h.seats||[]).some(s=>s.playerId===playerId));
+  if(playerHands.length < 3) return null;
+  
+  let vpip=0, pfr=0, raises=0, calls=0, checks=0, bet3=0, wtsd=0, won=0;
+  
+  playerHands.forEach(h=>{
+    const seat = (h.seats||[]).find(s=>s.playerId===playerId);
+    if(!seat) return;
+    const acts = seat.actions||[];
+    
+    // VPIP: entered pot preflop (call or raise)
+    const preflopActs = acts.filter(a=>a.street==='פרה-פלופ'&&a.type!=='SB'&&a.type!=='BB');
+    if(preflopActs.some(a=>['Call','Raise','Open','3bet','4bet','All-in'].includes(a.type))) vpip++;
+    
+    // PFR: raised preflop
+    if(preflopActs.some(a=>['Raise','Open','3bet','4bet','All-in'].includes(a.type))) pfr++;
+    
+    // 3bet: re-raised preflop
+    if(preflopActs.some(a=>['3bet','4bet'].includes(a.type)||a.displayType==='3b'||a.displayType==='4b')) bet3++;
+    
+    // All actions for AF
+    const allActs = acts.filter(a=>a.type!=='SB'&&a.type!=='BB');
+    raises += allActs.filter(a=>['Raise','Open','3bet','4bet','All-in'].includes(a.type)).length;
+    calls  += allActs.filter(a=>a.type==='Call').length;
+    checks += allActs.filter(a=>a.type==='Check').length;
+    
+    // WTSD: made it to showdown (not folded + has river or all-in)
+    if(!seat.folded&&(h.board||[]).filter(Boolean).length===5) wtsd++;
+    
+    // Won
+    if((h.winners||[]).some(w=>w.playerId===playerId)) won++;
+  });
+  
+  const n = playerHands.length;
+  
+  // Trend: last 10 vs previous 10
+  const recent = playerHands.slice(0,10);
+  const older = playerHands.slice(10,20);
+  let trend = '→';
+  if(recent.length>=5&&older.length>=5){
+    const recentAgg = recent.filter(h=>{
+      const s=(h.seats||[]).find(s=>s.playerId===playerId);
+      return (s?.actions||[]).some(a=>['Raise','Open','3bet','4bet','All-in'].includes(a.type));
+    }).length/recent.length;
+    const olderAgg = older.filter(h=>{
+      const s=(h.seats||[]).find(s=>s.playerId===playerId);
+      return (s?.actions||[]).some(a=>['Raise','Open','3bet','4bet','All-in'].includes(a.type));
+    }).length/older.length;
+    trend = recentAgg > olderAgg+0.1 ? '↑' : recentAgg < olderAgg-0.1 ? '↓' : '→';
+  }
+  
+  return {
+    n,
+    vpip: Math.round(vpip/n*100),
+    pfr: Math.round(pfr/n*100),
+    bet3: Math.round(bet3/n*100),
+    af: calls>0 ? (raises/calls).toFixed(1) : raises>0?'∞':'0',
+    wtsd: Math.round(wtsd/n*100),
+    won: Math.round(won/n*100),
+    trend
+  };
+}
+
+function closeHUD(){ document.getElementById('hud-overlay')?.remove(); }
+function showPlayerHUD(seatIdx){
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat?.playerId) return;
+  
+  const hud = calcPlayerHUD(seat.playerId);
+  const name = pName(seat.playerId)||'שחקן';
+  
+  document.getElementById('hud-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'hud-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
+  overlay.onclick = ()=>overlay.remove();
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:340px';
+  box.onclick = e=>e.stopPropagation();
+  
+  if(!hud){
+    box.innerHTML = '<div style="text-align:center;padding:20px"><div style="font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:8px">📊 '+name+'</div><div style="color:#5a5870;font-size:12px">נדרשות לפחות 3 ידיים לחישוב HUD</div></div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    return;
+  }
+
+  const statColor = (val, low, high) => val>=high?'#5fc47a':val>=low?'#FFB347':'#e07b6a';
+  
+  box.innerHTML = 
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+    '<div><div style="font-size:15px;font-weight:800;color:#c8a96e">📊 '+name+'</div>'+
+    '<div style="font-size:10px;color:#5a5870">'+hud.n+' ידיים · Trend '+hud.trend+'</div></div>'+
+    '<button onclick="closeHUD()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>'+
+    
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
+    hudStat('VPIP', hud.vpip+'%', statColor(hud.vpip,20,40), 'נכנס לקופה')+
+    hudStat('PFR', hud.pfr+'%', statColor(hud.pfr,15,30), 'Raise פרה-פלופ')+
+    hudStat('3bet', hud.bet3+'%', statColor(hud.bet3,5,10), '3bet%')+
+    hudStat('AF', hud.af, statColor(parseFloat(hud.af),1,3), 'אגרסיביות')+
+    hudStat('WTSD', hud.wtsd+'%', statColor(hud.wtsd,25,40), 'הגיע לשואודאון')+
+    hudStat('W%', hud.won+'%', statColor(hud.won,30,50), '% ניצחון')+
+    '</div>';
+    
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function hudStat(label, value, color, desc){
+  return '<div style="background:#0d1120;border-radius:10px;padding:10px;text-align:center">'+
+    '<div style="font-size:10px;color:#5a5870;margin-bottom:4px">'+label+'</div>'+
+    '<div style="font-size:20px;font-weight:900;color:'+color+'">'+value+'</div>'+
+    '<div style="font-size:9px;color:#5a5870;margin-top:2px">'+desc+'</div>'+
+    '</div>';
+}
+
 async function openCameraForCards(target){
   if(typeof ANTHROPIC_KEY==='undefined'||!ANTHROPIC_KEY||ANTHROPIC_KEY.includes('...')){
     notify('הגדר ANTHROPIC_KEY בקוד קודם'); return;
@@ -2682,11 +2803,20 @@ function clickSeat(i){
     S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:(S.defaultRebuyAmount||50000),pos:'',cards:[null,null],actions:[],folded:false,allin:false});
   const seat = S.seats.find(s=>s.seatIdx===i);
   if(!seat?.playerId){
-    // Empty seat - show quick player picker
     showQuickPlayerPicker(i);
   } else {
     activeSeat=i; renderSeatPanel(); openPanel('seat-panel'); renderSeats();
   }
+}
+
+// Long press on seat → HUD
+function initSeatLongPress(el, seatIdx){
+  let timer=null, didLong=false;
+  el.addEventListener('touchstart',()=>{ didLong=false; timer=setTimeout(()=>{ didLong=true; showPlayerHUD(seatIdx); },600); },{passive:true});
+  el.addEventListener('touchend',()=>{ if(timer){clearTimeout(timer);timer=null;} });
+  el.addEventListener('touchcancel',()=>{ if(timer){clearTimeout(timer);timer=null;} });
+  el.addEventListener('mousedown',()=>{ didLong=false; timer=setTimeout(()=>{ didLong=true; showPlayerHUD(seatIdx); },600); });
+  el.addEventListener('mouseup',()=>{ if(timer){clearTimeout(timer);timer=null;} });
 }
 function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
 function setSeatPlayer(i,pid){
@@ -5015,7 +5145,7 @@ try{
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1234r',    role:'admin'  },
+  { name:'יאיר',   pass:'q1234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
