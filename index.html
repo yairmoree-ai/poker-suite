@@ -272,6 +272,9 @@ input,select,textarea{font-family:inherit}
     <div id="pass-err" style="font-size:11px;color:#e07b6a;margin-bottom:10px;min-height:16px"></div>
     <button onclick="checkPass()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#c8a96e,#a07840);color:#0a0d14;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px">כניסה</button>
     <button onclick="enterAsViewer()" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:13px;cursor:pointer">👁 כניסה כצופה</button>
+    <div style="margin-top:8px;text-align:center">
+      <button onclick="showSetupAdmin()" style="background:none;border:none;color:#3a3a4a;font-size:11px;cursor:pointer;text-decoration:underline">הגדרה ראשונה</button>
+    </div>
   </div>
 </div>
 <div id="app" style="background:#080b12;display:none">
@@ -5245,11 +5248,15 @@ try{
 
 // INIT
 // ═══════════════════════════════════════
+// CLOUDFLARE WORKER URL - עדכן כאן
+// ═══════════════════════════════════════
+const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
+
+// ═══════════════════════════════════════
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
-const ANTHROPIC_KEY = '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';
-  const USERS = [
-  { name:'יאיר',   pass:'1234r5',    role:'admin'  },
+const USERS = [
+  { name:'יאיר',   pass:'q1234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
@@ -5378,6 +5385,66 @@ if(gsUrl && currentUser && isAdmin()){
   }
 }
 
+
+function showSetupAdmin(){
+  document.getElementById('setup-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'setup-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;padding:20px;direction:rtl';
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:20px;width:100%;max-width:320px';
+  
+  box.innerHTML = 
+    '<div style="font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:6px;text-align:center">⚙️ הגדרה ראשונה</div>'+
+    '<div style="font-size:11px;color:#5a5870;margin-bottom:14px;text-align:center">יצירת מנהל ראשון</div>'+
+    '<input id="setup-name" type="text" placeholder="שם מלא" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:14px;outline:none;margin-bottom:8px;text-align:right;box-sizing:border-box">'+
+    '<input id="setup-user" type="text" placeholder="שם משתמש" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:14px;outline:none;margin-bottom:8px;text-align:right;box-sizing:border-box;direction:ltr">'+
+    '<input id="setup-pass" type="password" placeholder="סיסמה" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:14px;outline:none;margin-bottom:12px;text-align:right;box-sizing:border-box">'+
+    '<div id="setup-err" style="color:#e07b6a;font-size:12px;margin-bottom:8px;display:none"></div>';
+
+  const btn = document.createElement('button');
+  btn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px';
+  btn.textContent = 'צור מנהל';
+  btn.onclick = async ()=>{
+    const name = document.getElementById('setup-name').value.trim();
+    const username = document.getElementById('setup-user').value.trim();
+    const password = document.getElementById('setup-pass').value.trim();
+    const errEl = document.getElementById('setup-err');
+    if(!name||!username||!password){ errEl.textContent='מלא את כל השדות'; errEl.style.display='block'; return; }
+    btn.textContent = 'יוצר...'; btn.disabled = true;
+    try {
+      const resp = await fetch(AUTH_WORKER_URL+'/setup-admin',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username,password,name})
+      });
+      const data = await resp.json();
+      if(data.ok){
+        overlay.remove();
+        notify('✓ מנהל נוצר! התחבר עם הפרטים שלך');
+      } else {
+        errEl.textContent = data.error||'שגיאה';
+        errEl.style.display='block';
+        btn.textContent='צור מנהל'; btn.disabled=false;
+      }
+    } catch(e){
+      errEl.textContent = 'שגיאה: '+e.message;
+      errEl.style.display='block';
+      btn.textContent='צור מנהל'; btn.disabled=false;
+    }
+  };
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer';
+  cancelBtn.textContent = 'ביטול';
+  cancelBtn.onclick = ()=>overlay.remove();
+
+  box.appendChild(btn); box.appendChild(cancelBtn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('setup-name')?.focus(),150);
+}
 
 function enterAsViewer(){
   currentUser = { name:'צופה', role:'viewer' };
