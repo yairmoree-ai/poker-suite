@@ -1461,16 +1461,49 @@ async function analyzeHand(h){
     const saveBtn2 = document.createElement('button');
     saveBtn2.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
     saveBtn2.textContent = '💾 שמור ביד';
-    saveBtn2.onclick = ()=>{
-      // Save analysis to hand notes
+    saveBtn2.onclick = async ()=>{
       const handIdx = (S.handLog||[]).findIndex(x=>x.id===h.id);
       if(handIdx>=0){
         S.handLog[handIdx].analysis = data.text;
         S.handLog[handIdx].analysisDate = new Date().toLocaleDateString('he-IL');
+        h.analysis = data.text;
+        h.analysisDate = S.handLog[handIdx].analysisDate;
         persist();
         saveBtn2.textContent = '✓ נשמר!';
         saveBtn2.disabled = true;
         notify('ניתוח נשמר ✓');
+
+        // Auto-generate notes per player
+        const token2 = currentUser?.token||localStorage.getItem('auth_token')||'';
+        const playerNames = (h.seats||[]).map(s=>s.playerName).filter(Boolean).join(', ');
+        try {
+          const nr = await fetch(AUTH_WORKER_URL+'/analyze-hand',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token2},
+            body:JSON.stringify({prompt:
+              'בהתבסס על ניתוח הפוקר הבא:\n\n'+data.text+'\n\n'+
+              'כתוב הערה קצרה ומעשית (משפט אחד) לכל שחקן: '+playerNames+
+              '.\nהחזר JSON בלבד: {"notes":{"שם":"הערה",...}} ללא כלום נוסף.'
+            })
+          });
+          const nd = await nr.json();
+          if(nd.ok){
+            const clean = nd.text.replace(/```json|```/g,'').trim();
+            const parsed = JSON.parse(clean);
+            const notes = parsed.notes||{};
+            const dateStr = new Date().toLocaleDateString('he-IL');
+            Object.entries(notes).forEach(([pName, note])=>{
+              const player = S.playerLib.find(p=>p.name===pName);
+              if(player){
+                if(!S.playerNotes) S.playerNotes={};
+                const existing = S.playerNotes[player.id]||'';
+                S.playerNotes[player.id] = (existing?existing+'\n':'')+'['+dateStr+'] '+note;
+              }
+            });
+            persist();
+            notify('📝 הערות נוספו לשחקנים');
+          }
+        } catch(e){ console.log('Notes error:',e); }
       }
     };
     
@@ -1897,6 +1930,12 @@ function toggleTheme(){
 })();
 
 function toggleVoice(){
+  if(!isSuperAdmin()&&!isAdminOnly()){
+    notify('🎤 חסום למנהל בלבד'); return;
+  }
+  if(isAdminOnly()){
+    requireSuperAdmin(()=>toggleVoice()); return;
+  }
   if(!_voiceActive){
     if(!confirm('להפעיל פקודות קוליות?\nפקודות: Fold / Check / Call / Raise / All in\n\nלחץ ביטול לכיבוי בכל עת.')) return;
     if(!_voiceRecog && !initVoice()) return;
@@ -4788,7 +4827,7 @@ function toggleSettings(){
   if(rebuyInp) rebuyInp.value = S.defaultRebuyAmount||50000;
   // Show users button only for admins with token
   const usersBtn = document.getElementById('btn-users-mgmt');
-  if(usersBtn) usersBtn.style.display = (currentUser?.token&&currentUser?.role==='admin')?'block':'none';
+  if(usersBtn) usersBtn.style.display = currentUser?.superAdmin?'block':'none';
   box.style.display = box.style.display==='none' ? 'flex' : 'none';
 }
 
@@ -5366,8 +5405,8 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'q1234',    role:'admin'  },
-  { name:'יאיר',   pass:'543211',    role:'local'  },
+  { name:'יאיר',   pass:'1q234',    role:'admin'  },
+  { name:'יאיר',   pass:'443211',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
