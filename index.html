@@ -1443,6 +1443,41 @@ async function analyzeHand(h){
     try { data = JSON.parse(text2); } catch(e){ throw new Error('תגובה לא תקינה: '+text2.substring(0,50)); }
     if(!data.ok) throw new Error(data.error||'שגיאה');
     aContent.textContent = data.text;
+    
+    // Add copy + save buttons after result
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;margin-top:14px';
+    
+    const copyBtn = document.createElement('button');
+    copyBtn.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#e2ddd4;font-size:13px;font-weight:700;cursor:pointer';
+    copyBtn.textContent = '📋 העתק';
+    copyBtn.onclick = ()=>{
+      navigator.clipboard.writeText(data.text).then(()=>{
+        copyBtn.textContent = '✓ הועתק!';
+        setTimeout(()=>copyBtn.textContent='📋 העתק', 2000);
+      });
+    };
+    
+    const saveBtn2 = document.createElement('button');
+    saveBtn2.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
+    saveBtn2.textContent = '💾 שמור ביד';
+    saveBtn2.onclick = ()=>{
+      // Save analysis to hand notes
+      const handIdx = (S.handLog||[]).findIndex(x=>x.id===h.id);
+      if(handIdx>=0){
+        S.handLog[handIdx].analysis = data.text;
+        S.handLog[handIdx].analysisDate = new Date().toLocaleDateString('he-IL');
+        persist();
+        saveBtn2.textContent = '✓ נשמר!';
+        saveBtn2.disabled = true;
+        notify('ניתוח נשמר ✓');
+      }
+    };
+    
+    btnRow.appendChild(copyBtn);
+    btnRow.appendChild(saveBtn2);
+    aBox.appendChild(btnRow);
+    
   } catch(e){
     aContent.textContent = 'שגיאה: '+e.message;
   }
@@ -3776,6 +3811,7 @@ function showHandDetail(hid){
   analyzeBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
   analyzeBtn.textContent = '🔍 נתח יד';
   analyzeBtn.onclick = ()=>analyzeHand(h);
+
   hdr.appendChild(analyzeBtn);
   hdr.appendChild(closeBtn);
   box.appendChild(hdr);
@@ -5254,8 +5290,8 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'12334',    role:'admin'  },
-  { name:'יאיר',   pass:'14321111',    role:'local'  },
+  { name:'יאיר',   pass:'1234w',    role:'admin'  },
+  { name:'יאיר',   pass:'443211',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
