@@ -1365,13 +1365,14 @@ async function analyzeHand(h){
   const myName = currentUser?.name||'';
   const mySeat = (h.seats||[]).find(s=>s.playerName===myName);
   const myCards = mySeat?(mySeat.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' '):'לא ידוע';
+  const myPos = mySeat?.pos||'לא ידוע';
   
   // Build street-by-street actions
   const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
   const streetActions = streets.map(st=>{
     const acts = (h.seats||[]).flatMap(s=>
       (s.actions||[]).filter(a=>a.street===st).map(a=>
-        s.playerName+': '+(a.displayType||a.type)+(a.amount?' '+Number(a.amount).toLocaleString():'')
+        s.playerName+'('+s.pos+'): '+(a.displayType||a.type)+(a.amount?' '+Number(a.amount).toLocaleString():'')
       )
     );
     return acts.length ? st+': '+acts.join(', ') : null;
@@ -1389,7 +1390,8 @@ async function analyzeHand(h){
     '**פרטי יד:**\n'+
     'בליינדים: '+blinds+'\n'+
     'לוח: '+(board||'טרם נחשף')+'\n'+
-    'הקלפים שלי: '+myCards+'\n\n'+
+    'הקלפים שלי ('+myName+'): '+myCards+'\n'+
+    'העמדה שלי: '+myPos+'\n\n'+
     '**פעולות:**\n'+streetActions+'\n\n'+
     '**HUD יריבים:**\n'+(hudInfo||'אין נתונים')+'\n\n'+
     '**נתח:**\n'+
@@ -5252,7 +5254,7 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'12234',    role:'admin'  },
+  { name:'יאיר',   pass:'12334',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
