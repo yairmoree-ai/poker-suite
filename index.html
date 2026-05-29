@@ -1357,10 +1357,6 @@ function closeHUD(){ document.getElementById('hud-overlay')?.remove(); }
 
 function closeAnalyze(){ document.getElementById('analyze-overlay')?.remove(); }
 async function analyzeHand(h){
-  if(typeof ANTHROPIC_KEY==='undefined'||!ANTHROPIC_KEY||ANTHROPIC_KEY.includes('...')){
-    notify('הגדר ANTHROPIC_KEY קודם'); return;
-  }
-
   // Build context for Claude
   const board = (h.board||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
   const blinds = h.blinds||'';
@@ -1428,24 +1424,18 @@ async function analyzeHand(h){
   document.body.appendChild(aOverlay);
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    const token = currentUser?.token || localStorage.getItem('auth_token') || '';
+    const resp = await fetch(AUTH_WORKER_URL+'/analyze-hand',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'x-api-key':ANTHROPIC_KEY,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
+        'Authorization':'Bearer '+token
       },
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{role:'user',content:prompt}]
-      })
+      body: JSON.stringify({ prompt })
     });
     const data = await resp.json();
-    if(data.error) throw new Error(data.error.message);
-    const text = data.content?.[0]?.text||'';
-    aContent.textContent = text;
+    if(!data.ok) throw new Error(data.error||'שגיאה');
+    aContent.textContent = data.text;
   } catch(e){
     aContent.textContent = 'שגיאה: '+e.message;
   }
@@ -5257,7 +5247,7 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'12w34',    role:'admin'  },
+  { name:'יאיר',   pass:'11234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
