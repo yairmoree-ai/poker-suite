@@ -266,11 +266,12 @@ input,select,textarea{font-family:inherit}
     <div style="font-size:48px;margin-bottom:16px">🃏</div>
     <div style="font-size:22px;font-weight:900;color:#c8a96e;margin-bottom:6px">Poker Suite</div>
     <div style="font-size:12px;color:#5a5870;margin-bottom:28px;letter-spacing:2px">PRIVATE ACCESS</div>
+    <input id="user-inp" type="text" placeholder="שם משתמש..." style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#e2ddd4;font-size:16px;outline:none;text-align:center;direction:ltr;margin-bottom:8px">
     <input id="pass-inp" type="password" placeholder="סיסמה..." 
       onkeydown="if(event.key==='Enter')checkPass()"
       style="width:100%;padding:13px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:16px;outline:none;text-align:center;margin-bottom:10px;box-sizing:border-box;-webkit-appearance:none">
     <div id="pass-err" style="font-size:11px;color:#e07b6a;margin-bottom:10px;min-height:16px"></div>
-    <button onclick="checkPass()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#c8a96e,#a07840);color:#0a0d14;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px">כניסה</button>
+    <button id="login-btn" onclick="checkPass()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#c8a96e,#a07840);color:#0a0d14;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px">כניסה</button>
     <button onclick="enterAsViewer()" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:13px;cursor:pointer">👁 כניסה כצופה</button>
     <div style="margin-top:8px;text-align:center">
       <button onclick="showSetupAdmin()" style="background:none;border:none;color:#3a3a4a;font-size:11px;cursor:pointer;text-decoration:underline">הגדרה ראשונה</button>
@@ -5256,7 +5257,7 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'q1234',    role:'admin'  },
+  { name:'יאיר',   pass:'12w34',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
@@ -5312,15 +5313,61 @@ function tryUpgrade(pass){
   notify('ברוך הבא '+u.name+' 🔑');
 }
 
-function checkPass(){
+function loginSuccess(){
+  document.getElementById('lock-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  const dot = document.getElementById('sync-dot');
+  if(dot) dot.title = 'מחובר: '+currentUser.name;
+  const badge = document.getElementById('user-badge');
+  if(badge){
+    badge.textContent = currentUser.name + (currentUser.role==='viewer'?' 👁':currentUser.role==='local'?' 🔒':' 🔑');
+    badge.style.color = currentUser.role==='viewer'?'#5b9bd5':currentUser.role==='local'?'#5b9bd5':'#c8a96e';
+  }
+  const upBtn2 = document.getElementById('btn-upgrade-to-admin');
+  if(upBtn2) upBtn2.style.display='none';
+  try{ loadState(); }catch(e){ try{render();}catch(e2){} }
+  startBlindTimer();
+  try{ showView('table'); }catch(e){}
+}
+
+async function checkPass(){
   const inp = document.getElementById('pass-inp');
   const val = inp?.value?.trim();
+  if(!val) return;
+  
+  // Get username from input (new field)
+  const userInp = document.getElementById('user-inp');
+  const username = userInp?.value?.trim();
+  
+  // Try Worker auth first if username provided
+  if(username && AUTH_WORKER_URL){
+    const loginBtn = document.getElementById('login-btn');
+    if(loginBtn){ loginBtn.textContent='...'; loginBtn.disabled=true; }
+    try {
+      const resp = await fetch(AUTH_WORKER_URL+'/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username, password:val})
+      });
+      const data = await resp.json();
+      if(data.ok){
+        currentUser = {name:data.user.name, role:data.user.role, token:data.token};
+        localStorage.setItem('auth_token', data.token);
+        if(loginBtn){ loginBtn.textContent='כניסה'; loginBtn.disabled=false; }
+        inp.value=''; if(userInp) userInp.value='';
+        loginSuccess();
+        return;
+      }
+    } catch(e){ /* fallback to local */ }
+    if(loginBtn){ loginBtn.textContent='כניסה'; loginBtn.disabled=false; }
+  }
+  
+  // Fallback: local USERS
   const user = USERS.find(u=>u.pass===val);
   if(user){
     currentUser = user;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='flex';
-    // Show username in topbar
     const dot = document.getElementById('sync-dot');
     if(dot) dot.title = 'מחובר: '+user.name;
     const badge = document.getElementById('user-badge');
