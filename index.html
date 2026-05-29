@@ -1350,6 +1350,102 @@ function calcPlayerHUD(playerId){
 }
 
 function closeHUD(){ document.getElementById('hud-overlay')?.remove(); }
+
+function closeAnalyze(){ document.getElementById('analyze-overlay')?.remove(); }
+async function analyzeHand(h){
+  if(typeof ANTHROPIC_KEY==='undefined'||!ANTHROPIC_KEY||ANTHROPIC_KEY.includes('...')){
+    notify('הגדר ANTHROPIC_KEY קודם'); return;
+  }
+
+  // Build context for Claude
+  const board = (h.board||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
+  const blinds = h.blinds||'';
+  
+  // My seat
+  const myName = currentUser?.name||'';
+  const mySeat = (h.seats||[]).find(s=>s.playerName===myName);
+  const myCards = mySeat?(mySeat.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' '):'לא ידוע';
+  
+  // Build street-by-street actions
+  const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const streetActions = streets.map(st=>{
+    const acts = (h.seats||[]).flatMap(s=>
+      (s.actions||[]).filter(a=>a.street===st).map(a=>
+        s.playerName+': '+(a.displayType||a.type)+(a.amount?' '+Number(a.amount).toLocaleString():'')
+      )
+    );
+    return acts.length ? st+': '+acts.join(', ') : null;
+  }).filter(Boolean).join('\n');
+
+  // HUD data for opponents
+  const opponents = (h.seats||[]).filter(s=>s.playerName!==myName&&s.playerName);
+  const hudInfo = opponents.map(s=>{
+    const hud = calcPlayerHUD(s.playerId);
+    if(!hud) return s.playerName+': אין נתונים';
+    return s.playerName+': VPIP '+hud.vpip+'% PFR '+hud.pfr+'% AF '+hud.af+' ('+hud.n+' ידיים)';
+  }).join('\n');
+
+  const prompt = 'אתה מומחה פוקר GTO. נתח את היד הבאה ותן המלצות ספציפיות לכל רחוב.\n\n'+
+    '**פרטי יד:**\n'+
+    'בליינדים: '+blinds+'\n'+
+    'לוח: '+(board||'טרם נחשף')+'\n'+
+    'הקלפים שלי: '+myCards+'\n\n'+
+    '**פעולות:**\n'+streetActions+'\n\n'+
+    '**HUD יריבים:**\n'+(hudInfo||'אין נתונים')+'\n\n'+
+    '**נתח:**\n'+
+    '1. כל רחוב - האם הפעולה הייתה נכונה? GTO vs Exploitative\n'+
+    '2. האם היה מקום לבלף/ליותר אגרסיביות?\n'+
+    '3. המלצה לסיטואציות דומות\n\n'+
+    'ענה בעברית, בצורה ממוקדת ומעשית.';
+
+  // Show loading
+  document.getElementById('analyze-overlay')?.remove();
+  const aOverlay = document.createElement('div');
+  aOverlay.id = 'analyze-overlay';
+  aOverlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
+  aOverlay.onclick = e=>{ if(e.target===aOverlay) aOverlay.remove(); };
+  
+  const aBox = document.createElement('div');
+  aBox.style.cssText = 'max-width:480px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:18px';
+  aBox.onclick = e=>e.stopPropagation();
+  
+  const aHdr = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+    '<span style="font-size:15px;font-weight:800;color:#c8a96e">🔍 ניתוח יד</span>'+
+    '<button onclick="closeAnalyze()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>';
+  
+  const aContent = document.createElement('div');
+  aContent.id = 'analyze-content';
+  aContent.style.cssText = 'font-size:13px;color:#e2ddd4;line-height:1.7;white-space:pre-wrap';
+  aContent.textContent = '⏳ מנתח יד...';
+  
+  aBox.innerHTML = aHdr;
+  aBox.appendChild(aContent);
+  aOverlay.appendChild(aBox);
+  document.body.appendChild(aOverlay);
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':ANTHROPIC_KEY,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error.message);
+    const text = data.content?.[0]?.text||'';
+    aContent.textContent = text;
+  } catch(e){
+    aContent.textContent = 'שגיאה: '+e.message;
+  }
+}
 function showPlayerHUD(seatIdx){
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat?.playerId) return;
@@ -1947,7 +2043,7 @@ function renderSeats(){
     el.className='seat-el';
     el.dataset.seat=i;
     el.style=`left:${x}%;top:${y}%`;
-    el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?76:40}px" onclick="clickSeat(${i})">
+    el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?76:40}px" onclick="clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
           ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
@@ -3673,6 +3769,13 @@ function showHandDetail(hid){
   closeBtn.style.cssText = 'background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
   closeBtn.onclick = ()=>overlay.remove();
+  
+  // Analyze button
+  const analyzeBtn = document.createElement('button');
+  analyzeBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+  analyzeBtn.textContent = '🔍 נתח יד';
+  analyzeBtn.onclick = ()=>analyzeHand(h);
+  hdr.appendChild(analyzeBtn);
   hdr.appendChild(closeBtn);
   box.appendChild(hdr);
 
@@ -5144,8 +5247,9 @@ try{
 // ═══════════════════════════════════════
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
-const USERS = [
-  { name:'יאיר',   pass:'q1234',    role:'admin'  },
+const ANTHROPIC_KEY = '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';
+  const USERS = [
+  { name:'יאיר',   pass:'q1234r',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
