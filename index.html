@@ -1426,13 +1426,14 @@ async function analyzeHand(h){
   try {
     const token = currentUser?.token || localStorage.getItem('auth_token') || '';
     console.log('Token:', token ? token.substring(0,20)+'...' : 'NONE');
+    console.log('Sending prompt length:', prompt.length, 'First 50:', prompt.substring(0,50));
     const resp = await fetch(AUTH_WORKER_URL+'/analyze-hand',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
         'Authorization':'Bearer '+token
       },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({ prompt: prompt })
     });
     const text2 = await resp.text();
     console.log('Response:', text2.substring(0,100));
@@ -5251,7 +5252,7 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'11234',    role:'admin'  },
+  { name:'יאיר',   pass:'12234',    role:'admin'  },
   { name:'יאיר',   pass:'4321',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
