@@ -4691,6 +4691,79 @@ async function syncFromSheets(){
 
 
 
+function closeUsersMgmt(){ document.getElementById('users-mgmt-overlay')?.remove(); }
+async function showUsersManager(){
+  document.getElementById('settings-box').style.display='none';
+  document.getElementById('users-mgmt-overlay')?.remove();
+  
+  const token = currentUser?.token||localStorage.getItem('auth_token')||'';
+  
+  const overlay = document.createElement('div');
+  overlay.id = 'users-mgmt-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:380px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:18px';
+  box.onclick = e=>e.stopPropagation();
+  box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+    '<span style="font-size:15px;font-weight:800;color:#c8a96e">👥 ניהול משתמשים</span>'+
+    '<button onclick="closeUsersMgmt()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>'+
+    '<div id="users-list-div" style="margin-bottom:14px"><div style="color:#5a5870;font-size:12px">טוען...</div></div>'+
+    '<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;margin-top:4px">'+
+    '<div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:8px">+ הוסף משתמש</div>'+
+    '<input id="new-uname" type="text" placeholder="שם משתמש" style="width:100%;padding:8px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;margin-bottom:6px;box-sizing:border-box;direction:ltr">'+
+    '<input id="new-name" type="text" placeholder="שם מלא" style="width:100%;padding:8px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:right">'+
+    '<input id="new-pass" type="password" placeholder="סיסמה" style="width:100%;padding:8px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;margin-bottom:6px;box-sizing:border-box">'+
+    '<select id="new-role" style="width:100%;padding:8px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;margin-bottom:8px">'+
+    '<option value="admin">מנהל 🔑</option>'+
+    '<option value="local">מקומי 🔒</option>'+
+    '<option value="viewer">צופה 👁</option>'+
+    '</select>'+
+    '<button onclick="addUserFromMgmt()" style="width:100%;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer">✓ הוסף</button>'+
+    '</div>';
+  
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  
+  // Load users
+  try {
+    const resp = await fetch(AUTH_WORKER_URL+'/users',{headers:{'Authorization':'Bearer '+token}});
+    const data = await resp.json();
+    const div = document.getElementById('users-list-div');
+    if(!div) return;
+    if(!data.ok){ div.innerHTML = '<div style="color:#e07b6a;font-size:12px">'+data.error+'</div>'; return; }
+    div.innerHTML = data.users.map(u=>
+      '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#0d1120;border-radius:8px;margin-bottom:6px">'+
+      '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#e2ddd4">'+u.name+'</div>'+
+      '<div style="font-size:10px;color:#5a5870">@'+u.username+' · '+u.role+'</div></div>'+
+      '</div>'
+    ).join('');
+  } catch(e){
+    const div = document.getElementById('users-list-div');
+    if(div) div.innerHTML = '<div style="color:#e07b6a;font-size:12px">שגיאה: '+e.message+'</div>';
+  }
+}
+
+async function addUserFromMgmt(){
+  const token = currentUser?.token||localStorage.getItem('auth_token')||'';
+  const username = document.getElementById('new-uname')?.value?.trim();
+  const name = document.getElementById('new-name')?.value?.trim();
+  const password = document.getElementById('new-pass')?.value?.trim();
+  const role = document.getElementById('new-role')?.value;
+  if(!username||!name||!password){ notify('מלא את כל השדות'); return; }
+  try {
+    const resp = await fetch(AUTH_WORKER_URL+'/create-user',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({username,name,password,role})
+    });
+    const data = await resp.json();
+    if(data.ok){ notify('✓ '+name+' נוסף'); showUsersManager(); }
+    else notify('שגיאה: '+data.error);
+  } catch(e){ notify('שגיאה: '+e.message); }
+}
+
 async function manualBackup(){
   if(!gsUrl){ notify('הגדר Google Sheets URL קודם'); return; }
   notify('💾 מגבה...');
@@ -4713,6 +4786,9 @@ function toggleSettings(){
   loadGSUrl();
   const rebuyInp = document.getElementById('rebuy-default-inp');
   if(rebuyInp) rebuyInp.value = S.defaultRebuyAmount||50000;
+  // Show users button only for admins with token
+  const usersBtn = document.getElementById('btn-users-mgmt');
+  if(usersBtn) usersBtn.style.display = (currentUser?.token&&currentUser?.role==='admin')?'block':'none';
   box.style.display = box.style.display==='none' ? 'flex' : 'none';
 }
 
@@ -5290,8 +5366,8 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1234w',    role:'admin'  },
-  { name:'יאיר',   pass:'443211',    role:'local'  },
+  { name:'יאיר',   pass:'q1234',    role:'admin'  },
+  { name:'יאיר',   pass:'543211',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
@@ -5621,6 +5697,7 @@ setTimeout(()=>document.getElementById('pass-inp')?.focus(), 100);
       </div>
     </div>
 
+    <button onclick="showUsersManager()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(91,155,213,0.3);background:rgba(91,155,213,0.08);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px" id="btn-users-mgmt">👥 ניהול משתמשים</button>
     <button onclick="document.getElementById('settings-box').style.display='none'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">סגור</button>
   </div>
 </div>
