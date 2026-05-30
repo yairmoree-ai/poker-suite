@@ -233,7 +233,7 @@ function persist(){
   try{ localStorage.setItem('ps_backup', JSON.stringify(snap)); }catch(e){}
   S._lastSaved = Date.now();
   // Auto-sync to Google Sheets - only for admins, immediate
-  if(typeof syncToSheets === 'function' && gsUrl && isAdmin()) syncToSheets(true);
+  if(typeof syncToSheets === 'function' && getGsUrl() && isAdmin()) syncToSheets(true);
 }
 
 function fullSnapshot(){
@@ -310,4 +310,3 @@ function getSeatXY(i,count){
   const angle=(Math.PI/2)+(2*Math.PI*i/count);
   return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
 }
-
