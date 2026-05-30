@@ -2,8 +2,8 @@ function renderLiveActions(){
   const bar = document.getElementById('live-actions-bar');
   if(!bar) return;
   const swp = assignPos();
-  const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
-  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
+  const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
+  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טרן':'Turn','ריבר':'River'};
   const colFn = t=>t==='Fold'?'#555':t==='SB'?'#8b7cb8':t==='BB'?'#e07b6a':t==='Check'?'#5fc47a':t==='Call'?'#5b9bd5':t==='All-in'?'#e05555':'#c8a96e';
   const typeShortFn = (t,a)=>a?.displayType||(t==='Raise'?'R':t==='Check'?'CH':t==='Call'?'C':t==='All-in'?'AI':t==='Fold'?'F':t);
   const posColFn = p=>p==='BTN'?'#c8a96e':p==='SB'?'#8b7cb8':p==='BB'?'#e07b6a':'#6a8090';
@@ -751,8 +751,8 @@ async function openCameraForCards(target){
         : 'זהה את 2 קלפי הפוקר של השחקן בתמונה. החזר JSON בלבד: {"cards":[{"rank":"A","suit":"♥"},{"rank":"K","suit":"♠"}]}';
 
       // Use Google Apps Script as proxy to avoid CORS
-      if(!gsUrl){ notify('הגדר Google Sheets URL קודם'); return; }
-      const resp = await fetch(gsUrl, {
+      if(!getGsUrl()){ notify('הגדר Google Sheets URL קודם'); return; }
+      const resp = await fetch(getGsUrl(), {
         method:'POST',
         body: JSON.stringify({
           action:'identify_cards',
