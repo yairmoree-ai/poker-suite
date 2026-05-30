@@ -313,6 +313,15 @@
 <div id="settings-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
   <div style="background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:14px">⚙️ הגדרות סנכרון</div>
+    <div id="viewer-url-row" style="display:none;background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.25);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:#5b9bd5;margin-bottom:6px">👁 קישור לצופים</div>
+      <div style="font-size:10px;color:#5a5870;margin-bottom:7px">שתף עם שחקנים — יראו את הטורניר שלך בלבד</div>
+      <div id="viewer-url-display" style="font-size:10px;color:#e2ddd4;direction:ltr;font-family:monospace;background:#0a0e18;padding:6px 8px;border-radius:6px;margin-bottom:7px;word-break:break-all"></div>
+      <div style="display:flex;gap:7px">
+        <button onclick="const u=document.getElementById('viewer-url-display').textContent;navigator.clipboard?.writeText(u);notify('קישור הועתק ✓')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:11px;font-weight:700;cursor:pointer">📋 העתק קישור</button>
+        <button onclick="const u=document.getElementById('viewer-url-display').textContent;const t='הצטרף לצפייה בטורניר 🃏\n'+u;navigator.share?navigator.share({title:'Poker Suite',text:t,url:u}):navigator.clipboard?.writeText(t);notify('שותף ✓')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.08);color:#5fc47a;font-size:11px;font-weight:700;cursor:pointer">📤 שתף</button>
+      </div>
+    </div>
     <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:6px">🔄 ברירת מחדל Rebuy</div>
       <div style="display:flex;align-items:center;gap:8px">
