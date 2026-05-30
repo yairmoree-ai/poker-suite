@@ -140,6 +140,7 @@ async function checkPass(){
         body:JSON.stringify({username, password:val})
       });
       const data = await resp.json();
+      console.log('Worker response:', resp.status, data);
       if(data.ok){
         currentUser = {name:data.user.name, role:data.user.role, token:data.token, username: username, sheetsUrl: data.user.sheetsUrl||null};
         localStorage.setItem('auth_token', data.token);
@@ -148,7 +149,7 @@ async function checkPass(){
         loginSuccess();
         return;
       }
-    } catch(e){ /* fallback to local */ }
+    } catch(e){ console.error('Worker login error:', e); /* fallback to local */ }
     if(loginBtn){ loginBtn.textContent='כניסה'; loginBtn.disabled=false; }
   }
   
