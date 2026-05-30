@@ -436,9 +436,20 @@ function toggleSettings(){
   loadGSUrl();
   const rebuyInp = document.getElementById('rebuy-default-inp');
   if(rebuyInp) rebuyInp.value = S.defaultRebuyAmount||50000;
-  // Show users button only for admins with token
   const usersBtn = document.getElementById('btn-users-mgmt');
   if(usersBtn) usersBtn.style.display = (currentUser?.role==='superadmin')?'block':'none';
+
+  // הצג URL לצופים אם המשתמש הוא מנהל
+  const viewerUrlRow = document.getElementById('viewer-url-row');
+  if(viewerUrlRow && isAdmin() && currentUser?.username){
+    const viewerUrl = location.origin + location.pathname + '?admin=' + encodeURIComponent(currentUser.username);
+    const urlEl = document.getElementById('viewer-url-display');
+    if(urlEl) urlEl.textContent = viewerUrl;
+    viewerUrlRow.style.display = 'block';
+  } else if(viewerUrlRow){
+    viewerUrlRow.style.display = 'none';
+  }
+
   box.style.display = box.style.display==='none' ? 'flex' : 'none';
 }
 
