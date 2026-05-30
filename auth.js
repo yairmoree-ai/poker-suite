@@ -7,8 +7,8 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר', user:'yair', pass:'1q234r', role:'admin',  sheetsUrl:'https://script.google.com/macros/s/AKfycbzUbdOOXojDmNrodKJcRQsHSgvED0dQ0WpUC_XpC4W-SKrDCHRSQKbvjjjcV0t8ZwJU/exec' },
-  { name:'יאיר', user:'yair', pass:'443211', role:'local',  sheetsUrl:'https://script.google.com/macros/s/AKfycbzUbdOOXojDmNrodKJcRQsHSgvED0dQ0WpUC_XpC4W-SKrDCHRSQKbvjjjcV0t8ZwJU/exec' },
+  { name:'יאיר', user:'yair', pass:'1q234r', role:'admin',  sheetsUrl:'https://script.google.com/macros/s/AKfycbwI5DWDMFckK0A0tRwDQGq3mCBxBl7lFxqY9O-Bw4NXSpKuJ2EY793PFvtI_DD2WPMq/exec' },
+  { name:'יאיר', user:'yair', pass:'443211', role:'local',  sheetsUrl:'https://script.google.com/macros/s/AKfycbwI5DWDMFckK0A0tRwDQGq3mCBxBl7lFxqY9O-Bw4NXSpKuJ2EY793PFvtI_DD2WPMq/exec' },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
