@@ -274,8 +274,8 @@ function showSetupAdmin(){
   setTimeout(()=>document.getElementById('setup-name')?.focus(),150);
 }
 
-function enterAsViewer(adminUsername){
-  currentUser = { name:'צופה', role:'viewer', viewingAdmin: adminUsername||null };
+function enterAsViewer(adminUsername, sheetsUrl){
+  currentUser = { name:'צופה', role:'viewer', viewingAdmin: adminUsername||null, sheetsUrl: sheetsUrl||null };
   document.getElementById('lock-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   const badge = document.getElementById('user-badge');
@@ -303,19 +303,14 @@ async function checkAdminParam(){
   const adminUser = params.get('admin');
   if(!adminUser) return false;
 
-  // שאל את ה-Worker על ה-sheetsUrl של המנהל הזה
+  let sheetsUrl = null;
   try{
     const resp = await fetch(AUTH_WORKER_URL+'/admin-info?username='+encodeURIComponent(adminUser));
     const data = await resp.json();
-    if(data.ok && data.sheetsUrl){
-      if(currentUser) currentUser.sheetsUrl = data.sheetsUrl;
-      else currentUser = { name:'צופה', role:'viewer', sheetsUrl: data.sheetsUrl, viewingAdmin: adminUser };
-      enterAsViewer(adminUser);
-      return true;
-    }
+    if(data.ok && data.sheetsUrl) sheetsUrl = data.sheetsUrl;
   }catch(e){}
-  // Fallback — כניסת צופה ללא sync
-  enterAsViewer(adminUser);
+
+  enterAsViewer(adminUser, sheetsUrl);
   return true;
 }
 
