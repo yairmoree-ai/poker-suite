@@ -7,8 +7,8 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1q234r',    role:'admin'  },
-  { name:'יאיר',   pass:'443211',    role:'local'  },
+  { name:'יאיר', user:'yair', pass:'1q234r', role:'admin',  sheetsUrl:'https://script.google.com/macros/s/AKfycbzUbdOOXojDmNrodKJcRQsHSgvED0dQ0WpUC_XpC4W-SKrDCHRSQKbvjjjcV0t8ZwJU/exec' },
+  { name:'יאיר', user:'yair', pass:'443211', role:'local',  sheetsUrl:'https://script.google.com/macros/s/AKfycbzUbdOOXojDmNrodKJcRQsHSgvED0dQ0WpUC_XpC4W-SKrDCHRSQKbvjjjcV0t8ZwJU/exec' },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
@@ -93,7 +93,7 @@ function tryUpgrade(pass){
   const u = USERS.find(u=>u.pass===pass && (u.role==='admin'||u.role==='local'));
   if(!u){ notify('סיסמה שגויה'); return; }
   document.getElementById('upgrade-dialog')?.remove();
-  currentUser = {name:u.name, role:u.role, username: u.user||u.name?.toLowerCase()};
+  currentUser = {name:u.name, role:u.role, username: u.user||u.name?.toLowerCase(), sheetsUrl: u.sheetsUrl||null};
   const badge = document.getElementById('user-badge');
   if(badge){ badge.textContent=u.name+(u.role==='local'?' 🔒':' 🔑'); badge.style.color=u.role==='local'?'#5b9bd5':'#c8a96e'; }
   const upBtn = document.getElementById('btn-upgrade-to-admin');
