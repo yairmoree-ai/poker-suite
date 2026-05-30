@@ -196,23 +196,31 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // GOOGLE SHEETS SYNC
 // ═══════════════════════════════
-let gsUrl = 'https://script.google.com/macros/s/AKfycbwHAAAFgkVIeA-viTNXhRSXBHrDz_yTbb06tf7yLKUPduvz1-3GATqjezHVoLAPPRiX/exec';
+// gsUrl — per-user, נטען מ-currentUser.sheetsUrl בעת login
+let gsUrl = ''; // fallback לתאימות לאחור
 let syncTimer = null;
 
+function getGsUrl() {
+  return currentUser?.sheetsUrl || gsUrl || '';
+}
+
 function loadGSUrl(){
-  try{ gsUrl = localStorage.getItem('ps_gsurl')||'https://script.google.com/macros/s/AKfycbwHAAAFgkVIeA-viTNXhRSXBHrDz_yTbb06tf7yLKUPduvz1-3GATqjezHVoLAPPRiX/exec'; }catch(e){ gsUrl='https://script.google.com/macros/s/AKfycbwHAAAFgkVIeA-viTNXhRSXBHrDz_yTbb06tf7yLKUPduvz1-3GATqjezHVoLAPPRiX/exec'; }
+  try{ gsUrl = localStorage.getItem('ps_gsurl')||''; }catch(e){ gsUrl=''; }
   const inp = document.getElementById('gs-url');
-  if(inp) inp.value = gsUrl;
-  updateSyncDot(gsUrl ? 'idle' : 'off');
+  if(inp) inp.value = currentUser?.sheetsUrl || gsUrl || '';
+  updateSyncDot(getGsUrl() ? 'idle' : 'off');
 }
 
 function saveGSUrl(){
   const inp = document.getElementById('gs-url');
-  gsUrl = inp?.value?.trim()||'';
-  try{ localStorage.setItem('ps_gsurl', gsUrl); }catch(e){}
-  updateSyncDot(gsUrl ? 'idle' : 'off');
-  if(gsUrl){ syncToSheets(true); }
+  const url = inp?.value?.trim()||'';
+  if(currentUser) currentUser.sheetsUrl = url;
+  gsUrl = url;
+  try{ localStorage.setItem('ps_gsurl', url); }catch(e){}
+  updateSyncDot(url ? 'idle' : 'off');
+  if(url){ syncToSheets(true); }
   else { setSyncStatus('סנכרון כבוי'); }
+  notify('URL נשמר ✓');
 }
 
 function updateSyncDot(state){
@@ -229,30 +237,25 @@ function setSyncStatus(msg, color){
 }
 
 async function syncToSheets(immediate){
-  if(isViewer()||isLocal()) return; // viewers and local never send
-  // NEVER send if no players in library (would erase data on Sheets)
+  if(isViewer()||isLocal()) return;
   if(!S.playerLib?.length) return;
-  // Don't send if local data is older than Sheets data
   if(S._sheetsTimestamp && S._lastSaved && S._sheetsTimestamp > S._lastSaved) return;
-  // Before sending, check if Sheets was updated since our last pull
+  const url = getGsUrl();
+  if(!url) return;
+  if(isViewer() || !currentUser) return;
   try {
-    const checkResp = await fetch(gsUrl+'?key=poker_data&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
-    const checkText = await checkResp.text();
-    const checkData = JSON.parse(checkText);
+    const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
+    const checkData = JSON.parse(await checkResp.text());
     if(checkData.ok && checkData.value?.savedAt){
-      const sheetsSavedAt = checkData.value.savedAt;
-      if(sheetsSavedAt > (S._lastSaved||0)){
-        // Sheets is newer - pull instead of push
+      if(checkData.value.savedAt > (S._lastSaved||0)){
         setSyncStatus('⚠️ קונפליקט – מושך גרסה חדשה יותר', '#e07b6a');
         applySnapshot(checkData.value);
-        S._sheetsTimestamp = sheetsSavedAt;
+        S._sheetsTimestamp = checkData.value.savedAt;
         persist(); render();
         return;
       }
     }
-  } catch(e){ /* network error - proceed with push */ }
-  if(!gsUrl) return;
-  if(isViewer() || !currentUser) return; // viewers and unauthenticated don't write
+  } catch(e){ /* proceed with push */ }
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
@@ -261,11 +264,11 @@ async function syncToSheets(immediate){
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
-    await fetch(gsUrl, {
+    await fetch(url, {
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({key:'poker_data', value: fullSnapshot()})
+      body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
     });
     updateSyncDot('ok');
     setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
@@ -276,19 +279,17 @@ async function syncToSheets(immediate){
 }
 
 async function syncFromSheets(){
-  if(!gsUrl){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
-  // Don't sync if user recently made changes (within 15 seconds)
-  if(isLocal()) return; // local mode: no auto-sync
+  const url = getGsUrl();
+  if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
+  if(isLocal()) return;
   if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 15000) return;
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
-    const resp = await fetch(gsUrl+'?key=poker_data&t='+Date.now(), {
-      method:'GET',
-      redirect:'follow'
+    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser?.username||'')+'&t='+Date.now(), {
+      method:'GET', redirect:'follow'
     });
-    const text = await resp.text();
-    const r = JSON.parse(text);
+    const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
       const incoming = r.value;
       if(!isAdmin() || !S._lastSaved || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
@@ -297,7 +298,6 @@ async function syncFromSheets(){
         persist();
       }
       render();
-      // Re-render current active view
       const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
       if(activeTab==='tourn') renderTournList();
       if(activeTab==='players') renderPlayerList();
@@ -396,23 +396,29 @@ async function addUserFromMgmt(){
   const password = document.getElementById('new-pass')?.value?.trim();
   const role = document.getElementById('new-role')?.value;
   if(!username||!name||!password){ notify('מלא את כל השדות'); return; }
+  const appsScriptUrl = getGsUrl();
   try {
     const resp = await fetch(AUTH_WORKER_URL+'/create-user',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({username,name,password,role})
+      body:JSON.stringify({username,name,password,role,appsScriptUrl})
     });
     const data = await resp.json();
-    if(data.ok){ notify('✓ '+name+' נוסף'); showUsersManager(); }
-    else notify('שגיאה: '+data.error);
+    if(data.ok){
+      const msg = data.user?.sheetsUrl
+        ? '✓ '+name+' נוסף + Sheet נוצר אוטומטית'
+        : '✓ '+name+' נוסף (ללא Sheet — הגדר Apps Script URL קודם)';
+      notify(msg);
+      showUsersManager();
+    } else notify('שגיאה: '+data.error);
   } catch(e){ notify('שגיאה: '+e.message); }
 }
 
 async function manualBackup(){
-  if(!gsUrl){ notify('הגדר Google Sheets URL קודם'); return; }
+  if(!getGsUrl()){ notify('הגדר Google Sheets URL קודם'); return; }
   notify('💾 מגבה...');
   try {
-    const resp = await fetch(gsUrl, {
+    const resp = await fetch(getGsUrl(), {
       method:'POST',
       body: JSON.stringify({ action:'manual_backup' })
     });
@@ -653,4 +659,3 @@ function shareKO(encodedMsg){
   const waUrl = 'https://wa.me/?text='+encodeURIComponent(msg);
   window.open(waUrl, '_blank');
 }
-
