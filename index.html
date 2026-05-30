@@ -5441,6 +5441,46 @@ let currentUser = null;
 const isAdmin  = ()=> currentUser?.role==='admin' || currentUser?.role==='local' || currentUser?.role==='superadmin';
 const isViewer = ()=> currentUser?.role==='viewer';
 const isLocal  = ()=> currentUser?.role==='local'; // admin without sync
+const isSuperAdmin = ()=> currentUser?.role==='superadmin';
+const isAdminOnly  = ()=> currentUser?.role==='admin'; // regular admin, not super
+let _superTempToken = null;
+async function requireSuperAdmin(onSuccess){
+  if(isSuperAdmin()){ onSuccess(); return; }
+  if(_superTempToken){ onSuccess(); return; }
+  document.getElementById('super-auth-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'super-auth-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:18px;width:100%;max-width:300px;text-align:center';
+  box.onclick = e=>e.stopPropagation();
+  box.innerHTML = '<div style="font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:4px">🔐 חסום למנהל-על בלבד</div>'+
+    '<div style="font-size:11px;color:#5a5870;margin-bottom:12px">הכנס פרטי מנהל-על לאישור</div>'+
+    '<input id="super-user" type="text" placeholder="שם משתמש" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;margin-bottom:6px;box-sizing:border-box;direction:ltr">'+
+    '<input id="super-pass" type="password" placeholder="סיסמה" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;margin-bottom:10px;box-sizing:border-box">';
+  const btn = document.createElement('button');
+  btn.style.cssText = 'width:100%;padding:11px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer';
+  btn.textContent = 'אשר';
+  btn.onclick = async ()=>{
+    const u = document.getElementById('super-user')?.value?.trim();
+    const p = document.getElementById('super-pass')?.value?.trim();
+    btn.textContent='...'; btn.disabled=true;
+    try {
+      const resp = await fetch(AUTH_WORKER_URL+'/verify-superadmin',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username:u, password:p})
+      });
+      const data = await resp.json();
+      if(data.ok){ _superTempToken = data.token; overlay.remove(); onSuccess(); }
+      else { btn.textContent='שגיאה: '+(data.error||''); btn.disabled=false; }
+    } catch(e){ btn.textContent='שגיאה'; btn.disabled=false; }
+  };
+  box.appendChild(btn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('super-user')?.focus(),150);
+}
 
 function showUpgradeDialog(){
   document.getElementById('upgrade-dialog')?.remove();
