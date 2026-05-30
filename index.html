@@ -331,11 +331,8 @@
     </div>
     <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:4px">🔗 Google Sheets</div>
-      <div style="font-size:10px;color:#5a5870;margin-bottom:8px">הדבק את ה-URL של ה-Apps Script לסנכרון אוטומטי</div>
-      <input id="gs-url" type="url" placeholder="https://script.google.com/macros/s/..."
-        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:11px;outline:none;direction:ltr;box-sizing:border-box;margin-bottom:8px">
+      <div id="gs-url-status" style="font-size:10px;margin-bottom:8px;color:#5a5870"></div>
       <div style="display:flex;gap:7px">
-        <button onclick="saveGSUrl()" style="flex:1;padding:8px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:12px;cursor:pointer">שמור URL</button>
         <button onclick="syncFromSheets()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:12px;cursor:pointer">📥 משוך נתונים</button>
         <button onclick="syncToSheets(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-weight:700;font-size:12px;cursor:pointer">📤 שלח נתונים</button>
       </div>
