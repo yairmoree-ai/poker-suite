@@ -206,9 +206,18 @@ function getGsUrl() {
 
 function loadGSUrl(){
   try{ gsUrl = localStorage.getItem('ps_gsurl')||''; }catch(e){ gsUrl=''; }
-  const inp = document.getElementById('gs-url');
-  if(inp) inp.value = currentUser?.sheetsUrl || gsUrl || '';
-  updateSyncDot(getGsUrl() ? 'idle' : 'off');
+  const url = getGsUrl();
+  const statusEl = document.getElementById('gs-url-status');
+  if(statusEl){
+    if(url){
+      statusEl.innerHTML = '✅ מחובר לסנכרון אוטומטי';
+      statusEl.style.color = '#5fc47a';
+    } else {
+      statusEl.innerHTML = '⚠️ לא מוגדר — צור קשר עם יאיר';
+      statusEl.style.color = '#e07b6a';
+    }
+  }
+  updateSyncDot(url ? 'idle' : 'off');
 }
 
 function saveGSUrl(){
@@ -218,8 +227,18 @@ function saveGSUrl(){
   gsUrl = url;
   try{ localStorage.setItem('ps_gsurl', url); }catch(e){}
   updateSyncDot(url ? 'idle' : 'off');
-  if(url){ syncToSheets(true); }
-  else { setSyncStatus('סנכרון כבוי'); }
+  if(url){
+    syncToSheets(true);
+    // שמור גם ב-Worker אם מחובר
+    const token = currentUser?.token||'';
+    if(token){
+      fetch(AUTH_WORKER_URL+'/update-sheets-url',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({sheetsUrl:url})
+      }).catch(()=>{});
+    }
+  } else { setSyncStatus('סנכרון כבוי'); }
   notify('URL נשמר ✓');
 }
 
@@ -405,10 +424,18 @@ async function addUserFromMgmt(){
     });
     const data = await resp.json();
     if(data.ok){
-      const msg = data.user?.sheetsUrl
-        ? '✓ '+name+' נוסף + Sheet נוצר אוטומטית'
-        : '✓ '+name+' נוסף (ללא Sheet — הגדר Apps Script URL קודם)';
-      notify(msg);
+      if(data.user?.sheetsUrl){
+        const viewerUrl = location.origin + location.pathname + '?admin=' + encodeURIComponent(username);
+        const msg = `✓ ${name} נוסף + Sheet נוצר`;
+        notify(msg);
+        // הצג דיאלוג עם קישור לצופים
+        setTimeout(()=>{
+          const share = confirm(`קישור לצופים של ${name}:\n${viewerUrl}\n\nהעתק לשיתוף?`);
+          if(share) navigator.clipboard?.writeText(viewerUrl).then(()=>notify('קישור הועתק ✓'));
+        }, 500);
+      } else {
+        notify('✓ '+name+' נוסף (ללא Sheet — ודא שה-Apps Script URL מוגדר ב-Settings)');
+      }
       showUsersManager();
     } else notify('שגיאה: '+data.error);
   } catch(e){ notify('שגיאה: '+e.message); }
