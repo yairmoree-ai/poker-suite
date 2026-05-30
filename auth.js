@@ -93,7 +93,7 @@ function tryUpgrade(pass){
   const u = USERS.find(u=>u.pass===pass && (u.role==='admin'||u.role==='local'));
   if(!u){ notify('סיסמה שגויה'); return; }
   document.getElementById('upgrade-dialog')?.remove();
-  currentUser = {name:u.name, role:u.role};
+  currentUser = {name:u.name, role:u.role, username: u.user||u.name?.toLowerCase()};
   const badge = document.getElementById('user-badge');
   if(badge){ badge.textContent=u.name+(u.role==='local'?' 🔒':' 🔑'); badge.style.color=u.role==='local'?'#5b9bd5':'#c8a96e'; }
   const upBtn = document.getElementById('btn-upgrade-to-admin');
@@ -253,32 +253,53 @@ function showSetupAdmin(){
   setTimeout(()=>document.getElementById('setup-name')?.focus(),150);
 }
 
-function enterAsViewer(){
-  currentUser = { name:'צופה', role:'viewer' };
+function enterAsViewer(adminUsername){
+  currentUser = { name:'צופה', role:'viewer', viewingAdmin: adminUsername||null };
   document.getElementById('lock-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   const badge = document.getElementById('user-badge');
   if(badge){ badge.textContent='צופה 👁'; badge.style.color='#5b9bd5'; }
-  // Show upgrade button for viewers
   const upBtn = document.getElementById('btn-upgrade-to-admin');
-  if(upBtn) upBtn.style.display='';
-  try{ render(); }catch(e){} // viewer doesn't load localStorage
-  // Open tournaments tab by default for viewers
+  if(upBtn) upBtn.style.display = adminUsername ? 'none' : '';
+  // הסתר לשוניות שאינן טורנירים
+  ['tab-table','tab-hands','tab-players'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+  try{ render(); }catch(e){}
   setTimeout(()=>showView('tourn'), 50);
   try{
     loadGSUrl();
-    if(getGsUrl()){ setTimeout(()=>syncFromSheets(), 800); } // pull from Sheets only
-    // On first load: pull from Sheets before any push
-if(getGsUrl() && currentUser && isAdmin()){
-  syncFromSheets().then(()=>{
-    // Only start auto-sync after initial pull
+    const url = getGsUrl();
+    if(url){ setTimeout(()=>syncFromSheets(), 800); }
     setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
-  });
-} else {
-  setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
-}
   }catch(e){}
 }
 
-// Auto-focus password input
-setTimeout(()=>document.getElementById('pass-inp')?.focus(), 100);
+// בדוק אם יש פרמטר ?admin= ב-URL — כניסת צופה אוטומטית
+async function checkAdminParam(){
+  const params = new URLSearchParams(window.location.search);
+  const adminUser = params.get('admin');
+  if(!adminUser) return false;
+
+  // שאל את ה-Worker על ה-sheetsUrl של המנהל הזה
+  try{
+    const resp = await fetch(AUTH_WORKER_URL+'/admin-info?username='+encodeURIComponent(adminUser));
+    const data = await resp.json();
+    if(data.ok && data.sheetsUrl){
+      if(currentUser) currentUser.sheetsUrl = data.sheetsUrl;
+      else currentUser = { name:'צופה', role:'viewer', sheetsUrl: data.sheetsUrl, viewingAdmin: adminUser };
+      enterAsViewer(adminUser);
+      return true;
+    }
+  }catch(e){}
+  // Fallback — כניסת צופה ללא sync
+  enterAsViewer(adminUser);
+  return true;
+}
+
+// Auto-focus password input or auto-enter viewer mode
+setTimeout(async ()=>{
+  const handled = await checkAdminParam();
+  if(!handled) document.getElementById('pass-inp')?.focus();
+}, 100);
