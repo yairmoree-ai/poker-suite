@@ -7,8 +7,8 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1234',    role:'admin'  },
-  { name:'יאיר',   pass:'4321',    role:'local'  },
+  { name:'יאיר',   pass:'1q234r',    role:'admin'  },
+  { name:'יאיר',   pass:'443211',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
@@ -141,7 +141,7 @@ async function checkPass(){
       });
       const data = await resp.json();
       if(data.ok){
-        currentUser = {name:data.user.name, role:data.user.role, token:data.token};
+        currentUser = {name:data.user.name, role:data.user.role, token:data.token, username: username, sheetsUrl: data.user.sheetsUrl||null};
         localStorage.setItem('auth_token', data.token);
         if(loginBtn){ loginBtn.textContent='כניסה'; loginBtn.disabled=false; }
         inp.value=''; if(userInp) userInp.value='';
@@ -174,15 +174,15 @@ async function checkPass(){
     try{ showView('table'); }catch(e){ console.error('showView error:',e); }
     try{
       loadGSUrl();
-      if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); }
+      if(getGsUrl()){ setTimeout(()=>syncFromSheets(), 800); }
       // On first load: pull from Sheets before any push
-if(gsUrl && currentUser && isAdmin()){
+if(getGsUrl() && currentUser && isAdmin()){
   syncFromSheets().then(()=>{
     // Only start auto-sync after initial pull
-    setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+    setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
   });
 } else {
-  setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+  setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
 }
     }catch(e){}
   } else {
@@ -267,15 +267,15 @@ function enterAsViewer(){
   setTimeout(()=>showView('tourn'), 50);
   try{
     loadGSUrl();
-    if(gsUrl){ setTimeout(()=>syncFromSheets(), 800); } // pull from Sheets only
+    if(getGsUrl()){ setTimeout(()=>syncFromSheets(), 800); } // pull from Sheets only
     // On first load: pull from Sheets before any push
-if(gsUrl && currentUser && isAdmin()){
+if(getGsUrl() && currentUser && isAdmin()){
   syncFromSheets().then(()=>{
     // Only start auto-sync after initial pull
-    setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+    setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
   });
 } else {
-  setInterval(()=>{ if(gsUrl && currentUser) syncFromSheets(); }, 10000);
+  setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
 }
   }catch(e){}
 }
