@@ -288,6 +288,9 @@ function enterAsViewer(adminUsername, sheetsUrl){
     if(el) el.style.display='none';
   });
   try{ render(); }catch(e){}
+  // הצג כפתור רענון לצופה
+  const refreshBtn = document.getElementById('btn-viewer-refresh');
+  if(refreshBtn) refreshBtn.style.display='inline-flex';
   setTimeout(()=>showView('tourn'), 50);
   try{
     loadGSUrl();
