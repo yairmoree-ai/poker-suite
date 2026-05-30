@@ -7,8 +7,8 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר', user:'yair', pass:'1q234r', role:'admin',  sheetsUrl:'https://script.google.com/macros/s/AKfycbwDc8xb71p2L09wQ2oDEi2RSl6awbTwv6rPv5olxCgIaejc3Jm5vTjo2vmnnLE4cTYF/exec' },
-  { name:'יאיר', user:'yair', pass:'44432111', role:'local',  sheetsUrl:'https://script.google.com/macros/s/AKfycbwDc8xb71p2L09wQ2oDEi2RSl6awbTwv6rPv5olxCgIaejc3Jm5vTjo2vmnnLE4cTYF/exec' },
+  { name:'יאיר', user:'yair', pass:'1234', role:'admin',  sheetsUrl:'https://script.google.com/macros/s/AKfycbzUbdOOXojDmNrodKJcRQsHSgvED0dQ0WpUC_XpC4W-SKrDCHRSQKbvjjjcV0t8ZwJU/exec' },
+  { name:'יאיר', user:'yair', pass:'4321', role:'local',  sheetsUrl:'https://script.google.com/macros/s/AKfycbzUbdOOXojDmNrodKJcRQsHSgvED0dQ0WpUC_XpC4W-SKrDCHRSQKbvjjjcV0t8ZwJU/exec' },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
@@ -163,10 +163,17 @@ async function checkPass(){
         loginSuccess();
         return;
       }
-    } catch(e){ console.error('Worker login error:', e); /* fallback to local */ }
+    } catch(e){ console.error('Worker login error:', e); }
     if(loginBtn){ loginBtn.textContent='כניסה'; loginBtn.disabled=false; }
+    // הצג שגיאה
+    const err2 = document.getElementById('pass-err');
+    if(err2){ err2.textContent='שגיאת חיבור — נסה שוב'; setTimeout(()=>err2.textContent='',3000); }
   }
-  
+
+  /* ═══════════════════════════════════════════════════
+     LOCAL USERS FALLBACK — DISABLED (כניסה מקומית)
+     להפעלה: הסר את תחילת ה-comment ב-/* וסוף ה-comment ב-*/
+  /*
   // Fallback: local USERS
   const user = USERS.find(u=>u.pass===val);
   if(user){
@@ -190,21 +197,20 @@ async function checkPass(){
     try{
       loadGSUrl();
       if(getGsUrl()){ setTimeout(()=>syncFromSheets(), 800); }
-      // On first load: pull from Sheets before any push
-if(getGsUrl() && currentUser && isAdmin()){
-  syncFromSheets().then(()=>{
-    // Only start auto-sync after initial pull
-    setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
-  });
-} else {
-  setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
-}
+      if(getGsUrl() && currentUser && isAdmin()){
+        syncFromSheets().then(()=>{
+          setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
+        });
+      } else {
+        setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
+      }
     }catch(e){}
   } else {
     const err = document.getElementById('pass-err');
     if(err){ err.textContent='סיסמה שגויה'; setTimeout(()=>err.textContent='',2000); }
     inp?.select();
   }
+  */
 }
 
 
