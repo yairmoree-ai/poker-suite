@@ -4776,12 +4776,29 @@ async function showUsersManager(){
       '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#0d1120;border-radius:8px;margin-bottom:6px">'+
       '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#e2ddd4">'+u.name+'</div>'+
       '<div style="font-size:10px;color:#5a5870">@'+u.username+' · '+u.role+'</div></div>'+
+      '<button onclick="resetUserPassword(\''+u.username+'\')" style="padding:5px 9px;border-radius:6px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:10px;font-weight:700;cursor:pointer">🔑 סיסמה</button>'+
       '</div>'
     ).join('');
   } catch(e){
     const div = document.getElementById('users-list-div');
     if(div) div.innerHTML = '<div style="color:#e07b6a;font-size:12px">שגיאה: '+e.message+'</div>';
   }
+}
+
+async function resetUserPassword(username){
+  const newPassword = prompt('סיסמה חדשה עבור '+username+':');
+  if(!newPassword) return;
+  const token = currentUser?.token||localStorage.getItem('auth_token')||'';
+  try {
+    const resp = await fetch(AUTH_WORKER_URL+'/reset-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({username, newPassword})
+    });
+    const data = await resp.json();
+    if(data.ok) notify('✓ סיסמה אופסה עבור '+username);
+    else notify('שגיאה: '+data.error);
+  } catch(e){ notify('שגיאה: '+e.message); }
 }
 
 async function addUserFromMgmt(){
@@ -5405,7 +5422,7 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר',   pass:'1234w',    role:'admin'  },
+  { name:'יאיר',   pass:'q1234',    role:'admin'  },
   { name:'יאיר',   pass:'443211',    role:'local'  },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
