@@ -4844,7 +4844,7 @@ function toggleSettings(){
   if(rebuyInp) rebuyInp.value = S.defaultRebuyAmount||50000;
   // Show users button only for admins with token
   const usersBtn = document.getElementById('btn-users-mgmt');
-  if(usersBtn) usersBtn.style.display = currentUser?.superAdmin?'block':'none';
+  if(usersBtn) usersBtn.style.display = (currentUser?.role==='superadmin')?'block':'none';
   box.style.display = box.style.display==='none' ? 'flex' : 'none';
 }
 
