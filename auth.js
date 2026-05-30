@@ -142,7 +142,9 @@ async function checkPass(){
       const data = await resp.json();
       console.log('Worker response:', resp.status, data);
       if(data.ok){
-        currentUser = {name:data.user.name, role:data.user.role, token:data.token, username: username, sheetsUrl: data.user.sheetsUrl||null};
+        const localUser = USERS.find(u => u.user === username.toLowerCase() || u.user === username);
+        const sheetsUrl = data.user.sheetsUrl || localUser?.sheetsUrl || null;
+        currentUser = {name:data.user.name, role:data.user.role, token:data.token, username: username, sheetsUrl};
         localStorage.setItem('auth_token', data.token);
         if(loginBtn){ loginBtn.textContent='כניסה'; loginBtn.disabled=false; }
         inp.value=''; if(userInp) userInp.value='';
