@@ -304,6 +304,7 @@ async function syncFromSheets(){
   if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 15000) return;
   // צופה משתמש ב-viewingAdmin כ-username
   const username = currentUser?.username || currentUser?.viewingAdmin || '';
+  console.log('syncFromSheets url:', url, 'username:', username);
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
