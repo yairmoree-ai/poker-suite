@@ -140,9 +140,13 @@ async function checkPass(){
         body:JSON.stringify({username, password:val})
       });
       const data = await resp.json();
-      console.log('Worker response:', resp.status, data);
       if(data.ok){
-        const localUser = USERS.find(u => u.user === username.toLowerCase() || u.user === username);
+        const localUser = USERS.find(u => 
+          u.user === username.toLowerCase() || 
+          u.user === username ||
+          u.name === username ||
+          u.name === data.user.name
+        );
         const sheetsUrl = data.user.sheetsUrl || localUser?.sheetsUrl || null;
         currentUser = {name:data.user.name, role:data.user.role, token:data.token, username: username, sheetsUrl};
         localStorage.setItem('auth_token', data.token);
