@@ -302,10 +302,12 @@ async function syncFromSheets(){
   if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
   if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 15000) return;
+  // צופה משתמש ב-viewingAdmin כ-username
+  const username = currentUser?.username || currentUser?.viewingAdmin || '';
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
-    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser?.username||'')+'&t='+Date.now(), {
+    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {
       method:'GET', redirect:'follow'
     });
     const r = JSON.parse(await resp.text());
@@ -466,10 +468,21 @@ function toggleSettings(){
   const usersBtn = document.getElementById('btn-users-mgmt');
   if(usersBtn) usersBtn.style.display = (currentUser?.role==='superadmin')?'block':'none';
 
+  // הצג שדה עריכת URL רק ל-superadmin
+  const gsEditRow = document.getElementById('gs-url-edit-row');
+  if(gsEditRow){
+    gsEditRow.style.display = isSuperAdmin() ? 'block' : 'none';
+    if(isSuperAdmin()){
+      const inp = document.getElementById('gs-url');
+      if(inp) inp.value = getGsUrl();
+    }
+  }
+
   // הצג URL לצופים אם המשתמש הוא מנהל
   const viewerUrlRow = document.getElementById('viewer-url-row');
   if(viewerUrlRow && isAdmin() && currentUser?.username){
-    const viewerUrl = location.origin + location.pathname + '?admin=' + encodeURIComponent(currentUser.username);
+    const adminKey = currentUser.username.match(/[a-zA-Z0-9_-]/) ? currentUser.username : (currentUser.usernameEn || currentUser.username);
+    const viewerUrl = location.origin + location.pathname + '?admin=' + encodeURIComponent(adminKey);
     const urlEl = document.getElementById('viewer-url-display');
     if(urlEl) urlEl.textContent = viewerUrl;
     viewerUrlRow.style.display = 'block';
