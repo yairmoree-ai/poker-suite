@@ -615,8 +615,18 @@ async function analyzeHand(h){
     try { data = JSON.parse(text2); } catch(e){ throw new Error('תגובה לא תקינה: '+text2.substring(0,50)); }
     if(!data.ok) throw new Error(data.error||'שגיאה');
     aContent.textContent = data.text;
-    
-    // Add copy + save buttons after result
+
+    // Auto-save analysis to hand immediately
+    const handIdx = (S.handLog||[]).findIndex(x=>x.id===h.id);
+    if(handIdx>=0){
+      S.handLog[handIdx].analysis = data.text;
+      S.handLog[handIdx].analysisDate = new Date().toLocaleDateString('he-IL');
+      h.analysis = data.text;
+      h.analysisDate = S.handLog[handIdx].analysisDate;
+      persist();
+    }
+
+    // Add copy + re-analyze buttons
     const btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;gap:8px;margin-top:14px';
     
@@ -629,58 +639,54 @@ async function analyzeHand(h){
         setTimeout(()=>copyBtn.textContent='📋 העתק', 2000);
       });
     };
-    
-    const saveBtn2 = document.createElement('button');
-    saveBtn2.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
-    saveBtn2.textContent = '💾 שמור ביד';
-    saveBtn2.onclick = async ()=>{
-      const handIdx = (S.handLog||[]).findIndex(x=>x.id===h.id);
-      if(handIdx>=0){
-        S.handLog[handIdx].analysis = data.text;
-        S.handLog[handIdx].analysisDate = new Date().toLocaleDateString('he-IL');
-        h.analysis = data.text;
-        h.analysisDate = S.handLog[handIdx].analysisDate;
-        persist();
-        saveBtn2.textContent = '✓ נשמר!';
-        saveBtn2.disabled = true;
-        notify('ניתוח נשמר ✓');
 
-        // Auto-generate notes per player
-        const token2 = currentUser?.token||localStorage.getItem('auth_token')||'';
-        const playerNames = (h.seats||[]).map(s=>s.playerName).filter(Boolean).join(', ');
-        try {
-          const nr = await fetch(AUTH_WORKER_URL+'/analyze-hand',{
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token2},
-            body:JSON.stringify({prompt:
-              'בהתבסס על ניתוח הפוקר הבא:\n\n'+data.text+'\n\n'+
-              'כתוב הערה קצרה ומעשית (משפט אחד) לכל שחקן: '+playerNames+
-              '.\nהחזר JSON בלבד: {"notes":{"שם":"הערה",...}} ללא כלום נוסף.'
-            })
-          });
-          const nd = await nr.json();
-          if(nd.ok){
-            const clean = nd.text.replace(/```json|```/g,'').trim();
-            const parsed = JSON.parse(clean);
-            const notes = parsed.notes||{};
-            const dateStr = new Date().toLocaleDateString('he-IL');
-            Object.entries(notes).forEach(([pName, note])=>{
-              const player = S.playerLib.find(p=>p.name===pName);
-              if(player){
-                if(!S.playerNotes) S.playerNotes={};
-                const existing = S.playerNotes[player.id]||'';
+    // Auto-generate notes per player
+    const saveNotesBtn = document.createElement('button');
+    saveNotesBtn.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
+    saveNotesBtn.textContent = '📝 שמור Notes';
+    saveNotesBtn.onclick = async ()=>{
+      saveNotesBtn.disabled = true; saveNotesBtn.textContent = '⏳ שומר...';
+      const token2 = currentUser?.token||localStorage.getItem('auth_token')||'';
+      const playerNames = (h.seats||[]).map(s=>s.playerName).filter(Boolean).join(', ');
+      try {
+        const nr = await fetch(AUTH_WORKER_URL+'/analyze-hand',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+token2},
+          body:JSON.stringify({prompt:
+            'בהתבסס על ניתוח הפוקר הבא:\n\n'+data.text+'\n\n'+
+            'כתוב הערה קצרה ומעשית (משפט אחד) לכל שחקן: '+playerNames+
+            '.\nהחזר JSON בלבד: {"notes":{"שם":"הערה",...}} ללא כלום נוסף.'
+          })
+        });
+        const nd = await nr.json();
+        if(nd.ok){
+          const clean = nd.text.replace(/```json|```/g,'').trim();
+          const parsed = JSON.parse(clean);
+          const notes = parsed.notes||{};
+          const dateStr = new Date().toLocaleDateString('he-IL');
+          Object.entries(notes).forEach(([name, note])=>{
+            const player = S.playerLib.find(p=>p.name===name);
+            if(player){
+              if(!S.playerNotes) S.playerNotes={};
+              const existing = S.playerNotes[player.id]||'';
+              // Don't duplicate same note
+              if(!existing.includes(note)){
                 S.playerNotes[player.id] = (existing?existing+'\n':'')+'['+dateStr+'] '+note;
               }
-            });
-            persist();
-            notify('📝 הערות נוספו לשחקנים');
-          }
-        } catch(e){ console.log('Notes error:',e); }
+            }
+          });
+          persist();
+          saveNotesBtn.textContent = '✓ נשמר!';
+          notify('📝 הערות נוספו לשחקנים');
+        }
+      } catch(e){
+        saveNotesBtn.textContent = '❌ שגיאה';
+        console.log('Notes error:',e);
       }
     };
     
     btnRow.appendChild(copyBtn);
-    btnRow.appendChild(saveBtn2);
+    btnRow.appendChild(saveNotesBtn);
     aBox.appendChild(btnRow);
     
   } catch(e){
