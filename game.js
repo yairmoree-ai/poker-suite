@@ -565,6 +565,8 @@ function showQuickInput(seatIdx, type){
 }
 
 function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלבד');return;}
+  // Cancel any pending long-press HUD timer
+  if(_longPressTimer){ clearTimeout(_longPressTimer); _longPressTimer=null; }
   const seat=S.seats.find(s=>s.seatIdx===seatIdx); if(!seat)return;
   const amt=parseFloat(amount)||0;
   if(!seat.actions)seat.actions=[];
@@ -671,24 +673,24 @@ function clickSeat(i){
 }
 
 // Long press on seat → HUD
+let _longPressTimer = null; // global — cancelled on any action or render
+
 function initSeatLongPress(el, seatIdx){
-  let timer=null, didLong=false, startX=0, startY=0;
-  function cancelTimer(){ if(timer){ clearTimeout(timer); timer=null; } didLong=false; }
+  let didLong=false, startX=0, startY=0;
+  function cancelTimer(){ if(_longPressTimer){ clearTimeout(_longPressTimer); _longPressTimer=null; } didLong=false; }
   function onTouchStart(e){
-    // Don't trigger if touch started on a button/interactive element
-    if(e.target.closest('button,input,select,a')){ return; }
-    didLong=false;
+    if(e.target.closest('button,input,select,a')) return;
+    cancelTimer(); didLong=false;
     startX=e.touches[0].clientX; startY=e.touches[0].clientY;
-    timer=setTimeout(()=>{ didLong=true; showPlayerHUD(seatIdx); },700);
+    _longPressTimer=setTimeout(()=>{ didLong=true; _longPressTimer=null; showPlayerHUD(seatIdx); },700);
   }
   function onTouchMove(e){
-    if(!timer) return;
+    if(!_longPressTimer) return;
     const dx=e.touches[0].clientX-startX, dy=e.touches[0].clientY-startY;
     if(Math.sqrt(dx*dx+dy*dy)>10) cancelTimer();
   }
   function onTouchEnd(e){
-    const wasLong = didLong;
-    cancelTimer();
+    const wasLong=didLong; cancelTimer();
     if(wasLong){ e.preventDefault(); e.stopPropagation(); }
   }
   el.addEventListener('touchstart', onTouchStart, {passive:true});
