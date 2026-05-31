@@ -78,6 +78,7 @@ let S={
   lastRaiseSize:0,  // size of last raise increment
   lastRaiseWasFull:true, // was last raise a full raise?
   btnLocked:false,
+  playerNotes:{},   // {playerId: 'note text'}
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
 let curHand=null, recStreet='פרה-פלופ', recActor='0';
@@ -151,7 +152,9 @@ function applySnapshot(v){
   if(v.place2Override!==undefined) S.place2Override=v.place2Override;
   if(v.handLog) S.handLog=v.handLog;
   if(v.tournLog) S.tournLog=v.tournLog;
+  if(v.playerNotes) S.playerNotes=v.playerNotes;
   // Ensure new fields always have defaults
+  if(!S.playerNotes) S.playerNotes={};
   if(S.currentActor===undefined) S.currentActor=null;
   if(S.bettingClosed===undefined) S.bettingClosed=false;
   if(S.lastRaiser===undefined) S.lastRaiser=null;
@@ -245,7 +248,8 @@ function fullSnapshot(){
     customBlindLevels:S.customBlindLevels, tableSize:S.tableSize,
     houseRake:S.houseRake, place4:S.place4, place3:S.place3,
     handLog:S.handLog, tournLog:S.tournLog,
-    blindTimer:S.blindTimer, blindStructure:S.blindStructure
+    blindTimer:S.blindTimer, blindStructure:S.blindStructure,
+    playerNotes:S.playerNotes||{}
   };
 }
 
