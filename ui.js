@@ -254,8 +254,38 @@ function showHandDetail(hid){
   // Analyze button
   const analyzeBtn = document.createElement('button');
   analyzeBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
-  analyzeBtn.textContent = '🔍 נתח יד';
+  analyzeBtn.textContent = h.analysis ? '🔍 נתח מחדש' : '🔍 נתח יד';
   analyzeBtn.onclick = ()=>analyzeHand(h);
+
+  // View saved analysis button
+  if(h.analysis){
+    const viewAnalysisBtn = document.createElement('button');
+    viewAnalysisBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+    viewAnalysisBtn.textContent = '📋 הצג ניתוח';
+    viewAnalysisBtn.onclick = ()=>{
+      document.getElementById('analyze-overlay')?.remove();
+      const aOverlay = document.createElement('div');
+      aOverlay.id = 'analyze-overlay';
+      aOverlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
+      aOverlay.onclick = e=>{ if(e.target===aOverlay) aOverlay.remove(); };
+      const aBox = document.createElement('div');
+      aBox.style.cssText = 'max-width:480px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:18px';
+      aBox.onclick = e=>e.stopPropagation();
+      aBox.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+        '<div><span style="font-size:15px;font-weight:800;color:#c8a96e">📋 ניתוח שמור</span>'+
+        (h.analysisDate?'<div style="font-size:10px;color:#5a5870;margin-top:2px">'+h.analysisDate+'</div>':'')+'</div>'+
+        '<button onclick="closeAnalyze()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>'+
+        '<div style="font-size:13px;color:#e2ddd4;line-height:1.7;white-space:pre-wrap">'+h.analysis+'</div>';
+      const copyBtn = document.createElement('button');
+      copyBtn.style.cssText = 'width:100%;margin-top:14px;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#e2ddd4;font-size:13px;font-weight:700;cursor:pointer';
+      copyBtn.textContent = '📋 העתק';
+      copyBtn.onclick = ()=>{ navigator.clipboard.writeText(h.analysis).then(()=>{ copyBtn.textContent='✓ הועתק!'; setTimeout(()=>copyBtn.textContent='📋 העתק',2000); }); };
+      aBox.appendChild(copyBtn);
+      aOverlay.appendChild(aBox);
+      document.body.appendChild(aOverlay);
+    };
+    hdr.appendChild(viewAnalysisBtn);
+  }
 
   hdr.appendChild(analyzeBtn);
   hdr.appendChild(closeBtn);
@@ -1343,4 +1373,3 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
-
