@@ -1054,9 +1054,9 @@ function pickCard(s){
   if(t?.startsWith('board')){
     const boardIdx = +t.replace('board','');
     S.board[boardIdx]=card;
-    // Auto-advance to next flop card
-    if(boardIdx===0&&!S.board[1]) setTimeout(()=>openCP('board1'),80);
-    else if(boardIdx===1&&!S.board[2]) setTimeout(()=>openCP('board2'),80);
+    // Auto-advance to next flop card (don't persist yet – wait for board2)
+    if(boardIdx===0&&!S.board[1]){ renderBoard(); setTimeout(()=>openCP('board1'),80); return; }
+    if(boardIdx===1&&!S.board[2]){ renderBoard(); setTimeout(()=>openCP('board2'),80); return; }
     // Clear bet chips when new betting round starts: after 3rd flop card, turn, river
     if(boardIdx===2||boardIdx===3||boardIdx===4){
       const newStreet = boardIdx===2?'פלופ':boardIdx===3?'טורן':'ריבר';
@@ -1070,33 +1070,31 @@ function pickCard(s){
         S.currentActor = null;
         S.bettingClosed = true;
         S.lastBet = 0;
+        persist(); renderSeats(); renderBoard();
         setTimeout(()=>{
           const bCnt = S.board.filter(Boolean).length;
           if(bCnt===5) showShowdownPanel();
           else autoOpenNextCard();
         }, 150);
+        return;
       } else {
         // Normal street – reset for new betting round
-        const newOrder = getActingOrder(newStreet);
-        S.currentActor = newOrder[0]||null;
-        S.bettingClosed = false;
         S.lastRaiser = null;
         S.actionCount = 0;
         S.raiseRound = 0;
         S.lastRaiseSize = 0;
         S.lastBet = 0;
         S.lastRaiseWasFull = true;
-      // Clear only the bet amounts (SB/BB stay, only last non-blind action cleared)
-      S.seats.forEach(seat=>{
-        if(seat.actions&&seat.actions.length>0){
-          // Keep cards and position info but clear bet actions for new street display
-          seat._streetCleared = (seat._streetCleared||0)+1;
-        }
-      });
-      // Clear bet chips container
-      const bc=document.getElementById('bet-chips-container');
-      if(bc) bc.innerHTML='';
-      renderLiveActions();
+        S.bettingClosed = false;
+        // Calculate first actor AFTER state is fully reset
+        const newOrder = getActingOrder(newStreet);
+        S.currentActor = newOrder.length > 0 ? newOrder[0] : null;
+        // Clear bet chips container
+        const bc=document.getElementById('bet-chips-container');
+        if(bc) bc.innerHTML='';
+        persist(); renderSeats(); renderBoard(); renderLiveActions();
+        return;
+      }
     }
   }
   else if(t?.startsWith('seat')){
@@ -1106,7 +1104,6 @@ function pickCard(s){
   persist(); renderSeats(); renderBoard();
   if(activeSeat!==null)renderSeatPanel();
 }
-} // close missing brace
 try{document.getElementById('card-picker').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});}catch(e){}
 
 // ═══════════════════════════════════════════════════════
@@ -1346,4 +1343,3 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
-
