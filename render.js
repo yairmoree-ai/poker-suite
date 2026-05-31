@@ -694,6 +694,7 @@ async function analyzeHand(h){
   }
 }
 function showPlayerHUD(seatIdx){
+  console.trace('showPlayerHUD called for seat', seatIdx);
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat?.playerId) return;
   
