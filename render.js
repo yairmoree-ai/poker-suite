@@ -751,6 +751,8 @@ async function openCameraForCards(target){
       // Use Google Apps Script as proxy to avoid CORS
       const resp = await fetch(getGsUrl(), {
         method:'POST',
+        redirect:'follow',
+        headers:{'Content-Type':'text/plain'},
         body: JSON.stringify({
           action:'identify_cards',
           image: base64,
@@ -758,7 +760,8 @@ async function openCameraForCards(target){
         })
       });
       
-      const data = await resp.json();
+      const text = await resp.text();
+      const data = JSON.parse(text);
       if(!data.ok) throw new Error(data.error||'שגיאה לא ידועה');
       const cards = data.cards||[];
 
