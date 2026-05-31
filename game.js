@@ -1017,6 +1017,99 @@ function awardPot(winnerSeatIdxs, showAnim=true){
   },400);
 }
 
+// ═══════════════════════════════════════════════════════
+// HAND EVALUATOR
+// ═══════════════════════════════════════════════════════
+function evaluateHand(cards){
+  // cards = array of {rank, suit}, 5-7 cards
+  // Returns {rank: 0-8, name: string, tiebreak: [...]}
+  if(!cards||cards.length<2) return null;
+  const RANKS={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+  const toNum = c=>RANKS[c.rank]||0;
+
+  // Generate all 5-card combinations from 5-7 cards
+  function combos(arr, k){
+    if(k===arr.length) return [arr];
+    if(k===1) return arr.map(x=>[x]);
+    const res=[];
+    for(let i=0;i<=arr.length-k;i++){
+      combos(arr.slice(i+1),k-1).forEach(c=>res.push([arr[i],...c]));
+    }
+    return res;
+  }
+
+  function score5(hand){
+    const vals = hand.map(toNum).sort((a,b)=>b-a);
+    const suits = hand.map(c=>c.suit);
+    const flush = suits.every(s=>s===suits[0]);
+    const counts = {};
+    vals.forEach(v=>counts[v]=(counts[v]||0)+1);
+    const groups = Object.entries(counts).map(([v,c])=>({v:+v,c})).sort((a,b)=>b.c-a.c||b.v-a.v);
+    const straight = (()=>{
+      const u=[...new Set(vals)];
+      if(u.length<5) return false;
+      if(u[0]-u[4]===4) return u[0];
+      // Wheel: A-2-3-4-5
+      if(u[0]===14&&u[1]===5&&u[2]===4&&u[3]===3&&u[4]===2) return 5;
+      return false;
+    })();
+    const sf = straight && flush;
+    if(sf) return {rank:8, tb:[straight]};
+    if(groups[0].c===4) return {rank:7, tb:[groups[0].v, groups[1].v]};
+    if(groups[0].c===3&&groups[1].c===2) return {rank:6, tb:[groups[0].v, groups[1].v]};
+    if(flush) return {rank:5, tb:vals};
+    if(straight) return {rank:4, tb:[straight]};
+    if(groups[0].c===3) return {rank:3, tb:[groups[0].v,...groups.slice(1).map(g=>g.v)]};
+    if(groups[0].c===2&&groups[1].c===2) return {rank:2, tb:[groups[0].v, groups[1].v, groups[2].v]};
+    if(groups[0].c===2) return {rank:1, tb:[groups[0].v,...groups.slice(1).map(g=>g.v)]};
+    return {rank:0, tb:vals};
+  }
+
+  const HAND_NAMES=['High Card','One Pair','Two Pair','Three of a Kind','Straight','Flush','Full House','Four of a Kind','Straight Flush'];
+  const fiveCombos = cards.length===5 ? [cards] : combos(cards, 5);
+  let best = null;
+  fiveCombos.forEach(combo=>{
+    const s = score5(combo);
+    if(!best||s.rank>best.rank||(s.rank===best.rank&&s.tb.join()>best.tb.join())) best=s;
+  });
+  return best ? {...best, name:HAND_NAMES[best.rank]} : null;
+}
+
+function detectShowdownWinner(eligible, board){
+  // eligible = array of seat objects with .cards
+  // board = array of card objects
+  const boardCards = (board||[]).filter(Boolean);
+  const results = eligible.map(seat=>{
+    const holeCards = (seat.cards||[]).filter(Boolean);
+    if(!holeCards.length) return {seatIdx:seat.seatIdx, score:null};
+    const allCards = [...holeCards, ...boardCards];
+    const score = evaluateHand(allCards);
+    return {seatIdx:seat.seatIdx, score, name:pName(seat.playerId)};
+  }).filter(r=>r.score);
+
+  if(!results.length) return null;
+
+  // Find best rank
+  const bestRank = Math.max(...results.map(r=>r.score.rank));
+  const bestHands = results.filter(r=>r.score.rank===bestRank);
+
+  if(bestHands.length===1) return {winners:[bestHands[0].seatIdx], handName:bestHands[0].score.name, isTie:false};
+
+  // Tiebreak
+  const tb = bestHands[0].score.tb.length;
+  let remaining = [...bestHands];
+  for(let i=0;i<tb;i++){
+    const maxVal = Math.max(...remaining.map(r=>r.score.tb[i]||0));
+    remaining = remaining.filter(r=>(r.score.tb[i]||0)===maxVal);
+    if(remaining.length===1) break;
+  }
+  return {
+    winners: remaining.map(r=>r.seatIdx),
+    handName: remaining[0].score.name,
+    isTie: remaining.length>1
+  };
+}
+
 function showShowdownPanel(){
   document.getElementById('showdown-overlay')?.remove();
   const overlay = document.createElement('div');
@@ -1052,22 +1145,66 @@ function showShowdownPanel(){
   const eligible = S.seats.filter(s=>s.playerId&&!s.folded);
   let selected = [];
 
+  // Auto-detect winner if all players have cards
+  const allHaveCards = eligible.every(s=>(s.cards||[]).filter(Boolean).length>=2);
+  const autoResult = allHaveCards ? detectShowdownWinner(eligible, S.board) : null;
+  if(autoResult){
+    selected = [...autoResult.winners];
+  }
+
+  // Helper to visually select a row
+  function selectRow(seatIdx, isSelected){
+    const row = document.getElementById('sd-seat-'+seatIdx);
+    const chk = document.getElementById('sd-check-'+seatIdx);
+    if(!row||!chk) return;
+    if(isSelected){
+      row.style.background='rgba(200,169,110,0.15)'; row.style.borderColor='#c8a96e';
+      chk.innerHTML='✓'; chk.style.cssText='width:20px;height:20px;border-radius:50%;border:2px solid #c8a96e;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#c8a96e;font-size:12px;font-weight:900';
+    } else {
+      row.style.background='rgba(255,255,255,0.04)'; row.style.borderColor='rgba(255,255,255,0.08)';
+      chk.innerHTML=''; chk.style.borderColor='rgba(255,255,255,0.2)';
+    }
+  }
+
+  // Auto-detect status label
+  if(autoResult){
+    const autoLbl = document.createElement('div');
+    autoLbl.style.cssText = 'font-size:11px;text-align:center;margin-bottom:10px;padding:5px 10px;border-radius:8px;background:rgba(95,196,122,0.1);color:#5fc47a;border:1px solid rgba(95,196,122,0.2)';
+    autoLbl.textContent = (autoResult.isTie?'🤝 תיקו — ':'🤖 זוהה: ')+autoResult.handName;
+    box.appendChild(autoLbl);
+  } else if(eligible.some(s=>(s.cards||[]).filter(Boolean).length<2)){
+    const noCardsLbl = document.createElement('div');
+    noCardsLbl.style.cssText = 'font-size:11px;text-align:center;margin-bottom:10px;color:#5a5870';
+    noCardsLbl.textContent = '💡 סמן קלפים לזיהוי מנצח אוטומטי';
+    box.appendChild(noCardsLbl);
+  }
+
   eligible.forEach(seat=>{
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);margin-bottom:8px;cursor:pointer';
     row.id = 'sd-seat-'+seat.seatIdx;
     const swp = assignPos();
     const pos = swp.find(s=>s.seatIdx===seat.seatIdx)?.pos||'';
+    const holeCards = (seat.cards||[]).filter(Boolean);
+    const handScore = holeCards.length>=2 ? evaluateHand([...holeCards,...S.board.filter(Boolean)]) : null;
+    const cardsStr = holeCards.map(c=>c.rank+c.suit).join(' ');
     row.innerHTML =
       '<div style="width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0" id="sd-check-'+seat.seatIdx+'"></div>'+
-      '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#e2ddd4">'+pName(seat.playerId)+'</div><div style="font-size:10px;color:#5a5870">'+pos+' · ₪'+seat.stack.toLocaleString()+'</div></div>';
+      '<div style="flex:1">'+
+        '<div style="font-size:13px;font-weight:700;color:#e2ddd4">'+pName(seat.playerId)+'</div>'+
+        '<div style="font-size:10px;color:#5a5870">'+pos+' · ₪'+seat.stack.toLocaleString()+'</div>'+
+        (cardsStr?'<div style="font-size:10px;color:#c8a96e;font-weight:700;direction:ltr;text-align:right">'+cardsStr+(handScore?' · <span style="color:#5fc47a">'+handScore.name+'</span>':'')+'</div>':'')+
+      '</div>';
     row.onclick = ()=>{
       const idx2 = selected.indexOf(seat.seatIdx);
-      if(idx2>=0){ selected.splice(idx2,1); row.style.background='rgba(255,255,255,0.04)'; row.style.borderColor='rgba(255,255,255,0.08)'; document.getElementById('sd-check-'+seat.seatIdx).innerHTML=''; document.getElementById('sd-check-'+seat.seatIdx).style.borderColor='rgba(255,255,255,0.2)'; }
-      else{ selected.push(seat.seatIdx); row.style.background='rgba(200,169,110,0.15)'; row.style.borderColor='#c8a96e'; document.getElementById('sd-check-'+seat.seatIdx).innerHTML='✓'; document.getElementById('sd-check-'+seat.seatIdx).style.cssText='width:20px;height:20px;border-radius:50%;border:2px solid #c8a96e;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#c8a96e;font-size:12px;font-weight:900'; }
+      if(idx2>=0){ selected.splice(idx2,1); selectRow(seat.seatIdx, false); }
+      else{ selected.push(seat.seatIdx); selectRow(seat.seatIdx, true); }
     };
     box.appendChild(row);
   });
+
+  // Apply auto-selection after rows are in DOM
+  setTimeout(()=>{ selected.forEach(s=>selectRow(s, true)); }, 0);
 
   const winBtn = document.createElement('button');
   winBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:15px;cursor:pointer;margin-top:4px';
