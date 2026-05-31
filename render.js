@@ -1214,6 +1214,8 @@ function renderSeats(){
       el.appendChild(btns);
     }
     cont.appendChild(el);
+    // Init long press for HUD (mobile)
+    if(seat?.playerId) initSeatLongPress(el, i);
   }
 
   // Render floating bet chips
