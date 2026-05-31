@@ -672,12 +672,29 @@ function clickSeat(i){
 
 // Long press on seat → HUD
 function initSeatLongPress(el, seatIdx){
-  let timer=null, didLong=false;
-  el.addEventListener('touchstart',()=>{ didLong=false; timer=setTimeout(()=>{ didLong=true; showPlayerHUD(seatIdx); },600); },{passive:true});
-  el.addEventListener('touchend',()=>{ if(timer){clearTimeout(timer);timer=null;} });
-  el.addEventListener('touchcancel',()=>{ if(timer){clearTimeout(timer);timer=null;} });
-  el.addEventListener('mousedown',()=>{ didLong=false; timer=setTimeout(()=>{ didLong=true; showPlayerHUD(seatIdx); },600); });
-  el.addEventListener('mouseup',()=>{ if(timer){clearTimeout(timer);timer=null;} });
+  let timer=null, didLong=false, startX=0, startY=0;
+  function cancelTimer(){ if(timer){ clearTimeout(timer); timer=null; } didLong=false; }
+  function onTouchStart(e){
+    // Don't trigger if touch started on a button/interactive element
+    if(e.target.closest('button,input,select,a')){ return; }
+    didLong=false;
+    startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+    timer=setTimeout(()=>{ didLong=true; showPlayerHUD(seatIdx); },700);
+  }
+  function onTouchMove(e){
+    if(!timer) return;
+    const dx=e.touches[0].clientX-startX, dy=e.touches[0].clientY-startY;
+    if(Math.sqrt(dx*dx+dy*dy)>10) cancelTimer();
+  }
+  function onTouchEnd(e){
+    const wasLong = didLong;
+    cancelTimer();
+    if(wasLong){ e.preventDefault(); e.stopPropagation(); }
+  }
+  el.addEventListener('touchstart', onTouchStart, {passive:true});
+  el.addEventListener('touchmove',  onTouchMove,  {passive:true});
+  el.addEventListener('touchend',   onTouchEnd,   {passive:false});
+  el.addEventListener('touchcancel',cancelTimer);
 }
 function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
 function setSeatPlayer(i,pid){
