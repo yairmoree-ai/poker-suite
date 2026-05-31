@@ -253,16 +253,28 @@ function showHandDetail(hid){
   
   // Analyze button
   const analyzeBtn = document.createElement('button');
+  analyzeBtn.id = 'analyze-hand-btn-'+h.id;
   analyzeBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
   analyzeBtn.textContent = h.analysis ? '🔍 נתח מחדש' : '🔍 נתח יד';
-  analyzeBtn.onclick = ()=>analyzeHand(h);
+  analyzeBtn.onclick = ()=>{
+    analyzeHand(h).then(()=>{
+      // Refresh button after analysis completes
+      analyzeBtn.textContent = '🔍 נתח מחדש';
+      // Show view button if not already there
+      if(!document.getElementById('view-analysis-btn-'+h.id)){
+        const vb = makeViewAnalysisBtn(h);
+        analyzeBtn.parentElement?.insertBefore(vb, analyzeBtn);
+      }
+    }).catch(()=>{});
+  };
 
-  // View saved analysis button
-  if(h.analysis){
-    const viewAnalysisBtn = document.createElement('button');
-    viewAnalysisBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
-    viewAnalysisBtn.textContent = '📋 הצג ניתוח';
-    viewAnalysisBtn.onclick = ()=>{
+  // View saved analysis button helper
+  function makeViewAnalysisBtn(hand){
+    const btn = document.createElement('button');
+    btn.id = 'view-analysis-btn-'+hand.id;
+    btn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+    btn.textContent = '📋 הצג ניתוח';
+    btn.onclick = ()=>{
       document.getElementById('analyze-overlay')?.remove();
       const aOverlay = document.createElement('div');
       aOverlay.id = 'analyze-overlay';
@@ -273,18 +285,23 @@ function showHandDetail(hid){
       aBox.onclick = e=>e.stopPropagation();
       aBox.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
         '<div><span style="font-size:15px;font-weight:800;color:#c8a96e">📋 ניתוח שמור</span>'+
-        (h.analysisDate?'<div style="font-size:10px;color:#5a5870;margin-top:2px">'+h.analysisDate+'</div>':'')+'</div>'+
+        (hand.analysisDate?'<div style="font-size:10px;color:#5a5870;margin-top:2px">'+hand.analysisDate+'</div>':'')+'</div>'+
         '<button onclick="closeAnalyze()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>'+
-        '<div style="font-size:13px;color:#e2ddd4;line-height:1.7;white-space:pre-wrap">'+h.analysis+'</div>';
+        '<div style="font-size:13px;color:#e2ddd4;line-height:1.7;white-space:pre-wrap">'+hand.analysis+'</div>';
       const copyBtn = document.createElement('button');
       copyBtn.style.cssText = 'width:100%;margin-top:14px;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#e2ddd4;font-size:13px;font-weight:700;cursor:pointer';
       copyBtn.textContent = '📋 העתק';
-      copyBtn.onclick = ()=>{ navigator.clipboard.writeText(h.analysis).then(()=>{ copyBtn.textContent='✓ הועתק!'; setTimeout(()=>copyBtn.textContent='📋 העתק',2000); }); };
+      copyBtn.onclick = ()=>{ navigator.clipboard.writeText(hand.analysis).then(()=>{ copyBtn.textContent='✓ הועתק!'; setTimeout(()=>copyBtn.textContent='📋 העתק',2000); }); };
       aBox.appendChild(copyBtn);
       aOverlay.appendChild(aBox);
       document.body.appendChild(aOverlay);
     };
-    hdr.appendChild(viewAnalysisBtn);
+    return btn;
+  }
+
+  // View saved analysis button
+  if(h.analysis){
+    hdr.appendChild(makeViewAnalysisBtn(h));
   }
 
   hdr.appendChild(analyzeBtn);
