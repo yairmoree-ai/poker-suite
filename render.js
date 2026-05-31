@@ -520,24 +520,11 @@ async function analyzeHand(h){
   const board = (h.board||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
   const blinds = h.blinds||'';
   
-  // My seat — match by name or playerId
+  // My seat
   const myName = currentUser?.name||'';
-  const mySeat = (h.seats||[]).find(s=>
-    s.playerName===myName ||
-    (s.playerId && pName(s.playerId)===myName)
-  );
-  const myCards = mySeat
-    ? (mySeat.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ') || 'לא סומנו'
-    : 'לא ידוע';
+  const mySeat = (h.seats||[]).find(s=>s.playerName===myName);
+  const myCards = mySeat?(mySeat.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' '):'לא ידוע';
   const myPos = mySeat?.pos||'לא ידוע';
-
-  // All players' cards (for full hand context)
-  const allCardsStr = (h.seats||[])
-    .filter(s=>s.playerName&&(s.cards||[]).some(Boolean))
-    .map(s=>{
-      const cards = (s.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
-      return s.playerName+'('+s.pos+'): '+cards;
-    }).join(', ');
   
   // Build street-by-street actions
   const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
@@ -563,8 +550,7 @@ async function analyzeHand(h){
     'בליינדים: '+blinds+'\n'+
     'לוח: '+(board||'טרם נחשף')+'\n'+
     'הקלפים שלי ('+myName+'): '+myCards+'\n'+
-    'העמדה שלי: '+myPos+'\n'+
-    (allCardsStr?'קלפי שחקנים: '+allCardsStr+'\n':'')+'\n'+
+    'העמדה שלי: '+myPos+'\n\n'+
     '**פעולות:**\n'+streetActions+'\n\n'+
     '**HUD יריבים:**\n'+(hudInfo||'אין נתונים')+'\n\n'+
     '**נתח:**\n'+
@@ -615,18 +601,8 @@ async function analyzeHand(h){
     try { data = JSON.parse(text2); } catch(e){ throw new Error('תגובה לא תקינה: '+text2.substring(0,50)); }
     if(!data.ok) throw new Error(data.error||'שגיאה');
     aContent.textContent = data.text;
-
-    // Auto-save analysis to hand immediately
-    const handIdx = (S.handLog||[]).findIndex(x=>x.id===h.id);
-    if(handIdx>=0){
-      S.handLog[handIdx].analysis = data.text;
-      S.handLog[handIdx].analysisDate = new Date().toLocaleDateString('he-IL');
-      h.analysis = data.text;
-      h.analysisDate = S.handLog[handIdx].analysisDate;
-      persist();
-    }
-
-    // Add copy + re-analyze buttons
+    
+    // Add copy + save buttons after result
     const btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;gap:8px;margin-top:14px';
     
@@ -639,54 +615,58 @@ async function analyzeHand(h){
         setTimeout(()=>copyBtn.textContent='📋 העתק', 2000);
       });
     };
+    
+    const saveBtn2 = document.createElement('button');
+    saveBtn2.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
+    saveBtn2.textContent = '💾 שמור ביד';
+    saveBtn2.onclick = async ()=>{
+      const handIdx = (S.handLog||[]).findIndex(x=>x.id===h.id);
+      if(handIdx>=0){
+        S.handLog[handIdx].analysis = data.text;
+        S.handLog[handIdx].analysisDate = new Date().toLocaleDateString('he-IL');
+        h.analysis = data.text;
+        h.analysisDate = S.handLog[handIdx].analysisDate;
+        persist();
+        saveBtn2.textContent = '✓ נשמר!';
+        saveBtn2.disabled = true;
+        notify('ניתוח נשמר ✓');
 
-    // Auto-generate notes per player
-    const saveNotesBtn = document.createElement('button');
-    saveNotesBtn.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
-    saveNotesBtn.textContent = '📝 שמור Notes';
-    saveNotesBtn.onclick = async ()=>{
-      saveNotesBtn.disabled = true; saveNotesBtn.textContent = '⏳ שומר...';
-      const token2 = currentUser?.token||localStorage.getItem('auth_token')||'';
-      const playerNames = (h.seats||[]).map(s=>s.playerName).filter(Boolean).join(', ');
-      try {
-        const nr = await fetch(AUTH_WORKER_URL+'/analyze-hand',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':'Bearer '+token2},
-          body:JSON.stringify({prompt:
-            'בהתבסס על ניתוח הפוקר הבא:\n\n'+data.text+'\n\n'+
-            'כתוב הערה קצרה ומעשית (משפט אחד) לכל שחקן: '+playerNames+
-            '.\nהחזר JSON בלבד: {"notes":{"שם":"הערה",...}} ללא כלום נוסף.'
-          })
-        });
-        const nd = await nr.json();
-        if(nd.ok){
-          const clean = nd.text.replace(/```json|```/g,'').trim();
-          const parsed = JSON.parse(clean);
-          const notes = parsed.notes||{};
-          const dateStr = new Date().toLocaleDateString('he-IL');
-          Object.entries(notes).forEach(([name, note])=>{
-            const player = S.playerLib.find(p=>p.name===name);
-            if(player){
-              if(!S.playerNotes) S.playerNotes={};
-              const existing = S.playerNotes[player.id]||'';
-              // Don't duplicate same note
-              if(!existing.includes(note)){
+        // Auto-generate notes per player
+        const token2 = currentUser?.token||localStorage.getItem('auth_token')||'';
+        const playerNames = (h.seats||[]).map(s=>s.playerName).filter(Boolean).join(', ');
+        try {
+          const nr = await fetch(AUTH_WORKER_URL+'/analyze-hand',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token2},
+            body:JSON.stringify({prompt:
+              'בהתבסס על ניתוח הפוקר הבא:\n\n'+data.text+'\n\n'+
+              'כתוב הערה קצרה ומעשית (משפט אחד) לכל שחקן: '+playerNames+
+              '.\nהחזר JSON בלבד: {"notes":{"שם":"הערה",...}} ללא כלום נוסף.'
+            })
+          });
+          const nd = await nr.json();
+          if(nd.ok){
+            const clean = nd.text.replace(/```json|```/g,'').trim();
+            const parsed = JSON.parse(clean);
+            const notes = parsed.notes||{};
+            const dateStr = new Date().toLocaleDateString('he-IL');
+            Object.entries(notes).forEach(([pName, note])=>{
+              const player = S.playerLib.find(p=>p.name===pName);
+              if(player){
+                if(!S.playerNotes) S.playerNotes={};
+                const existing = S.playerNotes[player.id]||'';
                 S.playerNotes[player.id] = (existing?existing+'\n':'')+'['+dateStr+'] '+note;
               }
-            }
-          });
-          persist();
-          saveNotesBtn.textContent = '✓ נשמר!';
-          notify('📝 הערות נוספו לשחקנים');
-        }
-      } catch(e){
-        saveNotesBtn.textContent = '❌ שגיאה';
-        console.log('Notes error:',e);
+            });
+            persist();
+            notify('📝 הערות נוספו לשחקנים');
+          }
+        } catch(e){ console.log('Notes error:',e); }
       }
     };
     
     btnRow.appendChild(copyBtn);
-    btnRow.appendChild(saveNotesBtn);
+    btnRow.appendChild(saveBtn2);
     aBox.appendChild(btnRow);
     
   } catch(e){
@@ -747,9 +727,7 @@ function hudStat(label, value, color, desc){
 }
 
 async function openCameraForCards(target){
-  if(typeof ANTHROPIC_KEY==='undefined'||!ANTHROPIC_KEY||ANTHROPIC_KEY.includes('...')){
-    notify('הגדר ANTHROPIC_KEY בקוד קודם'); return;
-  }
+  if(!getGsUrl()){ notify('הגדר Google Sheets URL קודם'); return; }
   // Create file input for camera
   const input = document.createElement('input');
   input.type = 'file';
@@ -771,7 +749,6 @@ async function openCameraForCards(target){
         : 'זהה את 2 קלפי הפוקר של השחקן בתמונה. החזר JSON בלבד: {"cards":[{"rank":"A","suit":"♥"},{"rank":"K","suit":"♠"}]}';
 
       // Use Google Apps Script as proxy to avoid CORS
-      if(!getGsUrl()){ notify('הגדר Google Sheets URL קודם'); return; }
       const resp = await fetch(getGsUrl(), {
         method:'POST',
         body: JSON.stringify({
@@ -1214,8 +1191,6 @@ function renderSeats(){
       el.appendChild(btns);
     }
     cont.appendChild(el);
-    // Init long press for HUD (mobile)
-    if(seat?.playerId) initSeatLongPress(el, i);
   }
 
   // Render floating bet chips
