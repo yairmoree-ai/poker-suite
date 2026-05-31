@@ -613,6 +613,8 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   if(type==='All-in')seat.allin=true;
   if(amt>0){
     seat.stack=Math.max(0,(seat.stack||0)-deltaAmt);
+    // Auto-mark allin if stack reached 0 (e.g. called all chips)
+    if(seat.stack===0 && !seat.folded) seat.allin=true;
     // Track last bet for Call default
     if(['Open','Raise','3bet','4bet','5bet','All-in','Bet'].includes(type)){
       const raiseIncrement = amt - S.lastBet;
@@ -871,6 +873,41 @@ function undoAward(){
   setTimeout(()=>showShowdownPanel(), 300);
 }
 
+// ═══════════════════════════════════════════════════════
+// SIDE POT CALCULATION
+// ═══════════════════════════════════════════════════════
+function calcSidePots(){
+  // Returns array of {amount, eligible:[seatIdx,...]}
+  const activePlayers = S.seats.filter(s=>s.playerId&&!s.folded);
+  const contributions = activePlayers.map(s=>({
+    seatIdx: s.seatIdx,
+    total: (s.actions||[]).reduce((sum,a)=>sum+(Number(a.amount)||0), 0),
+    allin: s.allin||false
+  }));
+  const allinLevels = [...new Set(
+    contributions.filter(c=>c.allin).map(c=>c.total)
+  )].sort((a,b)=>a-b);
+
+  if(!allinLevels.length) return [{amount: calcPot(), eligible: contributions.map(c=>c.seatIdx)}];
+
+  const sidePots = [];
+  let prevLevel = 0;
+  for(const level of allinLevels){
+    const potSlice = level - prevLevel;
+    const eligible = contributions.filter(c=>c.total >= level).map(c=>c.seatIdx);
+    sidePots.push({amount: potSlice * eligible.length, eligible});
+    prevLevel = level;
+  }
+  // Remaining above all all-in levels → only non-allin players eligible
+  const nonAllinAbove = contributions.filter(c=>c.total > prevLevel && !c.allin);
+  if(nonAllinAbove.length > 0){
+    const extraAmt = nonAllinAbove.reduce((sum,c)=>sum+(c.total - prevLevel), 0);
+    const eligible = nonAllinAbove.map(c=>c.seatIdx);
+    sidePots.push({amount: extraAmt, eligible});
+  }
+  return sidePots;
+}
+
 function checkAutoWin(){
   // All folded except one (including all-in players)
   const active = S.seats.filter(s=>s.playerId&&!s.folded);
@@ -889,17 +926,35 @@ function checkAutoWin(){
 }
 
 function awardPot(winnerSeatIdxs, showAnim=true){
-  const pot = calcPot();
-  if(!pot) return;
-  const share = Math.floor(pot / winnerSeatIdxs.length);
-  // Save state for undo
+  const totalPot = calcPot();
+  if(!totalPot) return;
+
+  // Calculate per-winner awards respecting side pots
+  const sidePots = calcSidePots();
+  const awards = {}; // seatIdx -> total amount won
+  sidePots.forEach(sp=>{
+    const potWinners = winnerSeatIdxs.filter(w=>sp.eligible.includes(w));
+    if(!potWinners.length){
+      // No eligible winner selected — return to eligible players (e.g. all-in loser gets uncallable back)
+      // This handles: loser was all-in, nobody won that slice — shouldn't happen in normal play
+      // Give to first eligible non-winner as return
+      const ret = sp.eligible.find(e=>!winnerSeatIdxs.includes(e));
+      if(ret) awards[ret] = (awards[ret]||0) + sp.amount;
+    } else {
+      const share = Math.floor(sp.amount / potWinners.length);
+      potWinners.forEach(w=>{ awards[w]=(awards[w]||0)+share; });
+    }
+  });
+  // Rounding remainder to first winner
+  const totalAwarded = Object.values(awards).reduce((s,v)=>s+v,0);
+  const remainder = totalPot - totalAwarded;
+  if(remainder>0 && winnerSeatIdxs.length>0) awards[winnerSeatIdxs[0]]=(awards[winnerSeatIdxs[0]]||0)+remainder;
+
+  const pot = totalPot;
   S._preAwardState = {
     seats: S.seats.map(s=>({...s, actions:[...(s.actions||[])], cards:[...(s.cards||[null,null])]})),
-    lastWinners: winnerSeatIdxs,
-    pot
+    lastWinners: winnerSeatIdxs, pot
   };
-
-  // Set winner highlight immediately
   S._winners = winnerSeatIdxs;
   S._lastWinners = winnerSeatIdxs.map(idx=>({
     seatIdx:idx,
@@ -908,58 +963,58 @@ function awardPot(winnerSeatIdxs, showAnim=true){
   }));
   renderSeats();
 
-  // Animate pot flying to winner(s)
+  // Animate
   const tableWrap = document.getElementById('table-wrap');
   const potEl = document.getElementById('pot-display');
   if(tableWrap && showAnim){
-    winnerSeatIdxs.forEach(sIdx=>{
+    Object.entries(awards).forEach(([sIdx, amt])=>{
+      if(!amt) return;
       const seatEl = document.querySelector('.seat-el[data-seat="'+sIdx+'"]');
       if(!seatEl||!potEl) return;
       const twRect = tableWrap.getBoundingClientRect();
       const potRect = potEl.getBoundingClientRect();
       const seatRect = seatEl.getBoundingClientRect();
-      const startX = potRect.left + potRect.width/2 - twRect.left;
-      const startY = potRect.top + potRect.height/2 - twRect.top;
-      const endX = seatRect.left + seatRect.width/2 - twRect.left;
-      const endY = seatRect.top + seatRect.height/2 - twRect.top;
+      const startX = potRect.left+potRect.width/2-twRect.left;
+      const startY = potRect.top+potRect.height/2-twRect.top;
+      const endX = seatRect.left+seatRect.width/2-twRect.left;
+      const endY = seatRect.top+seatRect.height/2-twRect.top;
       const chip = document.createElement('div');
       chip.style.cssText = 'position:absolute;left:'+startX+'px;top:'+startY+'px;background:#5fc47a;color:#0a0d14;font-size:13px;font-weight:900;padding:4px 12px;border-radius:12px;pointer-events:none;z-index:100;white-space:nowrap;--tx:'+(endX-startX)+'px;--ty:'+(endY-startY)+'px;animation:potFly 0.7s ease-in forwards';
-      chip.textContent = '₪'+share.toLocaleString();
+      chip.textContent = '₪'+amt.toLocaleString();
       tableWrap.appendChild(chip);
       setTimeout(()=>chip.remove(), 750);
     });
   }
 
-  // Update stacks after animation
   setTimeout(()=>{
-    winnerSeatIdxs.forEach(sIdx=>{
-      const seat = S.seats.find(s=>s.seatIdx===sIdx);
-      if(seat) seat.stack = (seat.stack||0) + share;
+    // Apply awards to all recipients (winners + any returned amounts)
+    Object.entries(awards).forEach(([sIdx,amt])=>{
+      const seat = S.seats.find(s=>s.seatIdx===+sIdx);
+      if(seat) seat.stack=(seat.stack||0)+amt;
     });
-    const bc = document.getElementById('bet-chips-container');
+    const bc=document.getElementById('bet-chips-container');
     if(bc) bc.innerHTML='';
-  S._winPot = pot;
-  persist();
-  renderSeats(); renderBoard();
-  // Keep winners highlighted until hand is reset
-  // S._winners will be cleared in resetHand()
-  const names = winnerSeatIdxs.map(i=>pName(S.seats.find(s=>s.seatIdx===i)?.playerId)||'?').join(' + ');
-    notify('🏆 '+names+' זכה בקופה ₪'+pot.toLocaleString());
-    // Show undo button, then auto-save after 8 seconds
+    S._winPot=pot;
+    persist(); renderSeats(); renderBoard();
+    const names=winnerSeatIdxs.map(i=>pName(S.seats.find(s=>s.seatIdx===i)?.playerId)||'?').join(' + ');
+    const winAmt=winnerSeatIdxs.reduce((s,i)=>s+(awards[i]||0),0);
+    // Show side pot info if relevant
+    const hasReturn = Object.keys(awards).some(k=>!winnerSeatIdxs.includes(+k)&&awards[k]>0);
+    const returnStr = hasReturn ? ' · ' + Object.entries(awards)
+      .filter(([k])=>!winnerSeatIdxs.includes(+k))
+      .map(([k,v])=>'↩₪'+v.toLocaleString()+' ל-'+(pName(S.seats.find(s=>s.seatIdx===+k)?.playerId)||'?'))
+      .join(' ') : '';
+    notify('🏆 '+names+' זכה ₪'+winAmt.toLocaleString()+returnStr);
     setTimeout(()=>{
-      const nb = document.createElement('button');
-      nb.id = 'undo-award-btn';
-      nb.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:12px;border:1px solid rgba(224,123,106,0.5);background:rgba(224,123,106,0.15);color:#e07b6a;font-size:13px;font-weight:800;cursor:pointer;z-index:200';
-      nb.textContent = '↩ בטל הכרזה';
-      nb.onclick = ()=>{ undoAward(); nb.remove(); clearTimeout(nb._saveTimer); };
+      const nb=document.createElement('button');
+      nb.id='undo-award-btn';
+      nb.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:12px;border:1px solid rgba(224,123,106,0.5);background:rgba(224,123,106,0.15);color:#e07b6a;font-size:13px;font-weight:800;cursor:pointer;z-index:200';
+      nb.textContent='↩ בטל הכרזה';
+      nb.onclick=()=>{ undoAward(); nb.remove(); clearTimeout(nb._saveTimer); };
       document.body.appendChild(nb);
-      // Auto-save after 8 seconds
-      nb._saveTimer = setTimeout(()=>{
-        nb.remove();
-        autoSaveAndPromptReset(winnerSeatIdxs);
-      }, 8000);
-    }, 800);
-  }, 400);
+      nb._saveTimer=setTimeout(()=>{ nb.remove(); autoSaveAndPromptReset(winnerSeatIdxs); },8000);
+    },800);
+  },400);
 }
 
 function showShowdownPanel(){
@@ -976,7 +1031,21 @@ function showShowdownPanel(){
   title.textContent = '🏆 מי ניצח?';
   const pot = document.createElement('div');
   pot.style.cssText = 'font-size:13px;color:#5fc47a;text-align:center;margin-bottom:14px';
-  pot.textContent = 'Pot: ₪'+calcPot().toLocaleString();
+  // Show side pot breakdown if any player is all-in
+  const hasAllin = S.seats.some(s=>s.playerId&&s.allin&&!s.folded);
+  if(hasAllin){
+    const sp = calcSidePots();
+    if(sp.length > 1){
+      pot.innerHTML = sp.map((p,i)=>
+        '<div>'+( i===0?'Main pot':'Side pot '+(i))+': ₪'+p.amount.toLocaleString()+
+        ' <span style="font-size:10px;color:#5a5870">('+p.eligible.map(e=>pName(S.seats.find(s=>s.seatIdx===e)?.playerId)||'?').join(', ')+')</span></div>'
+      ).join('');
+    } else {
+      pot.textContent = 'Pot: ₪'+calcPot().toLocaleString();
+    }
+  } else {
+    pot.textContent = 'Pot: ₪'+calcPot().toLocaleString();
+  }
   box.appendChild(title); box.appendChild(pot);
 
   // Players still in (not folded)
@@ -1279,4 +1348,3 @@ function setTableSize(n){
   S.tableSize=n; S.seats=S.seats.filter(s=>s.seatIdx<n);
   persist(); render();
 }
-
