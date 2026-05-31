@@ -520,11 +520,24 @@ async function analyzeHand(h){
   const board = (h.board||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
   const blinds = h.blinds||'';
   
-  // My seat
+  // My seat — match by name or playerId
   const myName = currentUser?.name||'';
-  const mySeat = (h.seats||[]).find(s=>s.playerName===myName);
-  const myCards = mySeat?(mySeat.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' '):'לא ידוע';
+  const mySeat = (h.seats||[]).find(s=>
+    s.playerName===myName ||
+    (s.playerId && pName(s.playerId)===myName)
+  );
+  const myCards = mySeat
+    ? (mySeat.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ') || 'לא סומנו'
+    : 'לא ידוע';
   const myPos = mySeat?.pos||'לא ידוע';
+
+  // All players' cards (for full hand context)
+  const allCardsStr = (h.seats||[])
+    .filter(s=>s.playerName&&(s.cards||[]).some(Boolean))
+    .map(s=>{
+      const cards = (s.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
+      return s.playerName+'('+s.pos+'): '+cards;
+    }).join(', ');
   
   // Build street-by-street actions
   const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
@@ -550,7 +563,8 @@ async function analyzeHand(h){
     'בליינדים: '+blinds+'\n'+
     'לוח: '+(board||'טרם נחשף')+'\n'+
     'הקלפים שלי ('+myName+'): '+myCards+'\n'+
-    'העמדה שלי: '+myPos+'\n\n'+
+    'העמדה שלי: '+myPos+'\n'+
+    (allCardsStr?'קלפי שחקנים: '+allCardsStr+'\n':'')+'\n'+
     '**פעולות:**\n'+streetActions+'\n\n'+
     '**HUD יריבים:**\n'+(hudInfo||'אין נתונים')+'\n\n'+
     '**נתח:**\n'+
