@@ -760,8 +760,7 @@ async function openCameraForCards(target){
         })
       });
       
-      const text = await resp.text();
-      const data = JSON.parse(text);
+      const data = JSON.parse(await resp.text());
       if(!data.ok) throw new Error(data.error||'שגיאה לא ידועה');
       const cards = data.cards||[];
 
