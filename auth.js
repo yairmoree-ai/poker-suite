@@ -7,8 +7,8 @@ const AUTH_WORKER_URL = 'https://poker-suite-auth.yairmoree.workers.dev';
 // USERS - הוסף/ערוך משתמשים כאן
 // ═══════════════════════════════════════
 const USERS = [
-  { name:'יאיר', user:'yair', pass:'1234', role:'admin',  sheetsUrl:'https://script.google.com/macros/s/AKfycbxzSRf58IqsF1Rg1WoSH8tTrjWDbx49jNR27ulxACmx2yzi1U2GL0URT2CjlKUvAAox/exec' },
-  { name:'יאיר', user:'yair', pass:'4321', role:'local',  sheetsUrl:'https://script.google.com/macros/s/AKfycbxzSRf58IqsF1Rg1WoSH8tTrjWDbx49jNR27ulxACmx2yzi1U2GL0URT2CjlKUvAAox/exec' },
+  { name:'יאיר', user:'yair', pass:'1234', role:'admin',  sheetsUrl:'https://script.google.com/macros/s/AKfycbzUbdOOXojDmNrodKJcRQsHSgvED0dQ0WpUC_XpC4W-SKrDCHRSQKbvjjjcV0t8ZwJU/exec' },
+  { name:'יאיר', user:'yair', pass:'4321', role:'local',  sheetsUrl:'https://script.google.com/macros/s/AKfycbzUbdOOXojDmNrodKJcRQsHSgvED0dQ0WpUC_XpC4W-SKrDCHRSQKbvjjjcV0t8ZwJU/exec' },
   // מנהלים נוספים:
   // { name:'שם', pass:'סיסמה', role:'admin' },
 ];
@@ -156,7 +156,8 @@ async function checkPass(){
           u.name === data.user.name
         );
         const sheetsUrl = data.user.sheetsUrl || localUser?.sheetsUrl || null;
-        currentUser = {name:data.user.name, role:data.user.role, token:data.token, username: username, sheetsUrl};
+        const usernameEn = data.user.username || username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+        currentUser = {name:data.user.name, role:data.user.role, token:data.token, username: usernameEn, sheetsUrl};
         localStorage.setItem('auth_token', data.token);
         if(loginBtn){ loginBtn.textContent='כניסה'; loginBtn.disabled=false; }
         inp.value=''; if(userInp) userInp.value='';
