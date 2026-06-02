@@ -728,6 +728,10 @@ function hudStat(label, value, color, desc){
 
 async function openCameraForCards(target){
   if(!getGsUrl()){ notify('הגדר Google Sheets URL קודם'); return; }
+  // בדיקת הרשאות — רק superadmin
+  requireSuperAdmin(()=>_openCameraForCardsInner(target));
+}
+async function _openCameraForCardsInner(target){
   // Create file input for camera
   const input = document.createElement('input');
   input.type = 'file';
