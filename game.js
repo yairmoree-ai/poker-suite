@@ -268,10 +268,8 @@ function autoOpenNextCard(){
   if(slotIdx===-1) return;
   // Check if blocked by active betting
   if(S.btnLocked && !S.bettingClosed && S.currentActor!==null){
-    console.log('autoOpenNextCard BLOCKED: btnLocked='+S.btnLocked+' bettingClosed='+S.bettingClosed+' currentActor='+S.currentActor);
     notify('סיים את סיבוב ההימורים קודם'); return;
   }
-  console.log('autoOpenNextCard OK: slot='+slotIdx);
   openCP('board'+slotIdx);
 }
 
