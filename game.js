@@ -1216,19 +1216,45 @@ function showShowdownPanel(){
     const holeCards = (seat.cards||[]).filter(Boolean);
     const handScore = holeCards.length>=2 ? evaluateHand([...holeCards,...S.board.filter(Boolean)]) : null;
     const cardsStr = holeCards.map(c=>c.rank+c.suit).join(' ');
+    const cardsBtnId = 'sd-cards-btn-'+seat.seatIdx;
     row.innerHTML =
       '<div style="width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0" id="sd-check-'+seat.seatIdx+'"></div>'+
       '<div style="flex:1">'+
         '<div style="font-size:13px;font-weight:700;color:#e2ddd4">'+pName(seat.playerId)+'</div>'+
         '<div style="font-size:10px;color:#5a5870">'+pos+' · ₪'+seat.stack.toLocaleString()+'</div>'+
-        (cardsStr?'<div style="font-size:10px;color:#c8a96e;font-weight:700;direction:ltr;text-align:right">'+cardsStr+(handScore?' · <span style="color:#5fc47a">'+handScore.name+'</span>':'')+'</div>':'')+
-      '</div>';
+        (cardsStr?'<div style="font-size:10px;color:#c8a96e;font-weight:700;direction:ltr;text-align:right">'+cardsStr+(handScore?' · <span style="color:#5fc47a">'+handScore.name+'</span>':'')+'</div>':
+          '<div style="font-size:10px;color:#5a5870">קלפים לא הוזנו</div>')+
+      '</div>'+
+      '<button id="'+cardsBtnId+'" style="padding:4px 8px;border-radius:7px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">'+
+        (holeCards.length>=2?'✏️':'🃏 הזן')+
+      '</button>';
     row.onclick = ()=>{
       const idx2 = selected.indexOf(seat.seatIdx);
       if(idx2>=0){ selected.splice(idx2,1); selectRow(seat.seatIdx, false); }
       else{ selected.push(seat.seatIdx); selectRow(seat.seatIdx, true); }
     };
     box.appendChild(row);
+
+    // כפתור הזנת קלפים — פותח card picker ומרענן את המסך
+    setTimeout(()=>{
+      const cardsBtn = document.getElementById(cardsBtnId);
+      if(!cardsBtn) return;
+      cardsBtn.addEventListener('click', e=>{
+        e.stopPropagation();
+        // שמור את קלפי השחקן הקיימים ופתח card picker
+        const sIdx = seat.seatIdx;
+        const curCards = S.seats.find(s=>s.seatIdx===sIdx)?.cards||[null,null];
+        // נקה קלף ראשון שאין
+        const firstEmpty = curCards[0]?1:0;
+        document.getElementById('showdown-overlay')?.remove();
+        // פתח card picker לקלף הראשון החסר
+        cpTarget = 'seat'+sIdx+'_c'+firstEmpty;
+        // אחרי בחירה → פתח קלף שני → אחרי שניהם → חזור ל-showdown
+        S._sdAfterCards = sIdx;
+        document.getElementById('card-picker').classList.add('open');
+        renderCP();
+      });
+    }, 0);
   });
 
   // Apply auto-selection after rows are in DOM
