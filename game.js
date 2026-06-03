@@ -1039,6 +1039,15 @@ function awardPot(winnerSeatIdxs, showAnim=true){
 // ═══════════════════════════════════════════════════════
 // HAND EVALUATOR
 // ═══════════════════════════════════════════════════════
+function compareTb(a, b){
+  // השוואה מספרית של tiebreak arrays (לא אלפביתית)
+  for(let i=0;i<Math.max(a.length,b.length);i++){
+    const diff=(a[i]||0)-(b[i]||0);
+    if(diff!==0) return diff;
+  }
+  return 0;
+}
+
 function evaluateHand(cards){
   // cards = array of {rank, suit}, 5-7 cards
   // Returns {rank: 0-8, name: string, tiebreak: [...]}
@@ -1089,7 +1098,7 @@ function evaluateHand(cards){
   let best = null;
   fiveCombos.forEach(combo=>{
     const s = score5(combo);
-    if(!best||s.rank>best.rank||(s.rank===best.rank&&s.tb.join()>best.tb.join())) best=s;
+    if(!best||s.rank>best.rank||(s.rank===best.rank&&compareTb(s.tb,best.tb)>0)) best=s;
   });
   return best ? {...best, name:HAND_NAMES[best.rank]} : null;
 }
