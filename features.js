@@ -149,7 +149,7 @@ function handleVoiceCommand(cmd){
     if(slot>=0&&slot<5){
       // Check valid (not flop before having flop etc)
       if(slot===3&&!S.board[2]){notify('צריך פלופ קודם');return;}
-      if(slot===4&&!S.board[3]){notify('צריך טורן קודם');return;}
+      if(slot===4&&!S.board[3]){notify('צריך טרן קודם');return;}
       // Check not used
       const used = [...(S.board||[]),...(S.seats.flatMap(s=>s.cards||[]))].filter(Boolean);
       if(used.some(u=>u.rank===card.rank&&u.suit===card.suit)){notify('קלף תפוס');return;}
@@ -285,8 +285,8 @@ async function syncToSheets(immediate){
   try{
     await fetch(url, {
       method:'POST',
-      redirect:'follow',
-      headers:{'Content-Type':'text/plain'},
+      mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
     });
     updateSyncDot('ok');
