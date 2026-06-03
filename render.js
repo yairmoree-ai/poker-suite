@@ -1214,11 +1214,13 @@ function renderSeats(){
       let lpTimer=null, lpFired=false;
       const seatIdx=i;
       el.addEventListener('touchstart',function(e){
+        // בטל אם הלחיצה היא על כפתור פנימי (פעולה, rebuy, וכו')
+        if(e.target.tagName==='BUTTON'||e.target.closest('button')) return;
         lpFired=false;
         lpTimer=setTimeout(function(){
           lpFired=true;
           try{ showPlayerHUD(seatIdx); }catch(err){}
-        },500);
+        },600);
       },{passive:true});
       el.addEventListener('touchend',function(e){
         if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
@@ -1226,6 +1228,12 @@ function renderSeats(){
       el.addEventListener('touchmove',function(e){
         if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
       });
+      // בטל long press כשפעולה מתבצעת (כפתורי פעולה מפעילים touchstart נפרד)
+      el.addEventListener('touchstart',function(e){
+        if(e.target.tagName==='BUTTON'||e.target.closest('button')){
+          if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
+        }
+      },{passive:true,capture:true});
     }
     cont.appendChild(el);
   }
