@@ -123,7 +123,7 @@ function undoLastAction(seatIdx){
   if(!seat||!seat.actions?.length) return;
 
   const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
   const streetActs = seat.actions.filter(a=>a.street===street);
   if(!streetActs.length) return;
 
@@ -131,7 +131,7 @@ function undoLastAction(seatIdx){
   // Don't undo SB/BB blinds
   if(last.type==='SB'||last.type==='BB'){ notify('לא ניתן לבטל בליינד'); return; }
   // Don't undo if next street cards have been dealt (TDA rule)
-  const allStreets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const allStreets = ['פרה-פלופ','פלופ','טרן','ריבר'];
   const streetIdx = allStreets.indexOf(street);
   const nextStreetDealt = streetIdx===0 ? S.board[0]!=null :
                           streetIdx===1 ? S.board[3]!=null :
@@ -276,7 +276,7 @@ function autoOpenNextCard(){
 function getStreetInvested(seatIdx){
   // How much has this player already put in during current street
   const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   return (seat?.actions||[])
     .filter(a=>a.street===street)
@@ -572,7 +572,7 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   if(!seat.actions)seat.actions=[];
   // Determine current street from board
   const boardCards = S.board.filter(Boolean).length;
-  const street = boardCards===0?'פרה-פלופ':boardCards<=3?'פלופ':boardCards===4?'טורן':'ריבר';
+  const street = boardCards===0?'פרה-פלופ':boardCards<=3?'פלופ':boardCards===4?'טרן':'ריבר';
   const isRaise = ['Open','Raise','3bet','4bet','All-in'].includes(type);
   if(isRaise) S.raiseRound = (S.raiseRound||0)+1;
   const currentRound = S.raiseRound||0;
@@ -633,7 +633,7 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   // After fold, recompute order with folded player excluded
   if(type==='Fold'){
     const boardCount2 = S.board.filter(Boolean).length;
-    const street2 = boardCount2===0?'פרה-פלופ':boardCount2<=3?'פלופ':boardCount2===4?'טורן':'ריבר';
+    const street2 = boardCount2===0?'פרה-פלופ':boardCount2<=3?'פלופ':boardCount2===4?'טרן':'ריבר';
     const newOrder = getActingOrder(street2); // now excludes folded player
     const curIdx = newOrder.indexOf(seatIdx);
     // Find next after this seat in the NEW order
@@ -739,7 +739,7 @@ function canPlayerRaise(seatIdx){
   // If last all-in was not a full raise, only players who haven't voluntarily acted can raise
   if(S.lastRaiseWasFull!==false) return true; // full raise or no raise = everyone can raise
   const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   const volActs = (seat?.actions||[]).filter(a=>a.street===street&&a.type!=='SB'&&a.type!=='BB');
   // If player has already acted voluntarily this street before the all-in, they cannot raise
@@ -748,7 +748,7 @@ function canPlayerRaise(seatIdx){
 
 function getNextActor(afterSeatIdx){
   const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
   const order = getActingOrder(street);
   if(!order.length) return null;
 
