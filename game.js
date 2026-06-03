@@ -1182,7 +1182,7 @@ function showSDCardPicker(seatIdx){
       [0,1].map(i=>{
         const card = i===0?c0:c1;
         const isActive = pickingIdx===i;
-        return '<div onclick="pickingIdx='+i+';renderPicker()" style="width:44px;height:60px;border-radius:8px;border:2px solid '+(isActive?'#c8a96e':'rgba(255,255,255,0.15)')+';background:'+(isActive?'rgba(200,169,110,0.1)':'rgba(255,255,255,0.03)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer">'+
+        return '<div class="sd-slot-btn" data-slotidx="'+i+'" style="width:44px;height:60px;border-radius:8px;border:2px solid '+(isActive?'#c8a96e':'rgba(255,255,255,0.15)')+';background:'+(isActive?'rgba(200,169,110,0.1)':'rgba(255,255,255,0.03)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer">'+
           (card?'<span style="font-size:16px;font-weight:900;color:'+SC2[card.suit]+'">'+card.rank+'</span><span style="font-size:14px;color:'+SC2[card.suit]+'">'+card.suit+'</span>':'<span style="font-size:22px;color:rgba(255,255,255,0.15)">+</span>')+
         '</div>';
       }).join('')+
@@ -1222,13 +1222,17 @@ function showSDCardPicker(seatIdx){
 
   renderPicker();
 
-  // Event delegation — מאזין לכל לחיצה על קלף
+  // Event delegation — מאזין לכל לחיצה
   box.addEventListener('click', function(e){
+    // לחיצה על slot (קלף מוצג) — החלף pickingIdx
+    const slot = e.target.closest('.sd-slot-btn');
+    if(slot){ window._sdPickingIdx = +slot.dataset.slotidx; window._sdRenderPicker(); return; }
+    // לחיצה על קלף בגריד
     const btn = e.target.closest('.sd-card-btn');
     if(!btn) return;
     if(btn.dataset.used==='1') return;
     e.stopPropagation();
-    sdPickCard(btn.dataset.rank, btn.dataset.suit, +btn.dataset.seatidx);
+    window.sdPickCard(btn.dataset.rank, btn.dataset.suit, +btn.dataset.seatidx);
   });
 
   overlay.appendChild(box);
