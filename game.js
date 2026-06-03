@@ -1263,11 +1263,12 @@ function advanceTurn(fromSeatIdx){
       const active = S.seats.filter(s=>s.playerId&&!s.folded);
       if(active.length<=1) return; // auto win already handled
       const bCnt = S.board.filter(Boolean).length;
-      const hasAllin = active.some(s=>s.allin);
-      // All-in situation: at least one player is all-in
+      const canAct = active.filter(s=>!s.allin&&(s.stack||0)>0);
+      // All-in situation: at least one all-in AND no one else can act
+      const hasAllin = active.some(s=>s.allin) && canAct.length===0;
       // After calling an all-in → deal remaining cards then showdown
       if(hasAllin){
-if(bCnt===5) showShowdownPanel();
+        if(bCnt===5) showShowdownPanel();
         else autoOpenNextCard();
         return;
       }
