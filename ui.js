@@ -128,7 +128,7 @@ function newHand(){
 function renderRecordPanel(){
   if(!curHand)return;
   const h=curHand;
-  const streets=['פרה-פלופ','פלופ','טורן','ריבר'];
+  const streets=['פרה-פלופ','פלופ','טרן','ריבר'];
   let potSoFar=0;
   // Calculate pot from all recorded actions
   h.seats.forEach(s=>(s.actions||[]).forEach(a=>{if(parseFloat(a.amount)>0)potSoFar+=parseFloat(a.amount);}));
@@ -161,7 +161,7 @@ function renderRecordPanel(){
   </div>`;
   // Actions by street
   const allActs=h.seats.flatMap((s,si)=>(s.actions||[]).map(a=>({...a,si,pn:s.playerName,pos:s.pos})));
-  ['פרה-פלופ','פלופ','טורן','ריבר'].forEach(st=>{
+  ['פרה-פלופ','פלופ','טרן','ריבר'].forEach(st=>{
     const sa=allActs.filter(a=>a.street===st);
     if(!sa.length)return;
     let runPot=0;
@@ -359,8 +359,8 @@ function showHandDetail(hid){
 
 
   // Streets - column layout like poker client
-  const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
-  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
+  const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
+  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טרן':'Turn','ריבר':'River'};
   const actionColors = {Fold:'#666',Check:'#5fc47a',Call:'#5b9bd5',Raise:'#c8a96e','3bet':'#e0a030','4bet':'#e07b6a','All-in':'#e05555',BB:'#e07b6a',SB:'#8b7cb8',Bet:'#c8a96e',Open:'#c8a96e'};
 
   // Build columns grid
@@ -414,7 +414,7 @@ function showHandDetail(hid){
 
       // Street header with pot
       const potAtStreet = (()=>{
-        const allStreets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+        const allStreets = ['פרה-פלופ','פלופ','טרן','ריבר'];
         const streetIdx = allStreets.indexOf(street);
         if(streetIdx === 0){
           // Pre-flop: show SB + BB + Ante only
@@ -467,7 +467,7 @@ function showHandDetail(hid){
         col.appendChild(row);
       });
       // Add player cards at bottom of this column
-      const allStreetsList2 = ['פרה-פלופ','פלופ','טורן','ריבר'];
+      const allStreetsList2 = ['פרה-פלופ','פלופ','טרן','ריבר'];
       const seatsWithCards = (h.seats||[]).filter(s=>(s.cards||[]).some(Boolean)).filter(s=>{
         let lastSt = 'פרה-פלופ';
         allStreetsList2.forEach(st=>{ if((s.actions||[]).some(a=>a.street===st)) lastSt=st; });
@@ -532,7 +532,7 @@ function renderHandList(){
       .filter(s=>s.playerName===filterPlayer)
       .flatMap(s=>(s.actions||[]).map(a=>({...a, handId:h.id}))));
     
-    const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+    const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
     const vpip = hands.filter(h=>(h.seats||[]).some(s=>s.playerName===filterPlayer&&(s.actions||[]).some(a=>a.type==='Call'||a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet'))).length;
     const pfr = hands.filter(h=>(h.seats||[]).some(s=>s.playerName===filterPlayer&&(s.actions||[]).some(a=>a.street==='פרה-פלופ'&&(a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet')))).length;
     const raises = allActions.filter(a=>a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet'||a.type==='All-in');
@@ -975,96 +975,39 @@ function renderPlayerList(){
   const cont=document.getElementById('player-list');
   if(!S.playerLib.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div>אין שחקנים</div>';return;}
   const swp=assignPos();
-
-  // חיפוש ומיון
-  const searchVal=(document.getElementById('pl-search')?.value||'').trim().toLowerCase();
-  const sortVal=document.getElementById('pl-sort')?.value||'name';
-
-  let lib=[...S.playerLib];
-  if(searchVal) lib=lib.filter(p=>p.name.toLowerCase().includes(searchVal)||p.name.includes(searchVal));
-
-  // מיון
-  lib.sort((a,b)=>{
-    if(sortVal==='name') return a.name.localeCompare(b.name,'he');
-    const ha=S.handLog.filter(h=>(h.seats||[]).some(s=>s.playerId===a.id));
-    const hb=S.handLog.filter(h=>(h.seats||[]).some(s=>s.playerId===b.id));
-    if(sortVal==='hands') return hb.length-ha.length;
-    const hudA=calcPlayerHUD(a.id), hudB=calcPlayerHUD(b.id);
-    if(sortVal==='vpip') return (hudB?.vpip||0)-(hudA?.vpip||0);
-    if(sortVal==='pfr')  return (hudB?.pfr||0)-(hudA?.pfr||0);
-    if(sortVal==='won')  return (hudB?.won||0)-(hudA?.won||0);
-    return 0;
-  });
-
-  const statC=(v,lo,hi)=>v>=hi?'#5fc47a':v>=lo?'#FFB347':'#e07b6a';
-
-  cont.innerHTML=`
-  <div style="display:flex;gap:7px;margin-bottom:10px">
-    <input id="pl-search" placeholder="🔍 חיפוש..." value="${searchVal}"
-      style="flex:1;padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#e2ddd4;font-size:13px;outline:none;direction:rtl;-webkit-appearance:none"
-      oninput="renderPlayerList()">
-    <select id="pl-sort" onchange="renderPlayerList()"
-      style="padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#e2ddd4;font-size:12px;outline:none;direction:rtl">
-      <option value="name" ${sortVal==='name'?'selected':''}>א-ת</option>
-      <option value="hands" ${sortVal==='hands'?'selected':''}>ידיים ↓</option>
-      <option value="vpip"  ${sortVal==='vpip'?'selected':''}>VPIP ↓</option>
-      <option value="pfr"   ${sortVal==='pfr'?'selected':''}>PFR ↓</option>
-      <option value="won"   ${sortVal==='won'?'selected':''}>W% ↓</option>
-    </select>
-  </div>
-  `+lib.map(p=>{
+  cont.innerHTML=sortedLib().map(p=>{
     const b=S.buyins[p.id]||{buyin:0,rebuy:0};
     const inGame=S.seats.some(s=>s.playerId===p.id);
     const hands=S.handLog.filter(h=>(h.seats||[]).some(s=>s.playerId===p.id));
-    const hud=calcPlayerHUD(p.id);
     const activeTP=activeTournPlayers();
     const isWinner=activeTP.length===1&&activeTP[0]===p.id;
-    return`<div class="card-item" style="${inGame?'border-color:rgba(95,196,122,0.25)':''}" onclick="if(calcPlayerHUD('${p.id}'))showPlayerHUDById('${p.id}')">
-      <div style="display:flex;align-items:center;gap:9px">
-        <div style="width:34px;height:34px;border-radius:17px;background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0">${p.name[0].toUpperCase()}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            ${isWinner?'🥇 ':''}
-            <span>${p.name}</span>
-            ${b.rebuy>0?`<span style="font-size:13px;font-weight:900;color:var(--gold)">(${b.rebuy})</span>`:''}
-            ${isWinner?`<span style="font-size:9px;color:#FFD700;background:rgba(255,215,0,0.12);border-radius:10px;padding:1px 8px">מקום 1</span>`:''}
-            ${b.buyin>0&&!S.koOrder.includes(p.id)&&!isWinner?`<span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}
-            ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
-          </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:1px">${b.buyin?'BuyIn':'לא נרשם'} · ${hands.length} ידיים</div>
+    return`<div class="card-item" style="display:flex;align-items:center;gap:9px;${inGame?'border-color:rgba(95,196,122,0.25)':''}">
+      <div style="width:34px;height:34px;border-radius:17px;background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0">${p.name[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${isWinner?'🥇 ':''}
+          <span>${p.name}</span>
+          ${b.rebuy>0?`<span style="font-size:13px;font-weight:900;color:var(--gold)">(${b.rebuy})</span>`:''}
+          ${isWinner?`<span style="font-size:9px;color:#FFD700;background:rgba(255,215,0,0.12);border-radius:10px;padding:1px 8px">מקום 1</span>`:''}
+          ${b.buyin>0&&!S.koOrder.includes(p.id)&&!isWinner?`<span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}
+          ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end" onclick="event.stopPropagation()">
-          ${isViewer()?`
-            ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
-          `:`
-            ${!b.buyin?`<button class="btn btn-green btn-xs" onclick="doBuyin('${p.id}')">BuyIn</button>`:`<button class="btn btn-gray btn-xs" onclick="cancelBuyin('${p.id}')">ביטול BuyIn</button>`}
-            <button class="btn btn-outline btn-xs" onclick="doRebuy('${p.id}',1)">+R</button>
-            <button class="btn btn-gray btn-xs" onclick="doRebuy('${p.id}',-1)">-R</button>
-            ${!S.koOrder.includes(p.id)&&b.buyin>0?`<button class="btn btn-red btn-xs" onclick="koPlayerFromList('${p.id}')">KO 💀</button>`:''}
-            ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
-            <button class="btn btn-red btn-xs" onclick="deletePlayer('${p.id}')">✕</button>
-          `}
+        <div style="font-size:10px;color:var(--muted);margin-top:1px">
+          ${b.buyin?'BuyIn':'לא נרשם'}
         </div>
       </div>
-      ${hud?`
-      <div style="display:flex;gap:0;margin-top:9px;padding-top:9px;border-top:1px solid rgba(255,255,255,0.05)">
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:var(--muted)">VPIP</div>
-          <div style="font-size:14px;font-weight:900;color:${statC(hud.vpip,20,40)}">${hud.vpip}%</div>
-        </div>
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:var(--muted)">PFR</div>
-          <div style="font-size:14px;font-weight:900;color:${statC(hud.pfr,15,30)}">${hud.pfr}%</div>
-        </div>
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:var(--muted)">W%</div>
-          <div style="font-size:14px;font-weight:900;color:${statC(hud.won,35,50)}">${hud.won}%</div>
-        </div>
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:var(--muted)">ידיים</div>
-          <div style="font-size:14px;font-weight:900;color:var(--text)">${hud.n}</div>
-        </div>
-      </div>`:''}
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
+        ${isViewer()?`
+          ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
+        `:`
+          ${!b.buyin?`<button class="btn btn-green btn-xs" onclick="doBuyin('${p.id}')">BuyIn</button>`:`<button class="btn btn-gray btn-xs" onclick="cancelBuyin('${p.id}')">ביטול BuyIn</button>`}
+          <button class="btn btn-outline btn-xs" onclick="doRebuy('${p.id}',1)">+R</button>
+          <button class="btn btn-gray btn-xs" onclick="doRebuy('${p.id}',-1)">-R</button>
+          ${!S.koOrder.includes(p.id)&&b.buyin>0?`<button class="btn btn-red btn-xs" onclick="koPlayerFromList('${p.id}')">KO 💀</button>`:''}
+          ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
+          <button class="btn btn-red btn-xs" onclick="deletePlayer('${p.id}')">✕</button>
+        `}
+      </div>
     </div>`;
   }).join('');
 }
@@ -1116,7 +1059,7 @@ function pickCard(s){
     else if(boardIdx===1&&!S.board[2]) setTimeout(()=>openCP('board2'),80);
     // Clear bet chips when new betting round starts: after 3rd flop card, turn, river
     if(boardIdx===2||boardIdx===3||boardIdx===4){
-      const newStreet = boardIdx===2?'פלופ':boardIdx===3?'טורן':'ריבר';
+      const newStreet = boardIdx===2?'פלופ':boardIdx===3?'טרן':'ריבר';
       // Check if all-in situation – no betting needed
       const activeAfter = S.seats.filter(s=>s.playerId&&!s.folded);
       const canActAfter = activeAfter.filter(s=>!s.allin);
