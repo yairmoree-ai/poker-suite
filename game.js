@@ -1250,10 +1250,12 @@ function showShowdownPanel(){
         // נקה קלף ראשון שאין
         const firstEmpty = curCards[0]?1:0;
         document.getElementById('showdown-overlay')?.remove();
-        // אחרי בחירה → פתח קלף שני → אחרי שניהם → חזור ל-showdown
+        // פתח card picker ישירות — עוקף בדיקת btnLocked
         S._sdAfterCards = sIdx;
-        // פתח card picker דרך openCP
-        setTimeout(()=>openCP('seat'+sIdx+'_c'+firstEmpty), 50);
+        cpTarget = 'seat'+sIdx+'_c'+firstEmpty;
+        cpRank = null;
+        renderCP();
+        document.getElementById('card-picker').classList.add('open');
       });
     }, 0);
   });
