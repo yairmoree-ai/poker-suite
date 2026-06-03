@@ -673,38 +673,31 @@ async function analyzeHand(h){
     aContent.textContent = 'שגיאה: '+e.message;
   }
 }
-function showPlayerHUD(seatIdx){
-  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
-  if(!seat?.playerId) return;
-  
-  const hud = calcPlayerHUD(seat.playerId);
-  const name = pName(seat.playerId)||'שחקן';
-  
+function showPlayerHUDById(playerId){
+  const name = pName(playerId)||'שחקן';
+  const hud = calcPlayerHUD(playerId);
+  if(!hud){ notify('נדרשות לפחות 3 ידיים'); return; }
+  _renderHUDOverlay(name, hud);
+}
+
+function _renderHUDOverlay(name, hud){
   document.getElementById('hud-overlay')?.remove();
   const overlay = document.createElement('div');
   overlay.id = 'hud-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
   overlay.onclick = ()=>overlay.remove();
-  
+
   const box = document.createElement('div');
   box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:340px';
   box.onclick = e=>e.stopPropagation();
-  
-  if(!hud){
-    box.innerHTML = '<div style="text-align:center;padding:20px"><div style="font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:8px">📊 '+name+'</div><div style="color:#5a5870;font-size:12px">נדרשות לפחות 3 ידיים לחישוב HUD</div></div>';
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    return;
-  }
 
   const statColor = (val, low, high) => val>=high?'#5fc47a':val>=low?'#FFB347':'#e07b6a';
-  
-  box.innerHTML = 
+
+  box.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
     '<div><div style="font-size:15px;font-weight:800;color:#c8a96e">📊 '+name+'</div>'+
     '<div style="font-size:10px;color:#5a5870">'+hud.n+' ידיים · Trend '+hud.trend+'</div></div>'+
     '<button onclick="closeHUD()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>'+
-    
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
     hudStat('VPIP', hud.vpip+'%', statColor(hud.vpip,20,40), 'נכנס לקופה')+
     hudStat('PFR', hud.pfr+'%', statColor(hud.pfr,15,30), 'Raise פרה-פלופ')+
@@ -713,9 +706,29 @@ function showPlayerHUD(seatIdx){
     hudStat('WTSD', hud.wtsd+'%', statColor(hud.wtsd,25,40), 'הגיע לשואודאון')+
     hudStat('W%', hud.won+'%', statColor(hud.won,30,50), '% ניצחון')+
     '</div>';
-    
+
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+}
+
+function showPlayerHUD(seatIdx){
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat?.playerId) return;
+  const hud = calcPlayerHUD(seat.playerId);
+  const name = pName(seat.playerId)||'שחקן';
+  if(!hud){
+    document.getElementById('hud-overlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id='hud-overlay';
+    overlay.style.cssText='position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
+    overlay.onclick=()=>overlay.remove();
+    const box=document.createElement('div');
+    box.style.cssText='background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:340px';
+    box.onclick=e=>e.stopPropagation();
+    box.innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:8px">📊 '+name+'</div><div style="color:#5a5870;font-size:12px">נדרשות לפחות 3 ידיים לחישוב HUD</div></div>';
+    overlay.appendChild(box); document.body.appendChild(overlay); return;
+  }
+  _renderHUDOverlay(name, hud);
 }
 
 function hudStat(label, value, color, desc){
@@ -1195,6 +1208,24 @@ function renderSeats(){
         btns.appendChild(btn);
       });
       el.appendChild(btns);
+    }
+    // Long press on seat → HUD (mobile support)
+    if(seat?.playerId){
+      let lpTimer=null, lpFired=false;
+      const seatIdx=i;
+      el.addEventListener('touchstart',function(e){
+        lpFired=false;
+        lpTimer=setTimeout(function(){
+          lpFired=true;
+          try{ showPlayerHUD(seatIdx); }catch(err){}
+        },500);
+      },{passive:true});
+      el.addEventListener('touchend',function(e){
+        if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
+      });
+      el.addEventListener('touchmove',function(e){
+        if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
+      });
     }
     cont.appendChild(el);
   }
