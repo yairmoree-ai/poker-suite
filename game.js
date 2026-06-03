@@ -1194,8 +1194,7 @@ function showSDCardPicker(seatIdx){
         RANKS.map(rank=>{
           const key=rank+suit;
           const isUsed=usedKeys.includes(key)&&!(seatObj.cards[0]&&seatObj.cards[0].rank===rank&&seatObj.cards[0].suit===suit)&&!(seatObj.cards[1]&&seatObj.cards[1].rank===rank&&seatObj.cards[1].suit===suit);
-          const onclickStr = isUsed ? '' : 'sdPickCard(\"'+rank+'\",\"'+suit+'\",'+seatIdx+')';
-          return '<button onclick="'+onclickStr+'" style="width:24px;height:32px;border-radius:4px;border:1px solid '+(isUsed?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.15)')+';background:'+(isUsed?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.07)')+';color:'+(isUsed?'rgba(255,255,255,0.15)':SC2[suit])+';font-size:9px;font-weight:700;cursor:'+(isUsed?'default':'pointer')+';padding:1px 0">'+rank+'<br>'+suit+'</button>';
+          return '<button class="sd-card-btn" data-rank="'+rank+'" data-suit="'+suit+'" data-seatidx="'+seatIdx+'" data-used="'+(isUsed?'1':'0')+'" style="width:24px;height:32px;border-radius:4px;border:1px solid '+(isUsed?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.15)')+';background:'+(isUsed?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.07)')+';color:'+(isUsed?'rgba(255,255,255,0.15)':SC2[suit])+';font-size:9px;font-weight:700;cursor:'+(isUsed?'default':'pointer')+';padding:1px 0">'+rank+'<br>'+suit+'</button>';
         }).join('')+
         '</div>'
       ).join('');
@@ -1222,6 +1221,16 @@ function showSDCardPicker(seatIdx){
   };
 
   renderPicker();
+
+  // Event delegation — מאזין לכל לחיצה על קלף
+  box.addEventListener('click', function(e){
+    const btn = e.target.closest('.sd-card-btn');
+    if(!btn) return;
+    if(btn.dataset.used==='1') return;
+    e.stopPropagation();
+    sdPickCard(btn.dataset.rank, btn.dataset.suit, +btn.dataset.seatidx);
+  });
+
   overlay.appendChild(box);
   overlay.onclick = ()=>{ overlay.remove(); showShowdownPanel(); };
   document.body.appendChild(overlay);
