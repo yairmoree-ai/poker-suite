@@ -1253,18 +1253,12 @@ function showShowdownPanel(){
         const firstEmpty = curCards[0]?1:0;
         document.getElementById('showdown-overlay')?.remove();
         S._sdAfterCards = sIdx;
-        // סגור סיבוב זמנית כדי לאפשר פתיחת card picker
-        const _prevBettingClosed = S.bettingClosed;
-        const _prevActor = S.currentActor;
         S.bettingClosed = true;
         S.currentActor = null;
         cpTarget = 'seat'+sIdx+'_c'+firstEmpty;
         cpRank = null;
         renderCP();
         document.getElementById('card-picker').classList.add('open');
-        // שחזר מצב אחרי פתיחה
-        S.bettingClosed = _prevBettingClosed;
-        S.currentActor = _prevActor;
       });
     }, 0);
   });
