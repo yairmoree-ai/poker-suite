@@ -934,10 +934,16 @@ function checkAutoWin(){
     awardPot([active[0].seatIdx], false);
     return true;
   }
-  // All remaining players are all-in (no one can act) → showdown
+  // All remaining players are all-in (no one can act) → deal cards then showdown
   const canAct = active.filter(s=>!s.allin);
   if(canAct.length===0 && active.length>1){
-    setTimeout(()=>showShowdownPanel(),300);
+    S.bettingClosed = true;
+    S.currentActor = null;
+    const bCnt = S.board.filter(Boolean).length;
+    setTimeout(()=>{
+      if(bCnt>=5) showShowdownPanel();
+      else autoOpenNextCard();
+    }, 300);
     return true;
   }
   return false;
