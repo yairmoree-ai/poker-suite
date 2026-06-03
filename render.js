@@ -1287,7 +1287,9 @@ function renderBoard(){
     btn.onclick=()=>{
 if(i===3&&!S.board[2]){notify('צריך פלופ קודם');return;}
       if(i===4&&!S.board[3]){notify('צריך טרן קודם');return;}
-      if(S.btnLocked && S.currentActor!==null && !S.bettingClosed){notify('סיים את סיבוב ההימורים קודם');return;}
+      // חסום רק אם יש שחקן שעדיין יכול לפעול (לא all-in)
+      const activeNonAllin = S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&(s.stack||0)>0);
+      if(S.btnLocked && S.currentActor!==null && !S.bettingClosed && activeNonAllin.length>0){notify('סיים את סיבוב ההימורים קודם');return;}
       openCP(`board${i}`);
     };
     btn.innerHTML=card
