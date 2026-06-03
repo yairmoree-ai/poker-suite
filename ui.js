@@ -1106,14 +1106,25 @@ function pickCard(s){
       if(seatObj){
         if(!seatObj.cards)seatObj.cards=[null,null];
         seatObj.cards[+m[2]]=card;
-        const fromSD = S._sdAfterCards!==undefined;
-        if(+m[2]===0 && fromSD){
-          // קלף ראשון מ-showdown — פתח קלף שני דרך openCP
-          setTimeout(()=>openCP('seat'+m[1]+'_c1'), 150);
-        } else if(+m[2]===1 && fromSD){
-          // קלף שני מ-showdown — חזור למסך showdown
-          S._sdAfterCards=undefined;
-          setTimeout(()=>showShowdownPanel(), 200);
+        persist();
+        if(S._sdAfterCards!==undefined){
+          if(+m[2]===0){
+            // קלף ראשון מ-showdown → פתח קלף שני ישירות
+            const si=m[1];
+            setTimeout(()=>{
+              cpTarget='seat'+si+'_c1';
+              cpRank=null;
+              renderCP();
+              document.getElementById('card-picker').classList.add('open');
+            },120);
+            return; // אל תרנדר שולחן
+          } else if(+m[2]===1){
+            // קלף שני מ-showdown → חזור למסך showdown
+            const sdSeat = S._sdAfterCards;
+            S._sdAfterCards=undefined;
+            setTimeout(()=>showShowdownPanel(),150);
+            return; // אל תרנדר שולחן
+          }
         }
       }
     }
