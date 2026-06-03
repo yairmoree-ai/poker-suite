@@ -1101,7 +1101,26 @@ function pickCard(s){
   }
   else if(t?.startsWith('seat')){
     const m=t.match(/seat(\d+)_c(\d+)/);
-    if(m){const seat=S.seats.find(s=>s.seatIdx===+m[1]);if(seat){if(!seat.cards)seat.cards=[null,null];seat.cards[+m[2]]=card;}}
+    if(m){
+      const seatObj=S.seats.find(s=>s.seatIdx===+m[1]);
+      if(seatObj){
+        if(!seatObj.cards)seatObj.cards=[null,null];
+        seatObj.cards[+m[2]]=card;
+        const fromSD = S._sdAfterCards!==undefined;
+        if(+m[2]===0 && fromSD){
+          // קלף ראשון מ-showdown — פתח קלף שני אוטומטית
+          setTimeout(()=>{
+            cpTarget='seat'+m[1]+'_c1';
+            renderCP();
+            document.getElementById('card-picker').classList.add('open');
+          },120);
+        } else if(+m[2]===1 && fromSD){
+          // קלף שני מ-showdown — חזור למסך showdown
+          S._sdAfterCards=undefined;
+          setTimeout(()=>showShowdownPanel(),150);
+        }
+      }
+    }
   }
   persist(); renderSeats(); renderBoard();
   if(activeSeat!==null)renderSeatPanel();
