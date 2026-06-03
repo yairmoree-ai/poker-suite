@@ -2,8 +2,8 @@ function renderLiveActions(){
   const bar = document.getElementById('live-actions-bar');
   if(!bar) return;
   const swp = assignPos();
-  const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
-  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
+  const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
+  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טרן':'Turn','ריבר':'River'};
   const colFn = t=>t==='Fold'?'#555':t==='SB'?'#8b7cb8':t==='BB'?'#e07b6a':t==='Check'?'#5fc47a':t==='Call'?'#5b9bd5':t==='All-in'?'#e05555':'#c8a96e';
   const typeShortFn = (t,a)=>a?.displayType||(t==='Raise'?'R':t==='Check'?'CH':t==='Call'?'C':t==='All-in'?'AI':t==='Fold'?'F':t);
   const posColFn = p=>p==='BTN'?'#c8a96e':p==='SB'?'#8b7cb8':p==='BB'?'#e07b6a':'#6a8090';
@@ -527,7 +527,7 @@ async function analyzeHand(h){
   const myPos = mySeat?.pos||'לא ידוע';
   
   // Build street-by-street actions
-  const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
   const streetActions = streets.map(st=>{
     const acts = (h.seats||[]).flatMap(s=>
       (s.actions||[]).filter(a=>a.street===st).map(a=>
@@ -1017,7 +1017,7 @@ function render(){
   if(S.btnLocked && S.currentActor!==null && S.bettingClosed){
     // Check if there really is a player who needs to act
     const boardCount = S.board.filter(Boolean).length;
-    const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+    const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
     const order = getActingOrder(street);
     if(order.includes(S.currentActor)) S.bettingClosed = false;
   }
@@ -1105,7 +1105,7 @@ function renderSeats(){
         <div class="seat-name">${name||'?'}</div>
         ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
-        ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טורן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טורן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
+        ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טרן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טרן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
     const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&(seat.folded||seat.sittingOut||!S.btnLocked);
     const isSittingOut = seat.sittingOut||false;
     return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(200,169,110,0.5);background:rgba(200,169,110,0.15);color:#c8a96e;font-size:8px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')
@@ -1255,7 +1255,7 @@ function renderSeats(){
     const actions = seat.actions||[];
     // Sum total invested in current street
     const boardCount2 = S.board.filter(Boolean).length;
-    const curSt = boardCount2===0?'פרה-פלופ':boardCount2<=3?'פלופ':boardCount2===4?'טורן':'ריבר';
+    const curSt = boardCount2===0?'פרה-פלופ':boardCount2<=3?'פלופ':boardCount2===4?'טרן':'ריבר';
     const stActs = actions.filter(a=>a.street===curSt);
     const totalInvested = stActs.filter(a=>a.type!=='Fold'&&a.type!=='Check').reduce((sum,a)=>sum+(Number(a.amount)||0),0);
     if(totalInvested===0) return;
@@ -1286,7 +1286,7 @@ function renderBoard(){
     btn.style=`width:${sw}px;height:${Math.round(sw*1.4)}px`;
     btn.onclick=()=>{
 if(i===3&&!S.board[2]){notify('צריך פלופ קודם');return;}
-      if(i===4&&!S.board[3]){notify('צריך טורן קודם');return;}
+      if(i===4&&!S.board[3]){notify('צריך טרן קודם');return;}
       if(S.btnLocked && S.currentActor!==null && !S.bettingClosed){notify('סיים את סיבוב ההימורים קודם');return;}
       openCP(`board${i}`);
     };
