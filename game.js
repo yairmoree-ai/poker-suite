@@ -938,9 +938,11 @@ function checkAutoWin(){
   const canAct = active.filter(s=>!s.allin);
   if(canAct.length===0 && active.length>1){
     const bCnt = S.board.filter(Boolean).length;
+    S.bettingClosed = true; // סגור סיבוב לפני פתיחת קלפים
+    S.currentActor = null;
     setTimeout(()=>{
       if(bCnt>=5) showShowdownPanel();
-      else autoOpenNextCard(); // פתח קלפים לפני showdown
+      else autoOpenNextCard();
     }, 300);
     return true;
   }
@@ -1297,6 +1299,8 @@ function advanceTurn(fromSeatIdx){
       const hasAllin = active.some(s=>s.allin) && canAct.length===0;
       // After calling an all-in → deal remaining cards then showdown
       if(hasAllin){
+        S.bettingClosed = true;
+        S.currentActor = null;
         if(bCnt===5) showShowdownPanel();
         else autoOpenNextCard();
         return;
