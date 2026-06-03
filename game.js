@@ -934,16 +934,10 @@ function checkAutoWin(){
     awardPot([active[0].seatIdx], false);
     return true;
   }
-  // All remaining players are all-in (no one can act) → deal cards then showdown
+  // All remaining players are all-in (no one can act) → showdown
   const canAct = active.filter(s=>!s.allin);
   if(canAct.length===0 && active.length>1){
-    const bCnt = S.board.filter(Boolean).length;
-    S.bettingClosed = true; // סגור סיבוב לפני פתיחת קלפים
-    S.currentActor = null;
-    setTimeout(()=>{
-      if(bCnt>=5) showShowdownPanel();
-      else autoOpenNextCard();
-    }, 300);
+    setTimeout(()=>showShowdownPanel(),300);
     return true;
   }
   return false;
@@ -1252,12 +1246,19 @@ function showShowdownPanel(){
         // נקה קלף ראשון שאין
         const firstEmpty = curCards[0]?1:0;
         document.getElementById('showdown-overlay')?.remove();
-        // פתח card picker ישירות — עוקף בדיקת btnLocked
         S._sdAfterCards = sIdx;
+        // סגור סיבוב זמנית כדי לאפשר פתיחת card picker
+        const _prevBettingClosed = S.bettingClosed;
+        const _prevActor = S.currentActor;
+        S.bettingClosed = true;
+        S.currentActor = null;
         cpTarget = 'seat'+sIdx+'_c'+firstEmpty;
         cpRank = null;
         renderCP();
         document.getElementById('card-picker').classList.add('open');
+        // שחזר מצב אחרי פתיחה
+        S.bettingClosed = _prevBettingClosed;
+        S.currentActor = _prevActor;
       });
     }, 0);
   });
@@ -1299,8 +1300,6 @@ function advanceTurn(fromSeatIdx){
       const hasAllin = active.some(s=>s.allin) && canAct.length===0;
       // After calling an all-in → deal remaining cards then showdown
       if(hasAllin){
-        S.bettingClosed = true;
-        S.currentActor = null;
         if(bCnt===5) showShowdownPanel();
         else autoOpenNextCard();
         return;
