@@ -1172,6 +1172,7 @@ function showSDCardPicker(seatIdx){
     const pName2 = pName(seatObj.playerId)||'שחקן';
     const c0 = seatObj.cards[0];
     const c1 = seatObj.cards[1];
+    pickingIdx = window._sdPickingIdx||0; // עדכן מ-global
     box.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
       '<div style="font-size:14px;font-weight:800;color:#c8a96e">🃏 '+pName2+'</div>'+
