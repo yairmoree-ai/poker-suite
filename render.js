@@ -1118,6 +1118,10 @@ function renderSeats(){
     </div>`;
     // Add action buttons arc above occupied seats
     const isCurActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor===i;
+    if(S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor!==i && seat?.playerId && !seat?.folded && !seat?.allin){
+      // Debug: log why this seat is not the actor
+      // console.log('Seat',i,'not actor. currentActor=',S.currentActor);
+    }
     if(seat?.playerId && !seat?.folded && !seat?.allin && isCurActor){
       const btns = document.createElement('div');
       btns.id = 'seat-actions-'+i;
@@ -1235,7 +1239,48 @@ function renderSeats(){
         }
       },{passive:true,capture:true});
     }
+    // Showdown mode — כפתור הזנת קלפים על המושב
+    if(S._showdownMode && seat?.playerId && !seat?.folded){
+      const sdBtn = document.createElement('button');
+      const hasCards = seat.cards && seat.cards[0] && seat.cards[1];
+      sdBtn.textContent = hasCards
+        ? (seat.cards[0].rank+seat.cards[0].suit+' '+seat.cards[1].rank+seat.cards[1].suit)
+        : '🃏';
+      sdBtn.style.cssText = 'position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);'
+        +'background:'+(hasCards?'rgba(95,196,122,0.9)':'rgba(200,169,110,0.9)')
+        +';color:'+(hasCards?'#0a0d14':'#0a0d14')
+        +';border:none;border-radius:8px;padding:2px 8px;font-size:'+(hasCards?'10px':'13px')
+        +';font-weight:900;cursor:pointer;white-space:nowrap;z-index:25;pointer-events:all';
+      sdBtn.onclick = (e)=>{ e.stopPropagation(); showSDCardPicker(i); };
+      el.style.overflow = 'visible';
+      el.appendChild(sdBtn);
+    }
     cont.appendChild(el);
+  }
+
+  // כפתור "💰 העבר קופה" על השולחן בזמן showdown
+  const existingSDBar = document.getElementById('sd-action-bar');
+  if(existingSDBar) existingSDBar.remove();
+  if(S._showdownMode){
+    const bar = document.createElement('div');
+    bar.id = 'sd-action-bar';
+    bar.style.cssText = 'position:absolute;bottom:30px;left:50%;transform:translateX(-50%);'
+      +'display:flex;gap:10px;z-index:50;pointer-events:all';
+    const potBtn = document.createElement('button');
+    potBtn.textContent = '💰 העבר קופה';
+    potBtn.style.cssText = 'padding:10px 24px;border-radius:12px;border:none;'
+      +'background:#c8a96e;color:#0a0d14;font-size:14px;font-weight:900;cursor:pointer;'
+      +'box-shadow:0 4px 16px rgba(0,0,0,0.5)';
+    potBtn.onclick = ()=>{ S._showdownMode=false; showShowdownPanel(); };
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'ביטול';
+    cancelBtn.style.cssText = 'padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);'
+      +'background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:13px;cursor:pointer';
+    cancelBtn.onclick = ()=>{ S._showdownMode=false; renderSeats(); };
+    bar.appendChild(potBtn);
+    bar.appendChild(cancelBtn);
+    const seatsContainer = document.getElementById('seats-container');
+    if(seatsContainer) seatsContainer.appendChild(bar);
   }
 
   // Render floating bet chips
