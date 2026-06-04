@@ -1152,10 +1152,6 @@ function showSDCardPicker(seatIdx){
   if(!seatObj) return;
   if(!seatObj.cards) seatObj.cards=[null,null];
 
-  // כל הקלפים שכבר בשימוש
-  const used = allUsedCards ? allUsedCards() : [];
-  const usedKeys = used.map(c=>c?c.rank+c.suit:'');
-
   let pickingIdx = seatObj.cards[0] ? 1 : 0; // איזה קלף אנחנו בוחרים
 
   document.getElementById('showdown-overlay')?.remove();
@@ -1173,6 +1169,9 @@ function showSDCardPicker(seatIdx){
     const c0 = seatObj.cards[0];
     const c1 = seatObj.cards[1];
     pickingIdx = window._sdPickingIdx||0; // עדכן מ-global
+    // חשב usedKeys מחדש כולל קלפים שכבר נבחרו
+    const used = allUsedCards ? allUsedCards() : [];
+    const usedKeys = used.map(c=>c?c.rank+c.suit:'');
     box.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
       '<div style="font-size:14px;font-weight:800;color:#c8a96e">🃏 '+pName2+'</div>'+
@@ -1194,7 +1193,9 @@ function showSDCardPicker(seatIdx){
         '<div style="display:flex;gap:4px;margin-bottom:4px;justify-content:center">'+
         RANKS.map(rank=>{
           const key=rank+suit;
-          const isUsed=usedKeys.includes(key)&&!(seatObj.cards[0]&&seatObj.cards[0].rank===rank&&seatObj.cards[0].suit===suit)&&!(seatObj.cards[1]&&seatObj.cards[1].rank===rank&&seatObj.cards[1].suit===suit);
+          // קלף used אם בשימוש ע"י מישהו אחר (לא ע"י ה-slots של השחקן הנוכחי)
+          const myCards = [seatObj.cards[0], seatObj.cards[1]].filter(Boolean).map(c=>c.rank+c.suit);
+          const isUsed = usedKeys.includes(key) && !myCards.includes(key);
           return '<button class="sd-card-btn" data-rank="'+rank+'" data-suit="'+suit+'" data-seatidx="'+seatIdx+'" data-used="'+(isUsed?'1':'0')+'" style="width:24px;height:32px;border-radius:4px;border:1px solid '+(isUsed?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.15)')+';background:'+(isUsed?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.07)')+';color:'+(isUsed?'rgba(255,255,255,0.15)':SC2[suit])+';font-size:9px;font-weight:700;cursor:'+(isUsed?'default':'pointer')+';padding:1px 0">'+rank+'<br>'+suit+'</button>';
         }).join('')+
         '</div>'
