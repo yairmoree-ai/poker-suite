@@ -1212,13 +1212,15 @@ function showSDCardPicker(seatIdx){
     if(!sObj) return;
     if(!sObj.cards) sObj.cards=[null,null];
     const idx = window._sdPickingIdx||0;
+    console.log('sdPickCard: rank='+rank+' suit='+suit+' idx='+idx+' _sdPickingIdx='+window._sdPickingIdx);
     sObj.cards[idx] = {rank, suit};
     persist();
-    if(idx===0 && !sObj.cards[1]){
+    if(idx===0){
       window._sdPickingIdx = 1;
       window._sdRenderPicker();
     } else {
       // שני קלפים נבחרו — חזור לshowdown
+      console.log('sdPickCard: done, going to showdown');
       document.getElementById('sd-card-picker-overlay')?.remove();
       showShowdownPanel();
     }
