@@ -293,7 +293,7 @@ function showQuickPlayerPicker(seatIdx){
     const overlay = document.createElement('div');
     overlay.id = 'quick-player-picker';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px';
-    overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+    overlay.onclick = e=>{ if(e.target===overlay){ overlay.remove(); S._showdownMode=false; renderSeats(); } };
     const box = document.createElement('div');
     box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:14px;padding:14px;width:100%;max-width:320px';
     box.onclick = e=>e.stopPropagation();
@@ -950,6 +950,8 @@ function checkAutoWin(){
 }
 
 function awardPot(winnerSeatIdxs, showAnim=true){
+  S._showdownMode = false;
+  document.getElementById('showdown-overlay')?.remove();
   const totalPot = calcPot();
   if(!totalPot) return;
 
@@ -1230,7 +1232,8 @@ function showSDCardPicker(seatIdx){
     } else {
       // שני קלפים נבחרו
       overlay.remove();
-      showShowdownPanel();
+      renderSeats(); // עדכן קלפים על המושב
+      // אם ב-showdown mode — נשאר בשולחן, לא פותח overlay
     }
   });
 
@@ -1242,6 +1245,8 @@ function showSDCardPicker(seatIdx){
 
 function showShowdownPanel(){
   document.getElementById('showdown-overlay')?.remove();
+  S._showdownMode = true;
+  renderSeats(); // עדכן שולחן עם כפתורי 🃏
   const overlay = document.createElement('div');
   overlay.id = 'showdown-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
