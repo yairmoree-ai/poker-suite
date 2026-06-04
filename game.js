@@ -1151,6 +1151,8 @@ function showSDCardPicker(seatIdx){
   const seatObj = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seatObj) return;
   if(!seatObj.cards) seatObj.cards=[null,null];
+  // אפס קלפים קיימים כדי לאפשר בחירה מחדש
+  seatObj.cards = [null, null];
 
   let pickingIdx = seatObj.cards[0] ? 1 : 0; // איזה קלף אנחנו בוחרים
 
@@ -1181,7 +1183,7 @@ function showSDCardPicker(seatIdx){
       '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:14px">'+
       [0,1].map(i=>{
         const card = i===0?c0:c1;
-        const isActive = pickingIdx===i;
+        const isActive = (window._sdPickingIdx||0)===i;
         return '<div class="sd-slot-btn" data-slotidx="'+i+'" style="width:44px;height:60px;border-radius:8px;border:2px solid '+(isActive?'#c8a96e':'rgba(255,255,255,0.15)')+';background:'+(isActive?'rgba(200,169,110,0.1)':'rgba(255,255,255,0.03)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer">'+
           (card?'<span style="font-size:16px;font-weight:900;color:'+SC2[card.suit]+'">'+card.rank+'</span><span style="font-size:14px;color:'+SC2[card.suit]+'">'+card.suit+'</span>':'<span style="font-size:22px;color:rgba(255,255,255,0.15)">+</span>')+
         '</div>';
