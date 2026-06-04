@@ -1238,7 +1238,6 @@ function showSDCardPicker(seatIdx){
   overlay.appendChild(box);
   overlay.onclick = ()=>{ overlay.remove(); showShowdownPanel(); };
   document.body.appendChild(overlay);
-  window._sdPickingIdx = pickingIdx;
 }
 
 function showShowdownPanel(){
