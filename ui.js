@@ -1079,6 +1079,7 @@ function pickCard(s){
         // Normal street – reset for new betting round
         const newOrder = getActingOrder(newStreet);
         S.currentActor = newOrder[0]||null;
+        console.log('[pickCard] newStreet='+newStreet+' newOrder='+JSON.stringify(newOrder)+' currentActor='+S.currentActor);
         S.bettingClosed = false;
         S.lastRaiser = null;
         S.actionCount = 0;
