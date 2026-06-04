@@ -128,7 +128,7 @@ function newHand(){
 function renderRecordPanel(){
   if(!curHand)return;
   const h=curHand;
-  const streets=['פרה-פלופ','פלופ','טרן','ריבר'];
+  const streets=['פרה-פלופ','פלופ','טורן','ריבר'];
   let potSoFar=0;
   // Calculate pot from all recorded actions
   h.seats.forEach(s=>(s.actions||[]).forEach(a=>{if(parseFloat(a.amount)>0)potSoFar+=parseFloat(a.amount);}));
@@ -161,7 +161,7 @@ function renderRecordPanel(){
   </div>`;
   // Actions by street
   const allActs=h.seats.flatMap((s,si)=>(s.actions||[]).map(a=>({...a,si,pn:s.playerName,pos:s.pos})));
-  ['פרה-פלופ','פלופ','טרן','ריבר'].forEach(st=>{
+  ['פרה-פלופ','פלופ','טורן','ריבר'].forEach(st=>{
     const sa=allActs.filter(a=>a.street===st);
     if(!sa.length)return;
     let runPot=0;
@@ -359,8 +359,8 @@ function showHandDetail(hid){
 
 
   // Streets - column layout like poker client
-  const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
-  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טרן':'Turn','ריבר':'River'};
+  const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
   const actionColors = {Fold:'#666',Check:'#5fc47a',Call:'#5b9bd5',Raise:'#c8a96e','3bet':'#e0a030','4bet':'#e07b6a','All-in':'#e05555',BB:'#e07b6a',SB:'#8b7cb8',Bet:'#c8a96e',Open:'#c8a96e'};
 
   // Build columns grid
@@ -414,7 +414,7 @@ function showHandDetail(hid){
 
       // Street header with pot
       const potAtStreet = (()=>{
-        const allStreets = ['פרה-פלופ','פלופ','טרן','ריבר'];
+        const allStreets = ['פרה-פלופ','פלופ','טורן','ריבר'];
         const streetIdx = allStreets.indexOf(street);
         if(streetIdx === 0){
           // Pre-flop: show SB + BB + Ante only
@@ -467,7 +467,7 @@ function showHandDetail(hid){
         col.appendChild(row);
       });
       // Add player cards at bottom of this column
-      const allStreetsList2 = ['פרה-פלופ','פלופ','טרן','ריבר'];
+      const allStreetsList2 = ['פרה-פלופ','פלופ','טורן','ריבר'];
       const seatsWithCards = (h.seats||[]).filter(s=>(s.cards||[]).some(Boolean)).filter(s=>{
         let lastSt = 'פרה-פלופ';
         allStreetsList2.forEach(st=>{ if((s.actions||[]).some(a=>a.street===st)) lastSt=st; });
@@ -532,7 +532,7 @@ function renderHandList(){
       .filter(s=>s.playerName===filterPlayer)
       .flatMap(s=>(s.actions||[]).map(a=>({...a, handId:h.id}))));
     
-    const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
+    const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
     const vpip = hands.filter(h=>(h.seats||[]).some(s=>s.playerName===filterPlayer&&(s.actions||[]).some(a=>a.type==='Call'||a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet'))).length;
     const pfr = hands.filter(h=>(h.seats||[]).some(s=>s.playerName===filterPlayer&&(s.actions||[]).some(a=>a.street==='פרה-פלופ'&&(a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet')))).length;
     const raises = allActions.filter(a=>a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet'||a.type==='All-in');
@@ -1059,7 +1059,7 @@ function pickCard(s){
     else if(boardIdx===1&&!S.board[2]) setTimeout(()=>openCP('board2'),80);
     // Clear bet chips when new betting round starts: after 3rd flop card, turn, river
     if(boardIdx===2||boardIdx===3||boardIdx===4){
-      const newStreet = boardIdx===2?'פלופ':boardIdx===3?'טרן':'ריבר';
+      const newStreet = boardIdx===2?'פלופ':boardIdx===3?'טורן':'ריבר';
       // Check if all-in situation – no betting needed
       const activeAfter = S.seats.filter(s=>s.playerId&&!s.folded);
       const canActAfter = activeAfter.filter(s=>!s.allin);
@@ -1086,48 +1086,21 @@ function pickCard(s){
         S.lastRaiseSize = 0;
         S.lastBet = 0;
         S.lastRaiseWasFull = true;
-      // Clear only the bet amounts (SB/BB stay, only last non-blind action cleared)
-      S.seats.forEach(seat=>{
-        if(seat.actions&&seat.actions.length>0){
-          // Keep cards and position info but clear bet actions for new street display
-          seat._streetCleared = (seat._streetCleared||0)+1;
-        }
-      });
-      // Clear bet chips container
-      const bc=document.getElementById('bet-chips-container');
-      if(bc) bc.innerHTML='';
-      renderLiveActions();
-    }
+        // Clear only the bet amounts (SB/BB stay, only last non-blind action cleared)
+        S.seats.forEach(seat=>{
+          if(seat.actions&&seat.actions.length>0){
+            seat._streetCleared = (seat._streetCleared||0)+1;
+          }
+        });
+        // Clear bet chips container
+        const bc=document.getElementById('bet-chips-container');
+        if(bc) bc.innerHTML='';
+        renderLiveActions();
+      }
   }
   else if(t?.startsWith('seat')){
     const m=t.match(/seat(\d+)_c(\d+)/);
-    if(m){
-      const seatObj=S.seats.find(s=>s.seatIdx===+m[1]);
-      if(seatObj){
-        if(!seatObj.cards)seatObj.cards=[null,null];
-        seatObj.cards[+m[2]]=card;
-        persist();
-        if(S._sdAfterCards!==undefined){
-          if(+m[2]===0){
-            // קלף ראשון מ-showdown → פתח קלף שני ישירות
-            const si=m[1];
-            setTimeout(()=>{
-              cpTarget='seat'+si+'_c1';
-              cpRank=null;
-              renderCP();
-              document.getElementById('card-picker').classList.add('open');
-            },120);
-            return; // אל תרנדר שולחן
-          } else if(+m[2]===1){
-            // קלף שני מ-showdown → חזור למסך showdown
-            const sdSeat = S._sdAfterCards;
-            S._sdAfterCards=undefined;
-            setTimeout(()=>showShowdownPanel(),150);
-            return; // אל תרנדר שולחן
-          }
-        }
-      }
-    }
+    if(m){const seat=S.seats.find(s=>s.seatIdx===+m[1]);if(seat){if(!seat.cards)seat.cards=[null,null];seat.cards[+m[2]]=card;}}
   }
   persist(); renderSeats(); renderBoard();
   if(activeSeat!==null)renderSeatPanel();
