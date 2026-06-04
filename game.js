@@ -1150,98 +1150,91 @@ function showSDCardPicker(seatIdx){
   const SC2={'♠':'#e2ddd4','♥':'#e05555','♦':'#e05555','♣':'#e2ddd4'};
   const seatObj = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seatObj) return;
-  if(!seatObj.cards) seatObj.cards=[null,null];
-  // אפס קלפים קיימים כדי לאפשר בחירה מחדש
-  seatObj.cards = [null, null];
 
-  let pickingIdx = seatObj.cards[1] ? 0 : 1; // RTL: slot 1 = שמאל = קלף ראשון
+  // אפס קלפים ומצב
+  seatObj.cards = [null, null];
+  let step = 0; // 0 = בוחר קלף ראשון, 1 = בוחר קלף שני
 
   document.getElementById('showdown-overlay')?.remove();
 
   const overlay = document.createElement('div');
   overlay.id = 'sd-card-picker-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;direction:ltr';
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:380px;max-height:90vh;overflow-y:auto';
+  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:380px;max-height:90vh;overflow-y:auto;direction:rtl';
   box.onclick = e=>e.stopPropagation();
 
   function renderPicker(){
     const pName2 = pName(seatObj.playerId)||'שחקן';
-    const c0 = seatObj.cards[0];
-    const c1 = seatObj.cards[1];
-    pickingIdx = window._sdPickingIdx||0; // עדכן מ-global
-    // חשב usedKeys מחדש כולל קלפים שכבר נבחרו
+    const card0 = seatObj.cards[0]; // קלף ראשון
+    const card1 = seatObj.cards[1]; // קלף שני
     const used = allUsedCards ? allUsedCards() : [];
     const usedKeys = used.map(c=>c?c.rank+c.suit:'');
-    box.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
-      '<div style="font-size:14px;font-weight:800;color:#c8a96e">🃏 '+pName2+'</div>'+
-      '<button onclick="document.getElementById(\"sd-card-picker-overlay\")?.remove();showShowdownPanel();" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button>'+
-      '</div>'+
-      // הצגת הקלפים הנוכחיים
-      '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:14px">'+
-      [0,1].map(i=>{
-        const card = i===0?c0:c1;
-        const isActive = (window._sdPickingIdx||0)===i;
-        return '<div class="sd-slot-btn" data-slotidx="'+i+'" style="width:44px;height:60px;border-radius:8px;border:2px solid '+(isActive?'#c8a96e':'rgba(255,255,255,0.15)')+';background:'+(isActive?'rgba(200,169,110,0.1)':'rgba(255,255,255,0.03)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer">'+
-          (card?'<span style="font-size:16px;font-weight:900;color:'+SC2[card.suit]+'">'+card.rank+'</span><span style="font-size:14px;color:'+SC2[card.suit]+'">'+card.suit+'</span>':'<span style="font-size:22px;color:rgba(255,255,255,0.15)">+</span>')+
-        '</div>';
+
+    const slotHTML = [0,1].map(i=>{
+      const card = seatObj.cards[i];
+      const isActive = step===i;
+      const border = isActive?'#c8a96e':'rgba(255,255,255,0.15)';
+      const bg = isActive?'rgba(200,169,110,0.1)':'rgba(255,255,255,0.03)';
+      const label = i===0?'קלף 1':'קלף 2';
+      return '<div class="sd-slot-btn" data-step="'+i+'" style="width:52px;height:68px;border-radius:8px;border:2px solid '+border+';background:'+bg+';display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:2px">'+
+        (card
+          ?'<span style="font-size:17px;font-weight:900;color:'+SC2[card.suit]+'">'+card.rank+'</span><span style="font-size:15px;color:'+SC2[card.suit]+'">'+card.suit+'</span>'
+          :'<span style="font-size:10px;color:rgba(255,255,255,0.2)">'+label+'</span>')+
+      '</div>';
+    }).join('');
+
+    const gridHTML = SUITS.map(suit=>
+      '<div style="display:flex;gap:3px;margin-bottom:3px;justify-content:center;direction:ltr">'+
+      RANKS.map(rank=>{
+        const key=rank+suit;
+        const myCards=[card0,card1].filter(Boolean).map(c=>c.rank+c.suit);
+        const isUsed=usedKeys.includes(key)&&!myCards.includes(key);
+        return '<button class="sd-card-btn" data-rank="'+rank+'" data-suit="'+suit+'" data-used="'+(isUsed?'1':'0')+'" style="width:26px;height:34px;border-radius:4px;border:1px solid '+(isUsed?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.18)')+';background:'+(isUsed?'rgba(0,0,0,0.2)':'rgba(255,255,255,0.07)')+';color:'+(isUsed?'rgba(255,255,255,0.1)':SC2[suit])+';font-size:9px;font-weight:700;cursor:'+(isUsed?'default':'pointer')+';line-height:1.2;padding:1px 0">'+rank+'<br>'+suit+'</button>';
       }).join('')+
+      '</div>'
+    ).join('');
+
+    box.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+        '<div style="font-size:14px;font-weight:800;color:#c8a96e">🃏 '+pName2+'</div>'+
+        '<button class="sd-close-btn" style="background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer;line-height:1">✕</button>'+
       '</div>'+
-      '<div style="font-size:10px;color:#5a5870;text-align:center;margin-bottom:10px">בחר קלף '+(pickingIdx+1)+'</div>'+
-      // גריד קלפים
-      SUITS.map(suit=>
-        '<div style="display:flex;gap:4px;margin-bottom:4px;justify-content:center">'+
-        RANKS.map(rank=>{
-          const key=rank+suit;
-          // קלף used אם בשימוש ע"י מישהו אחר (לא ע"י ה-slots של השחקן הנוכחי)
-          const myCards = [seatObj.cards[0], seatObj.cards[1]].filter(Boolean).map(c=>c.rank+c.suit);
-          const isUsed = usedKeys.includes(key) && !myCards.includes(key);
-          return '<button class="sd-card-btn" data-rank="'+rank+'" data-suit="'+suit+'" data-seatidx="'+seatIdx+'" data-used="'+(isUsed?'1':'0')+'" style="width:24px;height:32px;border-radius:4px;border:1px solid '+(isUsed?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.15)')+';background:'+(isUsed?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.07)')+';color:'+(isUsed?'rgba(255,255,255,0.15)':SC2[suit])+';font-size:9px;font-weight:700;cursor:'+(isUsed?'default':'pointer')+';padding:1px 0">'+rank+'<br>'+suit+'</button>';
-        }).join('')+
-        '</div>'
-      ).join('');
-    // שמור pickingIdx בclosure
-    window._sdPickingIdx = pickingIdx;
-    window._sdRenderPicker = renderPicker;
+      '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">'+slotHTML+'</div>'+
+      '<div style="font-size:11px;color:#c8a96e;text-align:center;margin-bottom:12px;font-weight:700">בחר '+(step===0?'קלף ראשון':'קלף שני')+'</div>'+
+      gridHTML;
   }
 
-  window.sdPickCard = function(rank, suit, sIdx){
-    const sObj = S.seats.find(s=>s.seatIdx===sIdx);
-    if(!sObj) return;
-    if(!sObj.cards) sObj.cards=[null,null];
-    const idx = window._sdPickingIdx||0;
-    console.log('sdPickCard: rank='+rank+' suit='+suit+' idx='+idx+' _sdPickingIdx='+window._sdPickingIdx);
-    sObj.cards[idx] = {rank, suit};
+  box.addEventListener('click', function(e){
+    // סגור
+    if(e.target.closest('.sd-close-btn')){
+      overlay.remove();
+      showShowdownPanel();
+      return;
+    }
+    // לחיצה על slot — החלף step
+    const slot = e.target.closest('.sd-slot-btn');
+    if(slot){ step = +slot.dataset.step; renderPicker(); return; }
+    // לחיצה על קלף
+    const btn = e.target.closest('.sd-card-btn');
+    if(!btn||btn.dataset.used==='1') return;
+    e.stopPropagation();
+    const rank = btn.dataset.rank;
+    const suit = btn.dataset.suit;
+    seatObj.cards[step] = {rank, suit};
     persist();
-    if(idx===1 && !sObj.cards[0]){
-      // נבחר קלף ראשון (slot 1/שמאל) → עבור לslot 0 (ימין)
-      window._sdPickingIdx = 0;
-      window._sdRenderPicker();
+    if(step===0){
+      step=1;
+      renderPicker();
     } else {
-      // שני קלפים נבחרו — חזור לshowdown
-      console.log('sdPickCard: done, going to showdown');
-      document.getElementById('sd-card-picker-overlay')?.remove();
+      // שני קלפים נבחרו
+      overlay.remove();
       showShowdownPanel();
     }
-  };
-
-  renderPicker();
-
-  // Event delegation — מאזין לכל לחיצה
-  box.addEventListener('click', function(e){
-    // לחיצה על slot (קלף מוצג) — החלף pickingIdx
-    const slot = e.target.closest('.sd-slot-btn');
-    if(slot){ window._sdPickingIdx = +slot.dataset.slotidx; window._sdRenderPicker(); return; }
-    // לחיצה על קלף בגריד
-    const btn = e.target.closest('.sd-card-btn');
-    if(!btn) return;
-    if(btn.dataset.used==='1') return;
-    e.stopPropagation();
-    window.sdPickCard(btn.dataset.rank, btn.dataset.suit, +btn.dataset.seatidx);
   });
 
+  renderPicker();
   overlay.appendChild(box);
   overlay.onclick = ()=>{ overlay.remove(); showShowdownPanel(); };
   document.body.appendChild(overlay);
