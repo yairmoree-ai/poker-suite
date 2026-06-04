@@ -1154,7 +1154,7 @@ function showSDCardPicker(seatIdx){
   // אפס קלפים קיימים כדי לאפשר בחירה מחדש
   seatObj.cards = [null, null];
 
-  let pickingIdx = seatObj.cards[0] ? 1 : 0; // איזה קלף אנחנו בוחרים
+  let pickingIdx = seatObj.cards[1] ? 0 : 1; // RTL: slot 1 = שמאל = קלף ראשון
 
   document.getElementById('showdown-overlay')?.remove();
 
@@ -1215,8 +1215,9 @@ function showSDCardPicker(seatIdx){
     console.log('sdPickCard: rank='+rank+' suit='+suit+' idx='+idx+' _sdPickingIdx='+window._sdPickingIdx);
     sObj.cards[idx] = {rank, suit};
     persist();
-    if(idx===0){
-      window._sdPickingIdx = 1;
+    if(idx===1 && !sObj.cards[0]){
+      // נבחר קלף ראשון (slot 1/שמאל) → עבור לslot 0 (ימין)
+      window._sdPickingIdx = 0;
       window._sdRenderPicker();
     } else {
       // שני קלפים נבחרו — חזור לshowdown
