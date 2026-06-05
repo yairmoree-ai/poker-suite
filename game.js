@@ -63,10 +63,10 @@ function renderSeatPanel(){
     </div>
   </div>`;
   // BTN
-  const btnLabel = S.btnLocked ? '🔒 BTN נעול' : S.btnSeat===i ? '✓ BTN מסומן' : '🎯 סמן כ-BTN והתחל יד';
-  const btnStyle = S.btnLocked ? 'background:rgba(90,80,96,0.1);border:1px solid #5a506050;color:#5a5060' : S.btnSeat===i ? 'background:rgba(200,169,110,0.2);border:1px solid rgba(200,169,110,0.5);color:var(--gold)' : 'background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.5);color:#5b9bd5';
+  const btnLabel = S.btnSeat===i ? '✓ BTN מסומן' : '🎯 סמן כ-BTN והתחל יד';
+  const btnStyle = S.btnSeat===i ? 'background:rgba(200,169,110,0.2);border:1px solid rgba(200,169,110,0.5);color:var(--gold)' : 'background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.5);color:#5b9bd5';
   html+=`<div style="margin-bottom:7px"><span class="sec-lbl" style="margin-bottom:3px">עמדת דילר (BTN)</span>
-    <button class="btn btn-sm" style="${btnStyle}" onclick="if(!S.btnLocked){S.btnSeat=${i};postBlinds(${i});persist();renderSeats();renderSeatPanel();}">
+    <button class="btn btn-sm" style="${btnStyle}" onclick="if(S.btnLocked&&!confirm('להתחיל יד חדשה עם BTN זה? היד הנוכחית תאופס')){return;}S.btnSeat=${i};postBlinds(${i});persist();renderSeats();renderSeatPanel();">
       ${btnLabel}
     </button></div>`;
 
