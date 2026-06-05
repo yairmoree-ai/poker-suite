@@ -1235,6 +1235,7 @@ function showSDCardPicker(seatIdx){
       overlay.remove();
       S._showdownMode = true;
       renderSeats();
+      checkAutoWinner(); // בדוק אם כולם הזינו קלפים
     }
   });
 
@@ -1242,6 +1243,59 @@ function showSDCardPicker(seatIdx){
   overlay.appendChild(box);
   overlay.onclick = ()=>{ overlay.remove(); showShowdownPanel(); };
   document.body.appendChild(overlay);
+}
+
+
+function checkAutoWinner(){
+  if(!S._showdownMode) return;
+  const board = S.board.filter(Boolean);
+  if(board.length < 5) return; // צריך לוח מלא
+
+  const active = S.seats.filter(s=>s.playerId && !s.folded);
+  // בדוק שכולם הזינו 2 קלפים
+  const allHaveCards = active.every(s=>s.cards && s.cards[0] && s.cards[1]);
+  if(!allHaveCards) return;
+
+  // חשב ידיים
+  let best = null;
+  let winners = [];
+  active.forEach(seat=>{
+    const allCards = [...seat.cards, ...board];
+    const score = evaluateHand(allCards);
+    if(!score) return;
+    seat._sdScore = score;
+    if(!best || score.rank > best.rank || (score.rank===best.rank && compareTb(score.tb, best.tb)>0)){
+      best = score;
+      winners = [seat.seatIdx];
+    } else if(score.rank===best.rank && compareTb(score.tb, best.tb)===0){
+      winners.push(seat.seatIdx);
+    }
+  });
+
+  if(!winners.length) return;
+
+  // סמן מנצחים
+  S._autoWinners = winners;
+  renderSeats();
+
+  // עדכן כפתור 💰
+  const bar = document.getElementById('sd-action-bar');
+  if(bar){
+    const potBtn = bar.querySelector('button');
+    if(potBtn){
+      const winNames = winners.map(i=>pName(S.seats.find(s=>s.seatIdx===i)?.playerId)||'?').join(' + ');
+      const handName = best?.name||'';
+      potBtn.textContent = '🏆 '+winNames+' ('+handName+') — העבר קופה';
+      potBtn.style.background = '#5fc47a';
+      // לחיצה → ישירות awardPot
+      potBtn.onclick = ()=>{
+        S._showdownMode = false;
+        S._autoWinners = null;
+        active.forEach(s=>{ s._sdScore=null; });
+        awardPot(winners, true);
+      };
+    }
+  }
 }
 
 function enterShowdownMode(){
