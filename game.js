@@ -1212,7 +1212,8 @@ function showSDCardPicker(seatIdx){
     // סגור
     if(e.target.closest('.sd-close-btn')){
       overlay.remove();
-      showShowdownPanel();
+      S._showdownMode = true;
+      renderSeats(); // חזור לשולחן עם כפתורי 🃏
       return;
     }
     // לחיצה על slot — החלף step
@@ -1230,10 +1231,10 @@ function showSDCardPicker(seatIdx){
       step=1;
       renderPicker();
     } else {
-      // שני קלפים נבחרו
+      // שני קלפים נבחרו — חזור לשולחן עם כפתורי showdown
       overlay.remove();
-      renderSeats(); // עדכן קלפים על המושב
-      // אם ב-showdown mode — נשאר בשולחן, לא פותח overlay
+      S._showdownMode = true;
+      renderSeats();
     }
   });
 
