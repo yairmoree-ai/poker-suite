@@ -1239,13 +1239,13 @@ function renderSeats(){
         }
       },{passive:true,capture:true});
     }
+    // הדגש מנצח אוטומטי (גם בלי showdown mode — כגון אחרי awardPot)
+    if(S._autoWinners && S._autoWinners.includes(i) && seat?.playerId){
+      el.style.boxShadow = '0 0 24px rgba(95,196,122,0.9)';
+      el.style.border = '2px solid #5fc47a';
+    }
     // Showdown mode — כפתור הזנת קלפים על המושב
     if(S._showdownMode && seat?.playerId && !seat?.folded){
-      // הדגש מנצח אוטומטי
-      if(S._autoWinners && S._autoWinners.includes(i)){
-        el.style.boxShadow = '0 0 20px rgba(95,196,122,0.8)';
-        el.style.borderColor = '#5fc47a';
-      }
       const sdBtn = document.createElement('button');
       const hasCards = seat.cards && seat.cards[0] && seat.cards[1];
       sdBtn.textContent = hasCards
