@@ -1594,6 +1594,8 @@ function resetHand(){
   S.bettingClosed = false;
   S._lastWinners = null;
   S._winners = null;
+  S._showdownMode = false;
+  S._autoWinners = null;
   S.board = [null,null,null,null,null];
   S.seats = S.seats.map(s=>({...s, cards:[null,null], actions:[], folded:false, allin:false, sittingOut:(s.stack||0)===0?s.sittingOut:false}));
   persist(); render();
