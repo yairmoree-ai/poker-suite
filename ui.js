@@ -1072,7 +1072,8 @@ function pickCard(s){
         S.lastBet = 0;
         setTimeout(()=>{
           const bCnt = S.board.filter(Boolean).length;
-          if(bCnt===5) showShowdownPanel();
+          console.log('[ui.js pickCard allin] bCnt='+bCnt+' _showdownMode='+S._showdownMode);
+          if(bCnt===5) enterShowdownMode();
           else autoOpenNextCard();
         }, 150);
       } else {
