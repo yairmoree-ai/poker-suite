@@ -1253,6 +1253,11 @@ function enterShowdownMode(){
 
 function showShowdownPanel(){
   console.log('[showShowdownPanel] called, _showdownMode was='+S._showdownMode);
+  // אם כבר ב-showdown mode (enterShowdownMode רץ) — אל תפתח overlay אוטומטית
+  if(S._showdownMode===true){
+    console.log('[showShowdownPanel] blocked — in showdown mode, use pot button');
+    return;
+  }
   document.getElementById('showdown-overlay')?.remove();
   S._showdownMode = false;
   renderSeats();
