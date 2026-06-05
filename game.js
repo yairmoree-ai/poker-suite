@@ -889,7 +889,7 @@ function undoAward(){
   persist(); renderSeats(); renderBoard(); renderLiveActions();
   notify('↩ הכרזה בוטלה');
   // Re-show showdown panel
-  setTimeout(()=>showShowdownPanel(), 300);
+  setTimeout(()=>enterShowdownMode(), 300);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -941,7 +941,7 @@ function checkAutoWin(){
     S.currentActor = null;
     const bCnt = S.board.filter(Boolean).length;
     setTimeout(()=>{
-      if(bCnt>=5) showShowdownPanel();
+      if(bCnt>=5) enterShowdownMode();
       else autoOpenNextCard();
     }, 300);
     return true;
@@ -1243,10 +1243,15 @@ function showSDCardPicker(seatIdx){
   document.body.appendChild(overlay);
 }
 
+function enterShowdownMode(){
+  S._showdownMode = true;
+  renderSeats();
+}
+
 function showShowdownPanel(){
   document.getElementById('showdown-overlay')?.remove();
-  S._showdownMode = true;
-  renderSeats(); // עדכן שולחן עם כפתורי 🃏
+  S._showdownMode = false;
+  renderSeats();
   const overlay = document.createElement('div');
   overlay.id = 'showdown-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
@@ -1391,13 +1396,13 @@ function advanceTurn(fromSeatIdx){
       const hasAllin = active.some(s=>s.allin) && canAct.length===0;
       // After calling an all-in → deal remaining cards then showdown
       if(hasAllin){
-        if(bCnt===5) showShowdownPanel();
+        if(bCnt===5) enterShowdownMode();
         else autoOpenNextCard();
         return;
       }
       // Normal betting close
       if(bCnt===5){
-        showShowdownPanel();
+        enterShowdownMode();
       } else {
         autoOpenNextCard();
       }
