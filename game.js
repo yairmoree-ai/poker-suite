@@ -1245,11 +1245,14 @@ function showSDCardPicker(seatIdx){
 }
 
 function enterShowdownMode(){
+  console.log('[enterShowdownMode] called');
   S._showdownMode = true;
   renderSeats();
+  console.log('[enterShowdownMode] _showdownMode='+S._showdownMode);
 }
 
 function showShowdownPanel(){
+  console.log('[showShowdownPanel] called, _showdownMode was='+S._showdownMode);
   document.getElementById('showdown-overlay')?.remove();
   S._showdownMode = false;
   renderSeats();
