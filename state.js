@@ -54,6 +54,7 @@ const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 let S={
   playerLib:[],
   tableSize:9,
+  tableOrientation:'vertical',
   buyinCost:50,
   buyins:{},       // {pid:{buyin:n,rebuy:n}}
   koOrder:[],      // pids in order of KO (first KO = last place)
@@ -78,7 +79,6 @@ let S={
   lastRaiseSize:0,  // size of last raise increment
   lastRaiseWasFull:true, // was last raise a full raise?
   btnLocked:false,
-  playerNotes:{},   // {playerId: 'note text'}
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
 let curHand=null, recStreet='פרה-פלופ', recActor='0';
@@ -145,6 +145,7 @@ function applySnapshot(v){
   if(v.customBlinds!==undefined) S.customBlinds=v.customBlinds;
   if(v.customBlindLevels) S.customBlindLevels=v.customBlindLevels;
   if(v.tableSize) S.tableSize=v.tableSize;
+  if(v.tableOrientation) S.tableOrientation=v.tableOrientation;
   if(v.houseRake!==undefined) S.houseRake=v.houseRake;
   if(v.place4!==undefined) S.place4=v.place4;
   if(v.place3!==undefined) S.place3=v.place3;
@@ -152,9 +153,7 @@ function applySnapshot(v){
   if(v.place2Override!==undefined) S.place2Override=v.place2Override;
   if(v.handLog) S.handLog=v.handLog;
   if(v.tournLog) S.tournLog=v.tournLog;
-  if(v.playerNotes) S.playerNotes=v.playerNotes;
   // Ensure new fields always have defaults
-  if(!S.playerNotes) S.playerNotes={};
   if(S.currentActor===undefined) S.currentActor=null;
   if(S.bettingClosed===undefined) S.bettingClosed=false;
   if(S.lastRaiser===undefined) S.lastRaiser=null;
@@ -227,7 +226,7 @@ function persist(){
   // Save to both localStorage and sessionStorage
   try{ localStorage.setItem('ps_lib',JSON.stringify(S.playerLib)); }catch(e){}
   try{ localStorage.setItem('ps_seats',JSON.stringify({seats:S.seats,board:S.board,btnSeat:S.btnSeat})); }catch(e){}
-  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,houseRake:S.houseRake,place4:S.place4,place3:S.place3,place1Override:S.place1Override,place2Override:S.place2Override,btnLocked:S.btnLocked,lastBet:S.lastBet,blindTimer:S.blindTimer,blindStructure:S.blindStructure})); }catch(e){}
+  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,tableOrientation:S.tableOrientation,houseRake:S.houseRake,place4:S.place4,place3:S.place3,place1Override:S.place1Override,place2Override:S.place2Override,btnLocked:S.btnLocked,lastBet:S.lastBet,blindTimer:S.blindTimer,blindStructure:S.blindStructure})); }catch(e){}
   try{ localStorage.setItem('ps_log',JSON.stringify(S.handLog)); }catch(e){}
   try{ localStorage.setItem('ps_tlog',JSON.stringify(S.tournLog)); }catch(e){}
   // Also save full snapshot to sessionStorage (survives refresh, not new tab)
@@ -245,11 +244,10 @@ function fullSnapshot(){
     playerLib:S.playerLib, seats:S.seats, board:S.board, btnSeat:S.btnSeat,
     buyinCost:S.buyinCost, buyins:S.buyins, koOrder:S.koOrder,
     blindLevel:S.blindLevel, customBlinds:S.customBlinds,
-    customBlindLevels:S.customBlindLevels, tableSize:S.tableSize,
+    customBlindLevels:S.customBlindLevels, tableSize:S.tableSize, tableOrientation:S.tableOrientation,
     houseRake:S.houseRake, place4:S.place4, place3:S.place3,
     handLog:S.handLog, tournLog:S.tournLog,
-    blindTimer:S.blindTimer, blindStructure:S.blindStructure,
-    playerNotes:S.playerNotes||{}
+    blindTimer:S.blindTimer, blindStructure:S.blindStructure
   };
 }
 
@@ -310,7 +308,11 @@ function assignPos(){
 }
 
 function getSeatXY(i,count){
-  const cx=50,cy=50,rx=40,ry=47;
+  const cx=50,cy=50;
+  const horiz = (typeof S!=='undefined' && S.tableOrientation==='horizontal');
+  // אנכי: rx קטן, ry גדול | אופקי: rx גדול, ry קטן
+  const rx = horiz ? (count>=7?46:43) : (count>=7?36:34);
+  const ry = horiz ? (count>=7?36:34) : (count>=7?44:47);
   const angle=(Math.PI/2)+(2*Math.PI*i/count);
   return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
 }
