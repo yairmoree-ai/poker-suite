@@ -1012,6 +1012,45 @@ function setLevelDuration(secs){
   persist();
 }
 
+function renderTableShape(){
+  const horiz = S.tableOrientation === 'horizontal';
+  const wrap = document.getElementById('table-wrap');
+  const svg = document.getElementById('table-svg');
+  if(!wrap || !svg) return;
+
+  if(horiz){
+    // אופקי — רחב יותר מגבוה
+    wrap.style.width  = 'min(96vw, 520px)';
+    wrap.style.height = 'min(55vw, 300px)';
+    svg.innerHTML = `
+      <defs>
+        <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
+        <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#164828"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
+      </defs>
+      <ellipse cx="50" cy="50" rx="49" ry="44" fill="#060a10"/>
+      <ellipse cx="50" cy="50" rx="48" ry="43" fill="url(#gF)" opacity=".55"/>
+      <ellipse cx="50" cy="50" rx="48" ry="43" fill="none" stroke="#1e5535" stroke-width="1.5"/>
+      <ellipse cx="50" cy="50" rx="44" ry="38" fill="url(#gF2)"/>
+      <ellipse cx="50" cy="50" rx="44" ry="38" fill="none" stroke="#164030" stroke-width=".5"/>
+      <ellipse cx="50" cy="50" rx="40" ry="34" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>`;
+  } else {
+    // אנכי — גבוה יותר מרחב
+    wrap.style.width  = 'min(82vw, 360px)';
+    wrap.style.height = 'min(110vw, 480px)';
+    svg.innerHTML = `
+      <defs>
+        <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
+        <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#164828"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
+      </defs>
+      <ellipse cx="50" cy="50" rx="38" ry="49" fill="#060a10"/>
+      <ellipse cx="50" cy="50" rx="37" ry="48" fill="url(#gF)" opacity=".55"/>
+      <ellipse cx="50" cy="50" rx="37" ry="48" fill="none" stroke="#1e5535" stroke-width="1.5"/>
+      <ellipse cx="50" cy="50" rx="33" ry="44" fill="url(#gF2)"/>
+      <ellipse cx="50" cy="50" rx="33" ry="44" fill="none" stroke="#164030" stroke-width=".5"/>
+      <ellipse cx="50" cy="50" rx="29" ry="40" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>`;
+  }
+}
+
 function render(){
   // Safety: if currentActor is set and hand is active, ensure bettingClosed is correct
   if(S.btnLocked && S.currentActor!==null && S.bettingClosed){
@@ -1021,7 +1060,7 @@ function render(){
     const order = getActingOrder(street);
     if(order.includes(S.currentActor)) S.bettingClosed = false;
   }
-  renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+  renderTableShape(); renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
   // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
