@@ -1027,25 +1027,24 @@ function renderTableShape(){
 
   if(horiz){
     // אופקי
-    const wH = Math.min(window.innerWidth * 0.76, 520);
+    const wH = Math.min(window.innerWidth * 0.83, 520);
     wrap.style.width = wH + 'px';
-    wrap.style.height = (wH * 0.52) + 'px';
+    wrap.style.height = (wH * 0.55) + 'px';
     wrap.style.maxWidth = '';
     wrap.style.aspectRatio = '';
     wrap.style.alignSelf = 'center';
     svg.setAttribute('viewBox','0 0 200 100');
-    // r=50% מהגובה = שולחן stadium עגול בקצוות
+    // r=40 units (=~40% גובה) — שולחן פוקר עם קצוות מעוגלים נכון
     const s=(x1,x2,y1,y2,r)=>{
-      const d=r;
-      return `M${x1+d},${y1} L${x2-d},${y1} Q${x2},${y1} ${x2},${y1+d} L${x2},${y2-d} Q${x2},${y2} ${x2-d},${y2} L${x1+d},${y2} Q${x1},${y2} ${x1},${y2-d} L${x1},${y1+d} Q${x1},${y1} ${x1+d},${y1} Z`;
+      return `M${x1+r},${y1} L${x2-r},${y1} Q${x2},${y1} ${x2},${y1+r} L${x2},${y2-r} Q${x2},${y2} ${x2-r},${y2} L${x1+r},${y2} Q${x1},${y2} ${x1},${y2-r} L${x1},${y1+r} Q${x1},${y1} ${x1+r},${y1} Z`;
     };
     svg.innerHTML = defs+
-      `<path d="${s(2,198,2,98,50)}" fill="#040810"/>` +
-      `<path d="${s(3,197,3,97,48)}" fill="url(#gF)" opacity=".6"/>` +
-      `<path d="${s(3,197,3,97,48)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>` +
-      `<path d="${s(8,192,8,92,40)}" fill="url(#gF2)"/>` +
-      `<path d="${s(8,192,8,92,40)}" fill="none" stroke="#164030" stroke-width=".6"/>` +
-      `<path d="${s(12,188,12,88,36)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
+      `<path d="${s(1,199,1,99,40)}" fill="#040810"/>` +
+      `<path d="${s(2,198,2,98,39)}" fill="url(#gF)" opacity=".6"/>` +
+      `<path d="${s(2,198,2,98,39)}" fill="none" stroke="#1a4a2e" stroke-width="2"/>` +
+      `<path d="${s(6,194,6,94,35)}" fill="url(#gF2)"/>` +
+      `<path d="${s(6,194,6,94,35)}" fill="none" stroke="#164030" stroke-width=".8"/>` +
+      `<path d="${s(10,190,10,90,31)}" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".4"/>`;
     wrap.style.width = '';
     wrap.style.height = '';
   } else {
