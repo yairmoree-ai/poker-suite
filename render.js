@@ -1012,53 +1012,6 @@ function setLevelDuration(secs){
   persist();
 }
 
-function renderTableShape(){
-  const horiz = S.tableOrientation === 'horizontal';
-  const wrap = document.getElementById('table-wrap');
-  const svg = document.getElementById('table-svg');
-  if(!wrap || !svg) return;
-
-  // helper: stadium path בcoordinates 0-100
-  const stadium=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
-  const defs=`<defs>
-    <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
-    <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
-  </defs>`;
-
-  if(horiz){
-    // אופקי
-    wrap.style.width = 'min(96vw, 600px)';
-    wrap.style.height = 'min(52vw, 320px)';
-    wrap.style.aspectRatio = '';
-    svg.setAttribute('viewBox','0 0 200 100');
-    const s=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
-    svg.innerHTML = defs+
-      `<path d="${s(8,192,4,96,28)}" fill="#040810"/>` +
-      `<path d="${s(9,191,5,95,27)}" fill="url(#gF)" opacity=".6"/>` +
-      `<path d="${s(9,191,5,95,27)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>` +
-      `<path d="${s(14,186,10,90,22)}" fill="url(#gF2)"/>` +
-      `<path d="${s(14,186,10,90,22)}" fill="none" stroke="#164030" stroke-width=".6"/>` +
-      `<path d="${s(19,181,15,85,17)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
-    wrap.style.width = '';
-    wrap.style.height = '';
-  } else {
-    // אנכי
-    wrap.style.width = 'min(72vw, 340px)';
-    wrap.style.height = 'min(108vw, 500px)';
-    wrap.style.aspectRatio = '';
-    svg.setAttribute('viewBox','0 0 100 100');
-    svg.innerHTML = defs+
-      `<path d="${stadium(8,92,4,96,28)}" fill="#040810"/>` +
-      `<path d="${stadium(9,91,5,95,27)}" fill="url(#gF)" opacity=".6"/>` +
-      `<path d="${stadium(9,91,5,95,27)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>` +
-      `<path d="${stadium(14,86,10,90,22)}" fill="url(#gF2)"/>` +
-      `<path d="${stadium(14,86,10,90,22)}" fill="none" stroke="#164030" stroke-width=".6"/>` +
-      `<path d="${stadium(19,81,15,85,17)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
-    wrap.style.width = '';
-    wrap.style.height = '';
-  }
-}
-
 function render(){
   // Safety: if currentActor is set and hand is active, ensure bettingClosed is correct
   if(S.btnLocked && S.currentActor!==null && S.bettingClosed){
@@ -1068,10 +1021,7 @@ function render(){
     const order = getActingOrder(street);
     if(order.includes(S.currentActor)) S.bettingClosed = false;
   }
-  renderTableShape(); renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
-  // עדכן כפתור orientation
-  const orientBtn = document.getElementById('btn-orientation');
-  if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
+  renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
   // Show/hide viewer banner
   const vb = document.getElementById('viewer-banner');
   if(vb) vb.style.display = isViewer()?'flex':'none';
@@ -1119,9 +1069,6 @@ function renderStats(){
 }
 function renderSeats(){
   const cont=document.getElementById('seats-container'); cont.innerHTML='';
-  // class לאפקט scale
-  const hasActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null;
-  cont.classList.toggle('seats-has-actor', hasActor);
   const swp=assignPos();
   for(let i=0;i<S.tableSize;i++){
     const{x,y}=getSeatXY(i,S.tableSize);
@@ -1133,7 +1080,7 @@ function renderSeats(){
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
     const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
     const displayAct = lastAct||blindAct;
-    const w=seat?.playerId?(S.tableSize>=7?64:76):40;
+    const w=seat?.playerId?76:40;
     const isCurrentActor = i===S.currentActor;
     const isWinner = S._winners&&S._winners.includes(i);
     let cls='seat-btn';
@@ -1145,23 +1092,15 @@ function renderSeats(){
     if(isAlin)cls+=' allin';
     if(isCurrentActor&&seat?.playerId&&!isFold)cls+=' current-actor';
     if(isWinner)cls+=' winner';
-    const isCurActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor===i;
     const el=document.createElement('div');
     el.className='seat-el';
     el.dataset.seat=i;
-    el.style.left=`${x}%`;
-    el.style.top=`${y}%`;
-    el.style.transform='translate(-50%,-50%)';
-    if(isCurActor){
-      el.classList.add('is-actor');
-      el.style.transform='translate(-50%,-50%) scale(1.35)';
-      el.style.zIndex='30';
-    }
+    el.style=`left:${x}%;top:${y}%`;
     el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?76:40}px" onclick="clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
           ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
-          ${isBtn?`<span class="dealer-chip" style="cursor:pointer" onclick="event.stopPropagation();if(!S.btnLocked||confirm('להעביר את ה-BTN? היד הנוכחית תאופס')){S.btnSeat=null;S.btnLocked=false;resetHand();renderSeats();}">D</span>`:''}
+          ${isBtn?`<span class="dealer-chip">D</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
         ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
@@ -1178,6 +1117,7 @@ function renderSeats(){
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     // Add action buttons arc above occupied seats
+    const isCurActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor===i;
     if(S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor!==i && seat?.playerId && !seat?.folded && !seat?.allin){
       // Debug: log why this seat is not the actor
       // console.log('Seat',i,'not actor. currentActor=',S.currentActor);
@@ -1188,7 +1128,7 @@ function renderSeats(){
       btns.style.cssText = 'position:absolute;top:50%;left:50%;width:0;height:0;pointer-events:all;z-index:20';
       // Place buttons in arc around the seat circle
       // F, CH = above seat | C, R, AI = below seat
-      const sw=S.tableSize>=7?64:76, sh=S.tableSize>=7?64:76, bSize=S.tableSize>=7?24:28, gap=S.tableSize>=7?3:5;
+      const sw=76, sh=76, bSize=28, gap=5;
       btns.style.cssText = 'position:absolute;top:0;left:0;width:'+sw+'px;height:'+sh+'px;pointer-events:none;z-index:20';
       // TOP: F, CH above seat
       const seatI=i;
@@ -1298,11 +1238,6 @@ function renderSeats(){
           if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
         }
       },{passive:true,capture:true});
-    }
-    // הדגש מנצח אוטומטי (גם בלי showdown mode — כגון אחרי awardPot)
-    if(S._autoWinners && S._autoWinners.includes(i) && seat?.playerId){
-      el.style.boxShadow = '0 0 24px rgba(95,196,122,0.9)';
-      el.style.border = '2px solid #5fc47a';
     }
     // Showdown mode — כפתור הזנת קלפים על המושב
     if(S._showdownMode && seat?.playerId && !seat?.folded){
