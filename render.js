@@ -1019,35 +1019,38 @@ function renderTableShape(){
   if(!wrap || !svg) return;
 
   if(horiz){
-    // אופקי — רחב יותר מגבוה
+    // אופקי — stadium shape
     wrap.style.width  = 'min(96vw, 520px)';
-    wrap.style.height = 'min(55vw, 300px)';
+    wrap.style.height = 'min(48vw, 260px)';
+    // r=קרן הקשת, x1/x2=קצות ישר, y1/y2=גובה
+    const makeStadium=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
     svg.innerHTML = `
       <defs>
         <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
-        <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#164828"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
+        <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
       </defs>
-      <ellipse cx="50" cy="50" rx="49" ry="44" fill="#060a10"/>
-      <ellipse cx="50" cy="50" rx="48" ry="43" fill="url(#gF)" opacity=".55"/>
-      <ellipse cx="50" cy="50" rx="48" ry="43" fill="none" stroke="#1e5535" stroke-width="1.5"/>
-      <ellipse cx="50" cy="50" rx="44" ry="38" fill="url(#gF2)"/>
-      <ellipse cx="50" cy="50" rx="44" ry="38" fill="none" stroke="#164030" stroke-width=".5"/>
-      <ellipse cx="50" cy="50" rx="40" ry="34" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>`;
+      <path d="${makeStadium(8,92,5,95,24)}" fill="#040810"/>
+      <path d="${makeStadium(9,91,6,94,23)}" fill="url(#gF)" opacity=".6"/>
+      <path d="${makeStadium(9,91,6,94,23)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>
+      <path d="${makeStadium(12,88,11,89,20)}" fill="url(#gF2)"/>
+      <path d="${makeStadium(12,88,11,89,20)}" fill="none" stroke="#164030" stroke-width=".6"/>
+      <path d="${makeStadium(15,85,15,85,17)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
   } else {
-    // אנכי — גבוה יותר מרחב
-    wrap.style.width  = 'min(82vw, 360px)';
-    wrap.style.height = 'min(110vw, 480px)';
+    // אנכי — stadium shape עומד
+    wrap.style.width  = 'min(78vw, 340px)';
+    wrap.style.height = 'min(115vw, 500px)';
+    const makeStadiumV=(y1,y2,x1,x2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
     svg.innerHTML = `
       <defs>
         <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
-        <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#164828"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
+        <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
       </defs>
-      <ellipse cx="50" cy="50" rx="38" ry="49" fill="#060a10"/>
-      <ellipse cx="50" cy="50" rx="37" ry="48" fill="url(#gF)" opacity=".55"/>
-      <ellipse cx="50" cy="50" rx="37" ry="48" fill="none" stroke="#1e5535" stroke-width="1.5"/>
-      <ellipse cx="50" cy="50" rx="33" ry="44" fill="url(#gF2)"/>
-      <ellipse cx="50" cy="50" rx="33" ry="44" fill="none" stroke="#164030" stroke-width=".5"/>
-      <ellipse cx="50" cy="50" rx="29" ry="40" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".3"/>`;
+      <path d="${makeStadiumV(5,95,10,90,28)}" fill="#040810"/>
+      <path d="${makeStadiumV(6,94,11,89,27)}" fill="url(#gF)" opacity=".6"/>
+      <path d="${makeStadiumV(6,94,11,89,27)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>
+      <path d="${makeStadiumV(10,90,15,85,23)}" fill="url(#gF2)"/>
+      <path d="${makeStadiumV(10,90,15,85,23)}" fill="none" stroke="#164030" stroke-width=".6"/>
+      <path d="${makeStadiumV(14,86,19,81,19)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
   }
 }
 
