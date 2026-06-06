@@ -1298,6 +1298,35 @@ function checkAutoWinner(){
   }
 }
 
+function applyLiveTuner(){
+  const w = +document.getElementById('lt-w').value;
+  const r = +document.getElementById('lt-r').value;
+  const c = +document.getElementById('lt-c').value;
+  document.getElementById('lt-w-v').textContent = w;
+  document.getElementById('lt-r-v').textContent = r;
+  document.getElementById('lt-c-v').textContent = c;
+  const wrap = document.getElementById('table-wrap');
+  if(!wrap) return;
+  const wPx = Math.min(window.innerWidth * w/100, 600);
+  wrap.style.width = wPx+'px';
+  wrap.style.height = (wPx*r/100)+'px';
+  const info = document.getElementById('lt-info');
+  if(info) info.textContent = Math.round(wPx)+'×'+Math.round(wPx*r/100)+'px | עיגול:'+c;
+  // עדכן SVG עם עיגול חדש
+  const svg = document.getElementById('table-svg');
+  if(svg){
+    const s=(x1,x2,y1,y2,rr)=>`M${x1+rr},${y1} L${x2-rr},${y1} Q${x2},${y1} ${x2},${y1+rr} L${x2},${y2-rr} Q${x2},${y2} ${x2-rr},${y2} L${x1+rr},${y2} Q${x1},${y2} ${x1},${y2-rr} L${x1},${y1+rr} Q${x1},${y1} ${x1+rr},${y1} Z`;
+    const defs=`<defs><radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient><radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient></defs>`;
+    svg.innerHTML=defs+
+      `<path d="${s(1,199,1,99,c)}" fill="#040810"/>`+
+      `<path d="${s(2,198,2,98,c-1)}" fill="url(#gF)" opacity=".6"/>`+
+      `<path d="${s(2,198,2,98,c-1)}" fill="none" stroke="#1a4a2e" stroke-width="2"/>`+
+      `<path d="${s(6,194,6,94,Math.max(c-4,1))}" fill="url(#gF2)"/>`+
+      `<path d="${s(10,190,10,90,Math.max(c-8,1))}" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".4"/>`;
+  }
+  renderSeats();
+}
+
 function toggleOrientation(){
   S.tableOrientation = S.tableOrientation==='horizontal' ? 'vertical' : 'horizontal';
   const btn = document.getElementById('btn-orientation');
