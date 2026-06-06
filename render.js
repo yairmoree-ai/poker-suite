@@ -1069,6 +1069,9 @@ function renderStats(){
 }
 function renderSeats(){
   const cont=document.getElementById('seats-container'); cont.innerHTML='';
+  // class לאפקט scale
+  const hasActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null;
+  cont.classList.toggle('seats-has-actor', hasActor);
   const swp=assignPos();
   for(let i=0;i<S.tableSize;i++){
     const{x,y}=getSeatXY(i,S.tableSize);
@@ -1080,7 +1083,7 @@ function renderSeats(){
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
     const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
     const displayAct = lastAct||blindAct;
-    const w=seat?.playerId?76:40;
+    const w=seat?.playerId?(S.tableSize>=7?64:76):40;
     const isCurrentActor = i===S.currentActor;
     const isWinner = S._winners&&S._winners.includes(i);
     let cls='seat-btn';
@@ -1096,6 +1099,7 @@ function renderSeats(){
     el.className='seat-el';
     el.dataset.seat=i;
     el.style=`left:${x}%;top:${y}%`;
+    if(isCurActor) el.classList.add('is-actor');
     el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?76:40}px" onclick="clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
@@ -1128,7 +1132,7 @@ function renderSeats(){
       btns.style.cssText = 'position:absolute;top:50%;left:50%;width:0;height:0;pointer-events:all;z-index:20';
       // Place buttons in arc around the seat circle
       // F, CH = above seat | C, R, AI = below seat
-      const sw=76, sh=76, bSize=28, gap=5;
+      const sw=S.tableSize>=7?64:76, sh=S.tableSize>=7?64:76, bSize=S.tableSize>=7?24:28, gap=S.tableSize>=7?3:5;
       btns.style.cssText = 'position:absolute;top:0;left:0;width:'+sw+'px;height:'+sh+'px;pointer-events:none;z-index:20';
       // TOP: F, CH above seat
       const seatI=i;
