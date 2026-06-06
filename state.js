@@ -310,8 +310,8 @@ function assignPos(){
 function getSeatXY(i,count){
   const cx=50,cy=50;
   const horiz = (typeof S!=='undefined' && S.tableOrientation==='horizontal');
-  const rx = horiz ? (count>=7?45:42) : (count>=7?35:33);
-  const ry = horiz ? (count>=7?37:35) : (count>=7?44:46);
+  const rx = horiz ? (count>=7?44:41) : (count>=7?34:32);
+  const ry = horiz ? (count>=7?36:34) : (count>=7?44:46);
   const angle=(Math.PI/2)+(2*Math.PI*i/count);
   return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
 }
