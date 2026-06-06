@@ -55,7 +55,7 @@ input,select,textarea{font-family:inherit}
 #main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
 /* TABLE */
 #table-view{flex:1;overflow-x:hidden;overflow-y:visible;display:flex;flex-direction:column;position:relative}
-#table-wrap{position:relative;overflow:visible;background:#080b12;width:min(96vw,600px);height:min(72vw,450px);margin:auto;flex-shrink:0}
+#table-wrap{position:relative;overflow:visible;background:#080b12;width:min(96vw,600px);height:min(72vw,450px);margin:auto;flex-shrink:0;transition:width 0.3s ease, height 0.3s ease;}
 #table-svg{display:block}
 #seats-container{position:absolute;inset:0;z-index:10;pointer-events:none;overflow:visible}
 #bet-chips-container{position:absolute;inset:0;z-index:15;pointer-events:none;overflow:visible}
@@ -245,18 +245,4 @@ input,select,textarea{font-family:inherit}
   pointer-events:none;
   z-index:99997;
   animation: blackHoleAppear 0.4s ease-out forwards, blackHolePulse 0.8s ease-in-out 0.4s infinite;
-}
-
-/* ── ACTIVE SEAT SCALE UP ── */
-.seat-el {
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.seat-el.is-actor {
-  transform: translate(-50%, -50%) scale(1.35) !important;
-  z-index: 30 !important;
-}
-/* שאר המושבים — opacity בלבד, ללא שינוי transform */
-.seats-has-actor .seat-el:not(.is-actor) {
-  opacity: 0.65;
-  transition: opacity 0.25s ease;
 }
