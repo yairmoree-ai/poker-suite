@@ -1018,39 +1018,42 @@ function renderTableShape(){
   const svg = document.getElementById('table-svg');
   if(!wrap || !svg) return;
 
+  // helper: stadium path בcoordinates 0-100
+  const stadium=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
+  const defs=`<defs>
+    <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
+    <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
+  </defs>`;
+
   if(horiz){
-    // אופקי — stadium shape
-    wrap.style.width  = 'min(96vw, 520px)';
-    wrap.style.height = 'min(48vw, 260px)';
-    // r=קרן הקשת, x1/x2=קצות ישר, y1/y2=גובה
-    const makeStadium=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
-    svg.innerHTML = `
-      <defs>
-        <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
-        <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
-      </defs>
-      <path d="${makeStadium(8,92,5,95,24)}" fill="#040810"/>
-      <path d="${makeStadium(9,91,6,94,23)}" fill="url(#gF)" opacity=".6"/>
-      <path d="${makeStadium(9,91,6,94,23)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>
-      <path d="${makeStadium(12,88,11,89,20)}" fill="url(#gF2)"/>
-      <path d="${makeStadium(12,88,11,89,20)}" fill="none" stroke="#164030" stroke-width=".6"/>
-      <path d="${makeStadium(15,85,15,85,17)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
+    // אופקי — קצות מעוגלים בשמאל/ימין, ישר למעלה/למטה
+    // viewBox נשאר 0 0 100 100 עם preserveAspectRatio="none"
+    // rx גדול = קשת שטוחה לצד
+    wrap.style.aspectRatio = '2 / 1';
+    svg.setAttribute('viewBox','0 0 200 100');
+    const s=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
+    svg.innerHTML = defs+
+      `<path d="${s(8,192,4,96,28)}" fill="#040810"/>` +
+      `<path d="${s(9,191,5,95,27)}" fill="url(#gF)" opacity=".6"/>` +
+      `<path d="${s(9,191,5,95,27)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>` +
+      `<path d="${s(14,186,10,90,22)}" fill="url(#gF2)"/>` +
+      `<path d="${s(14,186,10,90,22)}" fill="none" stroke="#164030" stroke-width=".6"/>` +
+      `<path d="${s(19,181,15,85,17)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
+    wrap.style.width = '';
+    wrap.style.height = '';
   } else {
-    // אנכי — stadium shape עומד
-    wrap.style.width  = 'min(78vw, 340px)';
-    wrap.style.height = 'min(115vw, 500px)';
-    const makeStadiumV=(y1,y2,x1,x2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
-    svg.innerHTML = `
-      <defs>
-        <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
-        <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
-      </defs>
-      <path d="${makeStadiumV(5,95,10,90,28)}" fill="#040810"/>
-      <path d="${makeStadiumV(6,94,11,89,27)}" fill="url(#gF)" opacity=".6"/>
-      <path d="${makeStadiumV(6,94,11,89,27)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>
-      <path d="${makeStadiumV(10,90,15,85,23)}" fill="url(#gF2)"/>
-      <path d="${makeStadiumV(10,90,15,85,23)}" fill="none" stroke="#164030" stroke-width=".6"/>
-      <path d="${makeStadiumV(14,86,19,81,19)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
+    // אנכי — קצות מעוגלים למעלה/למטה
+    wrap.style.aspectRatio = '';
+    svg.setAttribute('viewBox','0 0 100 100');
+    svg.innerHTML = defs+
+      `<path d="${stadium(8,92,4,96,28)}" fill="#040810"/>` +
+      `<path d="${stadium(9,91,5,95,27)}" fill="url(#gF)" opacity=".6"/>` +
+      `<path d="${stadium(9,91,5,95,27)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>` +
+      `<path d="${stadium(14,86,10,90,22)}" fill="url(#gF2)"/>` +
+      `<path d="${stadium(14,86,10,90,22)}" fill="none" stroke="#164030" stroke-width=".6"/>` +
+      `<path d="${stadium(19,81,15,85,17)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
+    wrap.style.width = '';
+    wrap.style.height = '';
   }
 }
 
