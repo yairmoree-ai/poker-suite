@@ -1022,6 +1022,9 @@ function render(){
     if(order.includes(S.currentActor)) S.bettingClosed = false;
   }
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+  // עדכן כפתור orientation
+  const orientBtn = document.getElementById('btn-orientation');
+  if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
   // Show/hide viewer banner
   const vb = document.getElementById('viewer-banner');
   if(vb) vb.style.display = isViewer()?'flex':'none';
