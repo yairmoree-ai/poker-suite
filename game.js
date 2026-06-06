@@ -1298,6 +1298,14 @@ function checkAutoWinner(){
   }
 }
 
+function toggleOrientation(){
+  S.tableOrientation = S.tableOrientation==='horizontal' ? 'vertical' : 'horizontal';
+  const btn = document.getElementById('btn-orientation');
+  if(btn) btn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
+  persist();
+  renderSeats();
+}
+
 function enterShowdownMode(){
   console.log('[enterShowdownMode] called');
   S._showdownMode = true;
