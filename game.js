@@ -1303,6 +1303,7 @@ function toggleOrientation(){
   const btn = document.getElementById('btn-orientation');
   if(btn) btn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
   persist();
+  renderTableShape();
   renderSeats();
 }
 
