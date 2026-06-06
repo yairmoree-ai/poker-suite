@@ -1054,6 +1054,7 @@ function pickCard(s){
   if(t?.startsWith('board')){
     const boardIdx = +t.replace('board','');
     S.board[boardIdx]=card;
+    console.log('[pickCard board] idx='+boardIdx+' card='+JSON.stringify(card)+' board='+JSON.stringify(S.board));
     // Auto-advance to next flop card
     if(boardIdx===0&&!S.board[1]) setTimeout(()=>openCP('board1'),80);
     else if(boardIdx===1&&!S.board[2]) setTimeout(()=>openCP('board2'),80);
