@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Poker Suite">
 <meta name="color-scheme" content="dark">
@@ -81,6 +80,7 @@
     <select id="sel-table-size" onchange="if(isAdmin())setTableSize(+this.value)" style="background:#141824;border:1px solid rgba(255,255,255,0.12);color:#e2ddd4;border-radius:6px;padding:3px 6px;font-size:12px;outline:none;-webkit-appearance:none;text-align:center;width:44px;direction:ltr">
       <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
     </select>
+    <button id="btn-orientation" onclick="if(isAdmin())toggleOrientation()" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">⇅ אנכי</button>
     <button onclick="if(isAdmin())clearTable()" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.1);color:#e07b6a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 נקה</button>
     <button id="btn-savehand" onclick="if(isAdmin())showSaveHandPanel();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">💾 שמור</button>
     <button id="btn-resethand" onclick="if(isAdmin())confirmResetHand();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↺ אפס</button>
