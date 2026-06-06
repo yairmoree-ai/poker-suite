@@ -1027,9 +1027,9 @@ function renderTableShape(){
 
   if(horiz){
     // אופקי
-    const wH = Math.min(window.innerWidth * 0.83, 520);
+    const wH = Math.min(window.innerWidth * 0.58, 400);
     wrap.style.width = wH + 'px';
-    wrap.style.height = (wH * 0.55) + 'px';
+    wrap.style.height = (wH * 0.45) + 'px';
     wrap.style.maxWidth = '';
     wrap.style.aspectRatio = '';
     wrap.style.alignSelf = 'center';
