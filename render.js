@@ -1098,8 +1098,14 @@ function renderSeats(){
     const el=document.createElement('div');
     el.className='seat-el';
     el.dataset.seat=i;
-    el.style=`left:${x}%;top:${y}%`;
-    if(isCurActor) el.classList.add('is-actor');
+    el.style.left=`${x}%`;
+    el.style.top=`${y}%`;
+    el.style.transform='translate(-50%,-50%)';
+    if(isCurActor){
+      el.classList.add('is-actor');
+      el.style.transform='translate(-50%,-50%) scale(1.35)';
+      el.style.zIndex='30';
+    }
     el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?76:40}px" onclick="clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
