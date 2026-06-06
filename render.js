@@ -1027,20 +1027,25 @@ function renderTableShape(){
 
   if(horiz){
     // אופקי
-    wrap.style.width = '';
-    wrap.style.height = '';
-    wrap.style.aspectRatio = '8 / 5';
-    wrap.style.maxWidth = 'min(94vw, 560px)';
+    const wH = Math.min(window.innerWidth * 0.76, 520);
+    wrap.style.width = wH + 'px';
+    wrap.style.height = (wH * 0.52) + 'px';
+    wrap.style.maxWidth = '';
+    wrap.style.aspectRatio = '';
     wrap.style.alignSelf = 'center';
     svg.setAttribute('viewBox','0 0 200 100');
-    const s=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
+    // r=50% מהגובה = שולחן stadium עגול בקצוות
+    const s=(x1,x2,y1,y2,r)=>{
+      const d=r;
+      return `M${x1+d},${y1} L${x2-d},${y1} Q${x2},${y1} ${x2},${y1+d} L${x2},${y2-d} Q${x2},${y2} ${x2-d},${y2} L${x1+d},${y2} Q${x1},${y2} ${x1},${y2-d} L${x1},${y1+d} Q${x1},${y1} ${x1+d},${y1} Z`;
+    };
     svg.innerHTML = defs+
-      `<path d="${s(8,192,4,96,28)}" fill="#040810"/>` +
-      `<path d="${s(9,191,5,95,27)}" fill="url(#gF)" opacity=".6"/>` +
-      `<path d="${s(9,191,5,95,27)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>` +
-      `<path d="${s(14,186,10,90,22)}" fill="url(#gF2)"/>` +
-      `<path d="${s(14,186,10,90,22)}" fill="none" stroke="#164030" stroke-width=".6"/>` +
-      `<path d="${s(19,181,15,85,17)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
+      `<path d="${s(2,198,2,98,50)}" fill="#040810"/>` +
+      `<path d="${s(3,197,3,97,48)}" fill="url(#gF)" opacity=".6"/>` +
+      `<path d="${s(3,197,3,97,48)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>` +
+      `<path d="${s(8,192,8,92,40)}" fill="url(#gF2)"/>` +
+      `<path d="${s(8,192,8,92,40)}" fill="none" stroke="#164030" stroke-width=".6"/>` +
+      `<path d="${s(12,188,12,88,36)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
     wrap.style.width = '';
     wrap.style.height = '';
   } else {
