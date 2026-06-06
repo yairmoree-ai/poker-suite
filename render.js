@@ -1095,6 +1095,7 @@ function renderSeats(){
     if(isAlin)cls+=' allin';
     if(isCurrentActor&&seat?.playerId&&!isFold)cls+=' current-actor';
     if(isWinner)cls+=' winner';
+    const isCurActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor===i;
     const el=document.createElement('div');
     el.className='seat-el';
     el.dataset.seat=i;
@@ -1127,7 +1128,6 @@ function renderSeats(){
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     // Add action buttons arc above occupied seats
-    const isCurActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor===i;
     if(S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor!==i && seat?.playerId && !seat?.folded && !seat?.allin){
       // Debug: log why this seat is not the actor
       // console.log('Seat',i,'not actor. currentActor=',S.currentActor);
