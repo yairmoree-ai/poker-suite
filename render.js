@@ -1026,10 +1026,10 @@ function renderTableShape(){
   </defs>`;
 
   if(horiz){
-    // אופקי — קצות מעוגלים בשמאל/ימין, ישר למעלה/למטה
-    // viewBox נשאר 0 0 100 100 עם preserveAspectRatio="none"
-    // rx גדול = קשת שטוחה לצד
-    wrap.style.aspectRatio = '2 / 1';
+    // אופקי
+    wrap.style.width = 'min(96vw, 600px)';
+    wrap.style.height = 'min(52vw, 320px)';
+    wrap.style.aspectRatio = '';
     svg.setAttribute('viewBox','0 0 200 100');
     const s=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
     svg.innerHTML = defs+
@@ -1042,7 +1042,9 @@ function renderTableShape(){
     wrap.style.width = '';
     wrap.style.height = '';
   } else {
-    // אנכי — קצות מעוגלים למעלה/למטה
+    // אנכי
+    wrap.style.width = 'min(72vw, 340px)';
+    wrap.style.height = 'min(108vw, 500px)';
     wrap.style.aspectRatio = '';
     svg.setAttribute('viewBox','0 0 100 100');
     svg.innerHTML = defs+
