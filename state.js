@@ -308,10 +308,17 @@ function assignPos(){
 }
 
 function getSeatXY(i,count){
-  const cx=50,cy=50;
   const horiz = (typeof S!=='undefined' && S.tableOrientation==='horizontal');
-  const rx = horiz ? (count>=7?44:41) : (count>=7?34:32);
-  const ry = horiz ? (count>=7?36:34) : (count>=7?44:46);
-  const angle=(Math.PI/2)+(2*Math.PI*i/count);
-  return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
+  if(horiz){
+    const cx=50,cy=50;
+    const rx=count>=7?44:41, ry=count>=7?36:34;
+    const angle=(Math.PI/2)+(2*Math.PI*i/count);
+    return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
+  } else {
+    // viewBox 100x160 — מרכז (50,80)
+    const cx=50,cy=80;
+    const rx=count>=7?36:33, ry=count>=7?65:62;
+    const angle=(Math.PI/2)+(2*Math.PI*i/count);
+    return{x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
+  }
 }
