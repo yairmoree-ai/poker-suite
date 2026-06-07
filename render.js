@@ -1036,9 +1036,9 @@ function renderTableShape(){
 
   if(horiz){
     // אופקי
-    const wH = Math.min(window.innerWidth * 0.58, 400);
+    const wH = Math.min(window.innerWidth * 0.88, 520);
     wrap.style.width = wH + 'px';
-    wrap.style.height = (wH * 0.45) + 'px';
+    wrap.style.height = Math.round(wH * 0.51) + 'px';
     wrap.style.maxWidth = '';
     wrap.style.aspectRatio = '';
     wrap.style.alignSelf = 'center';
@@ -1048,12 +1048,12 @@ function renderTableShape(){
       return `M${x1+r},${y1} L${x2-r},${y1} Q${x2},${y1} ${x2},${y1+r} L${x2},${y2-r} Q${x2},${y2} ${x2-r},${y2} L${x1+r},${y2} Q${x1},${y2} ${x1},${y2-r} L${x1},${y1+r} Q${x1},${y1} ${x1+r},${y1} Z`;
     };
     svg.innerHTML = defs+
-      `<path d="${s(0,200,0,100,42)}" fill="#060a0e" filter="url(#fShadow)"/>` +
-      `<path d="${s(1,199,1,99,41)}" fill="url(#gRail)"/>` +
-      `<path d="${s(1,199,1,99,41)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>` +
-      `<path d="${s(5,195,5,95,37)}" fill="url(#gFelt)"/>` +
-      `<path d="${s(5,195,5,95,37)}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>` +
-      `<path d="${s(8,192,8,92,34)}" fill="none" stroke="rgba(200,169,110,0.07)" stroke-width="0.4"/>`;
+      `<path d="${s(0,200,0,100,50)}" fill="#060a0e" filter="url(#fShadow)"/>` +
+      `<path d="${s(1,199,1,99,49)}" fill="url(#gRail)"/>` +
+      `<path d="${s(1,199,1,99,49)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>` +
+      `<path d="${s(5,195,5,95,44)}" fill="url(#gFelt)"/>` +
+      `<path d="${s(5,195,5,95,44)}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>` +
+      `<path d="${s(8,192,8,92,40)}" fill="none" stroke="rgba(200,169,110,0.07)" stroke-width="0.4"/>`;
     wrap.style.width = '';
     wrap.style.height = '';
   } else {
@@ -1085,7 +1085,7 @@ function render(){
     const order = getActingOrder(street);
     if(order.includes(S.currentActor)) S.bettingClosed = false;
   }
-  if(!window._tunerActive) renderTableShape(); renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+  renderTableShape(); renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
   // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
