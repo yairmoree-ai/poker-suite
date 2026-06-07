@@ -1161,7 +1161,7 @@ function renderSeats(){
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
     const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
     const displayAct = lastAct||blindAct;
-    const w=seat?.playerId?(window._tunerSeatSize||(S.tableSize>=7?64:76)):40;
+    const w=seat?.playerId?(window._tunerSeatSize||(S.tableSize>=7?60:72)):38;
     const isCurrentActor = i===S.currentActor;
     const isWinner = S._winners&&S._winners.includes(i);
     let cls='seat-btn';
@@ -1185,14 +1185,14 @@ function renderSeats(){
       el.style.transform='translate(-50%,-50%) scale(1.35)';
       el.style.zIndex='30';
     }
-    el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?76:40}px" onclick="clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
+    el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?68:36}px;box-sizing:border-box" onclick="clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
           ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
           ${isBtn?`<span class="dealer-chip" style="cursor:pointer" onclick="event.stopPropagation();if(!S.btnLocked||confirm('להעביר את ה-BTN? היד הנוכחית תאופס')){S.btnSeat=null;S.btnLocked=false;resetHand();renderSeats();}">D</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
-        ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a7a5a;font-size:8px">(${sbb})</span> `:''} ${seat.stack.toLocaleString()}</div>`:''}
+        ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a6a54;font-size:8px">(${sbb}) </span>`:''}<span style="font-size:9px">${seat.stack.toLocaleString()}</span></div>`:''}
         ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
         ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טרן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טרן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
     const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&(seat.folded||seat.sittingOut||!S.btnLocked);
