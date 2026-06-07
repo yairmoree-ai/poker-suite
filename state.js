@@ -145,7 +145,7 @@ function applySnapshot(v){
   if(v.customBlinds!==undefined) S.customBlinds=v.customBlinds;
   if(v.customBlindLevels) S.customBlindLevels=v.customBlindLevels;
   if(v.tableSize) S.tableSize=v.tableSize;
-  if(v.tableOrientation) S.tableOrientation=v.tableOrientation;
+  // tableOrientation לא נטען מ-localStorage — תמיד vertical כברירת מחדל
   if(v.houseRake!==undefined) S.houseRake=v.houseRake;
   if(v.place4!==undefined) S.place4=v.place4;
   if(v.place3!==undefined) S.place3=v.place3;
