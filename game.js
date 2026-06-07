@@ -1320,6 +1320,7 @@ function applyLiveTuner(){
   const info = document.getElementById('lt-info');
   if(info) info.textContent = Math.round(wPx)+'×'+Math.round(hPx)+'px';
   // שמור ערכים זמנית לrenderSeats
+  window._tunerActive = true;
   window._tunerSeatSize = sz;
   window._tunerSeatDist = d/100;
   window._tunerBorder = b;
