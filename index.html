@@ -85,39 +85,7 @@
     <button id="btn-savehand" onclick="if(isAdmin())showSaveHandPanel();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">💾 שמור</button>
     <button id="btn-resethand" onclick="if(isAdmin())confirmResetHand();else notify('צופה בלבד')" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↺ אפס</button>
   </div>
-  <!-- LIVE TUNER - הסר אחרי כיוון -->
-  <div id="live-tuner" style="padding:6px 10px;background:#0a0d14;border-bottom:1px solid rgba(200,169,110,0.2);flex-shrink:0;direction:rtl">
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
-      <span style="font-size:10px;color:#c8a96e;font-weight:900">🎚</span>
-      <label style="font-size:10px;color:#5a5870;display:flex;align-items:center;gap:3px">רוחב%
-        <input type="range" id="lt-w" min="50" max="98" value="88" style="width:65px;accent-color:#c8a96e" oninput="applyLiveTuner()">
-        <span id="lt-w-v" style="color:#c8a96e;font-weight:700;min-width:22px">88</span>
-      </label>
-      <label style="font-size:10px;color:#5a5870;display:flex;align-items:center;gap:3px">יחס%
-        <input type="range" id="lt-r" min="30" max="80" value="51" style="width:65px;accent-color:#c8a96e" oninput="applyLiveTuner()">
-        <span id="lt-r-v" style="color:#c8a96e;font-weight:700;min-width:22px">51</span>
-      </label>
-      <label style="font-size:10px;color:#5a5870;display:flex;align-items:center;gap:3px">עיגול
-        <input type="range" id="lt-c" min="5" max="50" value="50" style="width:65px;accent-color:#c8a96e" oninput="applyLiveTuner()">
-        <span id="lt-c-v" style="color:#c8a96e;font-weight:700;min-width:22px">50</span>
-      </label>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-      <label style="font-size:10px;color:#5a5870;display:flex;align-items:center;gap:3px">מושב px
-        <input type="range" id="lt-s" min="32" max="72" value="52" style="width:65px;accent-color:#c8a96e" oninput="applyLiveTuner()">
-        <span id="lt-s-v" style="color:#c8a96e;font-weight:700;min-width:22px">52</span>
-      </label>
-      <label style="font-size:10px;color:#5a5870;display:flex;align-items:center;gap:3px">מרחק%
-        <input type="range" id="lt-d" min="30" max="55" value="44" style="width:65px;accent-color:#c8a96e" oninput="applyLiveTuner()">
-        <span id="lt-d-v" style="color:#c8a96e;font-weight:700;min-width:22px">44</span>
-      </label>
-      <label style="font-size:10px;color:#5a5870;display:flex;align-items:center;gap:3px">מסגרת
-        <input type="range" id="lt-b" min="2" max="20" value="7" style="width:65px;accent-color:#c8a96e" oninput="applyLiveTuner()">
-        <span id="lt-b-v" style="color:#c8a96e;font-weight:700;min-width:22px">7</span>
-      </label>
-      <span id="lt-info" style="font-size:9px;color:#5a5870"></span>
-    </div>
-  </div>
+
   <div id="table-view" style="display:flex;flex:1;flex-direction:column;overflow:hidden;justify-content:center;align-items:center;padding-bottom:105px">
 
     <div id="table-wrap">
