@@ -1058,10 +1058,10 @@ function renderTableShape(){
     wrap.style.height = '';
   } else {
     // אנכי — גודל לפי גובה המסך הזמין
-    const availH = window.innerHeight - 220; // מינוס header + timeline
-    const wV = Math.min(availH * 0.62, window.innerWidth * 0.82, 320);
+    const availH = window.innerHeight - 200;
+    const wV = Math.min(availH * 0.68, window.innerWidth * 0.90, 380);
     wrap.style.width = wV + 'px';
-    wrap.style.height = Math.round(wV * 1.55) + 'px';
+    wrap.style.height = Math.round(wV * 1.6) + 'px';
     wrap.style.aspectRatio = '';
     wrap.style.maxWidth = '';
     wrap.style.alignSelf = 'center';
@@ -1161,7 +1161,7 @@ function renderSeats(){
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
     const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
     const displayAct = lastAct||blindAct;
-    const w=seat?.playerId?(window._tunerSeatSize||(S.tableSize>=7?60:72)):38;
+    const w=seat?.playerId?(window._tunerSeatSize||88):38;
     const isCurrentActor = i===S.currentActor;
     const isWinner = S._winners&&S._winners.includes(i);
     let cls='seat-btn';
