@@ -1057,20 +1057,23 @@ function renderTableShape(){
     wrap.style.width = '';
     wrap.style.height = '';
   } else {
-    // אנכי
-    wrap.style.width = '';
-    wrap.style.height = '';
-    wrap.style.aspectRatio = '3 / 5';
-    wrap.style.maxWidth = 'min(72vw, 340px)';
+    // אנכי — גודל לפי גובה המסך הזמין
+    const availH = window.innerHeight - 220; // מינוס header + timeline
+    const wV = Math.min(availH * 0.62, window.innerWidth * 0.82, 320);
+    wrap.style.width = wV + 'px';
+    wrap.style.height = Math.round(wV * 1.55) + 'px';
+    wrap.style.aspectRatio = '';
+    wrap.style.maxWidth = '';
     wrap.style.alignSelf = 'center';
-    svg.setAttribute('viewBox','0 0 100 100');
+    svg.setAttribute('viewBox','0 0 100 160');
+    // Lovable style: rounded-[50%] = ellipse מלאה
     svg.innerHTML = defs+
-      `<path d="${stadium(0,100,0,100,30)}" fill="#060a0e" filter="url(#fShadow)"/>` +
-      `<path d="${stadium(1,99,1,99,29)}" fill="url(#gRail)"/>` +
-      `<path d="${stadium(1,99,1,99,29)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>` +
-      `<path d="${stadium(5,95,5,95,25)}" fill="url(#gFelt)"/>` +
-      `<path d="${stadium(5,95,5,95,25)}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>` +
-      `<path d="${stadium(8,92,8,92,22)}" fill="none" stroke="rgba(200,169,110,0.07)" stroke-width="0.4"/>`;
+      `<ellipse cx="50" cy="80" rx="50" ry="80" fill="#060a0e" filter="url(#fShadow)"/>` +
+      `<ellipse cx="50" cy="80" rx="49" ry="79" fill="url(#gRail)"/>` +
+      `<ellipse cx="50" cy="80" rx="49" ry="79" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.5"/>` +
+      `<ellipse cx="50" cy="80" rx="43" ry="73" fill="url(#gFelt)"/>` +
+      `<ellipse cx="50" cy="80" rx="43" ry="73" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>` +
+      `<ellipse cx="50" cy="80" rx="39" ry="69" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width="0.4"/>`;
     wrap.style.width = '';
     wrap.style.height = '';
   }
