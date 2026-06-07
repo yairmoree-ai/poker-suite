@@ -1021,8 +1021,17 @@ function renderTableShape(){
   // helper: stadium path בcoordinates 0-100
   const stadium=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
   const defs=`<defs>
-    <radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient>
-    <radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient>
+    <radialGradient id="gFelt" cx="50%" cy="40%">
+      <stop offset="0%" stop-color="#1e5a3a"/>
+      <stop offset="100%" stop-color="#0e2a1a"/>
+    </radialGradient>
+    <radialGradient id="gRail" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#2a5a38"/>
+      <stop offset="100%" stop-color="#163020"/>
+    </radialGradient>
+    <filter id="fShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(0,0,0,0.7)"/>
+    </filter>
   </defs>`;
 
   if(horiz){
@@ -1039,12 +1048,12 @@ function renderTableShape(){
       return `M${x1+r},${y1} L${x2-r},${y1} Q${x2},${y1} ${x2},${y1+r} L${x2},${y2-r} Q${x2},${y2} ${x2-r},${y2} L${x1+r},${y2} Q${x1},${y2} ${x1},${y2-r} L${x1},${y1+r} Q${x1},${y1} ${x1+r},${y1} Z`;
     };
     svg.innerHTML = defs+
-      `<path d="${s(1,199,1,99,40)}" fill="#040810"/>` +
-      `<path d="${s(2,198,2,98,39)}" fill="url(#gF)" opacity=".6"/>` +
-      `<path d="${s(2,198,2,98,39)}" fill="none" stroke="#1a4a2e" stroke-width="2"/>` +
-      `<path d="${s(6,194,6,94,35)}" fill="url(#gF2)"/>` +
-      `<path d="${s(6,194,6,94,35)}" fill="none" stroke="#164030" stroke-width=".8"/>` +
-      `<path d="${s(10,190,10,90,31)}" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".4"/>`;
+      `<path d="${s(0,200,0,100,42)}" fill="#060a0e" filter="url(#fShadow)"/>` +
+      `<path d="${s(1,199,1,99,41)}" fill="url(#gRail)"/>` +
+      `<path d="${s(1,199,1,99,41)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>` +
+      `<path d="${s(5,195,5,95,37)}" fill="url(#gFelt)"/>` +
+      `<path d="${s(5,195,5,95,37)}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>` +
+      `<path d="${s(8,192,8,92,34)}" fill="none" stroke="rgba(200,169,110,0.07)" stroke-width="0.4"/>`;
     wrap.style.width = '';
     wrap.style.height = '';
   } else {
@@ -1056,12 +1065,12 @@ function renderTableShape(){
     wrap.style.alignSelf = 'center';
     svg.setAttribute('viewBox','0 0 100 100');
     svg.innerHTML = defs+
-      `<path d="${stadium(8,92,4,96,28)}" fill="#040810"/>` +
-      `<path d="${stadium(9,91,5,95,27)}" fill="url(#gF)" opacity=".6"/>` +
-      `<path d="${stadium(9,91,5,95,27)}" fill="none" stroke="#1a4a2e" stroke-width="1.5"/>` +
-      `<path d="${stadium(14,86,10,90,22)}" fill="url(#gF2)"/>` +
-      `<path d="${stadium(14,86,10,90,22)}" fill="none" stroke="#164030" stroke-width=".6"/>` +
-      `<path d="${stadium(19,81,15,85,17)}" fill="none" stroke="rgba(200,169,110,0.05)" stroke-width=".4"/>`;
+      `<path d="${stadium(0,100,0,100,30)}" fill="#060a0e" filter="url(#fShadow)"/>` +
+      `<path d="${stadium(1,99,1,99,29)}" fill="url(#gRail)"/>` +
+      `<path d="${stadium(1,99,1,99,29)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>` +
+      `<path d="${stadium(5,95,5,95,25)}" fill="url(#gFelt)"/>` +
+      `<path d="${stadium(5,95,5,95,25)}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>` +
+      `<path d="${stadium(8,92,8,92,22)}" fill="none" stroke="rgba(200,169,110,0.07)" stroke-width="0.4"/>`;
     wrap.style.width = '';
     wrap.style.height = '';
   }
@@ -1076,7 +1085,7 @@ function render(){
     const order = getActingOrder(street);
     if(order.includes(S.currentActor)) S.bettingClosed = false;
   }
-  renderTableShape(); renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+  if(!window._tunerActive) renderTableShape(); renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
   // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
@@ -1132,7 +1141,15 @@ function renderSeats(){
   cont.classList.toggle('seats-has-actor', hasActor);
   const swp=assignPos();
   for(let i=0;i<S.tableSize;i++){
-    const{x,y}=getSeatXY(i,S.tableSize);
+    let{x,y}=getSeatXY(i,S.tableSize);
+    if(window._tunerSeatDist){
+      const cx=50,cy=50;
+      const angle=(Math.PI/2)+(2*Math.PI*i/S.tableSize);
+      const d=window._tunerSeatDist*100;
+      const horiz=S.tableOrientation==='horizontal';
+      x=cx+(horiz?d*1.25:d*0.82)*Math.cos(angle);
+      y=cy+(horiz?d*0.82:d)*Math.sin(angle);
+    }
     const seat=swp.find(s=>s.seatIdx===i);
     const name=seat?.playerId?pName(seat.playerId):null;
     const isAct=activeSeat===i, isFold=seat?.folded, isAlin=seat?.allin, isBtn=i===S.btnSeat&&seat?.playerId;
@@ -1141,7 +1158,7 @@ function renderSeats(){
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
     const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
     const displayAct = lastAct||blindAct;
-    const w=seat?.playerId?(S.tableSize>=7?64:76):40;
+    const w=seat?.playerId?(window._tunerSeatSize||(S.tableSize>=7?64:76)):40;
     const isCurrentActor = i===S.currentActor;
     const isWinner = S._winners&&S._winners.includes(i);
     let cls='seat-btn';
