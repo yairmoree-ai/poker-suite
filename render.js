@@ -1086,6 +1086,33 @@ function renderTableShape(){
     if(el) el.style.display = isViewer()?'none':'';
   });
 }
+function render(){
+  // Safety: if currentActor is set and hand is active, ensure bettingClosed is correct
+  if(S.btnLocked && S.currentActor!==null && S.bettingClosed){
+    const boardCount = S.board.filter(Boolean).length;
+    const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+    const order = getActingOrder(street);
+    if(order.includes(S.currentActor)) S.bettingClosed = false;
+  }
+  renderTableShape();
+  renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+  // עדכן כפתור orientation
+  const orientBtn = document.getElementById('btn-orientation');
+  if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
+  // Show/hide viewer banner
+  const vb = document.getElementById('viewer-banner');
+  if(vb) vb.style.display = isViewer()?'flex':'none';
+  ['tab-table','tab-hands'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = isViewer()?'none':'';
+  });
+  const timerCtrl = document.getElementById('timer-controls');
+  if(timerCtrl) timerCtrl.style.display = isViewer() ? 'none' : 'flex';
+  const sb2 = document.getElementById('statsbar');
+  const curTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','') || 'table';
+  if(sb2) sb2.style.display = (curTab==='table'||curTab==='hands') ? 'none' : '';
+}
+
 function renderStats(){
   const buy=Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0).length;
   document.getElementById('stat-players').textContent=buy;
@@ -1116,7 +1143,7 @@ function renderSeats(){
       const cx=50,cy=50;
       const angle=(Math.PI/2)+(2*Math.PI*i/S.tableSize);
       const d=window._tunerSeatDist*100;
-      const horiz=S.tableOrientation==='horizontal';
+      const horiz=false; // תמיד אנכי
       x=cx+(horiz?d*1.25:d*0.82)*Math.cos(angle);
       y=cy+(horiz?d*0.82:d)*Math.sin(angle);
     }
