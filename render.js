@@ -1020,9 +1020,9 @@ function renderTableShape(){
   // Lovable: max-w-[420px] aspect-[3/4]
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const topBarH = 210;
-  const maxW = Math.min(vw - 16, 420);
-  const maxH = vh - topBarH - 40;
+  const topBarH = 175;
+  const maxW = Math.min(vw - 40, 360);
+  const maxH = vh - topBarH - 100; // מרווח למושבים שגולשים
   let w = maxW;
   let h = w * 4/3;
   if(h > maxH){ h = maxH; w = h * 3/4; }
@@ -1351,23 +1351,25 @@ function renderSeats(){
   if(S._showdownMode){
     const bar = document.createElement('div');
     bar.id = 'sd-action-bar';
-    bar.style.cssText = 'position:absolute;bottom:30px;left:50%;transform:translateX(-50%);'
-      +'display:flex;gap:10px;z-index:50;pointer-events:all';
+    bar.style.cssText = 'display:flex;gap:10px;justify-content:center;padding:12px 16px;'
+      +'pointer-events:all;direction:rtl';
     const potBtn = document.createElement('button');
     potBtn.textContent = '💰 העבר קופה';
-    potBtn.style.cssText = 'padding:10px 24px;border-radius:12px;border:none;'
-      +'background:#c8a96e;color:#0a0d14;font-size:14px;font-weight:900;cursor:pointer;'
+    potBtn.style.cssText = 'flex:1;padding:14px 24px;border-radius:14px;border:none;'
+      +'background:#c8a96e;color:#0a0d14;font-size:15px;font-weight:900;cursor:pointer;'
       +'box-shadow:0 4px 16px rgba(0,0,0,0.5)';
     potBtn.onclick = ()=>{ S._showdownMode=false; showShowdownPanel(); };
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'ביטול';
-    cancelBtn.style.cssText = 'padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);'
+    cancelBtn.style.cssText = 'padding:14px 20px;border-radius:14px;border:1px solid rgba(255,255,255,0.15);'
       +'background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:13px;cursor:pointer';
     cancelBtn.onclick = ()=>{ S._showdownMode=false; renderSeats(); };
     bar.appendChild(potBtn);
     bar.appendChild(cancelBtn);
-    const seatsContainer = document.getElementById('seats-container');
-    if(seatsContainer) seatsContainer.appendChild(bar);
+    // הצג מתחת לשולחן — לא בתוכו
+    const tableView = document.getElementById('table-view');
+    if(tableView) tableView.appendChild(bar);
+    else{ const sc=document.getElementById('seats-container'); if(sc) sc.appendChild(bar); }
   }
 
   // Render floating bet chips
