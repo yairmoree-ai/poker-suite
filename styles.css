@@ -25,9 +25,11 @@
 .light-mode .seat-name { color:#1a1a2e !important; }
 .light-mode .seat-stack { color:#2a6a2a !important; }
 :root{
-  --gold:#c8a96e;--gold2:#a07840;--bg:#080b12;--bg2:#0f1320;
+  --gold:oklch(0.82 0.14 85);--gold-soft:oklch(0.68 0.11 80);--gold2:#a07840;
+  --bg:oklch(0.18 0.03 160);--bg2:#0f1320;
   --felt:oklch(0.42 0.12 155);--felt2:oklch(0.28 0.05 150);--felt-edge:oklch(0.22 0.04 150);
-  --felt-rail:oklch(0.28 0.05 150);--red:#e05555;--blue:#5b9bd5;--green:#5fc47a;
+  --felt-rail:oklch(0.28 0.05 150);--red:#e05555;--chip-red:oklch(0.6 0.22 25);
+  --blue:#5b9bd5;--green:#5fc47a;
   --panel:#0d1220;--border:rgba(200,169,110,0.18);
   --text:#e2ddd4;--muted:#5a5870;--muted2:#3a3650;
 }
@@ -274,3 +276,6 @@ input,select,textarea{font-family:inherit}
   z-index:99997;
   animation: blackHoleAppear 0.4s ease-out forwards, blackHolePulse 0.8s ease-in-out 0.4s infinite;
 }
+
+.card-red{color:oklch(0.6 0.22 25)}
+.card-black{color:oklch(0.15 0 0)}
