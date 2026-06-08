@@ -1013,83 +1013,50 @@ function setLevelDuration(secs){
 }
 
 function renderTableShape(){
-  const horiz = S.tableOrientation === 'horizontal';
   const wrap = document.getElementById('table-wrap');
   const svg = document.getElementById('table-svg');
   if(!wrap || !svg) return;
 
-  // helper: stadium path בcoordinates 0-100
-  const stadium=(x1,x2,y1,y2,r)=>`M${x1},${y1} L${x2},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x1},${y2} A${r},${r} 0 0 1 ${x1},${y1} Z`;
-  const defs=`<defs>
+  // Lovable: max-w-[420px] aspect-[3/4]
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const topBarH = 210;
+  const maxW = Math.min(vw - 16, 420);
+  const maxH = vh - topBarH - 40;
+  let w = maxW;
+  let h = w * 4/3;
+  if(h > maxH){ h = maxH; w = h * 3/4; }
+  w = Math.round(w); h = Math.round(h);
+
+  wrap.style.width = w + 'px';
+  wrap.style.height = h + 'px';
+  wrap.style.borderRadius = '50%';
+  wrap.style.overflow = 'visible';
+
+  // SVG viewBox 300x400 (aspect 3:4)
+  svg.setAttribute('viewBox','0 0 300 400');
+  svg.style.borderRadius = '50%';
+  svg.innerHTML = `<defs>
     <radialGradient id="gFelt" cx="50%" cy="40%">
-      <stop offset="0%" stop-color="#1e5a3a"/>
-      <stop offset="100%" stop-color="#0e2a1a"/>
+      <stop offset="0%" stop-color="oklch(0.42 0.12 155)"/>
+      <stop offset="100%" stop-color="oklch(0.22 0.07 150)"/>
     </radialGradient>
-    <radialGradient id="gRail" cx="50%" cy="50%">
-      <stop offset="0%" stop-color="#2a5a38"/>
-      <stop offset="100%" stop-color="#163020"/>
-    </radialGradient>
-    <filter id="fShadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="rgba(0,0,0,0.7)"/>
-    </filter>
-  </defs>`;
+    <linearGradient id="gRail" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="oklch(0.32 0.07 150)"/>
+      <stop offset="100%" stop-color="oklch(0.22 0.05 150)"/>
+    </linearGradient>
+  </defs>
+  <!-- outer rail: inset 8% -->
+  <ellipse cx="150" cy="200" rx="138" ry="184" fill="url(#gRail)" filter="drop-shadow(0 20px 40px rgba(0,0,0,0.7))"/>
+  <ellipse cx="150" cy="200" rx="138" ry="184" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+  <!-- felt: inset 13% -->
+  <ellipse cx="150" cy="200" rx="124" ry="170" fill="url(#gFelt)" filter="drop-shadow(inset 0 0 40px rgba(0,0,0,0.5))"/>
+  <!-- inner highlight -->
+  <ellipse cx="150" cy="200" rx="116" ry="162" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+  <!-- gold ring -->
+  <ellipse cx="150" cy="200" rx="108" ry="154" fill="none" stroke="rgba(200,169,110,0.08)" stroke-width="0.8"/>`;
 
-  if(horiz){
-    // אופקי
-    const wH = Math.min(window.innerWidth * 0.88, 520);
-    wrap.style.width = wH + 'px';
-    wrap.style.height = Math.round(wH * 0.51) + 'px';
-    wrap.style.maxWidth = '';
-    wrap.style.aspectRatio = '';
-    wrap.style.alignSelf = 'center';
-    svg.setAttribute('viewBox','0 0 200 100');
-    // r=40 units (=~40% גובה) — שולחן פוקר עם קצוות מעוגלים נכון
-    const s=(x1,x2,y1,y2,r)=>{
-      return `M${x1+r},${y1} L${x2-r},${y1} Q${x2},${y1} ${x2},${y1+r} L${x2},${y2-r} Q${x2},${y2} ${x2-r},${y2} L${x1+r},${y2} Q${x1},${y2} ${x1},${y2-r} L${x1},${y1+r} Q${x1},${y1} ${x1+r},${y1} Z`;
-    };
-    svg.innerHTML = defs+
-      `<path d="${s(0,200,0,100,50)}" fill="#060a0e" filter="url(#fShadow)"/>` +
-      `<path d="${s(1,199,1,99,49)}" fill="url(#gRail)"/>` +
-      `<path d="${s(1,199,1,99,49)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>` +
-      `<path d="${s(5,195,5,95,44)}" fill="url(#gFelt)"/>` +
-      `<path d="${s(5,195,5,95,44)}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>` +
-      `<path d="${s(8,192,8,92,40)}" fill="none" stroke="rgba(200,169,110,0.07)" stroke-width="0.4"/>`;
-    wrap.style.width = '';
-    wrap.style.height = '';
-  } else {
-    // אנכי — גודל לפי גובה המסך הזמין
-    const availH = window.innerHeight - 200;
-    const wV = Math.min(availH * 0.68, window.innerWidth * 0.90, 380);
-    wrap.style.width = wV + 'px';
-    wrap.style.height = Math.round(wV * 1.6) + 'px';
-    wrap.style.aspectRatio = '';
-    wrap.style.maxWidth = '';
-    wrap.style.alignSelf = 'center';
-    svg.setAttribute('viewBox','0 0 100 160');
-    // Lovable style: rounded-[50%] = ellipse מלאה
-    svg.innerHTML = defs+
-      `<ellipse cx="50" cy="80" rx="50" ry="80" fill="#060a0e" filter="url(#fShadow)"/>` +
-      `<ellipse cx="50" cy="80" rx="49" ry="79" fill="url(#gRail)"/>` +
-      `<ellipse cx="50" cy="80" rx="49" ry="79" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.5"/>` +
-      `<ellipse cx="50" cy="80" rx="43" ry="73" fill="url(#gFelt)"/>` +
-      `<ellipse cx="50" cy="80" rx="43" ry="73" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>` +
-      `<ellipse cx="50" cy="80" rx="39" ry="69" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width="0.4"/>`;
-    wrap.style.width = '';
-    wrap.style.height = '';
-  }
-}
-
-function render(){
-  // Safety: if currentActor is set and hand is active, ensure bettingClosed is correct
-  if(S.btnLocked && S.currentActor!==null && S.bettingClosed){
-    // Check if there really is a player who needs to act
-    const boardCount = S.board.filter(Boolean).length;
-    const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
-    const order = getActingOrder(street);
-    if(order.includes(S.currentActor)) S.bettingClosed = false;
-  }
-  renderTableShape(); renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
-  // עדכן כפתור orientation
+  // עדכן כפתור orientation  // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
   // Show/hide viewer banner
@@ -1161,7 +1128,7 @@ function renderSeats(){
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
     const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
     const displayAct = lastAct||blindAct;
-    const w=seat?.playerId?(window._tunerSeatSize||88):38;
+    const w=seat?.playerId?88:38;
     const isCurrentActor = i===S.currentActor;
     const isWinner = S._winners&&S._winners.includes(i);
     let cls='seat-btn';
@@ -1185,7 +1152,7 @@ function renderSeats(){
       el.style.transform='translate(-50%,-50%) scale(1.35)';
       el.style.zIndex='30';
     }
-    el.innerHTML=`<div class="${cls}" style="width:${w}px;min-height:${seat?.playerId?68:36}px;box-sizing:border-box" onclick="clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
+    el.innerHTML=`<div class="${cls}" style="width:88px;min-height:64px;box-sizing:border-box" onclick="clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
           ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
@@ -1193,7 +1160,7 @@ function renderSeats(){
         </div>
         <div class="seat-name">${name||'?'}</div>
         ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a6a54;font-size:8px">(${sbb}) </span>`:''}<span style="font-size:9px">${seat.stack.toLocaleString()}</span></div>`:''}
-        ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
+        ${(seat.cards||[]).some(Boolean)?`<div class="seat-cards-mini">${(seat.cards||[]).map(c=>c?`<div style="width:13px;height:18px;border-radius:3px;background:#ffffff;border:1px solid rgba(0,0,0,0.1);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:6px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:5px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`:'').join('')}</div>`:''}
         ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טרן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טרן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
     const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&(seat.folded||seat.sittingOut||!S.btnLocked);
     const isSittingOut = seat.sittingOut||false;
@@ -1216,7 +1183,7 @@ function renderSeats(){
       btns.style.cssText = 'position:absolute;top:50%;left:50%;width:0;height:0;pointer-events:all;z-index:20';
       // Place buttons in arc around the seat circle
       // F, CH = above seat | C, R, AI = below seat
-      const sw=S.tableSize>=7?64:76, sh=S.tableSize>=7?64:76, bSize=S.tableSize>=7?24:28, gap=S.tableSize>=7?3:5;
+      const sw=88, sh=68, bSize=26, gap=4;
       btns.style.cssText = 'position:absolute;top:0;left:0;width:'+sw+'px;height:'+sh+'px;pointer-events:none;z-index:20';
       // TOP: F, CH above seat
       const seatI=i;
