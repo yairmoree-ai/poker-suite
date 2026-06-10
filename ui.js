@@ -916,12 +916,11 @@ function renderTournList(){
             <div style="font-size:10px;color:#c8a96e;margin-bottom:1px">כניסות${t.freeRebuys?` <span style="color:#5b9bd5">(${t.freeRebuys}🎁)</span>`:''}</div>
             <div style="font-size:18px;font-weight:900;color:#f0ece4">${t.paidEntries||t.totalEntries}</div>
           </div>
-          ${isAdmin()?``:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <!-- Places column -->
           <div>
-            ${finishT.filter(f=>f.place<=4).map(f=>{
+            ${finishT.filter(f=>f.place<=4).sort((a,b)=>a.place-b.place).map(f=>{
               const rb = f.rebuy||0;
               const prize = prizeByPlaceT[f.place]||0;
               const medals={1:'🏆',2:'🥈',3:'🥉'};
