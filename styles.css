@@ -49,6 +49,8 @@ input,select,textarea{font-family:inherit}
 .sbox .val{font-size:13px;font-weight:800;color:var(--gold)}
 .sbox input{background:none;border:none;color:var(--gold);font-size:13px;font-weight:800;width:56px;text-align:center;outline:none}
 .sbox select{background:transparent;border:none;color:var(--gold);font-size:13px;font-weight:800;outline:none;cursor:pointer}
+#sbox-buyincost{min-width:0;padding:4px 6px}
+#sbox-buyincost input{width:38px}
 /* NAV */
 .topnav{display:flex;justify-content:space-between;align-items:center;padding:7px 10px 5px}
 .nav-tabs{display:flex;gap:5px}
