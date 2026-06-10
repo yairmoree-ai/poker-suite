@@ -757,15 +757,13 @@ function renderTournList(){
       <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:6px">📊 כניסות ו-Rebuy</div>
       <div style="overflow-x:auto;padding-bottom:4px">
         <div style="display:flex;align-items:flex-end;gap:4px;padding:0 2px;min-width:min-content">
-          ${Object.entries(S.buyins)
-            .filter(([pid,b])=>b.buyin>0)
-            .sort((a,b)=>(b[1].rebuy||0)-(a[1].rebuy||0))
-            .map(([pid,b])=>{
-              const maxTotal=Math.max(...Object.entries(S.buyins).filter(([p2,b2])=>b2.buyin>0).map(([p2,b2])=>1+(b2.rebuy||0)),1);
-              const total = 1 + (b.rebuy||0);
-              const totalPct = Math.max(Math.round((total/maxTotal)*100),8);
-              const buyinPct = Math.round((1/total)*100);
-              const rebuyPct = 100-buyinPct;
+          ${(()=>{
+            const entries = Object.entries(S.buyins).filter(([pid,b])=>b.buyin>0).sort((a,b)=>(b[1].rebuy||0)-(a[1].rebuy||0));
+            const maxRebuy = Math.max(...entries.map(([pid,b])=>b.rebuy||0), 1);
+            const BAR_MAX = 72; // px available for rebuy portion
+            const BUYIN_H = 12; // px — fixed green height for everyone
+            return entries.map(([pid,b])=>{
+              const rebuyH = b.rebuy>0 ? Math.max(Math.round((b.rebuy/maxRebuy)*BAR_MAX), 6) : 0;
               const hasFree16 = b.rebuy>=16;
               const hasFree10 = b.rebuy>=10;
               const rebuyColor = hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
@@ -773,16 +771,17 @@ function renderTournList(){
               const name = pName(pid)||'?';
               const isKO = S.koOrder.includes(pid);
               return `<div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;opacity:${isKO?0.45:1}">
-                <div style="font-size:11px;font-weight:900;color:${b.rebuy>0?rebuyColor:'var(--muted)'};margin-bottom:3px;white-space:nowrap">${b.rebuy>0?b.rebuy+''+(badge?`<span style='font-size:8px'>${badge}</span>`:''):''}</div>
-                <div style="width:26px;background:rgba(255,255,255,0.07);border-radius:3px 3px 0 0;height:80px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;overflow:hidden">
-                  ${b.rebuy>0?`<div style="width:100%;flex:${rebuyPct};background:${rebuyColor};min-height:3px"></div>`:''}
-                  <div style="width:100%;flex:${b.rebuy>0?buyinPct:100};background:rgba(95,196,122,0.6);min-height:4px"></div>
+                <div style="font-size:11px;font-weight:900;color:${b.rebuy>0?rebuyColor:'transparent'};margin-bottom:3px;white-space:nowrap;min-height:14px">${b.rebuy>0?b.rebuy+(badge?`<span style='font-size:8px'>${badge}</span>`:''):''}</div>
+                <div style="width:26px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
+                  ${rebuyH>0?`<div style="width:100%;height:${rebuyH}px;background:${rebuyColor};border-radius:3px 3px 0 0;margin-bottom:1px"></div>`:''}
+                  <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'3px 3px 0 0'}"></div>
                 </div>
                 <div style="height:52px;display:flex;align-items:flex-start;justify-content:center;margin-top:3px">
                   <span style="font-size:13px;font-weight:700;color:${isKO?'var(--muted)':'#e2ddd4'};writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;line-height:1;letter-spacing:2px">${name}</span>
                 </div>
               </div>`;
-            }).join('')}
+            }).join('');
+          })()}
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:4px">
@@ -945,20 +944,18 @@ function renderTournList(){
           <div>
             <div style="display:flex;align-items:flex-end;gap:3px;padding:0 2px;overflow-x:auto">
               ${(()=>{
-                const maxTotal=Math.max(...(t.finishOrder||[]).map(f=>1+(f.rebuy||0)),1);
+                const maxRebuy=Math.max(...(t.finishOrder||[]).map(f=>f.rebuy||0),1);
+                const BAR_MAX=56; const BUYIN_H=10;
                 return (t.finishOrder||[]).sort((a,b)=>(b.rebuy||0)-(a.rebuy||0)).map(f=>{
-                  const total=1+(f.rebuy||0);
-                  const totalPct=Math.max(Math.round((total/maxTotal)*100),8);
-                  const buyinPct=Math.round((1/total)*100);
-                  const rebuyPct=100-buyinPct;
+                  const rebuyH=f.rebuy>0?Math.max(Math.round((f.rebuy/maxRebuy)*BAR_MAX),5):0;
                   const hasFree16=f.rebuy>=16, hasFree10=f.rebuy>=10;
                   const rebuyColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
                   const badge=hasFree16?'16✓':hasFree10?'10✓':'';
                   return `<div style="display:flex;flex-direction:column;align-items:center;width:22px;flex-shrink:0">
-                    <div style="font-size:9px;font-weight:900;color:${f.rebuy>0?rebuyColor:'var(--muted)'};margin-bottom:2px;white-space:nowrap">${f.rebuy>0?f.rebuy+(badge?`<span style='font-size:7px'>${badge}</span>`:''):''}</div>
-                    <div style="width:16px;background:rgba(255,255,255,0.07);border-radius:2px 2px 0 0;height:70px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;overflow:hidden">
-                      ${f.rebuy>0?`<div style="width:100%;flex:${rebuyPct};background:${rebuyColor};min-height:2px"></div>`:''}
-                      <div style="width:100%;flex:${f.rebuy>0?buyinPct:100};background:rgba(95,196,122,0.6);min-height:3px"></div>
+                    <div style="font-size:9px;font-weight:900;color:${f.rebuy>0?rebuyColor:'transparent'};margin-bottom:2px;white-space:nowrap;min-height:12px">${f.rebuy>0?f.rebuy+(badge?`<span style='font-size:7px'>${badge}</span>`:''):''}</div>
+                    <div style="width:16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
+                      ${rebuyH>0?`<div style="width:100%;height:${rebuyH}px;background:${rebuyColor};border-radius:2px 2px 0 0;margin-bottom:1px"></div>`:''}
+                      <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'2px 2px 0 0'}"></div>
                     </div>
                     <div style="height:36px;display:flex;align-items:flex-start;justify-content:center;margin-top:2px">
                       <span style="font-size:12px;font-weight:700;color:#e2ddd4;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;letter-spacing:2px">${f.name}</span>
