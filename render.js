@@ -1081,10 +1081,13 @@ function renderTableShape(){
   const vRefresh = document.getElementById('btn-viewer-refresh');
   if(vRefresh) vRefresh.style.display = isViewer()?'':'none';
   // Hide action buttons for viewers
-  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
+  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
+  // sbox-tablesize: hide for viewers AND on tournaments/players tab
+  const _tsb = document.getElementById('sbox-tablesize');
+  if(_tsb) _tsb.style.display = (isViewer()||curTab==='tournaments'||curTab==='players')?'none':'';
 }
 function render(){
   // Safety: if currentActor is set and hand is active, ensure bettingClosed is correct
@@ -1111,6 +1114,8 @@ function render(){
   const sb2 = document.getElementById('statsbar');
   const curTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','') || 'table';
   if(sb2) sb2.style.display = (curTab==='table'||curTab==='hands') ? 'none' : '';
+  const _tsb2 = document.getElementById('sbox-tablesize');
+  if(_tsb2) _tsb2.style.display = (isViewer()||curTab==='tournaments'||curTab==='players')?'none':'';
 }
 
 function renderStats(){
@@ -1130,10 +1135,9 @@ function renderStats(){
   document.getElementById('inp-buyin-cost').value=S.buyinCost;
   document.querySelectorAll('#sel-table-size,#sel-table-size-stats').forEach(el=>el.value=S.tableSize);
   document.getElementById('sel-table-size').value=S.tableSize;
-  // Hide sbox-tablesize on tournaments/players tab
-  const curTabRS = document.querySelector('.nav-tab.active')?.id?.replace('tab-','') || 'table';
-  const tableSizeBoxRS = document.getElementById('sbox-tablesize');
-  if(tableSizeBoxRS) tableSizeBoxRS.style.display = (isViewer() || curTabRS==='tournaments' || curTabRS==='players') ? 'none' : '';
+  const _curTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','') || 'table';
+  const _tsb3 = document.getElementById('sbox-tablesize');
+  if(_tsb3) _tsb3.style.display = (isViewer()||_curTab==='tournaments'||_curTab==='players')?'none':'';
 }
 function renderSeats(){
   const cont=document.getElementById('seats-container'); cont.innerHTML='';
