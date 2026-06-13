@@ -1081,11 +1081,10 @@ function renderTableShape(){
   const vRefresh = document.getElementById('btn-viewer-refresh');
   if(vRefresh) vRefresh.style.display = isViewer()?'':'none';
   // Hide action buttons for viewers
-  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
+  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
-  // sbox-tablesize handled separately in switchTab (ui.js)
 }
 function render(){
   // Safety: if currentActor is set and hand is active, ensure bettingClosed is correct
@@ -1344,6 +1343,23 @@ function renderSeats(){
       el.appendChild(sdBtn);
     }
     cont.appendChild(el);
+  }
+
+  // ── Fixed dealer seat (right-middle, always same position) ──
+  {
+    const oldD = document.getElementById('dealer-seat-fixed');
+    if(oldD) oldD.remove();
+    const {x,y} = getDealerSeatXY();
+    const dealerEl = document.createElement('div');
+    dealerEl.id = 'dealer-seat-fixed';
+    dealerEl.style.cssText = `position:absolute;left:${x}%;top:${y}%;transform:translate(-50%,-50%);z-index:10;pointer-events:none`;
+    dealerEl.innerHTML = `<div style="
+      width:44px;height:44px;border-radius:50%;
+      background:rgba(255,255,255,0.04);
+      border:1px dashed rgba(255,255,255,0.25);
+      display:flex;align-items:center;justify-content:center;
+    "><span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:0.5px">DEAL</span></div>`;
+    cont.appendChild(dealerEl);
   }
 
   // כפתור "💰 העבר קופה" על השולחן בזמן showdown
