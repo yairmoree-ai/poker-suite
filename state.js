@@ -308,8 +308,21 @@ function assignPos(){
 }
 
 function getSeatXY(i,count){
-  // Lovable seatPosition: rx=36, ry=40, start bottom going clockwise
-  const angle = Math.PI/2 + (i/count)*Math.PI*2;
+  // Dealer is fixed at angle=0 (right-middle).
+  // Seats spread around the rest of the arc, leaving a gap for the dealer.
+  // Gap: ~50deg on each side of angle=0 → seats span from 50deg to 310deg (i.e. 260deg total)
+  const gapDeg = 50; // degrees to leave on each side of dealer
+  const spreadDeg = 360 - gapDeg*2; // 260deg for seats
+  const startDeg = gapDeg; // start angle in degrees (clockwise from right)
+  // Convert to radians. Angle 0 = right, going clockwise means adding angle.
+  // In canvas coords: right=0, down=PI/2, so clockwise = increasing angle
+  const startRad = (startDeg * Math.PI/180);
+  const stepRad = (spreadDeg * Math.PI/180) / (count - 1);
+  const angle = startRad + i * stepRad;
   const rx=36, ry=40;
   return{x:50+rx*Math.cos(angle), y:50+ry*Math.sin(angle)};
+}
+function getDealerSeatXY(){
+  // Fixed dealer seat: right-middle of ellipse (angle=0)
+  return{x:50+36, y:50};
 }
