@@ -1368,17 +1368,18 @@ function showStatistics(){
   const modal = document.getElementById('stats-modal');
   modal.style.display='flex';
 
-  const history = S.tournamentHistory || [];
+  const history = S.tournLog || [];
   const stats = {};
 
   history.forEach(t=>{
     const buyin = t.buyinCost || S.buyinCost || 50;
+    const prizes = {1:t.place1||0, 2:t.place2||0, 3:t.place3||0, 4:t.place4||0};
     (t.finishOrder||[]).forEach(f=>{
       const name = f.name || f.pid;
       if(!name || /^\d+$/.test(name)) return;
       if(!stats[name]) stats[name]={paid:0, won:0};
       stats[name].paid += (1+(f.rebuy||0)) * buyin;
-      stats[name].won += f.prize||0;
+      stats[name].won += prizes[f.place]||0;
     });
   });
 
