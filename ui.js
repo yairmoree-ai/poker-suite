@@ -916,11 +916,16 @@ function renderTournList(){
             <div style="font-size:10px;color:#c8a96e;margin-bottom:1px">כניסות${t.freeRebuys?` <span style="color:#5b9bd5">(${t.freeRebuys}🎁)</span>`:''}</div>
             <div style="font-size:18px;font-weight:900;color:#f0ece4">${t.paidEntries||t.totalEntries}</div>
           </div>
+          ${isAdmin()?`
+          <div style="background:rgba(26,58,26,0.3);border:1px solid rgba(74,138,74,0.3);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
+            <div style="font-size:10px;color:#4a8a4a;margin-bottom:1px">🃏 צ׳יפים</div>
+            <div style="font-size:16px;font-weight:900;color:#7fd47f">${((t.totalEntries||0)*50/1000).toFixed(1)}M</div>
+          </div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <!-- Places column -->
           <div>
-            ${finishT.filter(f=>f.place<=4).sort((a,b)=>a.place-b.place).map(f=>{
+            ${finishT.filter(f=>f.place<=4).map(f=>{
               const rb = f.rebuy||0;
               const prize = prizeByPlaceT[f.place]||0;
               const medals={1:'🏆',2:'🥈',3:'🥉'};
@@ -1355,4 +1360,83 @@ function showExplosion(name, rebuyNum){
 function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+
+function showStatistics(){
+  document.getElementById('settings-box').style.display='none';
+  const modal = document.getElementById('stats-modal');
+  modal.style.display='flex';
+
+  const history = S.tournamentHistory || [];
+  const stats = {};
+
+  history.forEach(t=>{
+    const buyin = t.buyinCost || S.buyinCost || 50;
+    (t.finishOrder||[]).forEach(f=>{
+      const name = f.name || f.pid;
+      if(!name || /^\d+$/.test(name)) return;
+      if(!stats[name]) stats[name]={paid:0, won:0};
+      stats[name].paid += (1+(f.rebuy||0)) * buyin;
+      stats[name].won += f.prize||0;
+    });
+  });
+
+  const players = Object.entries(stats)
+    .map(([name,d])=>({name, paid:d.paid, won:d.won, net:d.won-d.paid}))
+    .filter(p=>p.paid>0)
+    .sort((a,b)=>b.net-a.net);
+
+  if(!players.length){
+    document.getElementById('stats-modal-content').innerHTML=
+      '<div style="text-align:center;color:#5a5870;padding:24px;font-size:13px">אין נתוני טורנירים עדיין</div>';
+    return;
+  }
+
+  const maxAbs = Math.max(...players.map(p=>Math.abs(p.net)), 1);
+  const BAR_MAX = 90;
+  const ZERO_Y = 100;
+
+  const barsHtml = players.map(p=>{
+    const isPos = p.net>=0;
+    const barH = Math.max(Math.round((Math.abs(p.net)/maxAbs)*BAR_MAX), 3);
+    const color = isPos?'rgba(95,196,122,0.85)':'rgba(224,123,106,0.85)';
+    const label = (isPos?'+':'')+(p.net/1000).toFixed(1)+'k';
+    return `<div style="display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0">
+      <div style="height:18px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px">
+        <span style="font-size:9px;font-weight:900;color:${color};white-space:nowrap">${label}</span>
+      </div>
+      <div style="width:28px;height:${ZERO_Y}px;display:flex;flex-direction:column;justify-content:flex-end">
+        ${isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:3px 3px 0 0"></div>`:''}
+      </div>
+      <div style="width:28px;height:1px;background:rgba(255,255,255,0.18)"></div>
+      <div style="width:28px;height:${BAR_MAX}px;display:flex;flex-direction:column;justify-content:flex-start">
+        ${!isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:0 0 3px 3px"></div>`:''}
+      </div>
+      <div style="height:46px;display:flex;align-items:flex-start;justify-content:center;margin-top:3px">
+        <span style="font-size:12px;font-weight:700;color:#e2ddd4;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;letter-spacing:1px">${p.name}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const html = `
+    <div style="font-size:10px;color:#5a5870;margin-bottom:10px">${history.length} טורנירים • ${players.length} שחקנים</div>
+    <div style="overflow-x:auto;padding-bottom:4px;margin-bottom:16px">
+      <div style="display:flex;align-items:flex-start;gap:4px;min-width:min-content;padding:0 4px;direction:ltr">
+        ${barsHtml}
+      </div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:#5a5870;display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">
+      <span>שחקן</span><span style="text-align:right">השקעה</span><span style="text-align:right">זכיות</span><span style="text-align:right">נטו</span>
+    </div>
+    ${players.map(p=>`
+    <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-items:center">
+      <span style="font-size:12px;font-weight:700;color:#e2ddd4">${p.name}</span>
+      <span style="font-size:11px;color:#5a5870;text-align:right">₪${p.paid.toLocaleString()}</span>
+      <span style="font-size:11px;color:#5b9bd5;text-align:right">₪${p.won.toLocaleString()}</span>
+      <span style="font-size:12px;font-weight:900;color:${p.net>=0?'#5fc47a':'#e07b6a'};text-align:right">${p.net>=0?'+':''}₪${p.net.toLocaleString()}</span>
+    </div>`).join('')}
+  `;
+
+  document.getElementById('stats-modal-content').innerHTML = html;
 }
