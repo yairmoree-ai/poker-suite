@@ -289,6 +289,9 @@ async function syncToSheets(immediate){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
     });
+    // עדכן _lastSaved אחרי push מוצלח — מונע החלפה מה-Sheets
+    S._lastSaved = Date.now();
+    S._sheetsTimestamp = S._lastSaved;
     updateSyncDot('ok');
     setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
   }catch(e){
@@ -313,9 +316,10 @@ async function syncFromSheets(){
     const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
       const incoming = r.value;
+      // החל רק אם ה-Sheets חדש יותר ב-3+ שניות מהפעם האחרונה שסנכרנו
       const shouldApply = !isAdmin()
-        || !S._lastSaved
-        || (incoming.savedAt && incoming.savedAt > S._lastSaved + 3000);
+        || !S._sheetsTimestamp
+        || (incoming.savedAt && incoming.savedAt > S._sheetsTimestamp + 3000);
       if(shouldApply){
         applySnapshot(incoming);
         S._sheetsTimestamp = incoming.savedAt||Date.now();
