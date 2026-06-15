@@ -262,26 +262,37 @@ async function syncToSheets(immediate){
   if(!url) return;
   if(isViewer() || !currentUser) return;
 
-  // מכשיר חדש עם localStorage ריק — משוך קודם
-  if(!S._lastSaved){
-    try {
-      const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now(), {method:'GET',redirect:'follow'});
-      const checkData = JSON.parse(await checkResp.text());
-      if(checkData.ok && checkData.value?.savedAt){
-        applySnapshot(checkData.value);
-        S._sheetsTimestamp = checkData.value.savedAt;
-        S._lastSaved = checkData.value.savedAt;
-        persist(); render();
-        return;
-      }
-    } catch(e){ /* proceed with push */ }
-  }
-
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
     return;
   }
+
+  // בדוק אם Sheets חדש יותר ממה שיש לנו — מכשיר ישן שמנסה לדרוס
+  try {
+    const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now(), {method:'GET',redirect:'follow'});
+    const checkData = JSON.parse(await checkResp.text());
+    if(checkData.ok && checkData.value?.savedAt){
+      const sheetsSavedAt = checkData.value.savedAt;
+      if(!S._lastSaved){
+        // מכשיר חדש — משוך קודם
+        applySnapshot(checkData.value);
+        S._sheetsTimestamp = sheetsSavedAt;
+        S._lastSaved = sheetsSavedAt;
+        try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
+        try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
+        persist(); render();
+        return;
+      }
+      if(sheetsSavedAt > S._lastSaved + 5000){
+        // Sheets חדש יותר — לא דורסים, מתריעים
+        setSyncStatus('⚠️ קיים גרסה חדשה יותר — לחץ רענון', '#e07b6a');
+        updateSyncDot('err');
+        return;
+      }
+    }
+  } catch(e){ /* אם הבדיקה נכשלה — ממשיכים לדחוף */ }
+
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
@@ -293,6 +304,8 @@ async function syncToSheets(immediate){
     });
     S._lastSaved = Date.now();
     S._sheetsTimestamp = S._lastSaved;
+    try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
+    try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
     updateSyncDot('ok');
     setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
   }catch(e){
