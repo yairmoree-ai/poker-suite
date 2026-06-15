@@ -216,8 +216,16 @@ function loadState(){
   if(tlog) S.tournLog=Array.isArray(tlog)?tlog:[];
 
   if(S.buyinCost===100) S.buyinCost=50;
-  render();
 
+  // טען timestamps של סנכרון כדי למנוע דריסה מ-Sheets
+  try{
+    const syncTs = localStorage.getItem('ps_sync_ts');
+    if(syncTs) S._lastSaved = parseInt(syncTs)||0;
+    const sheetsTs = localStorage.getItem('ps_sheets_ts');
+    if(sheetsTs) S._sheetsTimestamp = parseInt(sheetsTs)||0;
+  }catch(e){}
+
+  render();
 }
 function persist(){
   if(isViewer()) return; // viewers never save locally
@@ -234,6 +242,8 @@ function persist(){
   // Save to all known old keys for migration
   try{ localStorage.setItem('ps_backup', JSON.stringify(snap)); }catch(e){}
   S._lastSaved = Date.now();
+  try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
+  if(S._sheetsTimestamp) try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
   // Auto-sync to Google Sheets - only for admins, immediate
   if(typeof syncToSheets === 'function' && getGsUrl() && isAdmin()) syncToSheets(true);
 }
@@ -308,17 +318,8 @@ function assignPos(){
 }
 
 function getSeatXY(i,count){
-  // Dealer fixed at angle=0 (right). Seats spread around the remaining arc.
-  // Gap shrinks with more players; radius grows to avoid crowding.
-  const gapDeg = count<=4 ? 50 : count<=6 ? 40 : count<=7 ? 32 : 22;
-  const rx = count>=8 ? 42 : 36;
-  const ry = count>=8 ? 46 : 40;
-  const spreadDeg = 360 - gapDeg*2;
-  const startRad = gapDeg * Math.PI/180;
-  const stepRad = (spreadDeg * Math.PI/180) / (count - 1);
-  const angle = startRad + i * stepRad;
+  // Lovable seatPosition: rx=36, ry=40, start bottom going clockwise
+  const angle = Math.PI/2 + (i/count)*Math.PI*2;
+  const rx=36, ry=40;
   return{x:50+rx*Math.cos(angle), y:50+ry*Math.sin(angle)};
-}
-function getDealerSeatXY(){
-  return{x:50+36, y:50};
 }
