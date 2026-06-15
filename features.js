@@ -268,14 +268,16 @@ async function syncToSheets(immediate){
     return;
   }
 
-  // בדוק אם Sheets חדש יותר ממה שיש לנו — מכשיר ישן שמנסה לדרוס
+  // בדוק אם Sheets חדש יותר ממה שיש לנו
   try {
     const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now(), {method:'GET',redirect:'follow'});
     const checkData = JSON.parse(await checkResp.text());
     if(checkData.ok && checkData.value?.savedAt){
       const sheetsSavedAt = checkData.value.savedAt;
+      console.log('[syncToSheets] sheetsSavedAt='+sheetsSavedAt+' _lastSaved='+S._lastSaved);
       if(!S._lastSaved){
         // מכשיר חדש — משוך קודם
+        console.log('[syncToSheets] new device — pulling first');
         applySnapshot(checkData.value);
         S._sheetsTimestamp = sheetsSavedAt;
         S._lastSaved = sheetsSavedAt;
@@ -285,13 +287,14 @@ async function syncToSheets(immediate){
         return;
       }
       if(sheetsSavedAt > S._lastSaved + 5000){
-        // Sheets חדש יותר — לא דורסים, מתריעים
+        // מכשיר ישן — לא דורסים
+        console.log('[syncToSheets] Sheets is newer — NOT pushing, warning user');
         setSyncStatus('⚠️ קיים גרסה חדשה יותר — לחץ רענון', '#e07b6a');
         updateSyncDot('err');
         return;
       }
     }
-  } catch(e){ /* אם הבדיקה נכשלה — ממשיכים לדחוף */ }
+  } catch(e){ console.log('[syncToSheets] check failed:', e.message); }
 
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
@@ -306,6 +309,7 @@ async function syncToSheets(immediate){
     S._sheetsTimestamp = S._lastSaved;
     try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
     try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
+    console.log('[syncToSheets] pushed OK, _lastSaved='+S._lastSaved);
     updateSyncDot('ok');
     setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
   }catch(e){
@@ -318,7 +322,12 @@ async function syncFromSheets(){
   const url = getGsUrl();
   if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
-  if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 30000) return;
+  const timeSinceLastSave = Date.now() - (S._lastSaved||0);
+  console.log('[syncFromSheets] _lastSaved='+S._lastSaved+' _sheetsTimestamp='+S._sheetsTimestamp+' timeSince='+Math.round(timeSinceLastSave/1000)+'s');
+  if(isAdmin() && S._lastSaved && timeSinceLastSave < 30000){
+    console.log('[syncFromSheets] skipping — too recent');
+    updateSyncDot('ok'); return;
+  }
   const username = currentUser?.username || currentUser?.viewingAdmin || '';
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
@@ -332,10 +341,14 @@ async function syncFromSheets(){
       const shouldApply = !isAdmin()
         || !S._sheetsTimestamp
         || (incoming.savedAt && incoming.savedAt > S._sheetsTimestamp + 3000);
+      console.log('[syncFromSheets] incoming.savedAt='+incoming.savedAt+' _sheetsTimestamp='+S._sheetsTimestamp+' shouldApply='+shouldApply);
       if(shouldApply){
+        console.log('[syncFromSheets] APPLYING SNAPSHOT');
         applySnapshot(incoming);
         S._sheetsTimestamp = incoming.savedAt||Date.now();
         S._lastSaved = S._sheetsTimestamp;
+        try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
+        try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
         persist();
         render();
         const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
