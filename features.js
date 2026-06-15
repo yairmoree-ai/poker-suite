@@ -266,8 +266,7 @@ async function syncToSheets(immediate){
     const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
     const checkData = JSON.parse(await checkResp.text());
     if(checkData.ok && checkData.value?.savedAt){
-      // רק אם ה-Sheets חדש יותר מה-_lastSaved שלנו — ובלבד שלא עדכנו את _lastSaved לאחרונה
-      if(checkData.value.savedAt > (S._lastSaved||0) && (Date.now() - (S._lastSaved||0)) > 5000){
+      if(checkData.value.savedAt > (S._lastSaved||0)){
         setSyncStatus('⚠️ קונפליקט – מושך גרסה חדשה יותר', '#e07b6a');
         applySnapshot(checkData.value);
         S._sheetsTimestamp = checkData.value.savedAt;
@@ -302,8 +301,8 @@ async function syncFromSheets(){
   const url = getGsUrl();
   if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
-  if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 15000) return;
-  // צופה משתמש ב-viewingAdmin כ-username
+  // אם admin עבד תוך 30 שניות — לא מושכים
+  if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 30000) return;
   const username = currentUser?.username || currentUser?.viewingAdmin || '';
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
@@ -314,16 +313,19 @@ async function syncFromSheets(){
     const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
       const incoming = r.value;
-      if(!isAdmin() || !S._lastSaved || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
+      const shouldApply = !isAdmin()
+        || !S._lastSaved
+        || (incoming.savedAt && incoming.savedAt > S._lastSaved + 3000);
+      if(shouldApply){
         applySnapshot(incoming);
         S._sheetsTimestamp = incoming.savedAt||Date.now();
         persist();
+        render();
+        const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
+        if(activeTab==='tourn') renderTournList();
+        if(activeTab==='players') renderPlayerList();
+        if(activeTab==='hands') renderHandList();
       }
-      render();
-      const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
-      if(activeTab==='tourn') renderTournList();
-      if(activeTab==='players') renderPlayerList();
-      if(activeTab==='hands') renderHandList();
       updateSyncDot('ok');
       setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
     } else {
