@@ -258,23 +258,25 @@ function setSyncStatus(msg, color){
 async function syncToSheets(immediate){
   if(isViewer()||isLocal()) return;
   if(!S.playerLib?.length) return;
-  if(S._sheetsTimestamp && S._lastSaved && S._sheetsTimestamp > S._lastSaved) return;
   const url = getGsUrl();
   if(!url) return;
   if(isViewer() || !currentUser) return;
-  try {
-    const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
-    const checkData = JSON.parse(await checkResp.text());
-    if(checkData.ok && checkData.value?.savedAt){
-      if(checkData.value.savedAt > (S._lastSaved||0)){
-        setSyncStatus('⚠️ קונפליקט – מושך גרסה חדשה יותר', '#e07b6a');
+
+  // מכשיר חדש עם localStorage ריק — משוך קודם
+  if(!S._lastSaved){
+    try {
+      const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now(), {method:'GET',redirect:'follow'});
+      const checkData = JSON.parse(await checkResp.text());
+      if(checkData.ok && checkData.value?.savedAt){
         applySnapshot(checkData.value);
         S._sheetsTimestamp = checkData.value.savedAt;
+        S._lastSaved = checkData.value.savedAt;
         persist(); render();
         return;
       }
-    }
-  } catch(e){ /* proceed with push */ }
+    } catch(e){ /* proceed with push */ }
+  }
+
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
@@ -289,7 +291,6 @@ async function syncToSheets(immediate){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
     });
-    // עדכן _lastSaved אחרי push מוצלח — מונע החלפה מה-Sheets
     S._lastSaved = Date.now();
     S._sheetsTimestamp = S._lastSaved;
     updateSyncDot('ok');
@@ -304,7 +305,6 @@ async function syncFromSheets(){
   const url = getGsUrl();
   if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
-  // אם admin עבד תוך 30 שניות — לא מושכים
   if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 30000) return;
   const username = currentUser?.username || currentUser?.viewingAdmin || '';
   updateSyncDot('syncing');
@@ -316,13 +316,13 @@ async function syncFromSheets(){
     const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
       const incoming = r.value;
-      // החל רק אם ה-Sheets חדש יותר ב-3+ שניות מהפעם האחרונה שסנכרנו
       const shouldApply = !isAdmin()
         || !S._sheetsTimestamp
         || (incoming.savedAt && incoming.savedAt > S._sheetsTimestamp + 3000);
       if(shouldApply){
         applySnapshot(incoming);
         S._sheetsTimestamp = incoming.savedAt||Date.now();
+        S._lastSaved = S._sheetsTimestamp;
         persist();
         render();
         const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
