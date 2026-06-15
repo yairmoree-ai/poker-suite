@@ -268,48 +268,39 @@ async function syncToSheets(immediate){
     return;
   }
 
-  // בדוק אם Sheets חדש יותר ממה שיש לנו
-  try {
-    const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now(), {method:'GET',redirect:'follow'});
-    const checkData = JSON.parse(await checkResp.text());
-    if(checkData.ok && checkData.value?.savedAt){
-      const sheetsSavedAt = checkData.value.savedAt;
-      console.log('[syncToSheets] sheetsSavedAt='+sheetsSavedAt+' _lastSaved='+S._lastSaved);
-      if(!S._lastSaved){
-        // מכשיר חדש — משוך קודם
+  // מכשיר חדש — משוך קודם
+  if(!S._lastSaved){
+    try {
+      const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now(), {method:'GET',redirect:'follow'});
+      const checkData = JSON.parse(await checkResp.text());
+      if(checkData.ok && checkData.value?.savedAt){
         console.log('[syncToSheets] new device — pulling first');
         applySnapshot(checkData.value);
-        S._sheetsTimestamp = sheetsSavedAt;
-        S._lastSaved = sheetsSavedAt;
+        S._sheetsTimestamp = checkData.value.savedAt;
+        S._lastSaved = checkData.value.savedAt;
         try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
         try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
         persist(); render();
         return;
       }
-      if(sheetsSavedAt > S._lastSaved + 5000){
-        // מכשיר ישן — לא דורסים
-        console.log('[syncToSheets] Sheets is newer — NOT pushing, warning user');
-        setSyncStatus('⚠️ קיים גרסה חדשה יותר — לחץ רענון', '#e07b6a');
-        updateSyncDot('err');
-        return;
-      }
-    }
-  } catch(e){ console.log('[syncToSheets] check failed:', e.message); }
-
+    } catch(e){}
+  }
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
+    const snap = fullSnapshot();
+    const sentSavedAt = snap.savedAt;
     await fetch(url, {
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
+      body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: snap})
     });
-    S._lastSaved = Date.now();
-    S._sheetsTimestamp = S._lastSaved;
+    S._lastSaved = sentSavedAt;
+    S._sheetsTimestamp = sentSavedAt;
     try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
     try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
-    console.log('[syncToSheets] pushed OK, _lastSaved='+S._lastSaved);
+    console.log('[syncToSheets] pushed OK, sentSavedAt='+sentSavedAt);
     updateSyncDot('ok');
     setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
   }catch(e){
@@ -323,10 +314,8 @@ async function syncFromSheets(){
   if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
   const timeSinceLastSave = Date.now() - (S._lastSaved||0);
-  console.log('[syncFromSheets] _lastSaved='+S._lastSaved+' _sheetsTimestamp='+S._sheetsTimestamp+' timeSince='+Math.round(timeSinceLastSave/1000)+'s');
   if(isAdmin() && S._lastSaved && timeSinceLastSave < 30000){
-    console.log('[syncFromSheets] skipping — too recent');
-    updateSyncDot('ok'); return;
+    return;
   }
   const username = currentUser?.username || currentUser?.viewingAdmin || '';
   updateSyncDot('syncing');
@@ -338,9 +327,10 @@ async function syncFromSheets(){
     const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
       const incoming = r.value;
+      // השווה את ה-savedAt של ה-snapshot הנכנס לזה ששלחנו
       const shouldApply = !isAdmin()
         || !S._sheetsTimestamp
-        || (incoming.savedAt && incoming.savedAt > S._sheetsTimestamp + 3000);
+        || (incoming.savedAt && incoming.savedAt > S._sheetsTimestamp + 1000);
       console.log('[syncFromSheets] incoming.savedAt='+incoming.savedAt+' _sheetsTimestamp='+S._sheetsTimestamp+' shouldApply='+shouldApply);
       if(shouldApply){
         console.log('[syncFromSheets] APPLYING SNAPSHOT');
