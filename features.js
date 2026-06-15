@@ -266,7 +266,8 @@ async function syncToSheets(immediate){
     const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
     const checkData = JSON.parse(await checkResp.text());
     if(checkData.ok && checkData.value?.savedAt){
-      if(checkData.value.savedAt > (S._lastSaved||0)){
+      // רק אם ה-Sheets חדש יותר מה-_lastSaved שלנו — ובלבד שלא עדכנו את _lastSaved לאחרונה
+      if(checkData.value.savedAt > (S._lastSaved||0) && (Date.now() - (S._lastSaved||0)) > 5000){
         setSyncStatus('⚠️ קונפליקט – מושך גרסה חדשה יותר', '#e07b6a');
         applySnapshot(checkData.value);
         S._sheetsTimestamp = checkData.value.savedAt;
@@ -709,97 +710,4 @@ function shareKO(encodedMsg){
   const msg = decodeURIComponent(encodedMsg);
   const waUrl = 'https://wa.me/?text='+encodeURIComponent(msg);
   window.open(waUrl, '_blank');
-}
-
-
-// ── Drive Restore ────────────────────────────────────────
-async function showDriveRestore(){
-  if(!getGsUrl()){ notify('הגדר Google Sheets URL קודם'); return; }
-  document.getElementById('settings-box').style.display='none';
-  const box = document.getElementById('drive-restore-box');
-  const cont = document.getElementById('drive-restore-content');
-  cont.innerHTML='<div style="text-align:center;color:#5a5870;padding:20px">⏳ טוען גיבויים...</div>';
-  box.style.display='flex';
-  try{
-    const resp = await fetch(getGsUrl(),{method:'POST',body:JSON.stringify({action:'get_backup_list',username:currentUser?.username||''})});
-    const data = await resp.json();
-    if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
-    if(!data.backups?.length){ cont.innerHTML='<div style="text-align:center;color:#5a5870;padding:20px;font-size:13px">לא נמצאו גיבויים</div>'; return; }
-    cont.innerHTML=`
-      <div style="font-size:11px;color:#5a5870;margin-bottom:10px">נמצאו ${data.backups.length} גיבויים — בחר תאריך:</div>
-      ${data.backups.map(b=>`
-        <button onclick="loadDriveBackup('${b}')" style="width:100%;text-align:right;padding:10px 12px;border-radius:10px;border:1px solid rgba(95,196,122,0.2);background:rgba(95,196,122,0.06);color:#e2ddd4;font-size:13px;cursor:pointer;margin-bottom:6px;display:block">
-          📅 ${b}
-        </button>`).join('')}`;
-  }catch(e){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${e.message}</div>`; }
-}
-
-let _driveSnap = null;
-
-async function loadDriveBackup(sheetName){
-  const cont = document.getElementById('drive-restore-content');
-  cont.innerHTML=`<div style="text-align:center;color:#5a5870;padding:20px">⏳ טוען גיבוי מ-${sheetName}...</div>`;
-  try{
-    const resp = await fetch(getGsUrl(),{method:'POST',body:JSON.stringify({action:'get_backup_data',username:currentUser?.username||'',sheetName})});
-    const data = await resp.json();
-    if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
-    _driveSnap = data.data;
-    document.getElementById('drive-restore-box').style.display='none';
-    previewMergeFromSnap(_driveSnap, sheetName);
-  }catch(e){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${e.message}</div>`; }
-}
-
-function previewMergeFromSnap(snap, label){
-  const sourceTournaments = snap.tournLog || [];
-  const existingIds = new Set((S.tournLog||[]).map(t=>t.id));
-  const newT = sourceTournaments.filter(t=>!existingIds.has(t.id));
-  const existT = sourceTournaments.filter(t=>existingIds.has(t.id));
-  const list = document.getElementById('merge-list');
-  let html=`<div style="font-size:11px;color:#5a5870;margin-bottom:10px">גיבוי: <span style="color:#e2ddd4">${label}</span><br>${sourceTournaments.length} טורנירים • <span style="color:#5fc47a">${newT.length} חדשים</span> • <span style="color:#5a5870">${existT.length} קיימים</span></div>`;
-  if(!newT.length){
-    html+=`<div style="text-align:center;color:#5a5870;padding:16px;font-size:13px">כל הטורנירים כבר קיימים</div>`;
-  } else {
-    html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:11px;color:#5a5870">בחר טורנירים לייבוא:</span>
-      <button onclick="document.querySelectorAll('.merge-cb').forEach(c=>c.checked=true)" style="font-size:10px;color:#5b9bd5;background:none;border:none;cursor:pointer;padding:0">בחר הכל</button>
-    </div>`;
-    html+=newT.map(t=>{
-      const winners=(t.finishOrder||[]).filter(f=>f.place<=3).sort((a,b)=>a.place-b.place).map(f=>f.name).join(', ');
-      return `<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:rgba(91,155,213,0.06);border:1px solid rgba(91,155,213,0.15);margin-bottom:6px;cursor:pointer">
-        <input type="checkbox" class="merge-cb" data-id="${t.id}" checked style="margin-top:3px;accent-color:#5b9bd5;flex-shrink:0">
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#e2ddd4">${t.name||t.date||t.id}</div>
-          <div style="font-size:10px;color:#5a5870;margin-top:2px">${t.date||''} • ${t.totalEntries||0} כניסות • ₪${(t.prizePool||0).toLocaleString()}</div>
-          ${winners?`<div style="font-size:10px;color:#c8a96e;margin-top:2px">🏆 ${winners}</div>`:''}
-        </div>
-      </label>`;
-    }).join('');
-  }
-  list.innerHTML=html;
-  document.getElementById('merge-box').style.display='flex';
-}
-
-function previewMergeTournaments(){
-  const ta = document.getElementById('import-ta');
-  const code = ta.value.trim();
-  if(!code){ notify('הדבק קוד גיבוי'); return; }
-  try{
-    const snap = JSON.parse(decodeURIComponent(escape(atob(code))));
-    _driveSnap = snap;
-    document.getElementById('import-box').style.display='none';
-    previewMergeFromSnap(snap, 'קוד גיבוי ידני');
-  }catch(e){ notify('קוד לא תקין'); }
-}
-
-function confirmMergeTournaments(){
-  if(!_driveSnap) return;
-  const selected = new Set([...document.querySelectorAll('.merge-cb:checked')].map(c=>c.dataset.id));
-  if(!selected.size){ notify('לא נבחרו טורנירים'); return; }
-  const toAdd = (_driveSnap.tournLog||[]).filter(t=>selected.has(t.id));
-  S.tournLog = [...(S.tournLog||[]), ...toAdd].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-  persist();
-  renderTournList();
-  document.getElementById('merge-box').style.display='none';
-  _driveSnap = null;
-  notify(`${toAdd.length} טורנירים יובאו ✓`);
 }
