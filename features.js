@@ -270,11 +270,14 @@ async function syncToSheets(immediate){
   try{
     const snap = fullSnapshot();
     console.log('[syncToSheets] שולח hands='+snap.handLog?.length+' savedAt='+snap.savedAt);
-    await fetch(url, {
-      method:'POST', mode:'no-cors',
+    const pushResp = await fetch(url, {
+      method:'POST',
+      mode:'no-cors',
+      redirect:'follow',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: snap})
     });
+    console.log('[syncToSheets] response type='+pushResp.type+' status='+pushResp.status);
     updateSyncDot('ok');
     setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
   }catch(e){
