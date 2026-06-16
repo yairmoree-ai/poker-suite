@@ -292,8 +292,18 @@ async function syncFromSheets(){
     const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
     const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
+      const before = {hands: S.handLog?.length||0, players: S.playerLib?.length||0};
       applySnapshot(r.value);
-      // לא persist() — לא לדרוס S.savedAt
+      const after = {hands: S.handLog?.length||0, players: S.playerLib?.length||0};
+      // הצג debug על המסך
+      let dbg = document.getElementById('sync-debug');
+      if(!dbg){ dbg=document.createElement('div'); dbg.id='sync-debug'; dbg.style.cssText='position:fixed;bottom:60px;left:8px;right:8px;background:rgba(0,0,0,0.85);color:#5fc47a;font-size:10px;padding:8px;border-radius:8px;z-index:9999;font-family:monospace;direction:ltr'; document.body.appendChild(dbg); }
+      dbg.innerHTML = `sync: ${new Date().toLocaleTimeString()}<br>
+        incoming hands=${r.value.handLog?.length||0} savedAt=${r.value.savedAt}<br>
+        S.savedAt=${S.savedAt}<br>
+        before: hands=${before.hands} players=${before.players}<br>
+        after: hands=${after.hands} players=${after.players}`;
+      setTimeout(()=>{ if(dbg) dbg.remove(); }, 8000);
       render();
       const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
       if(activeTab==='tourn') renderTournList();
