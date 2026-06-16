@@ -91,6 +91,7 @@ function applySnapshot(v){
   if(v.handLog?.length){
     const existingIds = new Set((S.handLog||[]).map(h=>h.id).filter(Boolean));
     const newHands = v.handLog.filter(h=>h.id && !existingIds.has(h.id));
+    console.log('[applySnapshot] handLog incoming='+v.handLog.length+' existing='+S.handLog?.length+' new='+newHands.length);
     if(newHands.length){
       S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(a.ts||0)-(b.ts||0));
     }
@@ -99,6 +100,7 @@ function applySnapshot(v){
   if(v.tournLog?.length){
     const existingIds = new Set((S.tournLog||[]).map(t=>t.id).filter(Boolean));
     const newT = v.tournLog.filter(t=>t.id && !existingIds.has(t.id));
+    console.log('[applySnapshot] tournLog incoming='+v.tournLog.length+' new='+newT.length);
     if(newT.length){
       S.tournLog = [...(S.tournLog||[]), ...newT].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
     }
@@ -107,10 +109,12 @@ function applySnapshot(v){
   if(v.playerLib?.length){
     const existingIds = new Set((S.playerLib||[]).map(p=>p.id).filter(Boolean));
     const newP = v.playerLib.filter(p=>p.id && !existingIds.has(p.id));
+    console.log('[applySnapshot] playerLib incoming='+v.playerLib.length+' new='+newP.length);
     if(newP.length) S.playerLib = [...(S.playerLib||[]), ...newP];
   }
   // שאר השדות — קח מהגרסה החדשה יותר בלבד
   const incomingNewer = !S.savedAt || !v.savedAt || v.savedAt > S.savedAt;
+  console.log('[applySnapshot] S.savedAt='+S.savedAt+' v.savedAt='+v.savedAt+' incomingNewer='+incomingNewer);
   if(incomingNewer){
     if(v.seats) S.seats=v.seats;
     if(v.board) S.board=v.board;
@@ -165,7 +169,7 @@ function applySnapshot(v){
     if(v.place3!==undefined) S.place3=v.place3;
     if(v.place1Override!==undefined) S.place1Override=v.place1Override;
     if(v.place2Override!==undefined) S.place2Override=v.place2Override;
-    if(v.savedAt) S.savedAt=v.savedAt;
+    // לא מעדכנים S.savedAt — רק persist() יעדכן אותו בפעולה אמיתית
   }
   // תמיד
   if(S.currentActor===undefined) S.currentActor=null;
