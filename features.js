@@ -732,7 +732,7 @@ async function showDriveRestore(){
   cont.innerHTML='<div style="text-align:center;color:#5a5870;padding:20px">⏳ טוען גיבויים...</div>';
   box.style.display='flex';
   try{
-    const resp = await fetch(gsUrl,{method:'POST',body:JSON.stringify({action:'get_backup_list',username:currentUser?.username||''})});
+    const resp = await fetch(gsUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'get_backup_list',username:currentUser?.username||''})});
     const data = await resp.json();
     console.log('[showDriveRestore]', data);
     if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
@@ -753,7 +753,7 @@ async function loadDriveBackup(sheetName){
   const cont = document.getElementById('drive-restore-content');
   cont.innerHTML=`<div style="text-align:center;color:#5a5870;padding:20px">⏳ טוען גיבוי מ-${sheetName}...</div>`;
   try{
-    const resp = await fetch(gsUrl,{method:'POST',body:JSON.stringify({action:'get_backup_data',username:currentUser?.username||'',sheetName})});
+    const resp = await fetch(gsUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'get_backup_data',username:currentUser?.username||'',sheetName})});
     const data = await resp.json();
     if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
     _driveSnap = data.data;
