@@ -281,43 +281,6 @@ async function syncToSheets(immediate){
   }
 }
 
-function mergeSnapshot(incoming){
-  // handLog — מזג לפי id, הוסף ידיים חסרות
-  if(incoming.handLog?.length){
-    const existingIds = new Set((S.handLog||[]).map(h=>h.id));
-    const newHands = incoming.handLog.filter(h=>h.id && !existingIds.has(h.id));
-    if(newHands.length){
-      S.handLog = [...(S.handLog||[]), ...newHands]
-        .sort((a,b)=>(a.ts||0)-(b.ts||0));
-    }
-  }
-  // tournLog — מזג לפי id
-  if(incoming.tournLog?.length){
-    const existingIds = new Set((S.tournLog||[]).map(t=>t.id));
-    const newT = incoming.tournLog.filter(t=>t.id && !existingIds.has(t.id));
-    if(newT.length){
-      S.tournLog = [...(S.tournLog||[]), ...newT]
-        .sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-    }
-  }
-  // playerLib — מזג לפי id, הוסף שחקנים חסרים
-  if(incoming.playerLib?.length){
-    const existingIds = new Set((S.playerLib||[]).map(p=>p.id));
-    const newPlayers = incoming.playerLib.filter(p=>p.id && !existingIds.has(p.id));
-    if(newPlayers.length){
-      S.playerLib = [...(S.playerLib||[]), ...newPlayers];
-    }
-  }
-  // שאר השדות — קח את הגרסה החדשה יותר
-  if(!S.savedAt || (incoming.savedAt && incoming.savedAt > S.savedAt)){
-    const keep = {
-      handLog: S.handLog, tournLog: S.tournLog, playerLib: S.playerLib,
-      _sheetsTimestamp: S._sheetsTimestamp
-    };
-    Object.assign(S, incoming, keep);
-  }
-}
-
 async function syncFromSheets(){
   const url = getGsUrl();
   if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
@@ -329,11 +292,7 @@ async function syncFromSheets(){
     const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
     const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
-      if(isAdmin()){
-        mergeSnapshot(r.value);
-      } else {
-        applySnapshot(r.value);
-      }
+      applySnapshot(r.value);
       persist();
       render();
       const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
