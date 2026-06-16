@@ -292,6 +292,7 @@ async function syncToSheets(immediate){
     const sentSavedAt = snap.savedAt;
     await fetch(url, {
       method:'POST',
+      mode:'no-cors',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: snap})
     });
