@@ -734,6 +734,7 @@ async function showDriveRestore(){
   try{
     const resp = await fetch(gsUrl,{method:'POST',body:JSON.stringify({action:'get_backup_list',username:currentUser?.username||''})});
     const data = await resp.json();
+    console.log('[showDriveRestore]', data);
     if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
     if(!data.backups?.length){ cont.innerHTML='<div style="text-align:center;color:#5a5870;padding:20px;font-size:13px">לא נמצאו גיבויים</div>'; return; }
     cont.innerHTML=`
