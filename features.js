@@ -269,8 +269,12 @@ async function syncToSheets(immediate){
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
     const snap = fullSnapshot();
+    // חתוך handLog ל-50 האחרונות למניעת payload גדול מדי
+    if(snap.handLog?.length > 50){
+      snap.handLog = snap.handLog.slice(-50);
+    }
     const payload = JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: snap});
-    console.log('[syncToSheets] שולח hands='+snap.handLog?.length+' savedAt='+snap.savedAt+' size='+Math.round(payload.length/1024)+'KB');
+    console.log('[syncToSheets] שולח hands='+snap.handLog?.length+' size='+Math.round(payload.length/1024)+'KB');
     const pushResp = await fetch(url, {
       method:'POST',
       mode:'no-cors',
