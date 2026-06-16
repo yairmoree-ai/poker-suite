@@ -269,12 +269,18 @@ async function syncToSheets(immediate){
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
     const snap = fullSnapshot();
-    if(snap.handLog?.length > 20) snap.handLog = snap.handLog.slice(-20);
+    // דחס ידיים לשליחה — שמור רק שדות חיוניים
+    if(snap.handLog?.length){
+      snap.handLog = snap.handLog.map(h=>({
+        id:h.id, ts:h.ts, label:h.label, street:h.street,
+        pot:h.pot, board:h.board, players:h.players,
+        actions:h.actions, timeline:h.timeline,
+        heroCards:h.heroCards, notes:h.notes, result:h.result,
+        seats:h.seats, blinds:h.blinds, savedAt:h.savedAt
+      }));
+    }
     const payload = JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: snap});
-    console.log('[syncToSheets] total='+Math.round(payload.length/1024)+'KB'
-      +' hands='+snap.handLog?.length+'('+Math.round(JSON.stringify(snap.handLog).length/1024)+'KB)'
-      +' players='+snap.playerLib?.length+'('+Math.round(JSON.stringify(snap.playerLib).length/1024)+'KB)'
-      +' tourn='+snap.tournLog?.length+'('+Math.round(JSON.stringify(snap.tournLog).length/1024)+'KB)');
+    console.log('[syncToSheets] total='+Math.round(payload.length/1024)+'KB hands='+snap.handLog?.length);
     const pushResp = await fetch(url, {
       method:'POST',
       mode:'no-cors',
