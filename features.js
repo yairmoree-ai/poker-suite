@@ -255,11 +255,12 @@ function setSyncStatus(msg, color){
   if(el){ el.textContent = msg; el.style.color = color||'#5a5870'; }
 }
 
+const FIREBASE_URL = 'https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app';
+
 async function syncToSheets(immediate){
   if(isViewer()||isLocal()) return;
   if(!S.playerLib?.length) return;
-  const url = getGsUrl();
-  if(!url || !currentUser) return;
+  if(!currentUser?.username) return;
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
@@ -268,28 +269,20 @@ async function syncToSheets(immediate){
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
+    S.savedAt = Date.now();
     const snap = fullSnapshot();
-    // דחס ידיים לשליחה — שמור רק שדות חיוניים
-    if(snap.handLog?.length){
-      snap.handLog = snap.handLog.map(h=>({
-        id:h.id, ts:h.ts, label:h.label, street:h.street,
-        pot:h.pot, board:h.board, players:h.players,
-        actions:h.actions, timeline:h.timeline,
-        heroCards:h.heroCards, notes:h.notes, result:h.result,
-        seats:h.seats, blinds:h.blinds, savedAt:h.savedAt
-      }));
-    }
-    const payload = JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: snap});
-    console.log('[syncToSheets] total='+Math.round(payload.length/1024)+'KB hands='+snap.handLog?.length);
-    const pushResp = await fetch(url, {
-      method:'POST',
-      mode:'no-cors',
+    const url = FIREBASE_URL+'/users/'+encodeURIComponent(currentUser.username)+'.json';
+    const resp = await fetch(url, {
+      method:'PUT',
       headers:{'Content-Type':'application/json'},
-      body: payload
+      body: JSON.stringify(snap)
     });
-    console.log('[syncToSheets] response type='+pushResp.type);
-    updateSyncDot('ok');
-    setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+    if(resp.ok){
+      updateSyncDot('ok');
+      setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+    } else {
+      throw new Error('HTTP '+resp.status);
+    }
   }catch(e){
     updateSyncDot('err');
     setSyncStatus('שגיאה: '+e.message, '#e07b6a');
@@ -297,28 +290,18 @@ async function syncToSheets(immediate){
 }
 
 async function syncFromSheets(){
-  const url = getGsUrl();
-  if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
-  const username = currentUser?.username || currentUser?.viewingAdmin || '';
+  if(!currentUser) return;
+  const username = currentUser.username || currentUser.viewingAdmin || '';
+  if(!username) return;
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
-    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
-    const r = JSON.parse(await resp.text());
-    if(r.ok && r.value){
-      const before = {hands: S.handLog?.length||0, players: S.playerLib?.length||0};
-      applySnapshot(r.value);
-      const after = {hands: S.handLog?.length||0, players: S.playerLib?.length||0};
-      // הצג debug על המסך
-      let dbg = document.getElementById('sync-debug');
-      if(!dbg){ dbg=document.createElement('div'); dbg.id='sync-debug'; dbg.style.cssText='position:fixed;bottom:60px;left:8px;right:8px;background:rgba(0,0,0,0.85);color:#5fc47a;font-size:10px;padding:8px;border-radius:8px;z-index:9999;font-family:monospace;direction:ltr'; document.body.appendChild(dbg); }
-      dbg.innerHTML = `sync: ${new Date().toLocaleTimeString()}<br>
-        incoming hands=${r.value.handLog?.length||0} savedAt=${r.value.savedAt}<br>
-        S.savedAt=${S.savedAt}<br>
-        before: hands=${before.hands} players=${before.players}<br>
-        after: hands=${after.hands} players=${after.players}`;
-      setTimeout(()=>{ if(dbg) dbg.remove(); }, 8000);
+    const url = FIREBASE_URL+'/users/'+encodeURIComponent(username)+'.json?t='+Date.now();
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if(data && data.playerLib){
+      applySnapshot(data);
       render();
       const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
       if(activeTab==='tourn') renderTournList();
