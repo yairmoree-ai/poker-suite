@@ -255,12 +255,26 @@ function setSyncStatus(msg, color){
   if(el){ el.textContent = msg; el.style.color = color||'#5a5870'; }
 }
 
-const FIREBASE_URL = 'https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app';
-
 async function syncToSheets(immediate){
   if(isViewer()||isLocal()) return;
   if(!S.playerLib?.length) return;
-  if(!currentUser?.username) return;
+  if(S._sheetsTimestamp && S._lastSaved && S._sheetsTimestamp > S._lastSaved) return;
+  const url = getGsUrl();
+  if(!url) return;
+  if(isViewer() || !currentUser) return;
+  try {
+    const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
+    const checkData = JSON.parse(await checkResp.text());
+    if(checkData.ok && checkData.value?.savedAt){
+      if(checkData.value.savedAt > (S._lastSaved||0)){
+        setSyncStatus('⚠️ קונפליקט – מושך גרסה חדשה יותר', '#e07b6a');
+        applySnapshot(checkData.value);
+        S._sheetsTimestamp = checkData.value.savedAt;
+        persist(); render();
+        return;
+      }
+    }
+  } catch(e){ /* proceed with push */ }
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
@@ -269,20 +283,14 @@ async function syncToSheets(immediate){
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
-    S.savedAt = Date.now();
-    const snap = fullSnapshot();
-    const url = FIREBASE_URL+'/users/'+encodeURIComponent(currentUser.username)+'.json';
-    const resp = await fetch(url, {
-      method:'PUT',
+    await fetch(url, {
+      method:'POST',
+      mode:'no-cors',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(snap)
+      body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
     });
-    if(resp.ok){
-      updateSyncDot('ok');
-      setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-    } else {
-      throw new Error('HTTP '+resp.status);
-    }
+    updateSyncDot('ok');
+    setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
   }catch(e){
     updateSyncDot('err');
     setSyncStatus('שגיאה: '+e.message, '#e07b6a');
@@ -290,18 +298,26 @@ async function syncToSheets(immediate){
 }
 
 async function syncFromSheets(){
+  const url = getGsUrl();
+  if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
-  if(!currentUser) return;
-  const username = currentUser.username || currentUser.viewingAdmin || '';
-  if(!username) return;
+  if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 15000) return;
+  // צופה משתמש ב-viewingAdmin כ-username
+  const username = currentUser?.username || currentUser?.viewingAdmin || '';
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
-    const url = FIREBASE_URL+'/users/'+encodeURIComponent(username)+'.json?t='+Date.now();
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if(data && data.playerLib){
-      applySnapshot(data);
+    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {
+      method:'GET', redirect:'follow'
+    });
+    const r = JSON.parse(await resp.text());
+    if(r.ok && r.value){
+      const incoming = r.value;
+      if(!isAdmin() || !S._lastSaved || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
+        applySnapshot(incoming);
+        S._sheetsTimestamp = incoming.savedAt||Date.now();
+        persist();
+      }
       render();
       const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
       if(activeTab==='tourn') renderTournList();
@@ -693,4 +709,92 @@ function shareKO(encodedMsg){
   const msg = decodeURIComponent(encodedMsg);
   const waUrl = 'https://wa.me/?text='+encodeURIComponent(msg);
   window.open(waUrl, '_blank');
+}
+
+
+// ── Firebase ──────────────────────────────────────────
+const FIREBASE_URL = 'https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app';
+
+async function syncToSheets(immediate){
+  if(isViewer()||isLocal()) return;
+  if(!S.playerLib?.length) return;
+  if(!currentUser?.username) return;
+  if(!immediate){
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(()=>syncToSheets(true), 2000);
+    return;
+  }
+  updateSyncDot('syncing');
+  setSyncStatus('שולח נתונים...', '#c8a96e');
+  try{
+    S.savedAt = Date.now();
+    const snap = fullSnapshot();
+    const url = FIREBASE_URL+'/users/'+encodeURIComponent(currentUser.username)+'.json';
+    const resp = await fetch(url, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(snap)
+    });
+    if(resp.ok){
+      updateSyncDot('ok');
+      setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+    } else {
+      throw new Error('HTTP '+resp.status);
+    }
+  }catch(e){
+    updateSyncDot('err');
+    setSyncStatus('שגיאה: '+e.message, '#e07b6a');
+  }
+}
+
+async function syncFromSheets(){
+  if(isLocal()) return;
+  if(!currentUser) return;
+  const username = currentUser.username || currentUser.viewingAdmin || '';
+  if(!username) return;
+  updateSyncDot('syncing');
+  setSyncStatus('מושך נתונים...', '#c8a96e');
+  try{
+    const url = FIREBASE_URL+'/users/'+encodeURIComponent(username)+'.json?t='+Date.now();
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if(data && data.playerLib){
+      applySnapshot(data);
+      render();
+      const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
+      if(activeTab==='tourn') renderTournList();
+      if(activeTab==='players') renderPlayerList();
+      if(activeTab==='hands') renderHandList();
+      updateSyncDot('ok');
+      setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
+    } else {
+      updateSyncDot('idle');
+      setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
+    }
+  }catch(e){
+    updateSyncDot('err');
+    setSyncStatus('שגיאה: '+e.message, '#e07b6a');
+  }
+}
+
+async function migrateFromSheets(){
+  const gsUrl = getGsUrl();
+  if(!gsUrl){ notify('הכנס Google Sheets URL קודם'); return; }
+  if(!currentUser?.username){ notify('התחבר קודם'); return; }
+  notify('⏳ ממגר נתונים מ-Sheets...');
+  try{
+    const resp = await fetch(gsUrl+'?key=poker_data&username='+encodeURIComponent(currentUser.username)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
+    const r = JSON.parse(await resp.text());
+    if(r.ok && r.value){
+      applySnapshot(r.value);
+      persist();
+      await syncToSheets(true);
+      notify('✅ מיגרציה הושלמה!');
+      render();
+    } else {
+      notify('לא נמצאו נתונים ב-Sheets');
+    }
+  }catch(e){
+    notify('שגיאה: '+e.message);
+  }
 }
