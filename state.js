@@ -318,7 +318,6 @@ function assignPos(){
 }
 
 function getSeatXY(i,count){
-  // Dealer fixed at angle=0 (right). Seats spread around remaining arc.
   const gapDeg = count<=4 ? 50 : count<=6 ? 40 : count<=7 ? 32 : 22;
   const rx = count>=8 ? 42 : 36;
   const ry = count>=8 ? 46 : 40;
@@ -329,6 +328,5 @@ function getSeatXY(i,count){
   return{x:50+rx*Math.cos(angle), y:50+ry*Math.sin(angle)};
 }
 function getDealerSeatXY(){
-  // Fixed dealer seat: right-middle of ellipse (angle=0)
   return{x:50+36, y:50};
 }
