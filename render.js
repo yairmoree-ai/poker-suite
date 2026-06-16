@@ -1345,20 +1345,15 @@ function renderSeats(){
     cont.appendChild(el);
   }
 
-  // ── Fixed dealer seat (right-middle, always same position) ──
+  // כיסא דילר קבוע — ימין אמצע
+  const oldDealerSeat = document.getElementById('dealer-seat-fixed');
+  if(oldDealerSeat) oldDealerSeat.remove();
   {
-    const oldD = document.getElementById('dealer-seat-fixed');
-    if(oldD) oldD.remove();
     const {x,y} = getDealerSeatXY();
     const dealerEl = document.createElement('div');
     dealerEl.id = 'dealer-seat-fixed';
     dealerEl.style.cssText = `position:absolute;left:${x}%;top:${y}%;transform:translate(-50%,-50%);z-index:10;pointer-events:none`;
-    dealerEl.innerHTML = `<div style="
-      width:44px;height:44px;border-radius:50%;
-      background:rgba(255,255,255,0.04);
-      border:1px dashed rgba(255,255,255,0.25);
-      display:flex;align-items:center;justify-content:center;
-    "><span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:0.5px">DEAL</span></div>`;
+    dealerEl.innerHTML = `<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center"><span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3)">DEAL</span></div>`;
     cont.appendChild(dealerEl);
   }
 
