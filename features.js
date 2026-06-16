@@ -255,85 +255,8 @@ function setSyncStatus(msg, color){
   if(el){ el.textContent = msg; el.style.color = color||'#5a5870'; }
 }
 
-async function syncToSheets(immediate){
-  if(isViewer()||isLocal()) return;
-  if(!S.playerLib?.length) return;
-  if(S._sheetsTimestamp && S._lastSaved && S._sheetsTimestamp > S._lastSaved) return;
-  const url = getGsUrl();
-  if(!url) return;
-  if(isViewer() || !currentUser) return;
-  try {
-    const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
-    const checkData = JSON.parse(await checkResp.text());
-    if(checkData.ok && checkData.value?.savedAt){
-      if(checkData.value.savedAt > (S._lastSaved||0)){
-        setSyncStatus('⚠️ קונפליקט – מושך גרסה חדשה יותר', '#e07b6a');
-        applySnapshot(checkData.value);
-        S._sheetsTimestamp = checkData.value.savedAt;
-        persist(); render();
-        return;
-      }
-    }
-  } catch(e){ /* proceed with push */ }
-  if(!immediate){
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(()=>syncToSheets(true), 2000);
-    return;
-  }
-  updateSyncDot('syncing');
-  setSyncStatus('שולח נתונים...', '#c8a96e');
-  try{
-    await fetch(url, {
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
-    });
-    updateSyncDot('ok');
-    setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-  }catch(e){
-    updateSyncDot('err');
-    setSyncStatus('שגיאה: '+e.message, '#e07b6a');
-  }
-}
 
-async function syncFromSheets(){
-  const url = getGsUrl();
-  if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
-  if(isLocal()) return;
-  if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 15000) return;
-  // צופה משתמש ב-viewingAdmin כ-username
-  const username = currentUser?.username || currentUser?.viewingAdmin || '';
-  updateSyncDot('syncing');
-  setSyncStatus('מושך נתונים...', '#c8a96e');
-  try{
-    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {
-      method:'GET', redirect:'follow'
-    });
-    const r = JSON.parse(await resp.text());
-    if(r.ok && r.value){
-      const incoming = r.value;
-      if(!isAdmin() || !S._lastSaved || (incoming.savedAt && incoming.savedAt > S._lastSaved)){
-        applySnapshot(incoming);
-        S._sheetsTimestamp = incoming.savedAt||Date.now();
-        persist();
-      }
-      render();
-      const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
-      if(activeTab==='tourn') renderTournList();
-      if(activeTab==='players') renderPlayerList();
-      if(activeTab==='hands') renderHandList();
-      updateSyncDot('ok');
-      setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-    } else {
-      updateSyncDot('idle');
-      setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
-    }
-  }catch(e){
-    updateSyncDot('err');
-    setSyncStatus('שגיאה: '+e.message, '#e07b6a');
-  }
-}
+
 
 
 
@@ -797,4 +720,164 @@ async function migrateFromSheets(){
   }catch(e){
     notify('שגיאה: '+e.message);
   }
+}
+
+// ── Drive Restore ────────────────────────────────────────
+async function showDriveRestore(){
+  const gsUrl = getGsUrl();
+  if(!gsUrl){ notify('הגדר Google Sheets URL קודם'); return; }
+  document.getElementById('settings-box').style.display='none';
+  const box = document.getElementById('drive-restore-box');
+  const cont = document.getElementById('drive-restore-content');
+  cont.innerHTML='<div style="text-align:center;color:#5a5870;padding:20px">⏳ טוען גיבויים...</div>';
+  box.style.display='flex';
+  try{
+    const resp = await fetch(gsUrl,{method:'POST',body:JSON.stringify({action:'get_backup_list',username:currentUser?.username||''})});
+    const data = await resp.json();
+    if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
+    if(!data.backups?.length){ cont.innerHTML='<div style="text-align:center;color:#5a5870;padding:20px;font-size:13px">לא נמצאו גיבויים</div>'; return; }
+    cont.innerHTML=`
+      <div style="font-size:11px;color:#5a5870;margin-bottom:10px">נמצאו ${data.backups.length} גיבויים — בחר תאריך:</div>
+      ${data.backups.map(b=>`
+        <button onclick="loadDriveBackup('${b}')" style="width:100%;text-align:right;padding:10px 12px;border-radius:10px;border:1px solid rgba(95,196,122,0.2);background:rgba(95,196,122,0.06);color:#e2ddd4;font-size:13px;cursor:pointer;margin-bottom:6px;display:block">
+          📅 ${b}
+        </button>`).join('')}`;
+  }catch(e){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${e.message}</div>`; }
+}
+
+let _driveSnap = null;
+
+async function loadDriveBackup(sheetName){
+  const gsUrl = getGsUrl();
+  const cont = document.getElementById('drive-restore-content');
+  cont.innerHTML=`<div style="text-align:center;color:#5a5870;padding:20px">⏳ טוען גיבוי מ-${sheetName}...</div>`;
+  try{
+    const resp = await fetch(gsUrl,{method:'POST',body:JSON.stringify({action:'get_backup_data',username:currentUser?.username||'',sheetName})});
+    const data = await resp.json();
+    if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
+    _driveSnap = data.data;
+    document.getElementById('drive-restore-box').style.display='none';
+    previewMergeFromSnap(_driveSnap, sheetName);
+  }catch(e){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${e.message}</div>`; }
+}
+
+function previewMergeFromSnap(snap, label){
+  const sourceTournaments = snap.tournLog || [];
+  const existingIds = new Set((S.tournLog||[]).map(t=>t.id));
+  const newT = sourceTournaments.filter(t=>!existingIds.has(t.id));
+  const existT = sourceTournaments.filter(t=>existingIds.has(t.id));
+  const list = document.getElementById('merge-list');
+  let html=`<div style="font-size:11px;color:#5a5870;margin-bottom:10px">גיבוי: <span style="color:#e2ddd4">${label}</span><br>${sourceTournaments.length} טורנירים • <span style="color:#5fc47a">${newT.length} חדשים</span> • <span style="color:#5a5870">${existT.length} קיימים</span></div>`;
+  if(!newT.length){
+    html+=`<div style="text-align:center;color:#5a5870;padding:16px;font-size:13px">כל הטורנירים כבר קיימים</div>`;
+  } else {
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:11px;color:#5a5870">בחר טורנירים לייבוא:</span>
+      <button onclick="document.querySelectorAll('.merge-cb').forEach(c=>c.checked=true)" style="font-size:10px;color:#5b9bd5;background:none;border:none;cursor:pointer;padding:0">בחר הכל</button>
+    </div>`;
+    html+=newT.map(t=>{
+      const winners=(t.finishOrder||[]).filter(f=>f.place<=3).sort((a,b)=>a.place-b.place).map(f=>f.name).join(', ');
+      return `<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:rgba(91,155,213,0.06);border:1px solid rgba(91,155,213,0.15);margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" class="merge-cb" data-id="${t.id}" checked style="margin-top:3px;accent-color:#5b9bd5;flex-shrink:0">
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:#e2ddd4">${t.name||t.date||t.id}</div>
+          <div style="font-size:10px;color:#5a5870;margin-top:2px">${t.date||''} • ${t.totalEntries||0} כניסות • ₪${(t.prizePool||0).toLocaleString()}</div>
+          ${winners?`<div style="font-size:10px;color:#c8a96e;margin-top:2px">🏆 ${winners}</div>`:''}
+        </div>
+      </label>`;
+    }).join('');
+  }
+  list.innerHTML=html;
+  document.getElementById('merge-box').style.display='flex';
+}
+
+function previewMergeTournaments(){
+  const ta = document.getElementById('import-ta');
+  const code = ta.value.trim();
+  if(!code){ notify('הדבק קוד גיבוי'); return; }
+  try{
+    const snap = JSON.parse(decodeURIComponent(escape(atob(code))));
+    _driveSnap = snap;
+    document.getElementById('import-box').style.display='none';
+    previewMergeFromSnap(snap, 'קוד גיבוי ידני');
+  }catch(e){ notify('קוד לא תקין'); }
+}
+
+function confirmMergeTournaments(){
+  if(!_driveSnap) return;
+  const selected = new Set([...document.querySelectorAll('.merge-cb:checked')].map(c=>c.dataset.id));
+  if(!selected.size){ notify('לא נבחרו טורנירים'); return; }
+  const toAdd = (_driveSnap.tournLog||[]).filter(t=>selected.has(t.id));
+  S.tournLog = [...(S.tournLog||[]), ...toAdd].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  persist();
+  renderTournList();
+  document.getElementById('merge-box').style.display='none';
+  _driveSnap = null;
+  notify(`${toAdd.length} טורנירים יובאו ✓`);
+}
+
+function showStatistics(){
+  document.getElementById('settings-box').style.display='none';
+  const modal = document.getElementById('stats-modal');
+  modal.style.display='flex';
+  const history = S.tournLog || [];
+  const stats = {};
+  history.forEach(t=>{
+    const buyin = t.buyinCost || S.buyinCost || 50;
+    const prizes = {1:t.place1||0, 2:t.place2||0, 3:t.place3||0, 4:t.place4||0};
+    (t.finishOrder||[]).forEach(f=>{
+      const name = f.name || f.pid;
+      if(!name || /^\d+$/.test(name)) return;
+      if(!stats[name]) stats[name]={paid:0, won:0};
+      stats[name].paid += (1+(f.rebuy||0)) * buyin;
+      stats[name].won += prizes[f.place]||0;
+    });
+  });
+  const players = Object.entries(stats)
+    .map(([name,d])=>({name, paid:d.paid, won:d.won, net:d.won-d.paid}))
+    .filter(p=>p.paid>0)
+    .sort((a,b)=>b.net-a.net);
+  if(!players.length){
+    document.getElementById('stats-modal-content').innerHTML='<div style="text-align:center;color:#5a5870;padding:24px;font-size:13px">אין נתוני טורנירים עדיין</div>';
+    return;
+  }
+  const maxAbs = Math.max(...players.map(p=>Math.abs(p.net)), 1);
+  const BAR_MAX = 90, ZERO_Y = 100;
+  const barsHtml = players.map(p=>{
+    const isPos = p.net>=0;
+    const barH = Math.max(Math.round((Math.abs(p.net)/maxAbs)*BAR_MAX), 3);
+    const color = isPos?'rgba(95,196,122,0.85)':'rgba(224,123,106,0.85)';
+    const label = (isPos?'+':'')+(p.net/1000).toFixed(1)+'k';
+    return `<div style="display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0">
+      <div style="height:18px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px">
+        <span style="font-size:9px;font-weight:900;color:${color};white-space:nowrap">${label}</span>
+      </div>
+      <div style="width:28px;height:${ZERO_Y}px;display:flex;flex-direction:column;justify-content:flex-end">
+        ${isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:3px 3px 0 0"></div>`:''}
+      </div>
+      <div style="width:28px;height:1px;background:rgba(255,255,255,0.18)"></div>
+      <div style="width:28px;height:${BAR_MAX}px;display:flex;flex-direction:column;justify-content:flex-start">
+        ${!isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:0 0 3px 3px"></div>`:''}
+      </div>
+      <div style="height:46px;display:flex;align-items:flex-start;justify-content:center;margin-top:3px">
+        <span style="font-size:12px;font-weight:700;color:#e2ddd4;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;letter-spacing:1px">${p.name}</span>
+      </div>
+    </div>`;
+  }).join('');
+  const html = `
+    <div style="font-size:10px;color:#5a5870;margin-bottom:10px">${history.length} טורנירים • ${players.length} שחקנים</div>
+    <div style="overflow-x:auto;padding-bottom:4px;margin-bottom:16px">
+      <div style="display:flex;align-items:flex-start;gap:4px;min-width:min-content;padding:0 4px;direction:ltr">${barsHtml}</div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:#5a5870;display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">
+      <span>שחקן</span><span style="text-align:right">השקעה</span><span style="text-align:right">זכיות</span><span style="text-align:right">נטו</span>
+    </div>
+    ${players.map(p=>`
+    <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-items:center">
+      <span style="font-size:12px;font-weight:700;color:#e2ddd4">${p.name}</span>
+      <span style="font-size:11px;color:#5a5870;text-align:right">₪${p.paid.toLocaleString()}</span>
+      <span style="font-size:11px;color:#5b9bd5;text-align:right">₪${p.won.toLocaleString()}</span>
+      <span style="font-size:12px;font-weight:900;color:${p.net>=0?'#5fc47a':'#e07b6a'};text-align:right">${p.net>=0?'+':''}₪${p.net.toLocaleString()}</span>
+    </div>`).join('')}`;
+  document.getElementById('stats-modal-content').innerHTML = html;
 }
