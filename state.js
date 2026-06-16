@@ -309,8 +309,15 @@ function assignPos(){
 }
 
 function getSeatXY(i,count){
-  // Lovable seatPosition: rx=36, ry=40, start bottom going clockwise
-  const angle = Math.PI/2 + (i/count)*Math.PI*2;
-  const rx=36, ry=40;
+  const gapDeg = count<=4 ? 50 : count<=6 ? 40 : count<=7 ? 32 : 22;
+  const rx = count>=8 ? 42 : 36;
+  const ry = count>=8 ? 46 : 40;
+  const spreadDeg = 360 - gapDeg*2;
+  const startRad = gapDeg * Math.PI/180;
+  const stepRad = (spreadDeg * Math.PI/180) / (count - 1);
+  const angle = startRad + i * stepRad;
   return{x:50+rx*Math.cos(angle), y:50+ry*Math.sin(angle)};
+}
+function getDealerSeatXY(){
+  return{x:50+36, y:50};
 }
