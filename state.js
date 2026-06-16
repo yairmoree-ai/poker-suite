@@ -216,16 +216,8 @@ function loadState(){
   if(tlog) S.tournLog=Array.isArray(tlog)?tlog:[];
 
   if(S.buyinCost===100) S.buyinCost=50;
-
-  // טען timestamps של סנכרון
-  try{
-    const syncTs = localStorage.getItem('ps_sync_ts');
-    if(syncTs) S._lastSaved = parseInt(syncTs)||0;
-    const sheetsTs = localStorage.getItem('ps_sheets_ts');
-    if(sheetsTs) S._sheetsTimestamp = parseInt(sheetsTs)||0;
-  }catch(e){}
-
   render();
+
 }
 function persist(){
   if(isViewer()) return; // viewers never save locally
@@ -242,8 +234,6 @@ function persist(){
   // Save to all known old keys for migration
   try{ localStorage.setItem('ps_backup', JSON.stringify(snap)); }catch(e){}
   S._lastSaved = Date.now();
-  try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
-  if(S._sheetsTimestamp) try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
   // Auto-sync to Google Sheets - only for admins, immediate
   if(typeof syncToSheets === 'function' && getGsUrl() && isAdmin()) syncToSheets(true);
 }
