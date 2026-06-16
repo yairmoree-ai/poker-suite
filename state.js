@@ -87,73 +87,87 @@ let curHand=null, recStreet='פרה-פלופ', recActor='0';
 // STORAGE
 // ═══════════════════════════════════════════════════════
 function applySnapshot(v){
-  // Only apply if incoming snapshot is newer (prevents viewer from overwriting admin changes)
-  if(isAdmin() && v.savedAt && S._lastSaved && v.savedAt < S._lastSaved) {
-    console.log('Skipping older snapshot');
-    return;
-  }
-  if(v.playerLib) S.playerLib=v.playerLib;
-  if(v.seats) S.seats=v.seats;
-  if(v.board) S.board=v.board;
-  if(v.btnSeat!==undefined) S.btnSeat=v.btnSeat;
-  if(v.btnLocked!==undefined) S.btnLocked=v.btnLocked;
-  if(v.lastBet!==undefined) S.lastBet=v.lastBet;
-  if(v.buyinCost) S.buyinCost=v.buyinCost;
-  if(v.buyins) S.buyins=v.buyins;
-  if(v.koOrder) S.koOrder=v.koOrder;
-  const prevLevel = S.blindLevel;
-  if(v.blindLevel!==undefined) S.blindLevel=v.blindLevel;
-  // If level changed, announce for viewer
-  if(v.blindLevel!==undefined && v.blindLevel !== prevLevel && v.blindLevel > prevLevel){
-    const nb2 = BLIND_LEVELS[v.blindLevel];
-    if(nb2) setTimeout(()=>announceBlindLevel(v.blindLevel+1, nb2.sb, nb2.bb), 300);
-  }
-  if(v.blindTimer){
-    Object.assign(S.blindTimer, v.blindTimer);
-    // Calculate current secondsLeft from timestamp
-    if(S.blindTimer.running && S.blindTimer.startedAt){
-      const elapsed = Math.floor((Date.now() - S.blindTimer.startedAt)/1000);
-      S.blindTimer.secondsLeft = Math.max(0, (S.blindTimer.pausedAt||getLevelDuration(S.blindLevel)) - elapsed);
+  // מזג handLog — הוסף ידיים חסרות לפי id
+  if(v.handLog?.length){
+    const existingIds = new Set((S.handLog||[]).map(h=>h.id).filter(Boolean));
+    const newHands = v.handLog.filter(h=>h.id && !existingIds.has(h.id));
+    if(newHands.length){
+      S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(a.ts||0)-(b.ts||0));
     }
-    updateTimerDisplay();
-    if(!isAdmin()){
-      // Viewer runs local countdown (accurate because we calculated from timestamp)
-      clearInterval(_timerInterval); _timerInterval = null;
-      if(S.blindTimer.running){
-        _timerInterval = setInterval(()=>{
-          if(S.blindTimer.secondsLeft>0){
-            S.blindTimer.secondsLeft--;
-            updateTimerDisplay();
-          } else {
-            // Level up for viewer too
-            const next = S.blindLevel + 1;
-            if(next < BLIND_LEVELS.length){
-              S.blindLevel = next;
-              S.blindTimer.secondsLeft = getLevelDuration(next);
-              S.blindTimer.pausedAt = S.blindTimer.secondsLeft;
+  }
+  // מזג tournLog — הוסף טורנירים חסרים לפי id
+  if(v.tournLog?.length){
+    const existingIds = new Set((S.tournLog||[]).map(t=>t.id).filter(Boolean));
+    const newT = v.tournLog.filter(t=>t.id && !existingIds.has(t.id));
+    if(newT.length){
+      S.tournLog = [...(S.tournLog||[]), ...newT].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+    }
+  }
+  // מזג playerLib — הוסף שחקנים חסרים לפי id
+  if(v.playerLib?.length){
+    const existingIds = new Set((S.playerLib||[]).map(p=>p.id).filter(Boolean));
+    const newP = v.playerLib.filter(p=>p.id && !existingIds.has(p.id));
+    if(newP.length) S.playerLib = [...(S.playerLib||[]), ...newP];
+  }
+  // שאר השדות — קח מהגרסה החדשה יותר בלבד
+  const incomingNewer = !S.savedAt || !v.savedAt || v.savedAt > S.savedAt;
+  if(incomingNewer){
+    if(v.seats) S.seats=v.seats;
+    if(v.board) S.board=v.board;
+    if(v.btnSeat!==undefined) S.btnSeat=v.btnSeat;
+    if(v.btnLocked!==undefined) S.btnLocked=v.btnLocked;
+    if(v.lastBet!==undefined) S.lastBet=v.lastBet;
+    if(v.buyinCost) S.buyinCost=v.buyinCost;
+    if(v.buyins) S.buyins=v.buyins;
+    if(v.koOrder) S.koOrder=v.koOrder;
+    const prevLevel = S.blindLevel;
+    if(v.blindLevel!==undefined) S.blindLevel=v.blindLevel;
+    if(v.blindLevel!==undefined && v.blindLevel !== prevLevel && v.blindLevel > prevLevel){
+      const nb2 = BLIND_LEVELS[v.blindLevel];
+      if(nb2) setTimeout(()=>announceBlindLevel(v.blindLevel+1, nb2.sb, nb2.bb), 300);
+    }
+    if(v.blindTimer){
+      Object.assign(S.blindTimer, v.blindTimer);
+      if(S.blindTimer.running && S.blindTimer.startedAt){
+        const elapsed = Math.floor((Date.now() - S.blindTimer.startedAt)/1000);
+        S.blindTimer.secondsLeft = Math.max(0, (S.blindTimer.pausedAt||getLevelDuration(S.blindLevel)) - elapsed);
+      }
+      updateTimerDisplay();
+      if(!isAdmin()){
+        clearInterval(_timerInterval); _timerInterval = null;
+        if(S.blindTimer.running){
+          _timerInterval = setInterval(()=>{
+            if(S.blindTimer.secondsLeft>0){
+              S.blindTimer.secondsLeft--;
               updateTimerDisplay();
-              const nb = BLIND_LEVELS[next];
-              if(nb) setTimeout(()=>announceBlindLevel(next+1, nb.sb, nb.bb), 300);
             } else {
-              clearInterval(_timerInterval); _timerInterval=null;
+              const next = S.blindLevel + 1;
+              if(next < BLIND_LEVELS.length){
+                S.blindLevel = next;
+                S.blindTimer.secondsLeft = getLevelDuration(next);
+                S.blindTimer.pausedAt = S.blindTimer.secondsLeft;
+                updateTimerDisplay();
+                const nb = BLIND_LEVELS[next];
+                if(nb) setTimeout(()=>announceBlindLevel(next+1, nb.sb, nb.bb), 300);
+              } else {
+                clearInterval(_timerInterval); _timerInterval=null;
+              }
             }
-          }
-        },1000);
+          },1000);
+        }
       }
     }
+    if(v.customBlinds!==undefined) S.customBlinds=v.customBlinds;
+    if(v.customBlindLevels) S.customBlindLevels=v.customBlindLevels;
+    if(v.tableSize) S.tableSize=v.tableSize;
+    if(v.houseRake!==undefined) S.houseRake=v.houseRake;
+    if(v.place4!==undefined) S.place4=v.place4;
+    if(v.place3!==undefined) S.place3=v.place3;
+    if(v.place1Override!==undefined) S.place1Override=v.place1Override;
+    if(v.place2Override!==undefined) S.place2Override=v.place2Override;
+    if(v.savedAt) S.savedAt=v.savedAt;
   }
-  if(v.customBlinds!==undefined) S.customBlinds=v.customBlinds;
-  if(v.customBlindLevels) S.customBlindLevels=v.customBlindLevels;
-  if(v.tableSize) S.tableSize=v.tableSize;
-  // tableOrientation לא נטען מ-localStorage — תמיד vertical כברירת מחדל
-  if(v.houseRake!==undefined) S.houseRake=v.houseRake;
-  if(v.place4!==undefined) S.place4=v.place4;
-  if(v.place3!==undefined) S.place3=v.place3;
-  if(v.place1Override!==undefined) S.place1Override=v.place1Override;
-  if(v.place2Override!==undefined) S.place2Override=v.place2Override;
-  if(v.handLog) S.handLog=v.handLog;
-  if(v.tournLog) S.tournLog=v.tournLog;
-  // Ensure new fields always have defaults
+  // תמיד
   if(S.currentActor===undefined) S.currentActor=null;
   if(S.bettingClosed===undefined) S.bettingClosed=false;
   if(S.lastRaiser===undefined) S.lastRaiser=null;
