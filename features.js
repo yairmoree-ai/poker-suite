@@ -259,48 +259,20 @@ async function syncToSheets(immediate){
   if(isViewer()||isLocal()) return;
   if(!S.playerLib?.length) return;
   const url = getGsUrl();
-  if(!url) return;
-  if(isViewer() || !currentUser) return;
-
+  if(!url || !currentUser) return;
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
     return;
   }
-
-  // מכשיר חדש — משוך קודם
-  if(!S._lastSaved){
-    try {
-      const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now(), {method:'GET',redirect:'follow'});
-      const checkData = JSON.parse(await checkResp.text());
-      if(checkData.ok && checkData.value?.savedAt){
-        console.log('[syncToSheets] new device — pulling first');
-        applySnapshot(checkData.value);
-        S._sheetsTimestamp = checkData.value.savedAt;
-        S._lastSaved = checkData.value.savedAt;
-        try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
-        try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
-        persist(); render();
-        return;
-      }
-    } catch(e){}
-  }
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
-    const snap = fullSnapshot();
-    const sentSavedAt = snap.savedAt;
     await fetch(url, {
-      method:'POST',
-      mode:'no-cors',
+      method:'POST', mode:'no-cors',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: snap})
+      body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
     });
-    S._lastSaved = sentSavedAt;
-    S._sheetsTimestamp = sentSavedAt;
-    try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
-    try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
-    console.log('[syncToSheets] pushed OK, sentSavedAt='+sentSavedAt);
     updateSyncDot('ok');
     setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
   }catch(e){
@@ -309,43 +281,65 @@ async function syncToSheets(immediate){
   }
 }
 
+function mergeSnapshot(incoming){
+  // handLog — מזג לפי id, הוסף ידיים חסרות
+  if(incoming.handLog?.length){
+    const existingIds = new Set((S.handLog||[]).map(h=>h.id));
+    const newHands = incoming.handLog.filter(h=>h.id && !existingIds.has(h.id));
+    if(newHands.length){
+      S.handLog = [...(S.handLog||[]), ...newHands]
+        .sort((a,b)=>(a.ts||0)-(b.ts||0));
+    }
+  }
+  // tournLog — מזג לפי id
+  if(incoming.tournLog?.length){
+    const existingIds = new Set((S.tournLog||[]).map(t=>t.id));
+    const newT = incoming.tournLog.filter(t=>t.id && !existingIds.has(t.id));
+    if(newT.length){
+      S.tournLog = [...(S.tournLog||[]), ...newT]
+        .sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+    }
+  }
+  // playerLib — מזג לפי id, הוסף שחקנים חסרים
+  if(incoming.playerLib?.length){
+    const existingIds = new Set((S.playerLib||[]).map(p=>p.id));
+    const newPlayers = incoming.playerLib.filter(p=>p.id && !existingIds.has(p.id));
+    if(newPlayers.length){
+      S.playerLib = [...(S.playerLib||[]), ...newPlayers];
+    }
+  }
+  // שאר השדות — קח את הגרסה החדשה יותר
+  if(!S.savedAt || (incoming.savedAt && incoming.savedAt > S.savedAt)){
+    const keep = {
+      handLog: S.handLog, tournLog: S.tournLog, playerLib: S.playerLib,
+      _sheetsTimestamp: S._sheetsTimestamp
+    };
+    Object.assign(S, incoming, keep);
+  }
+}
+
 async function syncFromSheets(){
   const url = getGsUrl();
   if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
-  const timeSinceLastSave = Date.now() - (S._lastSaved||0);
-  if(isAdmin() && S._lastSaved && timeSinceLastSave < 30000){
-    return;
-  }
   const username = currentUser?.username || currentUser?.viewingAdmin || '';
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
-    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {
-      method:'GET', redirect:'follow'
-    });
+    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
     const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
-      const incoming = r.value;
-      // השווה את ה-savedAt של ה-snapshot הנכנס לזה ששלחנו
-      const shouldApply = !isAdmin()
-        || !S._sheetsTimestamp
-        || (incoming.savedAt && incoming.savedAt > S._sheetsTimestamp + 1000);
-      console.log('[syncFromSheets] incoming.savedAt='+incoming.savedAt+' _sheetsTimestamp='+S._sheetsTimestamp+' shouldApply='+shouldApply);
-      if(shouldApply){
-        console.log('[syncFromSheets] APPLYING SNAPSHOT');
-        applySnapshot(incoming);
-        S._sheetsTimestamp = incoming.savedAt||Date.now();
-        S._lastSaved = S._sheetsTimestamp;
-        try{ localStorage.setItem('ps_sync_ts', String(S._lastSaved)); }catch(e){}
-        try{ localStorage.setItem('ps_sheets_ts', String(S._sheetsTimestamp)); }catch(e){}
-        persist();
-        render();
-        const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
-        if(activeTab==='tourn') renderTournList();
-        if(activeTab==='players') renderPlayerList();
-        if(activeTab==='hands') renderHandList();
+      if(isAdmin()){
+        mergeSnapshot(r.value);
+      } else {
+        applySnapshot(r.value);
       }
+      persist();
+      render();
+      const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
+      if(activeTab==='tourn') renderTournList();
+      if(activeTab==='players') renderPlayerList();
+      if(activeTab==='hands') renderHandList();
       updateSyncDot('ok');
       setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
     } else {
