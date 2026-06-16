@@ -258,23 +258,8 @@ function setSyncStatus(msg, color){
 async function syncToSheets(immediate){
   if(isViewer()||isLocal()) return;
   if(!S.playerLib?.length) return;
-  if(S._sheetsTimestamp && S._lastSaved && S._sheetsTimestamp > S._lastSaved) return;
   const url = getGsUrl();
-  if(!url) return;
-  if(isViewer() || !currentUser) return;
-  try {
-    const checkResp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(currentUser.username||'')+'&t='+Date.now()+'&checkonly=1', {method:'GET',redirect:'follow'});
-    const checkData = JSON.parse(await checkResp.text());
-    if(checkData.ok && checkData.value?.savedAt){
-      if(checkData.value.savedAt > (S._lastSaved||0)){
-        setSyncStatus('⚠️ קונפליקט – מושך גרסה חדשה יותר', '#e07b6a');
-        applySnapshot(checkData.value);
-        S._sheetsTimestamp = checkData.value.savedAt;
-        persist(); render();
-        return;
-      }
-    }
-  } catch(e){ /* proceed with push */ }
+  if(!url || !currentUser) return;
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
@@ -284,8 +269,7 @@ async function syncToSheets(immediate){
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
     await fetch(url, {
-      method:'POST',
-      mode:'no-cors',
+      method:'POST', mode:'no-cors',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({key:'poker_data', username: currentUser?.username||'', value: fullSnapshot()})
     });
@@ -301,19 +285,15 @@ async function syncFromSheets(){
   const url = getGsUrl();
   if(!url){ setSyncStatus('הכנס URL קודם', '#e07b6a'); return; }
   if(isLocal()) return;
-  if(isAdmin() && S._lastSaved && (Date.now() - S._lastSaved) < 15000) return;
-  // צופה משתמש ב-viewingAdmin כ-username
   const username = currentUser?.username || currentUser?.viewingAdmin || '';
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
-    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {
-      method:'GET', redirect:'follow'
-    });
+    const resp = await fetch(url+'?key=poker_data&username='+encodeURIComponent(username)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
     const r = JSON.parse(await resp.text());
     if(r.ok && r.value){
       applySnapshot(r.value);
-      // לא קוראים persist() — כדי לא לדרוס S.savedAt עם timestamp חדש
+      // לא persist() — לא לדרוס S.savedAt
       render();
       const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
       if(activeTab==='tourn') renderTournList();
