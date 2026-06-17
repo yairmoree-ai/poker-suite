@@ -682,7 +682,13 @@ async function syncFromSheets(){
     const resp = await fetch(url);
     const data = await resp.json();
     if(data && data.playerLib){
+      const before = {hands: S.handLog?.length||0, savedAt: S.savedAt};
       applySnapshot(data);
+      const after = {hands: S.handLog?.length||0};
+      let dbg = document.getElementById('sync-debug');
+      if(!dbg){ dbg=document.createElement('div'); dbg.id='sync-debug'; dbg.style.cssText='position:fixed;bottom:60px;left:8px;right:8px;background:rgba(0,0,0,0.85);color:#5fc47a;font-size:10px;padding:8px;border-radius:8px;z-index:9999;font-family:monospace;direction:ltr'; document.body.appendChild(dbg); }
+      dbg.innerHTML = `${new Date().toLocaleTimeString()}<br>incoming.savedAt=${data.savedAt}<br>S.savedAt(before)=${before.savedAt}<br>hands: ${before.hands}→${after.hands}`;
+      setTimeout(()=>{ if(dbg) dbg.remove(); }, 10000);
       render();
       const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
       if(activeTab==='tourn') renderTournList();
