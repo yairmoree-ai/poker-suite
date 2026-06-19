@@ -652,18 +652,31 @@ async function syncToSheets(immediate){
   try{
     S.savedAt = Date.now();
     const snap = fullSnapshot();
-    const url = FIREBASE_URL+'/users/'+encodeURIComponent(currentUser.username)+'.json';
-    const resp = await fetch(url, {
+    const uname = encodeURIComponent(currentUser.username);
+    const baseUrl = FIREBASE_URL+'/users/'+uname;
+
+    // שמור snapshot ראשי (ללא handLog)
+    const snapWithoutHands = {...snap, handLog:[]};
+    const resp = await fetch(baseUrl+'.json', {
       method:'PUT',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(snap)
+      body: JSON.stringify(snapWithoutHands)
     });
-    if(resp.ok){
-      updateSyncDot('ok');
-      setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-    } else {
-      throw new Error('HTTP '+resp.status);
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+
+    // שמור כל יד בנתיב נפרד
+    if(S.handLog?.length){
+      await Promise.all(S.handLog.map(hand =>
+        fetch(baseUrl+'/hands/'+hand.id+'.json', {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(hand)
+        })
+      ));
     }
+
+    updateSyncDot('ok');
+    setSyncStatus('סונכרן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
   }catch(e){
     updateSyncDot('err');
     setSyncStatus('שגיאה: '+e.message, '#e07b6a');
@@ -678,28 +691,36 @@ async function syncFromSheets(){
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
-    const url = FIREBASE_URL+'/users/'+encodeURIComponent(username)+'.json?t='+Date.now();
-    const resp = await fetch(url);
-    const data = await resp.json();
+    const uname = encodeURIComponent(username);
+    const baseUrl = FIREBASE_URL+'/users/'+uname;
+
+    // משוך snapshot ראשי וידיים במקביל
+    const [snapResp, handsResp] = await Promise.all([
+      fetch(baseUrl+'.json?t='+Date.now()),
+      fetch(baseUrl+'/hands.json?t='+Date.now())
+    ]);
+    const data = await snapResp.json();
+    const handsData = await handsResp.json();
+
     if(data && data.playerLib){
-      const before = {hands: S.handLog?.length||0, savedAt: S.savedAt};
+      // מזג ידיים מ-Firebase
+      if(handsData && typeof handsData === 'object'){
+        const remoteHands = Object.values(handsData).filter(Boolean);
+        const existingIds = new Set((S.handLog||[]).map(h=>h.id).filter(Boolean));
+        const newHands = remoteHands.filter(h=>h.id && !existingIds.has(h.id));
+        if(newHands.length){
+          S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(a.ts||0)-(b.ts||0));
+          try{ localStorage.setItem('ps_log', JSON.stringify(S.handLog)); }catch(e){}
+        }
+        // גם עדכן ידיים קיימות שמשתנות
+        data.handLog = Object.values(handsData).filter(Boolean);
+      }
+
       applySnapshot(data);
-      // שמור נתונים ממוזגים ב-localStorage בלי לעדכן savedAt
-      try{ localStorage.setItem('ps_log', JSON.stringify(S.handLog)); }catch(e){}
       try{ localStorage.setItem('ps_lib', JSON.stringify(S.playerLib)); }catch(e){}
-      const after = {hands: S.handLog?.length||0};
-      let dbg = document.getElementById('sync-debug');
-      if(!dbg){ dbg=document.createElement('div'); dbg.id='sync-debug'; dbg.style.cssText='position:fixed;bottom:60px;left:8px;right:8px;background:rgba(0,0,0,0.85);color:#5fc47a;font-size:10px;padding:8px;border-radius:8px;z-index:9999;font-family:monospace;direction:ltr'; document.body.appendChild(dbg); }
-      dbg.innerHTML = `${new Date().toLocaleTimeString()}<br>incoming.savedAt=${data.savedAt}<br>S.savedAt(before)=${before.savedAt}<br>hands: ${before.hands}→${after.hands}`;
-      setTimeout(()=>{ if(dbg) dbg.remove(); }, 10000);
       render();
       renderHandList();
       renderTournList();
-      renderPlayerList();
-      const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
-      if(activeTab==='tourn') renderTournList();
-      if(activeTab==='players') renderPlayerList();
-      if(activeTab==='hands') renderHandList();
       updateSyncDot('ok');
       setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
     } else {
