@@ -1,9 +1,9 @@
 // ── Monte Carlo Equity (מקומי, ללא שרת) ───────────────────
-const RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
-const SUITS = ['♠','♥','♦','♣'];
-const RANK_VAL = Object.fromEntries(RANKS.map((r,i)=>[r,i]));
+const _MC_RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+const _MC_SUITS = ['♠','♥','♦','♣'];
+const _MC_RANK_VAL = Object.fromEntries(_MC_RANKS.map((r,i)=>[r,i]));
 
-function _fullDeck(){ const d=[]; RANKS.forEach(r=>SUITS.forEach(s=>d.push({rank:r,suit:s}))); return d; }
+function _fullDeck(){ const d=[]; _MC_RANKS.forEach(r=>_MC_SUITS.forEach(s=>d.push({rank:r,suit:s}))); return d; }
 function _cardKey(c){ return c.rank+c.suit; }
 function _handRankMC(cards){
   // מחזיר ערך השוואה (מספר גדול = יד טובה יותר)
@@ -355,7 +355,7 @@ function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=600
   rangeSet.forEach(h=>{
     if(h.length===2&&h[0]===h[1]){
       // pair
-      SUITS.forEach((s1,i)=>SUITS.forEach((s2,j)=>{
+      _MC_SUITS.forEach((s1,i)=>_MC_SUITS.forEach((s2,j)=>{
         if(i<j){
           const c1={rank:h[0],suit:s1},c2={rank:h[0],suit:s2};
           if(!knownKeys.has(c1.rank+c1.suit)&&!knownKeys.has(c2.rank+c2.suit))
@@ -364,14 +364,14 @@ function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=600
       }));
     } else if(h.endsWith('s')){
       const r1=h[0],r2=h[1];
-      SUITS.forEach(s=>{
+      _MC_SUITS.forEach(s=>{
         const c1={rank:r1,suit:s},c2={rank:r2,suit:s};
         if(!knownKeys.has(c1.rank+c1.suit)&&!knownKeys.has(c2.rank+c2.suit))
           rangeCombos.push([c1,c2]);
       });
     } else if(h.endsWith('o')){
       const r1=h[0],r2=h[1];
-      SUITS.forEach(s1=>SUITS.forEach(s2=>{
+      _MC_SUITS.forEach(s1=>_MC_SUITS.forEach(s2=>{
         if(s1!==s2){
           const c1={rank:r1,suit:s1},c2={rank:r2,suit:s2};
           if(!knownKeys.has(c1.rank+c1.suit)&&!knownKeys.has(c2.rank+c2.suit))
