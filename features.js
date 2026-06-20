@@ -712,7 +712,7 @@ async function syncFromSheets(){
         const newHands = remoteHands.filter(h=>h.id && !existingIds.has(h.id));
         console.log('[syncFromSheets] remote='+remoteHands.length+' existing='+existingIds.size+' new='+newHands.length);
         if(newHands.length){
-          S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(a.ts||0)-(b.ts||0));
+          S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(b.ts||0)-(a.ts||0));
           try{ localStorage.setItem('ps_log', JSON.stringify(S.handLog)); }catch(e){}
         }
         // גם עדכן ידיים קיימות שמשתנות
