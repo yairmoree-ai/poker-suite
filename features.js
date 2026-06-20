@@ -664,22 +664,16 @@ async function syncToSheets(immediate){
     });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
 
-    // שמור רק ידיים חדשות — לא קיימות ב-Firebase
+    // שמור כל ידיים ב-Firebase
     if(S.handLog?.length){
-      const handsCheckResp = await fetch(baseUrl+'/hands.json?shallow=true');
-      const existingHandIds = await handsCheckResp.json() || {};
-      console.log('[syncToSheets] existing hands in Firebase:', Object.keys(existingHandIds).length, 'local hands:', S.handLog.length);
-      const newHands = S.handLog.filter(h=>h.id && !existingHandIds[h.id]);
-      console.log('[syncToSheets] new hands to push:', newHands.length);
-      if(newHands.length){
-        await Promise.all(newHands.map(hand =>
-          fetch(baseUrl+'/hands/'+hand.id+'.json', {
-            method:'PUT',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify(hand)
-          })
-        ));
-      }
+      await Promise.all(S.handLog.map(hand =>
+        fetch(baseUrl+'/hands/'+hand.id+'.json', {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(hand)
+        })
+      ));
+      console.log('[sync] pushed', S.handLog.length, 'hands to Firebase');
     }
 
     updateSyncDot('ok');
