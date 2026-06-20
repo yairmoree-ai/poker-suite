@@ -668,7 +668,9 @@ async function syncToSheets(immediate){
     if(S.handLog?.length){
       const handsCheckResp = await fetch(baseUrl+'/hands.json?shallow=true');
       const existingHandIds = await handsCheckResp.json() || {};
+      console.log('[syncToSheets] existing hands in Firebase:', Object.keys(existingHandIds).length, 'local hands:', S.handLog.length);
       const newHands = S.handLog.filter(h=>h.id && !existingHandIds[h.id]);
+      console.log('[syncToSheets] new hands to push:', newHands.length);
       if(newHands.length){
         await Promise.all(newHands.map(hand =>
           fetch(baseUrl+'/hands/'+hand.id+'.json', {
@@ -708,6 +710,7 @@ async function syncFromSheets(){
     const handsData = await handsResp.json();
 
     if(data && data.playerLib){
+      const beforeHands = S.handLog?.length||0;
       // מזג ידיים מ-Firebase
       if(handsData && typeof handsData === 'object'){
         const remoteHands = Object.values(handsData).filter(Boolean);
@@ -726,6 +729,10 @@ async function syncFromSheets(){
       render();
       renderHandList();
       renderTournList();
+      let dbg = document.getElementById('sync-debug');
+      if(!dbg){ dbg=document.createElement('div'); dbg.id='sync-debug'; dbg.style.cssText='position:fixed;bottom:60px;left:8px;right:8px;background:rgba(0,0,0,0.85);color:#5fc47a;font-size:10px;padding:8px;border-radius:8px;z-index:9999;font-family:monospace;direction:ltr'; document.body.appendChild(dbg); }
+      dbg.innerHTML = `${new Date().toLocaleTimeString()}<br>firebase hands=${Object.keys(handsData||{}).length}<br>local hands: ${beforeHands}→${S.handLog?.length||0}`;
+      setTimeout(()=>{ if(dbg) dbg.remove(); }, 10000);
       updateSyncDot('ok');
       setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
     } else {
