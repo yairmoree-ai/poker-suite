@@ -710,6 +710,7 @@ async function syncFromSheets(){
         const remoteHands = Object.values(handsData).filter(Boolean);
         const existingIds = new Set((S.handLog||[]).map(h=>h.id).filter(Boolean));
         const newHands = remoteHands.filter(h=>h.id && !existingIds.has(h.id));
+        console.log('[syncFromSheets] remote='+remoteHands.length+' existing='+existingIds.size+' new='+newHands.length);
         if(newHands.length){
           S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(a.ts||0)-(b.ts||0));
           try{ localStorage.setItem('ps_log', JSON.stringify(S.handLog)); }catch(e){}
