@@ -664,15 +664,20 @@ async function syncToSheets(immediate){
     });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
 
-    // שמור כל יד בנתיב נפרד
+    // שמור רק ידיים חדשות — לא קיימות ב-Firebase
     if(S.handLog?.length){
-      await Promise.all(S.handLog.map(hand =>
-        fetch(baseUrl+'/hands/'+hand.id+'.json', {
-          method:'PUT',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(hand)
-        })
-      ));
+      const handsCheckResp = await fetch(baseUrl+'/hands.json?shallow=true');
+      const existingHandIds = await handsCheckResp.json() || {};
+      const newHands = S.handLog.filter(h=>h.id && !existingHandIds[h.id]);
+      if(newHands.length){
+        await Promise.all(newHands.map(hand =>
+          fetch(baseUrl+'/hands/'+hand.id+'.json', {
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(hand)
+          })
+        ));
+      }
     }
 
     updateSyncDot('ok');
