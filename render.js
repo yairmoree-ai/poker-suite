@@ -1,3 +1,60 @@
+// ── Pot Odds Bar ──────────────────────────────────────────
+function renderPotOdds(){
+  const bar = document.getElementById('pot-odds-bar');
+  if(!bar) return;
+
+  // Feature flag — כבוי → הסתר ויצא
+  if(S.showPotOdds === false){ bar.style.display='none'; return; }
+
+  // תנאים להצגה: יד פעילה, יש currentActor, יש call לעשות
+  const actor = S.currentActor;
+  if(!S.btnLocked || S.bettingClosed || actor===null){
+    bar.style.display='none'; return;
+  }
+  const seat = S.seats.find(s=>s.seatIdx===actor);
+  if(!seat?.playerId || seat.folded || seat.allin){
+    bar.style.display='none'; return;
+  }
+
+  const pot = calcPot();
+  const alreadyIn = getStreetInvested(actor);
+  const callAmt = Math.max(0, (S.lastBet||0) - alreadyIn);
+
+  if(callAmt <= 0 || pot <= 0){
+    bar.style.display='none'; return;
+  }
+
+  const totalPot   = pot + callAmt;
+  const pct        = (callAmt / totalPot * 100).toFixed(1);
+  const ratio      = (pot / callAmt).toFixed(1);
+  const fmt = n => n>=10000 ? '₪'+(n/1000).toFixed(0)+'K' : '₪'+n.toLocaleString();
+
+  bar.style.display = 'block';
+  bar.innerHTML = `
+    <div style="background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.22);border-radius:12px;
+                padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:6px;direction:rtl">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">POT ODDS</span>
+        <span style="font-size:16px;font-weight:900;color:#5b9bd5;line-height:1">1:${parseFloat(ratio).toFixed(ratio<2?1:0)}</span>
+        <span style="font-size:9px;color:#5a5870">Call ${fmt(callAmt)}</span>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">BREAK-EVEN</span>
+        <span style="font-size:20px;font-weight:900;color:#c8a96e;line-height:1">${pct}%</span>
+        <span style="font-size:9px;color:#5a5870">equity נדרשת</span>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">POT אחרי CALL</span>
+        <span style="font-size:16px;font-weight:900;color:#5fc47a;line-height:1">${fmt(totalPot)}</span>
+        <span style="font-size:9px;color:#5a5870">${pName(seat.playerId)||'?'}</span>
+      </div>
+      <button onclick="S.showPotOdds=false;persist();renderPotOdds()" title="הסתר"
+        style="background:none;border:none;color:#3a3850;font-size:14px;cursor:pointer;padding:2px;line-height:1;flex-shrink:0">✕</button>
+    </div>`;
+}
+
 function renderLiveActions(){
   const bar = document.getElementById('live-actions-bar');
   if(!bar) return;
@@ -1096,6 +1153,7 @@ function render(){
   }
   renderTableShape();
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+  renderPotOdds();
   // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
