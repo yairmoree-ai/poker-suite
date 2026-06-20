@@ -1,58 +1,549 @@
+// ── Monte Carlo Equity (מקומי, ללא שרת) ───────────────────
+const RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+const SUITS = ['♠','♥','♦','♣'];
+const RANK_VAL = Object.fromEntries(RANKS.map((r,i)=>[r,i]));
+
+function _fullDeck(){ const d=[]; RANKS.forEach(r=>SUITS.forEach(s=>d.push({rank:r,suit:s}))); return d; }
+function _cardKey(c){ return c.rank+c.suit; }
+function _handRankMC(cards){
+  // מחזיר ערך השוואה (מספר גדול = יד טובה יותר)
+  // שימוש ב-evaluateHand שכבר קיים ב-game.js
+  try {
+    const h = evaluateHand(cards);
+    return h.rank * 1e10 + (h.tiebreak||[]).reduce((a,v,i)=>a+v*Math.pow(15,4-i),0);
+  } catch(e){ return 0; }
+}
+
+function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=8000){
+  // holeCards: [{rank,suit},{rank,suit}]
+  // boardCards: קלפי בורד קיימים (0-4)
+  // numOpponents: מספר יריבים פעילים
+  if(!holeCards || holeCards.filter(Boolean).length < 2) return null;
+
+  const known = [...holeCards, ...boardCards].filter(Boolean);
+  const knownKeys = new Set(known.map(_cardKey));
+  const deck = _fullDeck().filter(c=>!knownKeys.has(_cardKey(c)));
+  const boardNeeded = 5 - boardCards.filter(Boolean).length;
+
+  let wins=0, ties=0;
+
+  for(let i=0; i<iterations; i++){
+    // ערבוב מהיר (Fisher-Yates חלקי)
+    for(let j=deck.length-1; j>0; j--){
+      const k=Math.floor(Math.random()*(j+1));
+      [deck[j],deck[k]]=[deck[k],deck[j]];
+    }
+    let idx=0;
+    // השלמת בורד
+    const runBoard = [...boardCards.filter(Boolean)];
+    for(let b=0;b<boardNeeded;b++) runBoard.push(deck[idx++]);
+
+    // קלפים ליריבים
+    const oppHands=[];
+    for(let o=0;o<numOpponents;o++) oppHands.push([deck[idx++],deck[idx++]]);
+
+    // חישוב ידיים
+    const myVal = _handRankMC([...holeCards,...runBoard]);
+    let best = myVal, iWin=true, iTie=false;
+    for(const oh of oppHands){
+      const ov = _handRankMC([...oh,...runBoard]);
+      if(ov > best){ iWin=false; iTie=false; break; }
+      if(ov === best){ iWin=false; iTie=true; }
+    }
+    if(iWin) wins++;
+    else if(iTie) ties++;
+  }
+
+  return ((wins + ties*0.5) / iterations * 100);
+}
+
 // ── Pot Odds Bar ──────────────────────────────────────────
+// ── Range data (GTO presets לפי גודל שולחן) ──────────────
+// ── GTO Ranges (מבוסס FreeBetRange + ThinkGTO + PokerCoaching, מותאם stack depth) ──
+// מבנה: _RANGES[tableSize][stackDepth][position][action]
+// stackDepth: 'deep' (75BB+), 'mid' (35-74BB), 'short' (20-34BB), 'push' (<20BB)
+
+const _RANGES = {
+  6: {
+    deep: { // 75BB+ — פתיחות 2.5-3x, ranges מלאים לפי solver
+      BTN:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,QJs,QTs,Q9s,JTs,J9s,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,ATo,KQo,KJo,KTo,QJo,QTo,JTo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AJs,AKo,AQo,A5s,A4s,A3s,A2s,KQs,98s,87s,76s',
+        call:  'TT,99,88,77,66,ATs,A9s,A8s,KJs,KTs,K9s,QJs,QTs,Q9s,JTs,J9s,T9s,AJo,ATo,KQo,KJo',
+        '4bet': 'AA,KK,QQ,AKs,AKo,A5s,A4s',
+      },
+      CO:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A5s,A4s,A3s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,J9s,T9s,98s,87s,76s,65s,AKo,AQo,AJo,ATo,KQo,KJo,QJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s,KQs,76s,65s',
+        call:  'TT,99,88,77,AJs,ATs,A9s,KJs,KTs,QJs,QTs,JTs,T9s,AJo,ATo,KQo',
+        '4bet': 'AA,KK,QQ,AKs,AKo,A5s',
+      },
+      HJ:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,A4s,A3s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,76s,AKo,AQo,AJo,ATo,KQo,KJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s,KQs',
+        call:  'TT,99,88,AJs,ATs,A9s,KJs,KTs,QJs,JTs,T9s,AJo,KQo',
+        '4bet': 'AA,KK,QQ,AKs,AKo',
+      },
+      MP:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,A4s',
+        call:  'TT,99,88,AQs,AJs,ATs,KQs,KJs,QJs,JTs,AQo,KQo',
+        '4bet': 'AA,KK,QQ,AKs,AKo',
+      },
+      UTG:{
+        // ThinkGTO solver: 22-AA, AKs/AQs/AJs/ATs, A5s-A2s, KQs/KJs, QJs, JTs, T9s, 98s + AKo/AQo/KQo
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A5s,A4s,A3s,A2s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,KQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo',
+        call:  'JJ,TT,AQs,AJs,KQs,AQo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      SB:{
+        // 39-47% — FreeBetRange
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,J9s,T9s,98s,87s,76s,65s,AKo,AQo,AJo,ATo,A9o,KQo,KJo,QJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s,KQs,76s',
+        call:  'TT,99,88,AJs,ATs,A9s,KJs,KTs,QJs,JTs,T9s,AJo,ATo,KQo',
+        '4bet': 'AA,KK,QQ,AKs,AKo,A5s',
+      },
+      BB:{
+        RFI: '',
+        '3bet': 'AA,KK,QQ,JJ,TT,AKs,AQs,AKo,AQo,A5s,A4s,A3s,KQs,87s,76s,65s,54s',
+        call:  '99,88,77,66,55,44,33,22,AJs,ATs,A9s,A8s,A7s,KJs,KTs,K9s,QJs,QTs,Q9s,JTs,J9s,T9s,98s,AJo,ATo,KQo,KJo,QJo',
+        '4bet': 'AA,KK,QQ,AKs,AKo,A5s',
+      },
+    },
+    mid: { // 35-74BB — ranges יותר צרים, פחות speculative
+      BTN:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,J9s,T9s,98s,87s,76s,65s,AKo,AQo,AJo,ATo,KQo,KJo,QJo,JTo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s,KQs',
+        call:  'TT,99,88,77,AJs,ATs,KJs,QJs,JTs,T9s,AJo,KQo',
+        '4bet': 'AA,KK,QQ,AKs,AKo',
+      },
+      CO:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,KTs,QJs,JTs,T9s,98s,87s,AKo,AQo,AJo,KQo,KJo,QJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,KQs',
+        call:  'TT,99,88,AJs,ATs,KJs,QJs,JTs,AJo,KQo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      HJ:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo,KJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',
+        call:  'TT,99,AJs,ATs,KQs,QJs,JTs,AJo,KQo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      MP:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,A5s,KQs,KJs,QJs,JTs,T9s,AKo,AQo,AJo,KQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo,A5s',
+        call:  'JJ,TT,AQs,AJs,KQs,AQo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      UTG:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,A5s,KQs,KJs,QJs,JTs,AKo,AQo,KQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo',
+        call:  'JJ,TT,AQs,AJs,KQs',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      SB:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A5s,A4s,A3s,KQs,KJs,QJs,JTs,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,QJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,KQs',
+        call:  'TT,99,88,AJs,ATs,KJs,QJs,JTs,AJo,KQo',
+        '4bet': 'AA,KK,QQ,AKs,AKo',
+      },
+      BB:{
+        RFI: '',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s,KQs,87s,76s',
+        call:  'TT,99,88,77,66,55,AJs,ATs,A9s,KJs,KTs,QJs,JTs,T9s,98s,AJo,ATo,KQo,KJo',
+        '4bet': 'AA,KK,QQ,AKs,AKo',
+      },
+    },
+    short: { // 20-34BB — ranges צרים, value-heavy, פחות bluffs
+      BTN:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A5s,A4s,KQs,KJs,KTs,QJs,JTs,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,QJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s',
+        call:  'TT,99,88,AJs,KQs,QJs,JTs,AJo,KQo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      CO:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo,KJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',
+        call:  'TT,99,AJs,KQs,JTs,AJo,KQo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      HJ:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,A5s,KQs,KJs,QJs,JTs,T9s,AKo,AQo,AJo,KQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo,A5s',
+        call:  'JJ,TT,AJs,KQs,AJo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      MP:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,KQs,KJs,QJs,JTs,AKo,AQo,KQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo',
+        call:  'JJ,TT,AQs,KQs',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      UTG:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,AKs,AQs,AJs,ATs,KQs,KJs,AKo,AQo,KQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo',
+        call:  'JJ,TT,AQs',
+        '4bet': 'AA,KK,AKs',
+      },
+      SB:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo,KJo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',
+        call:  'TT,99,AJs,KQs,AJo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      BB:{
+        RFI: '',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,87s',
+        call:  'TT,99,88,77,66,AJs,ATs,A9s,KQs,KJs,QJs,JTs,T9s,AJo,KQo',
+        '4bet': 'AA,KK,QQ,AKs,AKo',
+      },
+    },
+    push: { // <20BB — push/fold בלבד
+      BTN:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,AKo,AQo,AJo,ATo,A9o,KQo,KJo,QJo',
+        '3bet': 'AA,KK,QQ,JJ,TT,AKs,AQs,AKo,AQo',
+        call:  '99,88,77,AJs,KQs,AJo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      CO:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,KQs,KJs,QJs,JTs,T9s,AKo,AQo,AJo,KQo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo',
+        call:  'TT,99,AJs,KQs',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      HJ:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,KQs,KJs,QJs,JTs,AKo,AQo,AJo,KQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo',
+        call:  'JJ,TT,AQs',
+        '4bet': 'AA,KK,AKs',
+      },
+      MP:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,KQs,JTs,AKo,AQo,KQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo',
+        call:  'JJ,TT',
+        '4bet': 'AA,KK,AKs',
+      },
+      UTG:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,AKs,AQs,AJs,KQs,AKo,AQo',
+        '3bet': 'AA,KK,QQ,AKs,AKo',
+        call:  'JJ,TT',
+        '4bet': 'AA,KK,AKs',
+      },
+      SB:{
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,AKo,AQo,AJo,KQo',
+        '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo',
+        call:  'TT,99,KQs',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+      BB:{
+        RFI: '',
+        '3bet': 'AA,KK,QQ,JJ,TT,AKs,AQs,AKo',
+        call:  '99,88,77,AJs,ATs,KQs,QJs,JTs,AJo',
+        '4bet': 'AA,KK,AKs,AKo',
+      },
+    },
+  },
+};
+// 9-max (deep stack)
+_RANGES[9] = { deep:{
+  BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,J9s,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,ATo,KQo,KJo,KTo,QJo,QTo,JTo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s','call':'TT,99,88,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,QQ,AKs,AKo'},
+  CO:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,QJo','3bet':'AA,KK,QQ,AKs,AQs,AKo,A5s','call':'JJ,TT,AJs,ATs,KQs,QJs,JTs,AJo','4bet':'AA,KK,AKs,AKo'},
+  HJ:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,A9s,A5s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo,KJo','3bet':'AA,KK,QQ,AKs,AKo,A5s','call':'JJ,TT,AQs,AJs,KQs,QJs,AQo','4bet':'AA,KK,AKs,AKo'},
+  LJ:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,KQs,KJs,QJs,JTs,T9s,AKo,AQo,AJo,KQo','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT,AQs,KQs,AQo','4bet':'AA,KK,AKs,AKo'},
+  MP:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,KQs,KJs,QJs,JTs,AKo,AQo,KQo','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT,AQs,KQs','4bet':'AA,KK,AKs'},
+  'UTG+1':{RFI:'AA,KK,QQ,JJ,TT,99,88,AKs,AQs,AJs,KQs,JTs,AKo,AQo,KQo','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT,AQs','4bet':'AA,KK,AKs'},
+  UTG:{RFI:'AA,KK,QQ,JJ,TT,99,88,AKs,AQs,AJs,KQs,AKo,AQo','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT','4bet':'AA,KK,AKs'},
+  SB:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,ATo,KQo,KJo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s','call':'TT,99,AJs,KQs,QJs,AJo,KQo','4bet':'AA,KK,AKs,AKo'},
+  BB:{RFI:'','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,A4s,87s,76s','call':'TT,99,88,77,66,AJs,ATs,A9s,KQs,KJs,QJs,JTs,T9s,AJo,KQo','4bet':'AA,KK,QQ,AKs,AKo'},
+}, mid:{}, short:{}, push:{} };
+// העתק mid/short/push ל-9max מה-6max (קירוב טוב לתחילה)
+['mid','short','push'].forEach(d=>{
+  _RANGES[9][d]={};
+  Object.keys(_RANGES[6][d]).forEach(pos=>{
+    _RANGES[9][d][pos]=_RANGES[9].deep[pos]||_RANGES[6][d][pos];
+  });
+  ['LJ','UTG+1'].forEach(p=>{ if(!_RANGES[9][d][p]) _RANGES[9][d][p]=_RANGES[9].deep[p]||{}; });
+});
+// 2-5 players
+[2,3].forEach(n=>{
+  _RANGES[n]={deep:{BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,JTs,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,ATo,A9o,A8o,KQo,KJo,KTo,QJo,QTo,JTo,T9o','3bet':'AA,KK,QQ,JJ,TT,AKs,AQs,AKo,AQo',call:'99,88,AJs,KQs,AJo','4bet':'AA,KK,AKs,AKo'},SB:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,ATo,KQo,KJo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',call:'TT,99,AJs,KQs,AJo','4bet':'AA,KK,AKs,AKo'},BB:{RFI:'','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',call:'TT,99,88,77,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,AKs,AKo'}},mid:{},short:{},push:{}};
+  ['mid','short','push'].forEach(d=>{ _RANGES[n][d]=_RANGES[n].deep; });
+});
+_RANGES[4]={deep:{BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,76s,65s,AKo,AQo,AJo,ATo,KQo,KJo,QJo,JTo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,A4s',call:'TT,99,88,AJs,ATs,KQs,QJs,JTs,AJo','4bet':'AA,KK,AKs,AKo'},CO:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,QJo','3bet':'AA,KK,QQ,AKs,AQs,AKo,A5s',call:'JJ,TT,AJs,KQs,QJs,AJo,KQo','4bet':'AA,KK,AKs,AKo'},SB:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo','3bet':'AA,KK,QQ,AKs,AKo,A5s',call:'JJ,TT,AJs,KQs','4bet':'AA,KK,AKs'},BB:{RFI:'','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,87s',call:'TT,99,88,77,66,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,AKs,AKo'}},mid:{},short:{},push:{}};
+['mid','short','push'].forEach(d=>{ _RANGES[4][d]=_RANGES[4].deep; });
+_RANGES[5]=_RANGES[6]; _RANGES[7]=_RANGES[9]; _RANGES[8]=_RANGES[9];
+
+const _POS_BY_SIZE = {
+  2:['BTN','BB'], 3:['BTN','SB','BB'], 4:['BTN','CO','SB','BB'],
+  5:['BTN','CO','SB','BB'], 6:['BTN','CO','HJ','MP','UTG','SB','BB'],
+  7:['BTN','CO','HJ','MP','UTG','SB','BB'],
+  8:['BTN','CO','HJ','LJ','MP','UTG','SB','BB'],
+  9:['BTN','CO','HJ','LJ','MP','UTG+1','UTG','SB','BB'],
+};
+const _ACTIONS_LABELS = {RFI:'פתיחה','3bet':'3-Bet',call:'Call','4bet':'4-Bet'};
+
+function _parseRangeToSet(str){
+  const s=new Set();
+  if(!str)return s;
+  str.split(',').map(x=>x.trim()).filter(Boolean).forEach(h=>{
+    if(h.length===2&&h[0]===h[1])s.add(h);
+    else if(h.endsWith('s'))s.add(h);
+    else if(h.endsWith('o'))s.add(h);
+    else{s.add(h+'s');s.add(h+'o');}
+  });
+  return s;
+}
+
+function _countCombos(str){
+  if(!str)return 0;
+  let n=0;
+  str.split(',').map(x=>x.trim()).filter(Boolean).forEach(h=>{
+    if(h.length===2&&h[0]===h[1])n+=6;
+    else if(h.endsWith('s'))n+=4;
+    else if(h.endsWith('o'))n+=12;
+    else{n+=4+12;}
+  });
+  return n;
+}
+
+function _getStackDepth(){
+  // חישוב effective stack (קטן בין currentActor לשאר) חלקי BB
+  const actor = S.currentActor;
+  const bb = (getBlinds&&getBlinds()?.bb)||50;
+  const actorSeat = S.seats.find(s=>s.seatIdx===actor);
+  const actorStack = actorSeat?.stack||0;
+  const opponents = S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&s.seatIdx!==actor);
+  const minOppStack = opponents.length ? Math.min(...opponents.map(s=>s.stack||0)) : actorStack;
+  const effStack = Math.min(actorStack, minOppStack);
+  const effBB = bb>0 ? effStack/bb : 100;
+  if(effBB >= 75) return 'deep';
+  if(effBB >= 35) return 'mid';
+  if(effBB >= 20) return 'short';
+  return 'push';
+}
+
+function _getDepthLabel(){
+  const d = _getStackDepth();
+  return {deep:'75BB+ עמוק',mid:'35-74BB בינוני',short:'20-34BB קצר',push:'<20BB Push/Fold'}[d]||d;
+}
+
+function _getRangeStr(tableSize, pos, action){
+  const ts = tableSize||S.tableSize||6;
+  const depth = _getStackDepth();
+  const rBySize = _RANGES[ts]||_RANGES[6];
+  const rByDepth = rBySize[depth]||rBySize.deep||rBySize;
+  return (rByDepth[pos]||{})[action]||'';
+}
+
+// Monte Carlo vs specific range (מחליף את הקודם)
+function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=6000){
+  if(!holeCards||holeCards.filter(Boolean).length<2)return null;
+  if(!rangeStr)return monteCarloEquity(holeCards,boardCards,1,iterations);
+
+  // בנה deck פנוי מקלפים ידועים
+  const known=[...holeCards,...boardCards].filter(Boolean);
+  const knownKeys=new Set(known.map(c=>c.rank+c.suit));
+  const deck=_fullDeck().filter(c=>!knownKeys.has(c.rank+c.suit));
+  const boardNeeded=5-boardCards.filter(Boolean).length;
+
+  // בנה רשימת קומבינציות range
+  const SUITS=['♠','♥','♦','♣'];
+  const RANKS_ORDER=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+  const rangeCombos=[];
+  const rangeSet=_parseRangeToSet(rangeStr);
+  rangeSet.forEach(h=>{
+    if(h.length===2&&h[0]===h[1]){
+      // pair
+      SUITS.forEach((s1,i)=>SUITS.forEach((s2,j)=>{
+        if(i<j){
+          const c1={rank:h[0],suit:s1},c2={rank:h[0],suit:s2};
+          if(!knownKeys.has(c1.rank+c1.suit)&&!knownKeys.has(c2.rank+c2.suit))
+            rangeCombos.push([c1,c2]);
+        }
+      }));
+    } else if(h.endsWith('s')){
+      const r1=h[0],r2=h[1];
+      SUITS.forEach(s=>{
+        const c1={rank:r1,suit:s},c2={rank:r2,suit:s};
+        if(!knownKeys.has(c1.rank+c1.suit)&&!knownKeys.has(c2.rank+c2.suit))
+          rangeCombos.push([c1,c2]);
+      });
+    } else if(h.endsWith('o')){
+      const r1=h[0],r2=h[1];
+      SUITS.forEach(s1=>SUITS.forEach(s2=>{
+        if(s1!==s2){
+          const c1={rank:r1,suit:s1},c2={rank:r2,suit:s2};
+          if(!knownKeys.has(c1.rank+c1.suit)&&!knownKeys.has(c2.rank+c2.suit))
+            rangeCombos.push([c1,c2]);
+        }
+      }));
+    }
+  });
+
+  if(!rangeCombos.length)return monteCarloEquity(holeCards,boardCards,1,iterations);
+
+  let wins=0,ties=0;
+  for(let i=0;i<iterations;i++){
+    // בחר קומבו אקראי מה-range
+    const oppHand=rangeCombos[Math.floor(Math.random()*rangeCombos.length)];
+    // בנה deck זמני ללא קלפי היריב
+    const iterDeck=deck.filter(c=>!oppHand.some(oc=>oc.rank===c.rank&&oc.suit===c.suit));
+    // ערבב
+    for(let j=iterDeck.length-1;j>0;j--){
+      const k=Math.floor(Math.random()*(j+1));
+      [iterDeck[j],iterDeck[k]]=[iterDeck[k],iterDeck[j]];
+    }
+    // השלם בורד
+    const runBoard=[...boardCards.filter(Boolean)];
+    for(let b=0;b<boardNeeded;b++)runBoard.push(iterDeck[b]);
+    const myVal=_handRankMC([...holeCards,...runBoard]);
+    const oppVal=_handRankMC([...oppHand,...runBoard]);
+    if(myVal>oppVal)wins++;
+    else if(myVal===oppVal)ties++;
+  }
+  return (wins+ties*0.5)/iterations*100;
+}
+
 function renderPotOdds(){
   const bar = document.getElementById('pot-odds-bar');
   if(!bar) return;
-
-  // Feature flag — כבוי → הסתר ויצא
   if(S.showPotOdds === false){ bar.style.display='none'; return; }
 
-  // תנאים להצגה: יד פעילה, יש currentActor, יש call לעשות
   const actor = S.currentActor;
-  if(!S.btnLocked || S.bettingClosed || actor===null){
-    bar.style.display='none'; return;
-  }
+  if(!S.btnLocked || S.bettingClosed || actor===null){ bar.style.display='none'; return; }
   const seat = S.seats.find(s=>s.seatIdx===actor);
-  if(!seat?.playerId || seat.folded || seat.allin){
-    bar.style.display='none'; return;
-  }
+  if(!seat?.playerId || seat.folded || seat.allin){ bar.style.display='none'; return; }
 
   const pot = calcPot();
   const alreadyIn = getStreetInvested(actor);
   const callAmt = Math.max(0, (S.lastBet||0) - alreadyIn);
+  if(callAmt <= 0 || pot <= 0){ bar.style.display='none'; return; }
 
-  if(callAmt <= 0 || pot <= 0){
-    bar.style.display='none'; return;
+  const totalPot = pot + callAmt;
+  const breakEvenNum = callAmt / totalPot * 100;
+  const breakEven = breakEvenNum.toFixed(1);
+  const ratio = pot / callAmt;
+  const fmt = n => n>=10000 ? '₪'+(n/1000).toFixed(0)+'K' : '₪'+n.toLocaleString();
+  const ratioStr = '1:'+(ratio<2?ratio.toFixed(1):Math.round(ratio));
+
+  const holeCards = (seat.cards||[]).filter(Boolean);
+  const boardCards = (S.board||[]).filter(Boolean);
+  const rs = S._rangeSelection;
+
+  // חישוב equity
+  let equityPct = null;
+  if(holeCards.length===2){
+    if(rs){
+      const rangeStr = _getRangeStr(S.tableSize, rs.pos, rs.action);
+      equityPct = monteCarloEquityVsRange(holeCards, boardCards, rangeStr);
+    } else {
+      const numOpp = Math.max(1, S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&s.seatIdx!==actor).length);
+      equityPct = monteCarloEquity(holeCards, boardCards, numOpp);
+    }
   }
 
-  const totalPot   = pot + callAmt;
-  const pct        = (callAmt / totalPot * 100).toFixed(1);
-  const ratio      = (pot / callAmt).toFixed(1);
-  const fmt = n => n>=10000 ? '₪'+(n/1000).toFixed(0)+'K' : '₪'+n.toLocaleString();
+  const ev = equityPct!==null ? equityPct - breakEvenNum : null;
+  const evHtml = ev!==null
+    ? (ev>=0
+      ? `<span style="color:#5fc47a;font-size:9px;font-weight:900">✅ +EV</span>`
+      : `<span style="color:#e07b6a;font-size:9px;font-weight:900">❌ -EV</span>`)
+    : '';
+
+  // snapshot
+  S._potOddsSnapshot = {
+    pot, callAmt,
+    breakEven: parseFloat(breakEven),
+    ...(equityPct!==null ? {equity:parseFloat(equityPct.toFixed(1)),ev:parseFloat((ev||0).toFixed(1)),evPositive:ev>=0} : {}),
+    ...(rs ? {range:{...rs}} : {}),
+  };
+
+  // Range selector state
+  const tableSize = S.tableSize||6;
+  const positions = _POS_BY_SIZE[tableSize]||_POS_BY_SIZE[6];
+  const showRange = S._showRangeSelector;
+  const selPos = rs?.pos||positions[0];
+  const selAction = rs?.action||'RFI';
+  const rangeStr = _getRangeStr(tableSize, selPos, selAction);
+  const combos = _countCombos(rangeStr);
+  const pct = combos ? (combos/1326*100).toFixed(0) : 0;
+
+  const chipStyle = (active,color='#c8a96e') => active
+    ? `padding:4px 9px;border-radius:14px;border:1px solid ${color}88;background:${color}22;color:${color};font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap`
+    : `padding:4px 9px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#5a5870;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap`;
 
   bar.style.display = 'block';
   bar.innerHTML = `
-    <div style="background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.22);border-radius:12px;
-                padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:6px;direction:rtl">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+  <div style="background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.22);border-radius:12px;padding:8px 12px;direction:rtl">
+
+    <!-- שורה ראשית -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
         <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">POT ODDS</span>
-        <span style="font-size:16px;font-weight:900;color:#5b9bd5;line-height:1">1:${parseFloat(ratio).toFixed(ratio<2?1:0)}</span>
+        <span style="font-size:16px;font-weight:900;color:#5b9bd5;line-height:1">${ratioStr}</span>
         <span style="font-size:9px;color:#5a5870">Call ${fmt(callAmt)}</span>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
         <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">BREAK-EVEN</span>
-        <span style="font-size:20px;font-weight:900;color:#c8a96e;line-height:1">${pct}%</span>
-        <span style="font-size:9px;color:#5a5870">equity נדרשת</span>
+        <span style="font-size:16px;font-weight:900;color:#c8a96e;line-height:1">${breakEven}%</span>
+        <span style="font-size:9px;color:#5a5870">נדרש</span>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">POT אחרי CALL</span>
-        <span style="font-size:16px;font-weight:900;color:#5fc47a;line-height:1">${fmt(totalPot)}</span>
-        <span style="font-size:9px;color:#5a5870">${pName(seat.playerId)||'?'}</span>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">EQUITY</span>
+        ${equityPct!==null
+          ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}`
+          : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
       </div>
-      <button onclick="S.showPotOdds=false;persist();renderPotOdds()" title="הסתר"
-        style="background:none;border:none;color:#3a3850;font-size:14px;cursor:pointer;padding:2px;line-height:1;flex-shrink:0">✕</button>
-    </div>`;
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
+        <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>
+        <button onclick="S._showRangeSelector=!S._showRangeSelector;renderPotOdds()"
+          style="background:${showRange?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};border:1px solid ${showRange?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};border-radius:7px;color:${showRange?'#c8a96e':'#5a5870'};font-size:10px;font-weight:800;cursor:pointer;padding:3px 7px;white-space:nowrap">
+          🎯 Range${rs?' ✓':''}
+        </button>
+      </div>
+    </div>
+
+    <!-- Range selector (מתרחב) -->
+    ${showRange ? `
+    <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:8px">
+
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:9px;color:#5a5870;font-weight:700;letter-spacing:.4px">EFFECTIVE STACK</span>
+        <span style="font-size:10px;color:#c8a96e;font-weight:800">${_getDepthLabel()}</span>
+      </div>
+
+      <div>
+        <div style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.5px;margin-bottom:5px">עמדת היריב</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${positions.map(p=>`<button style="${chipStyle(p===selPos,'#5b9bd5')}" onclick="S._rangeSelection={pos:'${p}',action:'${selAction}'};renderPotOdds()">${p}</button>`).join('')}
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.5px;margin-bottom:5px">פעולתו</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${Object.entries(_ACTIONS_LABELS).map(([a,lbl])=>`<button style="${chipStyle(a===selAction,'#7eb8a4')}" onclick="S._rangeSelection={pos:'${selPos}',action:'${a}'};renderPotOdds()">${lbl}</button>`).join('')}
+        </div>
+      </div>
+
+      ${rangeStr ? `
+      <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:10px;color:#8a8799">${selPos} ${_ACTIONS_LABELS[selAction]||selAction}</span>
+        <span style="font-size:10px;color:#c8a96e;font-weight:800">${combos} combos · ${pct}%</span>
+        ${holeCards.length===2
+          ? `<span style="font-size:10px;font-weight:800;color:${equityPct!==null?(ev>=0?'#5fc47a':'#e07b6a'):'#5a5870'}">${equityPct!==null?equityPct.toFixed(1)+'%':'...'}</span>`
+          : `<span style="font-size:9px;color:#3a3850">הזן קלפים</span>`}
+      </div>` : `
+      <div style="font-size:10px;color:#3a3850;text-align:center;padding:4px">אין range לבחירה זו</div>`}
+
+      <button onclick="S._rangeSelection=null;S._showRangeSelector=false;renderPotOdds()"
+        style="font-size:10px;color:#5a5870;background:none;border:none;cursor:pointer;text-align:right;padding:0">
+        ✕ נקה range
+      </button>
+    </div>` : ''}
+  </div>`;
 }
 
 function renderLiveActions(){
