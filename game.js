@@ -63,10 +63,10 @@ function renderSeatPanel(){
     </div>
   </div>`;
   // BTN
-  const btnLabel = S.btnSeat===i ? '✓ BTN מסומן' : '🎯 סמן כ-BTN והתחל יד';
-  const btnStyle = S.btnSeat===i ? 'background:rgba(200,169,110,0.2);border:1px solid rgba(200,169,110,0.5);color:var(--gold)' : 'background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.5);color:#5b9bd5';
+  const btnLabel = S.btnLocked ? '🔒 BTN נעול' : S.btnSeat===i ? '✓ BTN מסומן' : '🎯 סמן כ-BTN והתחל יד';
+  const btnStyle = S.btnLocked ? 'background:rgba(90,80,96,0.1);border:1px solid #5a506050;color:#5a5060' : S.btnSeat===i ? 'background:rgba(200,169,110,0.2);border:1px solid rgba(200,169,110,0.5);color:var(--gold)' : 'background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.5);color:#5b9bd5';
   html+=`<div style="margin-bottom:7px"><span class="sec-lbl" style="margin-bottom:3px">עמדת דילר (BTN)</span>
-    <button class="btn btn-sm" style="${btnStyle}" onclick="if(S.btnLocked&&!confirm('להתחיל יד חדשה עם BTN זה? היד הנוכחית תאופס')){return;}S.btnSeat=${i};postBlinds(${i});persist();renderSeats();renderSeatPanel();">
+    <button class="btn btn-sm" style="${btnStyle}" onclick="if(!S.btnLocked){S.btnSeat=${i};postBlinds(${i});persist();renderSeats();renderSeatPanel();}">
       ${btnLabel}
     </button></div>`;
 
@@ -123,7 +123,7 @@ function undoLastAction(seatIdx){
   if(!seat||!seat.actions?.length) return;
 
   const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
   const streetActs = seat.actions.filter(a=>a.street===street);
   if(!streetActs.length) return;
 
@@ -131,7 +131,7 @@ function undoLastAction(seatIdx){
   // Don't undo SB/BB blinds
   if(last.type==='SB'||last.type==='BB'){ notify('לא ניתן לבטל בליינד'); return; }
   // Don't undo if next street cards have been dealt (TDA rule)
-  const allStreets = ['פרה-פלופ','פלופ','טרן','ריבר'];
+  const allStreets = ['פרה-פלופ','פלופ','טורן','ריבר'];
   const streetIdx = allStreets.indexOf(street);
   const nextStreetDealt = streetIdx===0 ? S.board[0]!=null :
                           streetIdx===1 ? S.board[3]!=null :
@@ -276,7 +276,7 @@ function autoOpenNextCard(){
 function getStreetInvested(seatIdx){
   // How much has this player already put in during current street
   const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   return (seat?.actions||[])
     .filter(a=>a.street===street)
@@ -293,7 +293,7 @@ function showQuickPlayerPicker(seatIdx){
     const overlay = document.createElement('div');
     overlay.id = 'quick-player-picker';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px';
-    overlay.onclick = e=>{ if(e.target===overlay){ overlay.remove(); S._showdownMode=false; renderSeats(); } };
+    overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
     const box = document.createElement('div');
     box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:14px;padding:14px;width:100%;max-width:320px';
     box.onclick = e=>e.stopPropagation();
@@ -572,7 +572,7 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   if(!seat.actions)seat.actions=[];
   // Determine current street from board
   const boardCards = S.board.filter(Boolean).length;
-  const street = boardCards===0?'פרה-פלופ':boardCards<=3?'פלופ':boardCards===4?'טרן':'ריבר';
+  const street = boardCards===0?'פרה-פלופ':boardCards<=3?'פלופ':boardCards===4?'טורן':'ריבר';
   const isRaise = ['Open','Raise','3bet','4bet','All-in'].includes(type);
   if(isRaise) S.raiseRound = (S.raiseRound||0)+1;
   const currentRound = S.raiseRound||0;
@@ -605,7 +605,12 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   }
   // Give each action a global index for ordering
   const allActCount = S.seats.reduce((n,s)=>(s.actions||[]).length+n, 0);
-  seat.actions.push({street,type,displayType,amount:deltaAmt?String(deltaAmt):'',raiseRound:currentRound,idx:allActCount});
+  const actionObj = {street,type,displayType,amount:deltaAmt?String(deltaAmt):"",raiseRound:currentRound,idx:allActCount};
+  if(type==="Call" && S._potOddsSnapshot && S._potOddsSnapshot.callAmt > 0){
+    actionObj.potOdds = Object.assign({},S._potOddsSnapshot);
+    S._potOddsSnapshot = null;
+  }
+  seat.actions.push(actionObj);
   if(isRaise){
     S.lastRaiser = {seat:seatIdx, round:currentRound};
     // After a raise, next actor starts from player AFTER the raiser
@@ -633,7 +638,7 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   // After fold, recompute order with folded player excluded
   if(type==='Fold'){
     const boardCount2 = S.board.filter(Boolean).length;
-    const street2 = boardCount2===0?'פרה-פלופ':boardCount2<=3?'פלופ':boardCount2===4?'טרן':'ריבר';
+    const street2 = boardCount2===0?'פרה-פלופ':boardCount2<=3?'פלופ':boardCount2===4?'טורן':'ריבר';
     const newOrder = getActingOrder(street2); // now excludes folded player
     const curIdx = newOrder.indexOf(seatIdx);
     // Find next after this seat in the NEW order
@@ -739,7 +744,7 @@ function canPlayerRaise(seatIdx){
   // If last all-in was not a full raise, only players who haven't voluntarily acted can raise
   if(S.lastRaiseWasFull!==false) return true; // full raise or no raise = everyone can raise
   const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   const volActs = (seat?.actions||[]).filter(a=>a.street===street&&a.type!=='SB'&&a.type!=='BB');
   // If player has already acted voluntarily this street before the all-in, they cannot raise
@@ -748,7 +753,7 @@ function canPlayerRaise(seatIdx){
 
 function getNextActor(afterSeatIdx){
   const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טרן':'ריבר';
+  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
   const order = getActingOrder(street);
   if(!order.length) return null;
 
@@ -889,7 +894,7 @@ function undoAward(){
   persist(); renderSeats(); renderBoard(); renderLiveActions();
   notify('↩ הכרזה בוטלה');
   // Re-show showdown panel
-  setTimeout(()=>enterShowdownMode(), 300);
+  setTimeout(()=>showShowdownPanel(), 300);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -934,24 +939,17 @@ function checkAutoWin(){
     awardPot([active[0].seatIdx], false);
     return true;
   }
-  // All remaining players are all-in (no one can act) → deal cards then showdown
+  // All remaining players are all-in (no one can act) → showdown
   const canAct = active.filter(s=>!s.allin);
   if(canAct.length===0 && active.length>1){
-    S.bettingClosed = true;
-    S.currentActor = null;
-    const bCnt = S.board.filter(Boolean).length;
-    setTimeout(()=>{
-      if(bCnt>=5) enterShowdownMode();
-      else autoOpenNextCard();
-    }, 300);
+    // Auto-deal remaining streets and show showdown
+    setTimeout(()=>showShowdownPanel(),300);
     return true;
   }
   return false;
 }
 
 function awardPot(winnerSeatIdxs, showAnim=true){
-  S._showdownMode = false;
-  document.getElementById('showdown-overlay')?.remove();
   const totalPot = calcPot();
   if(!totalPot) return;
 
@@ -1046,15 +1044,6 @@ function awardPot(winnerSeatIdxs, showAnim=true){
 // ═══════════════════════════════════════════════════════
 // HAND EVALUATOR
 // ═══════════════════════════════════════════════════════
-function compareTb(a, b){
-  // השוואה מספרית של tiebreak arrays (לא אלפביתית)
-  for(let i=0;i<Math.max(a.length,b.length);i++){
-    const diff=(a[i]||0)-(b[i]||0);
-    if(diff!==0) return diff;
-  }
-  return 0;
-}
-
 function evaluateHand(cards){
   // cards = array of {rank, suit}, 5-7 cards
   // Returns {rank: 0-8, name: string, tiebreak: [...]}
@@ -1105,7 +1094,7 @@ function evaluateHand(cards){
   let best = null;
   fiveCombos.forEach(combo=>{
     const s = score5(combo);
-    if(!best||s.rank>best.rank||(s.rank===best.rank&&compareTb(s.tb,best.tb)>0)) best=s;
+    if(!best||s.rank>best.rank||(s.rank===best.rank&&s.tb.join()>best.tb.join())) best=s;
   });
   return best ? {...best, name:HAND_NAMES[best.rank]} : null;
 }
@@ -1145,227 +1134,8 @@ function detectShowdownWinner(eligible, board){
   };
 }
 
-
-function showSDCardPicker(seatIdx){
-  const SUITS=['♠','♥','♦','♣'];
-  const RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-  const SC2={'♠':'#e2ddd4','♥':'#e05555','♦':'#e05555','♣':'#e2ddd4'};
-  const seatObj = S.seats.find(s=>s.seatIdx===seatIdx);
-  if(!seatObj) return;
-
-  // אפס קלפים ומצב
-  seatObj.cards = [null, null];
-  let step = 0; // 0 = בוחר קלף ראשון, 1 = בוחר קלף שני
-
-  document.getElementById('showdown-overlay')?.remove();
-
-  const overlay = document.createElement('div');
-  overlay.id = 'sd-card-picker-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;direction:ltr';
-
-  const box = document.createElement('div');
-  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:380px;max-height:90vh;overflow-y:auto;direction:rtl';
-  box.onclick = e=>e.stopPropagation();
-
-  function renderPicker(){
-    const pName2 = pName(seatObj.playerId)||'שחקן';
-    const card0 = seatObj.cards[0]; // קלף ראשון
-    const card1 = seatObj.cards[1]; // קלף שני
-    const used = allUsedCards ? allUsedCards() : [];
-    const usedKeys = used.map(c=>c?c.rank+c.suit:'');
-
-    const slotHTML = [0,1].map(i=>{
-      const card = seatObj.cards[i];
-      const isActive = step===i;
-      const border = isActive?'#c8a96e':'rgba(255,255,255,0.15)';
-      const bg = isActive?'rgba(200,169,110,0.1)':'rgba(255,255,255,0.03)';
-      const label = i===0?'קלף 1':'קלף 2';
-      return '<div class="sd-slot-btn" data-step="'+i+'" style="width:52px;height:68px;border-radius:8px;border:2px solid '+border+';background:'+bg+';display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:2px">'+
-        (card
-          ?'<span style="font-size:17px;font-weight:900;color:'+SC2[card.suit]+'">'+card.rank+'</span><span style="font-size:15px;color:'+SC2[card.suit]+'">'+card.suit+'</span>'
-          :'<span style="font-size:10px;color:rgba(255,255,255,0.2)">'+label+'</span>')+
-      '</div>';
-    }).join('');
-
-    const gridHTML = SUITS.map(suit=>
-      '<div style="display:flex;gap:3px;margin-bottom:3px;justify-content:center;direction:ltr">'+
-      RANKS.map(rank=>{
-        const key=rank+suit;
-        const myCards=[card0,card1].filter(Boolean).map(c=>c.rank+c.suit);
-        const isUsed=usedKeys.includes(key)&&!myCards.includes(key);
-        return '<button class="sd-card-btn" data-rank="'+rank+'" data-suit="'+suit+'" data-used="'+(isUsed?'1':'0')+'" style="width:26px;height:34px;border-radius:4px;border:1px solid '+(isUsed?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.18)')+';background:'+(isUsed?'rgba(0,0,0,0.2)':'rgba(255,255,255,0.07)')+';color:'+(isUsed?'rgba(255,255,255,0.1)':SC2[suit])+';font-size:9px;font-weight:700;cursor:'+(isUsed?'default':'pointer')+';line-height:1.2;padding:1px 0">'+rank+'<br>'+suit+'</button>';
-      }).join('')+
-      '</div>'
-    ).join('');
-
-    box.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-        '<div style="font-size:14px;font-weight:800;color:#c8a96e">🃏 '+pName2+'</div>'+
-        '<button class="sd-close-btn" style="background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer;line-height:1">✕</button>'+
-      '</div>'+
-      '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">'+slotHTML+'</div>'+
-      '<div style="font-size:11px;color:#c8a96e;text-align:center;margin-bottom:12px;font-weight:700">בחר '+(step===0?'קלף ראשון':'קלף שני')+'</div>'+
-      gridHTML;
-  }
-
-  box.addEventListener('click', function(e){
-    // סגור
-    if(e.target.closest('.sd-close-btn')){
-      overlay.remove();
-      S._showdownMode = true;
-      renderSeats(); // חזור לשולחן עם כפתורי 🃏
-      return;
-    }
-    // לחיצה על slot — החלף step
-    const slot = e.target.closest('.sd-slot-btn');
-    if(slot){ step = +slot.dataset.step; renderPicker(); return; }
-    // לחיצה על קלף
-    const btn = e.target.closest('.sd-card-btn');
-    if(!btn||btn.dataset.used==='1') return;
-    e.stopPropagation();
-    const rank = btn.dataset.rank;
-    const suit = btn.dataset.suit;
-    seatObj.cards[step] = {rank, suit};
-    persist();
-    if(step===0){
-      step=1;
-      renderPicker();
-    } else {
-      // שני קלפים נבחרו — חזור לשולחן עם כפתורי showdown
-      overlay.remove();
-      S._showdownMode = true;
-      renderSeats();
-      checkAutoWinner(); // בדוק אם כולם הזינו קלפים
-    }
-  });
-
-  renderPicker();
-  overlay.appendChild(box);
-  overlay.onclick = ()=>{ overlay.remove(); showShowdownPanel(); };
-  document.body.appendChild(overlay);
-}
-
-
-function checkAutoWinner(){
-  if(!S._showdownMode) return;
-  const board = S.board.filter(Boolean);
-  if(board.length < 5) return; // צריך לוח מלא
-
-  const active = S.seats.filter(s=>s.playerId && !s.folded);
-  // בדוק שכולם הזינו 2 קלפים
-  const allHaveCards = active.every(s=>s.cards && s.cards[0] && s.cards[1]);
-  if(!allHaveCards) return;
-
-  // חשב ידיים
-  let best = null;
-  let winners = [];
-  active.forEach(seat=>{
-    const allCards = [...seat.cards, ...board];
-    const score = evaluateHand(allCards);
-    if(!score) return;
-    seat._sdScore = score;
-    if(!best || score.rank > best.rank || (score.rank===best.rank && compareTb(score.tb, best.tb)>0)){
-      best = score;
-      winners = [seat.seatIdx];
-    } else if(score.rank===best.rank && compareTb(score.tb, best.tb)===0){
-      winners.push(seat.seatIdx);
-    }
-  });
-
-  if(!winners.length) return;
-
-  // סמן מנצחים
-  S._autoWinners = winners;
-  renderSeats();
-
-  // עדכן כפתור 💰
-  const bar = document.getElementById('sd-action-bar');
-  if(bar){
-    const potBtn = bar.querySelector('button');
-    if(potBtn){
-      const winNames = winners.map(i=>pName(S.seats.find(s=>s.seatIdx===i)?.playerId)||'?').join(' + ');
-      const handName = best?.name||'';
-      potBtn.textContent = '🏆 '+winNames+' ('+handName+') — העבר קופה';
-      potBtn.style.background = '#5fc47a';
-      // לחיצה → ישירות awardPot
-      potBtn.onclick = ()=>{
-        S._showdownMode = false;
-        S._autoWinners = null;
-        active.forEach(s=>{ s._sdScore=null; });
-        awardPot(winners, true);
-      };
-    }
-  }
-}
-
-function applyLiveTuner(){
-  const w = +document.getElementById('lt-w').value;
-  const r = +document.getElementById('lt-r').value;
-  const c = +document.getElementById('lt-c').value;
-  const sz = +document.getElementById('lt-s').value;
-  const d = +document.getElementById('lt-d').value;
-  const b = +document.getElementById('lt-b').value;
-  document.getElementById('lt-w-v').textContent = w;
-  document.getElementById('lt-r-v').textContent = r;
-  document.getElementById('lt-c-v').textContent = c;
-  document.getElementById('lt-s-v').textContent = sz;
-  document.getElementById('lt-d-v').textContent = d;
-  document.getElementById('lt-b-v').textContent = b;
-  const wrap = document.getElementById('table-wrap');
-  if(!wrap) return;
-  const wPx = Math.min(window.innerWidth * w/100, 600);
-  const hPx = wPx * r/100;
-  wrap.style.width = wPx+'px';
-  wrap.style.height = hPx+'px';
-  const info = document.getElementById('lt-info');
-  if(info) info.textContent = Math.round(wPx)+'×'+Math.round(hPx)+'px';
-  // שמור ערכים זמנית לrenderSeats
-  window._tunerActive = true;
-  window._tunerSeatSize = sz;
-  window._tunerSeatDist = d/100;
-  window._tunerBorder = b;
-  // עדכן SVG
-  const svg = document.getElementById('table-svg');
-  if(svg){
-    const s=(x1,x2,y1,y2,rr)=>`M${x1+rr},${y1} L${x2-rr},${y1} Q${x2},${y1} ${x2},${y1+rr} L${x2},${y2-rr} Q${x2},${y2} ${x2-rr},${y2} L${x1+rr},${y2} Q${x1},${y2} ${x1},${y2-rr} L${x1},${y1+rr} Q${x1},${y1} ${x1+rr},${y1} Z`;
-    const defs=`<defs><radialGradient id="gF" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a5535"/><stop offset="100%" stop-color="#0e2a1a"/></radialGradient><radialGradient id="gF2" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#0b2015"/></radialGradient></defs>`;
-    const bw = b/7; // scale border to viewBox
-    svg.innerHTML=defs+
-      `<path d="${s(1,199,1,99,c)}" fill="#040810"/>`+
-      `<path d="${s(1+bw,199-bw,1+bw,99-bw,Math.max(c-bw,1))}" fill="url(#gF)" opacity=".6"/>`+
-      `<path d="${s(1+bw,199-bw,1+bw,99-bw,Math.max(c-bw,1))}" fill="none" stroke="#1a4a2e" stroke-width="${bw*1.5}"/>`+
-      `<path d="${s(1+bw*2.5,199-bw*2.5,1+bw*2.5,99-bw*2.5,Math.max(c-bw*2.5,1))}" fill="url(#gF2)"/>`+
-      `<path d="${s(1+bw*4,199-bw*4,1+bw*4,99-bw*4,Math.max(c-bw*4,1))}" fill="none" stroke="rgba(200,169,110,0.06)" stroke-width=".4"/>`;
-  }
-  renderSeats();
-}
-
-function toggleOrientation(){
-  S.tableOrientation = S.tableOrientation==='horizontal' ? 'vertical' : 'horizontal';
-  const btn = document.getElementById('btn-orientation');
-  if(btn) btn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
-  persist();
-  renderTableShape();
-  renderSeats();
-}
-
-function enterShowdownMode(){
-  console.log('[enterShowdownMode] called');
-  S._showdownMode = true;
-  renderSeats();
-  console.log('[enterShowdownMode] _showdownMode='+S._showdownMode);
-}
-
 function showShowdownPanel(){
-  console.log('[showShowdownPanel] called, _showdownMode was='+S._showdownMode);
-  // אם כבר ב-showdown mode (enterShowdownMode רץ) — אל תפתח overlay אוטומטית
-  if(S._showdownMode===true){
-    console.log('[showShowdownPanel] blocked — in showdown mode, use pot button');
-    return;
-  }
   document.getElementById('showdown-overlay')?.remove();
-  S._showdownMode = false;
-  renderSeats();
   const overlay = document.createElement('div');
   overlay.id = 'showdown-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
@@ -1442,35 +1212,19 @@ function showShowdownPanel(){
     const holeCards = (seat.cards||[]).filter(Boolean);
     const handScore = holeCards.length>=2 ? evaluateHand([...holeCards,...S.board.filter(Boolean)]) : null;
     const cardsStr = holeCards.map(c=>c.rank+c.suit).join(' ');
-    const cardsBtnId = 'sd-cards-btn-'+seat.seatIdx;
     row.innerHTML =
       '<div style="width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0" id="sd-check-'+seat.seatIdx+'"></div>'+
       '<div style="flex:1">'+
         '<div style="font-size:13px;font-weight:700;color:#e2ddd4">'+pName(seat.playerId)+'</div>'+
         '<div style="font-size:10px;color:#5a5870">'+pos+' · ₪'+seat.stack.toLocaleString()+'</div>'+
-        (cardsStr?'<div style="font-size:10px;color:#c8a96e;font-weight:700;direction:ltr;text-align:right">'+cardsStr+(handScore?' · <span style="color:#5fc47a">'+handScore.name+'</span>':'')+'</div>':
-          '<div style="font-size:10px;color:#5a5870">קלפים לא הוזנו</div>')+
-      '</div>'+
-      '<button id="'+cardsBtnId+'" style="padding:4px 8px;border-radius:7px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">'+
-        (holeCards.length>=2?'✏️':'🃏 הזן')+
-      '</button>';
+        (cardsStr?'<div style="font-size:10px;color:#c8a96e;font-weight:700;direction:ltr;text-align:right">'+cardsStr+(handScore?' · <span style="color:#5fc47a">'+handScore.name+'</span>':'')+'</div>':'')+
+      '</div>';
     row.onclick = ()=>{
       const idx2 = selected.indexOf(seat.seatIdx);
       if(idx2>=0){ selected.splice(idx2,1); selectRow(seat.seatIdx, false); }
       else{ selected.push(seat.seatIdx); selectRow(seat.seatIdx, true); }
     };
     box.appendChild(row);
-
-    // כפתור הזנת קלפים — פותח card picker ומרענן את המסך
-    setTimeout(()=>{
-      const cardsBtn = document.getElementById(cardsBtnId);
-      if(!cardsBtn) return;
-      cardsBtn.addEventListener('click', e=>{
-        e.stopPropagation();
-        const sIdx = seat.seatIdx;
-        showSDCardPicker(sIdx);
-      });
-    }, 0);
   });
 
   // Apply auto-selection after rows are in DOM
@@ -1505,18 +1259,17 @@ function advanceTurn(fromSeatIdx){
       const active = S.seats.filter(s=>s.playerId&&!s.folded);
       if(active.length<=1) return; // auto win already handled
       const bCnt = S.board.filter(Boolean).length;
-      const canAct = active.filter(s=>!s.allin&&(s.stack||0)>0);
-      // All-in situation: at least one all-in AND no one else can act
-      const hasAllin = active.some(s=>s.allin) && canAct.length===0;
+      const hasAllin = active.some(s=>s.allin);
+      // All-in situation: at least one player is all-in
       // After calling an all-in → deal remaining cards then showdown
       if(hasAllin){
-        if(bCnt===5) enterShowdownMode();
+if(bCnt===5) showShowdownPanel();
         else autoOpenNextCard();
         return;
       }
       // Normal betting close
       if(bCnt===5){
-        enterShowdownMode();
+        showShowdownPanel();
       } else {
         autoOpenNextCard();
       }
@@ -1645,8 +1398,6 @@ function resetHand(){
   S.bettingClosed = false;
   S._lastWinners = null;
   S._winners = null;
-  S._showdownMode = false;
-  S._autoWinners = null;
   S.board = [null,null,null,null,null];
   S.seats = S.seats.map(s=>({...s, cards:[null,null], actions:[], folded:false, allin:false, sittingOut:(s.stack||0)===0?s.sittingOut:false}));
   persist(); render();
