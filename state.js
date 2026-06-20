@@ -92,7 +92,7 @@ function applySnapshot(v){
     const existingIds = new Set((S.handLog||[]).map(h=>h.id).filter(Boolean));
     const newHands = v.handLog.filter(h=>h.id && !existingIds.has(h.id));
     if(newHands.length){
-      S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(a.ts||0)-(b.ts||0));
+      S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(b.ts||0)-(a.ts||0));
     }
   }
   // מזג tournLog — הוסף טורנירים חסרים לפי id
