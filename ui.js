@@ -459,11 +459,26 @@ function showHandDetail(hid){
         row.style.cssText = 'padding:5px 6px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center';
         const c = actionColors[a.type]||'#e2ddd4';
         const isFold = a.type==='Fold';
+        const po = a.potOdds;
+        const poHtml = po ? (()=>{
+          const evColor = po.evPositive ? '#5fc47a' : '#e07b6a';
+          const evText  = po.evPositive ? '✅+EV' : '❌-EV';
+          const rangeText = po.range ? ` vs ${po.range.pos} ${po.range.action}` : '';
+          let inner = `<div style="font-size:8px;color:#5a5870;margin-top:3px;line-height:1.5;text-align:right">`;
+          inner += `<span style="color:#5b9bd5">1:${(po.pot/po.callAmt).toFixed(1)}</span>`;
+          inner += ` <span style="color:#c8a96e">BE:${po.breakEven}%</span>`;
+          if(po.equity!=null) inner += ` <span style="color:#7eb8a4">EQ:${po.equity}%</span>`;
+          if(po.ev!=null) inner += ` <span style="color:${evColor}">${evText}</span>`;
+          if(rangeText) inner += `<span style="color:#5a5870">${rangeText}</span>`;
+          inner += `</div>`;
+          return inner;
+        })() : '';
         row.innerHTML =
           '<div style="font-size:9px;color:#5a5870;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+
           '<div style="font-size:10px;font-weight:700;color:'+(isFold?'#555':'#e2ddd4')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.playerName+'</div>'+
           '<div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:5px;background:'+c+'22;color:'+c+';font-size:9px;font-weight:800">'+a.type+'</div>'+
-          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'');
+          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'')+
+          poHtml;
         col.appendChild(row);
       });
       // Add player cards at bottom of this column
@@ -1362,3 +1377,4 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
+
