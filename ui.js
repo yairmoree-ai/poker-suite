@@ -459,26 +459,11 @@ function showHandDetail(hid){
         row.style.cssText = 'padding:5px 6px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center';
         const c = actionColors[a.type]||'#e2ddd4';
         const isFold = a.type==='Fold';
-        const po = a.potOdds;
-        const poHtml = po ? (()=>{
-          const evColor = po.evPositive ? '#5fc47a' : '#e07b6a';
-          const evText  = po.evPositive ? '✅+EV' : '❌-EV';
-          const rangeText = po.range ? ` vs ${po.range.pos} ${po.range.action}` : '';
-          let inner = `<div style="font-size:8px;color:#5a5870;margin-top:3px;line-height:1.5;text-align:right">`;
-          inner += `<span style="color:#5b9bd5">1:${(po.pot/po.callAmt).toFixed(1)}</span>`;
-          inner += ` <span style="color:#c8a96e">BE:${po.breakEven}%</span>`;
-          if(po.equity!=null) inner += ` <span style="color:#7eb8a4">EQ:${po.equity}%</span>`;
-          if(po.ev!=null) inner += ` <span style="color:${evColor}">${evText}</span>`;
-          if(rangeText) inner += `<span style="color:#5a5870">${rangeText}</span>`;
-          inner += `</div>`;
-          return inner;
-        })() : '';
         row.innerHTML =
           '<div style="font-size:9px;color:#5a5870;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+
           '<div style="font-size:10px;font-weight:700;color:'+(isFold?'#555':'#e2ddd4')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.playerName+'</div>'+
           '<div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:5px;background:'+c+'22;color:'+c+';font-size:9px;font-weight:800">'+a.type+'</div>'+
-          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'')+
-          poHtml;
+          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'');
         col.appendChild(row);
       });
       // Add player cards at bottom of this column
@@ -1060,7 +1045,7 @@ function renderCP(){
       const bg = u?'rgba(255,255,255,0.06)':'#fff';
       const rankCol = u?'#666':(isRed?'#d42020':'#111');
       const suitCol = u?'#888':(isRed?'#d42020':'#111');
-      return `<button style="width:36px;height:48px;border-radius:6px;border:1.5px solid ${u?'rgba(255,255,255,0.08)':'#ddd'};background:${bg};cursor:${u?'default':'pointer'};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;box-shadow:${u?'none':'0 1px 3px rgba(0,0,0,0.4)'}" ${u?'disabled':''} onclick="cpRank='${rank}';pickCard('${suit}')">
+      return `<button style="width:36px;height:48px;border-radius:6px;border:1.5px solid ${u?'rgba(255,255,255,0.08)':'#ddd'};background:${bg};cursor:${u?'not-allowed':'pointer'};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;box-shadow:${u?'none':'0 1px 3px rgba(0,0,0,0.4)'};opacity:${u?'0.35':'1'}" ${u?'disabled onclick="return false"':`onclick="cpRank='${rank}';pickCard('${suit}')"`}>
         <span style="font-size:13px;font-weight:900;color:${rankCol};line-height:1">${rank}</span>
         <span style="font-size:11px;color:${suitCol};line-height:1">${suit}</span>
       </button>`;
@@ -1072,8 +1057,31 @@ function renderCP(){
 function pickCard(s){
   if(!cpRank){ console.log('pickCard: no cpRank'); return; }
   const card={rank:cpRank,suit:s};
+  // ── ולידציה: בדוק שהקלף לא כבר בשימוש ──
+  const t=cpTarget;
+  const isReview = t?.startsWith('__r__');
+  const used = isReview
+    ?(curHand?.board||[]).concat(curHand?.seats?.flatMap(s=>s.cards||[])||[]).filter(Boolean)
+    :allUsedCards();
+  // אפשר לבחור קלף שכבר בסלוט הזה (החלפה)
+  let currentCardInSlot = null;
+  if(!isReview){
+    if(t?.startsWith('board')){
+      currentCardInSlot = S.board[+t.replace('board','')];
+    } else if(t?.startsWith('seat')){
+      const m=t.match(/seat(\d+)_c(\d+)/);
+      if(m) currentCardInSlot = S.seats.find(s=>s.seatIdx===+m[1])?.cards?.[+m[2]];
+    }
+  }
+  const isDuplicate = used.some(c=>c&&c.rank===card.rank&&c.suit===card.suit
+    &&!(currentCardInSlot&&currentCardInSlot.rank===c.rank&&currentCardInSlot.suit===c.suit));
+  if(isDuplicate){
+    cpRank=null;
+    notify('⚠️ '+card.rank+card.suit+' כבר בשימוש!');
+    return;
+  }
   cpRank=null; // reset for next pick
-  const t=cpTarget; document.getElementById('card-picker').classList.remove('open');
+  document.getElementById('card-picker').classList.remove('open');
   if(t?.startsWith('__r__')){
     const rt=t.replace('__r__','');
     if(rt.startsWith('rb')){curHand.board[+rt.replace('rb','')]=card;}
