@@ -985,6 +985,47 @@ function renderTournList(){
 // ═══════════════════════════════════════════════════════
 // PLAYERS
 // ═══════════════════════════════════════════════════════
+const PLAYER_TYPES = {
+  TAG:  {label:'TAG',  color:'#5b9bd5', desc:'Tight Aggressive'},
+  LAG:  {label:'LAG',  color:'#c8a96e', desc:'Loose Aggressive'},
+  Nit:  {label:'Nit',  color:'#7eb8a4', desc:'Tight Passive'},
+  Station:{label:'Station',color:'#e07b6a',desc:'Calling Station'},
+  Fish: {label:'Fish', color:'#9b7eb8', desc:'Unpredictable'},
+};
+
+let _expandedPlayer = null;
+
+function togglePlayerProfile(pid){
+  _expandedPlayer = _expandedPlayer===pid ? null : pid;
+  renderPlayerList();
+}
+
+function savePlayerProfile(pid){
+  const p = S.playerLib.find(x=>x.id===pid);
+  if(!p) return;
+  const nameEl = document.getElementById('edit-name-'+pid);
+  const notesEl = document.getElementById('edit-notes-'+pid);
+  const typeEl = document.querySelector(`[data-ptype="${pid}"].ptype-active`);
+  if(nameEl && nameEl.value.trim()) p.name = nameEl.value.trim();
+  if(notesEl) p.notes = notesEl.value.trim();
+  if(typeEl) p.playerType = typeEl.dataset.ptypeVal;
+  _expandedPlayer = null;
+  persist(); renderPlayerList();
+  notify('✓ פרופיל עודכן');
+}
+
+function setPlayerType(pid, type){
+  document.querySelectorAll(`[data-ptype="${pid}"]`).forEach(el=>{
+    el.classList.toggle('ptype-active', el.dataset.ptypeVal===type);
+    const t = PLAYER_TYPES[el.dataset.ptypeVal];
+    if(t){
+      el.style.background = el.dataset.ptypeVal===type ? t.color+'33' : 'rgba(255,255,255,0.04)';
+      el.style.borderColor = el.dataset.ptypeVal===type ? t.color+'88' : 'rgba(255,255,255,0.1)';
+      el.style.color = el.dataset.ptypeVal===type ? t.color : '#5a5870';
+    }
+  });
+}
+
 function renderPlayerList(){
   const cont=document.getElementById('player-list');
   if(!S.playerLib.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div>אין שחקנים</div>';return;}
@@ -995,33 +1036,88 @@ function renderPlayerList(){
     const hands=S.handLog.filter(h=>(h.seats||[]).some(s=>s.playerId===p.id));
     const activeTP=activeTournPlayers();
     const isWinner=activeTP.length===1&&activeTP[0]===p.id;
-    return`<div class="card-item" style="display:flex;align-items:center;gap:9px;${inGame?'border-color:rgba(95,196,122,0.25)':''}">
-      <div style="width:34px;height:34px;border-radius:17px;background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0">${p.name[0].toUpperCase()}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          ${isWinner?'🥇 ':''}
-          <span>${p.name}</span>
-          ${b.rebuy>0?`<span style="font-size:13px;font-weight:900;color:var(--gold)">(${b.rebuy})</span>`:''}
-          ${isWinner?`<span style="font-size:9px;color:#FFD700;background:rgba(255,215,0,0.12);border-radius:10px;padding:1px 8px">מקום 1</span>`:''}
-          ${b.buyin>0&&!S.koOrder.includes(p.id)&&!isWinner?`<span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}
-          ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
-        </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:1px">
-          ${b.buyin?'BuyIn':'לא נרשם'}
+    const isExpanded=_expandedPlayer===p.id;
+    const pt = p.playerType ? PLAYER_TYPES[p.playerType] : null;
+
+    // חישוב HUD מהיר
+    let hudHtml='';
+    if(hands.length>0){
+      const hud=calcPlayerHUD(p.id);
+      if(hud&&hud.n>0){
+        const afStr=hud.af===Infinity||hud.af>9?'∞':hud.af.toFixed(1);
+        hudHtml=`<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:9px;color:#5a5870">VPIP <b style="color:#c8a96e">${hud.vpip}%</b></span>
+          <span style="font-size:9px;color:#5a5870">PFR <b style="color:#5b9bd5">${hud.pfr}%</b></span>
+          <span style="font-size:9px;color:#5a5870">3B <b style="color:#7eb8a4">${hud.bet3}%</b></span>
+          <span style="font-size:9px;color:#5a5870">AF <b style="color:#e07b6a">${afStr}</b></span>
+          <span style="font-size:9px;color:#5a5870">W <b style="color:#5fc47a">${hud.won}%</b></span>
+          <span style="font-size:9px;color:#3a3850">${hud.n} ידיים</span>
+        </div>`;
+      }
+    }
+
+    // פרופיל מורחב
+    const profileHtml = isExpanded ? `
+    <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:10px">
+      <div>
+        <div style="font-size:9px;color:#5a5870;font-weight:700;margin-bottom:4px">שם</div>
+        <input id="edit-name-${p.id}" value="${p.name}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2ddd4;font-size:13px;direction:rtl">
+      </div>
+      <div>
+        <div style="font-size:9px;color:#5a5870;font-weight:700;margin-bottom:4px">סוג שחקן</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${Object.entries(PLAYER_TYPES).map(([key,t])=>{
+            const isActive=p.playerType===key;
+            return`<button data-ptype="${p.id}" data-ptype-val="${key}"
+              class="ptype-btn${isActive?' ptype-active':''}"
+              onclick="setPlayerType('${p.id}','${key}')"
+              style="padding:4px 10px;border-radius:14px;border:1px solid ${isActive?t.color+'88':'rgba(255,255,255,0.1)'};background:${isActive?t.color+'33':'rgba(255,255,255,0.04)'};color:${isActive?t.color:'#5a5870'};font-size:10px;font-weight:700;cursor:pointer"
+              title="${t.desc}">${t.label}</button>`;
+          }).join('')}
         </div>
       </div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
-        ${isViewer()?`
-          ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
-        `:`
-          ${!b.buyin?`<button class="btn btn-green btn-xs" onclick="doBuyin('${p.id}')">BuyIn</button>`:`<button class="btn btn-gray btn-xs" onclick="cancelBuyin('${p.id}')">ביטול BuyIn</button>`}
-          <button class="btn btn-outline btn-xs" onclick="doRebuy('${p.id}',1)">+R</button>
-          <button class="btn btn-gray btn-xs" onclick="doRebuy('${p.id}',-1)">-R</button>
-          ${!S.koOrder.includes(p.id)&&b.buyin>0?`<button class="btn btn-red btn-xs" onclick="koPlayerFromList('${p.id}')">KO 💀</button>`:''}
-          ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
-          <button class="btn btn-red btn-xs" onclick="deletePlayer('${p.id}')">✕</button>
-        `}
+      <div>
+        <div style="font-size:9px;color:#5a5870;font-weight:700;margin-bottom:4px">הערות</div>
+        <textarea id="edit-notes-${p.id}" rows="2" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2ddd4;font-size:12px;direction:rtl;resize:none">${p.notes||''}</textarea>
       </div>
+      ${hudHtml}
+      <div style="display:flex;gap:6px">
+        <button onclick="savePlayerProfile('${p.id}')" style="flex:1;padding:8px;border-radius:8px;border:none;background:rgba(95,196,122,0.2);color:#5fc47a;font-size:12px;font-weight:800;cursor:pointer">✓ שמור</button>
+        <button onclick="togglePlayerProfile('${p.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:12px;cursor:pointer">סגור</button>
+      </div>
+    </div>` : '';
+
+    return`<div class="card-item" style="${inGame?'border-color:rgba(95,196,122,0.25)':''}">
+      <div style="display:flex;align-items:center;gap:9px" onclick="togglePlayerProfile('${p.id}')" style="cursor:pointer">
+        <div style="width:34px;height:34px;border-radius:17px;background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0;cursor:pointer">${p.name[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0;cursor:pointer">
+          <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            ${isWinner?'🥇 ':''}
+            <span>${p.name}</span>
+            ${pt?`<span style="font-size:9px;color:${pt.color};background:${pt.color}22;border-radius:8px;padding:1px 6px">${pt.label}</span>`:''}
+            ${b.rebuy>0?`<span style="font-size:13px;font-weight:900;color:var(--gold)">(${b.rebuy})</span>`:''}
+            ${isWinner?`<span style="font-size:9px;color:#FFD700;background:rgba(255,215,0,0.12);border-radius:10px;padding:1px 8px">מקום 1</span>`:''}
+            ${b.buyin>0&&!S.koOrder.includes(p.id)&&!isWinner?`<span style="font-size:9px;color:var(--green);background:rgba(95,196,122,0.12);border-radius:10px;padding:1px 6px">● פעיל</span>`:''}
+            ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px">
+            ${p.notes?`<span style="color:#5a5870">${p.notes.slice(0,30)}${p.notes.length>30?'...':''}</span>`:b.buyin?'BuyIn':'לא נרשם'}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end" onclick="event.stopPropagation()">
+          ${isViewer()?`
+            ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
+          `:`
+            ${!b.buyin?`<button class="btn btn-green btn-xs" onclick="doBuyin('${p.id}')">BuyIn</button>`:`<button class="btn btn-gray btn-xs" onclick="cancelBuyin('${p.id}')">ביטול BuyIn</button>`}
+            <button class="btn btn-outline btn-xs" onclick="doRebuy('${p.id}',1)">+R</button>
+            <button class="btn btn-gray btn-xs" onclick="doRebuy('${p.id}',-1)">-R</button>
+            ${!S.koOrder.includes(p.id)&&b.buyin>0?`<button class="btn btn-red btn-xs" onclick="koPlayerFromList('${p.id}')">KO 💀</button>`:''}
+            ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
+            <button class="btn btn-red btn-xs" onclick="deletePlayer('${p.id}')">✕</button>
+          `}
+        </div>
+      </div>
+      ${profileHtml}
     </div>`;
   }).join('');
 }
