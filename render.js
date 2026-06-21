@@ -418,7 +418,30 @@ function renderPotOdds(){
   const pot = calcPot();
   const alreadyIn = getStreetInvested(actor);
   const callAmt = Math.max(0, (S.lastBet||0) - alreadyIn);
-  if(callAmt <= 0 || pot <= 0){ bar.style.display='none'; return; }
+  // אם אין call פעיל — הצג HUD של השחקן הפעיל
+  if(callAmt <= 0 || pot <= 0){
+    bar.style.display='none';
+    // הצג HUD קומפקטי של currentActor
+    if(S.btnLocked && !S.bettingClosed && actor!==null && seat?.playerId){
+      const hud = calcPlayerHUD(seat.playerId);
+      if(hud && hud.n > 0){
+        const afStr = hud.af===Infinity||hud.af>9 ? '∞' : hud.af.toFixed(1);
+        bar.style.display='block';
+        bar.innerHTML=`<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:7px 12px;direction:rtl;display:flex;align-items:center;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
+          <span style="font-size:11px;font-weight:800;color:#e2ddd4;white-space:nowrap;flex-shrink:0">${pName(seat.playerId)||'?'}</span>
+          <span style="color:rgba(255,255,255,0.15);flex-shrink:0">|</span>
+          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">VPIP <span style="color:#c8a96e;font-weight:800">${hud.vpip}%</span></span>
+          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">PFR <span style="color:#5b9bd5;font-weight:800">${hud.pfr}%</span></span>
+          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">3B <span style="color:#7eb8a4;font-weight:800">${hud.bet3}%</span></span>
+          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">AF <span style="color:#e07b6a;font-weight:800">${afStr}</span></span>
+          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">W <span style="color:#5fc47a;font-weight:800">${hud.won}%</span></span>
+          <span style="color:rgba(255,255,255,0.1);flex-shrink:0">·</span>
+          <span style="font-size:9px;color:#3a3850;white-space:nowrap;flex-shrink:0">${hud.n} ידיים</span>
+        </div>`;
+      }
+    }
+    return;
+  }
 
   const totalPot = pot + callAmt;
   const breakEvenNum = callAmt / totalPot * 100;
