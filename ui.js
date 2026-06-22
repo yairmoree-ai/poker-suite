@@ -643,18 +643,17 @@ function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');re
   // Build a name map for all known pids
   const nameMap={};
   S.playerLib.forEach(p=>{nameMap[p.id]=p.name;});
+  const activeSorted = [...activePids].sort((a,b)=>{
+    const sa = S.seats.find(s=>s.playerId===a)?.stack||0;
+    const sb2 = S.seats.find(s=>s.playerId===b)?.stack||0;
+    return sb2-sa;
+  });
   const t={
     id:uid(), date:new Date().toLocaleDateString('he-IL'),
     buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
     totalEntries:totalEntries(), paidEntries:calcPaidEntries(), freeRebuys:calcFreeRebuys(), prizePool:pr.pool,
     houseRake:pr.house, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
     koOrder:[...S.koOrder],
-    // Sorted by finish: winners sorted by stack desc, then KO'd in reverse order
-    const activeSorted = [...activePids].sort((a,b)=>{
-      const sa = S.seats.find(s=>s.playerId===a)?.stack||0;
-      const sb2 = S.seats.find(s=>s.playerId===b)?.stack||0;
-      return sb2-sa;
-    });
     finishOrder:[...activeSorted, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid),rebuy:(S.buyins[pid]||{}).rebuy||0})),
     activePlayers:activePids.map(pid=>({pid,name:pName(pid)})),
     playerNames:nameMap,
@@ -1496,4 +1495,3 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
-
