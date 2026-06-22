@@ -648,9 +648,6 @@ function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');re
     const sb2 = S.seats.find(s=>s.playerId===b)?.stack||0;
     return sb2-sa;
   });
-  console.log('activePids:', activePids.map(p=>pName(p)));
-  console.log('koOrder:', [...S.koOrder].map(p=>pName(p)));
-  console.log('finishOrder:', [...activeSorted,...[...S.koOrder].reverse()].map(p=>pName(p)));
   const t={
     id:uid(), date:new Date().toLocaleDateString('he-IL'),
     buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
@@ -895,7 +892,10 @@ function renderTournList(){
 
   // Tournament history
   if(S.tournLog.length){
-    html += `<div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px">היסטוריה (${S.tournLog.length})</div>`;
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--gold)">היסטוריה (${S.tournLog.length})</div>
+      ${isAdmin()?`<button onclick="fixTournFinishOrders()" style="font-size:10px;color:#5a5870;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">🔧 תקן סדר מנצחים</button>`:''}
+    </div>`;
     html += S.tournLog.map((t,ti)=>{
       const prizeByPlaceT = {1:Math.round(t.place1||0),2:Math.round(t.place2||0),3:t.place3||0,4:t.place4||0};
       const finishT = (t.finishOrder||[]).slice().sort((a,b)=>a.place-b.place);
@@ -1036,6 +1036,26 @@ function setPlayerType(pid, type){
       el.style.color = el.dataset.ptypeVal===type ? t.color : '#5a5870';
     }
   });
+}
+
+function fixTournFinishOrders(){
+  // מתקן finishOrder לפי koOrder לכל הטורנירים
+  let fixed=0;
+  (S.tournLog||[]).forEach(t=>{
+    if(!t.koOrder||!t.koOrder.length) return;
+    const nameMap = t.playerNames||{};
+    const allPids = [...new Set([...(t.finishOrder||[]).map(f=>f.pid), ...t.koOrder])];
+    const activePidsT = allPids.filter(pid=>!t.koOrder.includes(pid));
+    const rebuyMap = {};
+    (t.finishOrder||[]).forEach(f=>{ rebuyMap[f.pid]=f.rebuy||0; });
+    t.finishOrder = [
+      ...activePidsT.map((pid,i)=>({place:i+1, pid, name:nameMap[pid]||pid, rebuy:rebuyMap[pid]||0})),
+      ...[...t.koOrder].reverse().map((pid,i)=>({place:activePidsT.length+i+1, pid, name:nameMap[pid]||pid, rebuy:rebuyMap[pid]||0}))
+    ];
+    fixed++;
+  });
+  persist(); renderTournList();
+  notify(`✓ תוקנו ${fixed} טורנירים`);
 }
 
 function renderPlayerList(){
