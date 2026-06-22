@@ -1007,7 +1007,10 @@ function savePlayerProfile(pid){
   const notesEl = document.getElementById('edit-notes-'+pid);
   const typeEl = document.querySelector(`[data-ptype="${pid}"].ptype-active`);
   if(nameEl && nameEl.value.trim()) p.name = nameEl.value.trim();
-  if(notesEl) p.notes = notesEl.value.trim();
+  if(notesEl){
+    if(!S.playerNotes) S.playerNotes={};
+    S.playerNotes[pid] = notesEl.value.trim();
+  }
   if(typeEl) p.playerType = typeEl.dataset.ptypeVal;
   _expandedPlayer = null;
   persist(); renderPlayerList();
@@ -1079,7 +1082,7 @@ function renderPlayerList(){
       </div>
       <div>
         <div style="font-size:9px;color:#5a5870;font-weight:700;margin-bottom:4px">הערות</div>
-        <textarea id="edit-notes-${p.id}" rows="2" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2ddd4;font-size:12px;direction:rtl;resize:none">${p.notes||''}</textarea>
+        <textarea id="edit-notes-${p.id}" rows="2" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2ddd4;font-size:12px;direction:rtl;resize:none">${(S.playerNotes||{})[p.id]||''}</textarea>
       </div>
       ${hudHtml}
       <div style="display:flex;gap:6px">
@@ -1102,7 +1105,7 @@ function renderPlayerList(){
             ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:1px">
-            ${p.notes?`<span style="color:#5a5870">${p.notes.slice(0,30)}${p.notes.length>30?'...':''}</span>`:b.buyin?'BuyIn':'לא נרשם'}
+            ${(()=>{ const n=(S.playerNotes||{})[p.id]||''; return n?`<span style="color:#5a5870">${n.slice(0,30)}${n.length>30?'...':''}</span>`:b.buyin?'BuyIn':'לא נרשם'; })()}
           </div>
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end" onclick="event.stopPropagation()">
@@ -1482,3 +1485,4 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
+
