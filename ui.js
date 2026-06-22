@@ -1044,7 +1044,8 @@ function renderPlayerList(){
     if(hands.length>0){
       const hud=calcPlayerHUD(p.id);
       if(hud&&hud.n>0){
-        const afStr=hud.af===Infinity||hud.af>9?'∞':hud.af.toFixed(1);
+        const afNum=parseFloat(hud.af)||0;
+        const afStr=!isFinite(afNum)||afNum>9?'∞':afNum.toFixed(1);
         hudHtml=`<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
           <span style="font-size:9px;color:#5a5870">VPIP <b style="color:#c8a96e">${hud.vpip}%</b></span>
           <span style="font-size:9px;color:#5a5870">PFR <b style="color:#5b9bd5">${hud.pfr}%</b></span>
@@ -1481,4 +1482,3 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
-
