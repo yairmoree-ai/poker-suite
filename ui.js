@@ -649,8 +649,13 @@ function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');re
     totalEntries:totalEntries(), paidEntries:calcPaidEntries(), freeRebuys:calcFreeRebuys(), prizePool:pr.pool,
     houseRake:pr.house, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
     koOrder:[...S.koOrder],
-    // Sorted by finish: 1st=winner(not KO'd), 2nd=last KO, 3rd=second-to-last KO, etc.
-    finishOrder:[...activePids, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid),rebuy:(S.buyins[pid]||{}).rebuy||0})),
+    // Sorted by finish: winners sorted by stack desc, then KO'd in reverse order
+    const activeSorted = [...activePids].sort((a,b)=>{
+      const sa = S.seats.find(s=>s.playerId===a)?.stack||0;
+      const sb2 = S.seats.find(s=>s.playerId===b)?.stack||0;
+      return sb2-sa;
+    });
+    finishOrder:[...activeSorted, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid),rebuy:(S.buyins[pid]||{}).rebuy||0})),
     activePlayers:activePids.map(pid=>({pid,name:pName(pid)})),
     playerNames:nameMap,
     blinds:`${getBlinds().sb}/${getBlinds().bb}`
@@ -735,7 +740,13 @@ function renderTournList(){
   const finishRows = [];
   const gameStarted = S.koOrder.length > 0 || winners.length === 1;
   if(gameStarted){
-    winners.forEach(pid=>finishRows.push({place:1,pid}));
+    // מיין שחקנים פעילים לפי stack יורד
+    const winnersSorted = [...winners].sort((a,b)=>{
+      const sa = S.seats.find(s=>s.playerId===a)?.stack||0;
+      const sb2 = S.seats.find(s=>s.playerId===b)?.stack||0;
+      return sb2-sa;
+    });
+    winnersSorted.forEach((pid,i)=>finishRows.push({place:i+1,pid}));
     [...S.koOrder].reverse().forEach((pid,i)=>finishRows.push({place:winners.length+i+1,pid}));
   }
 
