@@ -648,6 +648,9 @@ function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');re
     const sb2 = S.seats.find(s=>s.playerId===b)?.stack||0;
     return sb2-sa;
   });
+  console.log('activePids:', activePids.map(p=>pName(p)));
+  console.log('koOrder:', [...S.koOrder].map(p=>pName(p)));
+  console.log('finishOrder:', [...activeSorted,...[...S.koOrder].reverse()].map(p=>pName(p)));
   const t={
     id:uid(), date:new Date().toLocaleDateString('he-IL'),
     buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
@@ -895,12 +898,8 @@ function renderTournList(){
     html += `<div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px">היסטוריה (${S.tournLog.length})</div>`;
     html += S.tournLog.map((t,ti)=>{
       const prizeByPlaceT = {1:Math.round(t.place1||0),2:Math.round(t.place2||0),3:t.place3||0,4:t.place4||0};
-      const finishT = t.finishOrder||[];
-      // Rebuy per player from saved data
-      const rebuyT = pid => {
-        const found = t.finishOrder?.find(f=>f.pid===pid);
-        return found?.rebuy||0;
-      };
+      const finishT = (t.finishOrder||[]).slice().sort((a,b)=>a.place-b.place);
+      const rebuyT = pid => finishT.find(f=>f.pid===pid)?.rebuy||0;
       return `<div class="card-item">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
           <div>
