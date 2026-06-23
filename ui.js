@@ -888,13 +888,22 @@ function renderTournList(){
       <span class="prize-lbl">בית</span>
       ${isViewer()?`<span class="prize-val">₪${S.houseRake.toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">`}
     </div>
+    ${isAdmin()?`
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button onclick="openSaveTournBox()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:11px;font-weight:800;cursor:pointer">💾 שמור</button>
+      <button onclick="openRebuyKing()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid ${S.rebuyKing?.active?'rgba(95,196,122,0.4)':'rgba(91,155,213,0.4)'};background:${S.rebuyKing?.active?'rgba(95,196,122,0.12)':'rgba(91,155,213,0.1)'};color:${S.rebuyKing?.active?'#5fc47a':'#5b9bd5'};font-size:11px;font-weight:800;cursor:pointer">${S.rebuyKing?.active?'👑 פעיל 🔥':'👑 Rebuy King'}</button>
+      <button onclick="if(confirm('לאפס את הטורניר?'))resetTournament()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.08);color:#e07b6a;font-size:11px;font-weight:800;cursor:pointer">🗑 אפס</button>
+    </div>`:''}
   </div>`;
 
   // Tournament history
   if(S.tournLog.length){
     html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:12px;font-weight:700;color:var(--gold)">היסטוריה (${S.tournLog.length})</div>
-      ${isAdmin()?`<button onclick="fixTournFinishOrders()" style="font-size:10px;color:#5a5870;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">🔧 תקן סדר מנצחים</button>`:''}
+      ${isAdmin()?`<div style="display:flex;gap:6px">
+        <button onclick="exportToExcel()" style="font-size:10px;color:#5a5870;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>
+        <button onclick="fixTournFinishOrders()" style="font-size:10px;color:#5a5870;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">🔧 תקן סדר</button>
+      </div>`:''}
     </div>`;
     html += S.tournLog.map((t,ti)=>{
       const prizeByPlaceT = {1:Math.round(t.place1||0),2:Math.round(t.place2||0),3:t.place3||0,4:t.place4||0};
@@ -1036,6 +1045,246 @@ function setPlayerType(pid, type){
       el.style.color = el.dataset.ptypeVal===type ? t.color : '#5a5870';
     }
   });
+}
+
+function openSaveTournBox(){ showSaveTournDialog(); }
+
+function exportToExcel(){ exportTournsToCSV(); }
+
+function openRebuyKing(){
+  // אם כבר פעיל — הצג סטטוס
+  if(S.rebuyKing && S.rebuyKing.active){
+    showRebuyKingStatus(); return;
+  }
+  // פתח דיאלוג הגדרה
+  const players = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id));
+  if(players.length<2){ notify('צריך לפחות 2 שחקנים פעילים'); return; }
+
+  const box = document.createElement('div');
+  box.id = 'rebuy-king-box';
+  box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  box.innerHTML = `
+    <div style="width:100%;max-width:480px;background:#0d1120;border-radius:18px 18px 0 0;border:1px solid rgba(200,169,110,0.3);padding:20px 16px 32px;direction:rtl;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:18px;font-weight:900;color:#c8a96e">👑 Rebuy King</div>
+        <button onclick="document.getElementById('rebuy-king-box').remove()" style="background:none;border:none;color:#5a5870;font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:11px;color:#5a5870;margin-bottom:16px">כל שחקן מנחש מי יסיים עם הכי הרבה rebuys</div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <div style="font-size:11px;color:#5a5870;font-weight:700;white-space:nowrap">סכום הימור:</div>
+        <input id="rk-amount" type="number" value="50" min="10"
+          style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;color:#e2ddd4;font-size:15px;font-weight:900;text-align:center;outline:none;direction:ltr">
+        <button onclick="document.getElementById('rk-amount').value=50" style="padding:6px 10px;border-radius:7px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:11px;cursor:pointer">₪50</button>
+        <button onclick="document.getElementById('rk-amount').value=100" style="padding:6px 10px;border-radius:7px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:11px;cursor:pointer">₪100</button>
+      </div>
+
+      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">כל שחקן בוחר את ה-Rebuy King שלו:</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px" id="rk-players-grid">
+        ${players.map(p=>`
+          <div onclick="rkToggle(this,'${p.id}')"
+            style="padding:10px 4px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);text-align:center;cursor:pointer;transition:all .15s"
+            data-pid="${p.id}">
+            <div style="width:30px;height:30px;border-radius:15px;background:rgba(200,169,110,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#c8a96e;margin:0 auto 4px">${p.name[0].toUpperCase()}</div>
+            <div style="font-size:11px;font-weight:700">${p.name}</div>
+            <div style="font-size:9px;color:#5a5870;margin-top:1px">${(S.buyins[p.id]?.rebuy||0)} rebuys</div>
+          </div>`).join('')}
+      </div>
+
+      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">הימורי שחקנים:</div>
+      <div id="rk-bets-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px">
+        ${players.map(p=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)" id="rk-bet-${p.id}">
+            <div style="font-size:12px;font-weight:700">${p.name}</div>
+            <div style="font-size:11px;color:#3a3850" id="rk-pick-${p.id}">לא הימר</div>
+          </div>`).join('')}
+      </div>
+
+      <div style="background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.2);border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;margin-bottom:14px">
+        <span style="font-size:10px;color:#5a5870;font-weight:700">קופה כוללת</span>
+        <span style="font-size:14px;font-weight:900;color:#c8a96e;font-family:monospace" id="rk-pool-display">₪0</span>
+      </div>
+
+      <button onclick="startRebuyKing()" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.15);color:#c8a96e;font-size:13px;font-weight:800;cursor:pointer">
+        👑 פתח הימורים
+      </button>
+      <button onclick="document.getElementById('rebuy-king-box').remove()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#5a5870;font-size:12px;cursor:pointer;margin-top:6px">ביטול</button>
+    </div>`;
+  document.body.appendChild(box);
+  window._rkBets = {}; // {bettorPid: pickedPid}
+  window._rkCurrentBettor = null;
+}
+
+function rkToggle(el, pickedPid){
+  // בחירת שחקן להמר עליו
+  document.querySelectorAll('#rk-players-grid > div').forEach(d=>{
+    d.style.background='rgba(255,255,255,0.03)';
+    d.style.borderColor='rgba(255,255,255,0.08)';
+  });
+  el.style.background='rgba(200,169,110,0.12)';
+  el.style.borderColor='rgba(200,169,110,0.5)';
+  window._rkSelectedPick = pickedPid;
+
+  // שאל מי מהמר
+  const bettorBox = document.getElementById('rk-bettor-selector');
+  if(!bettorBox){
+    const players = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id));
+    const sel = document.createElement('div');
+    sel.id='rk-bettor-selector';
+    sel.style.cssText='margin-bottom:8px';
+    sel.innerHTML=`<div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:6px">מי מהמר?</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${players.map(p=>`<button onclick="rkPlaceBet('${p.id}')"
+          style="padding:5px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#8a8799;font-size:10px;font-weight:700;cursor:pointer"
+          id="rk-bettor-btn-${p.id}">${p.name}</button>`).join('')}
+      </div>`;
+    document.getElementById('rk-bets-list').before(sel);
+  }
+}
+
+function rkPlaceBet(bettorPid){
+  const pickedPid = window._rkSelectedPick;
+  if(!pickedPid){ notify('בחר קודם שחקן'); return; }
+  if(window._rkBets[bettorPid]){ notify('כבר הימרת!'); return; }
+
+  window._rkBets[bettorPid] = pickedPid;
+  const pickedName = pName(pickedPid);
+  const el = document.getElementById('rk-pick-'+bettorPid);
+  if(el) el.innerHTML = `<span style="color:#c8a96e;font-weight:800">${pickedName} ✓</span>`;
+
+  // עדכן קופה
+  const amt = parseInt(document.getElementById('rk-amount').value)||50;
+  const pool = Object.keys(window._rkBets).length * amt;
+  document.getElementById('rk-pool-display').textContent = '₪'+pool.toLocaleString();
+
+  // הסתר סלקטור bettor אחרי בחירה
+  const btn = document.getElementById('rk-bettor-btn-'+bettorPid);
+  if(btn){ btn.style.opacity='.3'; btn.disabled=true; }
+}
+
+function startRebuyKing(){
+  const amt = parseInt(document.getElementById('rk-amount').value)||50;
+  const bets = window._rkBets||{};
+  if(Object.keys(bets).length===0){ notify('אף אחד לא הימר עדיין'); return; }
+
+  S.rebuyKing = {
+    active: true,
+    amount: amt,
+    bets: {...bets}, // {bettorPid: pickedPid}
+    startedAt: Date.now(),
+  };
+  persist();
+  document.getElementById('rebuy-king-box').remove();
+  notify('👑 Rebuy King פעיל! קופה: ₪'+(Object.keys(bets).length*amt).toLocaleString());
+  renderTournList();
+}
+
+function showRebuyKingStatus(){
+  const rk = S.rebuyKing;
+  if(!rk) return;
+
+  // מצא מי מוביל
+  const rebuyCounts = {};
+  S.playerLib.forEach(p=>{ rebuyCounts[p.id]=(S.buyins[p.id]?.rebuy||0); });
+  const sorted = Object.entries(rebuyCounts).sort((a,b)=>b[1]-a[1]);
+  const leaderId = sorted[0]?.[0];
+  const leaderName = pName(leaderId)||'?';
+  const leaderRebuys = sorted[0]?.[1]||0;
+
+  const pool = Object.keys(rk.bets).length * rk.amount;
+
+  const box = document.createElement('div');
+  box.id = 'rebuy-king-box';
+  box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  box.innerHTML = `
+    <div style="width:100%;max-width:480px;background:#0d1120;border-radius:18px 18px 0 0;border:1px solid rgba(200,169,110,0.3);padding:20px 16px 32px;direction:rtl">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:18px;font-weight:900;color:#c8a96e">👑 Rebuy King — Live</div>
+        <button onclick="document.getElementById('rebuy-king-box').remove()" style="background:none;border:none;color:#5a5870;font-size:18px;cursor:pointer">✕</button>
+      </div>
+
+      <div style="background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.2);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:9px;color:#5a5870;font-weight:700">קופה</div>
+          <div style="font-size:20px;font-weight:900;color:#c8a96e;font-family:monospace">₪${pool.toLocaleString()}</div>
+        </div>
+        <div style="text-align:left">
+          <div style="font-size:9px;color:#5a5870;font-weight:700">מוביל כרגע</div>
+          <div style="font-size:14px;font-weight:900;color:#e07b6a">${leaderName} (${leaderRebuys}) 🔥</div>
+        </div>
+      </div>
+
+      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">הימורים:</div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px">
+        ${Object.entries(rk.bets).map(([bettorPid, pickedPid])=>{
+          const isLeading = pickedPid===leaderId;
+          return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;background:${isLeading?'rgba(95,196,122,0.06)':'rgba(255,255,255,0.03)'};border:1px solid ${isLeading?'rgba(95,196,122,0.2)':'rgba(255,255,255,0.06)'}">
+            <div style="font-size:12px;font-weight:700">${pName(bettorPid)}</div>
+            <div style="font-size:11px;color:${isLeading?'#5fc47a':'#5a5870'};font-weight:${isLeading?800:400}">${pName(pickedPid)}${isLeading?' 🔥':''}</div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <button onclick="resolveRebuyKing()" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.15);color:#5fc47a;font-size:13px;font-weight:800;cursor:pointer">
+        🏆 הכרז מנצח וסיים
+      </button>
+      <button onclick="cancelRebuyKing()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#5a5870;font-size:11px;cursor:pointer;margin-top:6px">
+        ✕ בטל Rebuy King
+      </button>
+    </div>`;
+  document.body.appendChild(box);
+}
+
+function resolveRebuyKing(){
+  const rk = S.rebuyKing;
+  if(!rk) return;
+
+  // מצא Rebuy King אמיתי
+  let maxRebuy=0, kingPid=null;
+  S.playerLib.forEach(p=>{
+    const r=S.buyins[p.id]?.rebuy||0;
+    if(r>maxRebuy){ maxRebuy=r; kingPid=p.id; }
+  });
+  if(!kingPid){ notify('אין rebuys להכריז'); return; }
+
+  const pool = Object.keys(rk.bets).length * rk.amount;
+  const winners = Object.entries(rk.bets).filter(([,pickedPid])=>pickedPid===kingPid).map(([bettorPid])=>bettorPid);
+  const prize = winners.length ? Math.floor(pool/winners.length) : 0;
+
+  // שמור תוצאה ב-S
+  S.rebuyKing = { ...rk, active:false, kingPid, maxRebuy, winners, prize, pool, resolvedAt:Date.now() };
+  persist();
+
+  document.getElementById('rebuy-king-box').remove();
+
+  // הצג תוצאה
+  const box = document.createElement('div');
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  box.innerHTML=`
+    <div style="width:100%;max-width:380px;background:#0d1120;border-radius:18px;border:1px solid rgba(200,169,110,0.4);padding:24px 16px;direction:rtl;text-align:center">
+      <div style="font-size:40px;margin-bottom:8px">👑</div>
+      <div style="font-size:22px;font-weight:900;color:#c8a96e;margin-bottom:4px">${pName(kingPid)}</div>
+      <div style="font-size:12px;color:#5a5870;margin-bottom:16px">${maxRebuy} rebuys · Rebuy King!</div>
+      ${winners.length>0
+        ? `<div style="background:rgba(95,196,122,0.08);border:1px solid rgba(95,196,122,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px">
+            <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:4px">ניחשו נכון:</div>
+            <div style="font-size:14px;font-weight:900;color:#5fc47a">${winners.map(pid=>pName(pid)).join(', ')}</div>
+            <div style="font-size:18px;font-weight:900;color:#5fc47a;font-family:monospace;margin-top:4px">+₪${prize.toLocaleString()} כל אחד</div>
+           </div>`
+        : `<div style="font-size:13px;color:#e07b6a;margin-bottom:16px">אף אחד לא ניחש נכון 😅</div>`}
+      <button onclick="this.closest('div[style]').remove();renderTournList()" style="width:100%;padding:11px;border-radius:10px;border:none;background:rgba(200,169,110,0.15);color:#c8a96e;font-size:13px;font-weight:800;cursor:pointer;border:1px solid rgba(200,169,110,0.4)">סגור</button>
+    </div>`;
+  document.body.appendChild(box);
+  renderTournList();
+}
+
+function cancelRebuyKing(){
+  if(!confirm('לבטל את Rebuy King? ההימורים יימחקו')) return;
+  delete S.rebuyKing;
+  persist();
+  document.getElementById('rebuy-king-box').remove();
+  renderTournList();
+  notify('Rebuy King בוטל');
 }
 
 function fixTournFinishOrders(){
@@ -1514,3 +1763,4 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
+
