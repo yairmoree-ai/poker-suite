@@ -1233,6 +1233,7 @@ function startRebuyKing(){
       </button>
     </div>`;
   document.body.appendChild(shareBox);
+}
 
 function showRebuyKingStatus(){
   const rk = S.rebuyKing;
@@ -1818,4 +1819,3 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
-
