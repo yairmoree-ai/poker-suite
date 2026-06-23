@@ -1208,7 +1208,7 @@ function startRebuyKing(){
   document.getElementById('rebuy-king-box').remove();
 
   // הצג כפתור שיתוף
-  const shareUrl = `https://${location.host}/rebuy-king.html?u=${currentUser?.username||''}`;
+  const shareUrl = `https://yairmoree-ai.github.io/poker-suite/rebuy-king.html?u=${currentUser?.username||''}`;
   const waMsg = encodeURIComponent(`👑 Rebuy King!\nמהמרים מי יסיים עם הכי הרבה rebuys\nלחץ להמר: ${shareUrl}`);
   const waUrl = `https://wa.me/?text=${waMsg}`;
 
@@ -1818,4 +1818,3 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
-
