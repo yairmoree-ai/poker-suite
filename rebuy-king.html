@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#07090f">
+<title>👑 Rebuy King</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#07090f;font-family:system-ui,-apple-system,sans-serif;color:#e2ddd4;min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:28px 16px 48px;gap:0;direction:rtl}
+
+.logo{font-size:32px;margin-bottom:6px;text-align:center}
+.title{font-size:20px;font-weight:900;color:#c8a96e;text-align:center;margin-bottom:4px}
+.subtitle{font-size:12px;color:#5a5870;text-align:center;margin-bottom:28px}
+
+.section{width:100%;max-width:380px;margin-bottom:20px}
+.section-label{font-size:10px;font-weight:700;color:#5a5870;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px}
+
+/* שדה שם */
+.name-input{width:100%;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#e2ddd4;font-size:17px;font-weight:700;outline:none;text-align:center;-webkit-appearance:none}
+.name-input:focus{border-color:rgba(200,169,110,0.5)}
+
+/* grid שחקנים */
+.players-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.player-card{padding:12px 6px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);text-align:center;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.player-card:active{transform:scale(.96)}
+.player-card.selected{background:rgba(200,169,110,0.14);border-color:rgba(200,169,110,0.55);box-shadow:0 0 14px rgba(200,169,110,0.15)}
+.player-avatar{width:36px;height:36px;border-radius:18px;background:rgba(200,169,110,0.15);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#c8a96e;margin:0 auto 5px}
+.player-card.selected .player-avatar{background:rgba(200,169,110,0.25)}
+.player-name{font-size:12px;font-weight:800;color:#e2ddd4}
+.player-card.selected .player-name{color:#c8a96e}
+.player-rebuys{font-size:9px;color:#5a5870;margin-top:2px}
+
+/* כפתור אישור */
+.confirm-btn{width:100%;max-width:380px;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,rgba(200,169,110,0.25),rgba(200,169,110,0.12));border:1px solid rgba(200,169,110,0.45);color:#c8a96e;font-size:15px;font-weight:900;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;margin-top:4px}
+.confirm-btn:active{transform:scale(.98)}
+.confirm-btn:disabled{opacity:.35;cursor:default}
+
+/* הודעות */
+.msg{width:100%;max-width:380px;padding:14px;border-radius:12px;font-size:13px;font-weight:700;text-align:center;margin-bottom:12px;display:none}
+.msg.error{background:rgba(224,123,106,0.12);border:1px solid rgba(224,123,106,0.3);color:#e07b6a}
+.msg.success{background:rgba(95,196,122,0.12);border:1px solid rgba(95,196,122,0.3);color:#5fc47a}
+.msg.info{background:rgba(91,155,213,0.1);border:1px solid rgba(91,155,213,0.25);color:#5b9bd5}
+
+/* loading */
+.spinner{width:28px;height:28px;border:3px solid rgba(200,169,110,0.2);border-top-color:#c8a96e;border-radius:50%;animation:spin .8s linear infinite;margin:20px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* success screen */
+.success-screen{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:40px 0}
+.success-icon{font-size:64px}
+.success-title{font-size:22px;font-weight:900;color:#5fc47a}
+.success-sub{font-size:13px;color:#5a5870}
+.success-pick{font-size:16px;font-weight:800;color:#c8a96e;background:rgba(200,169,110,0.1);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:10px 20px;margin-top:4px}
+
+/* closed screen */
+.closed-screen{display:none;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:60px 0}
+
+/* pool info */
+.pool-info{width:100%;max-width:380px;background:rgba(200,169,110,0.07);border:1px solid rgba(200,169,110,0.18);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.pool-label{font-size:10px;color:#5a5870;font-weight:700}
+.pool-amount{font-size:17px;font-weight:900;color:#c8a96e;font-family:monospace}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="screen-loading" style="margin-top:80px">
+  <div class="logo">👑</div>
+  <div class="spinner"></div>
+  <div style="font-size:12px;color:#5a5870;text-align:center">טוען...</div>
+</div>
+
+<!-- Closed -->
+<div id="screen-closed" class="closed-screen">
+  <div style="font-size:48px">🔒</div>
+  <div style="font-size:18px;font-weight:900;color:#5a5870">ההימורים סגורים</div>
+  <div style="font-size:12px;color:#3a3850">הטורניר כבר התחיל</div>
+</div>
+
+<!-- Already bet -->
+<div id="screen-already" class="closed-screen">
+  <div style="font-size:48px">✅</div>
+  <div style="font-size:18px;font-weight:900;color:#5fc47a">כבר הימרת!</div>
+  <div style="font-size:13px;color:#5a5870">ההימור שלך נרשם</div>
+  <div style="font-size:15px;font-weight:800;color:#c8a96e;margin-top:6px" id="already-pick"></div>
+</div>
+
+<!-- Main -->
+<div id="screen-main" style="display:none;width:100%;align-items:center;flex-direction:column">
+  <div class="logo">👑</div>
+  <div class="title">Rebuy King</div>
+  <div class="subtitle" id="tourn-subtitle">טורניר פוקר</div>
+
+  <div class="msg" id="msg-box"></div>
+
+  <!-- Pool -->
+  <div class="pool-info">
+    <div>
+      <div class="pool-label">קופה כרגע</div>
+      <div class="pool-amount">₪<span id="pool-amount">0</span></div>
+    </div>
+    <div style="text-align:left">
+      <div class="pool-label">סכום הימור</div>
+      <div style="font-size:15px;font-weight:900;color:#c8a96e">₪<span id="bet-amount">50</span></div>
+    </div>
+  </div>
+
+  <!-- שם -->
+  <div class="section">
+    <div class="section-label">השם שלך</div>
+    <input class="name-input" id="name-input" type="text" placeholder="הכנס שם..." autocomplete="off" autocorrect="off">
+  </div>
+
+  <!-- שחקנים -->
+  <div class="section">
+    <div class="section-label">מי יהיה ה-Rebuy King?</div>
+    <div class="players-grid" id="players-grid"></div>
+  </div>
+
+  <!-- אישור -->
+  <button class="confirm-btn" id="confirm-btn" onclick="submitBet()" disabled>
+    👑 אני מהמר
+  </button>
+</div>
+
+<!-- Success -->
+<div id="screen-success" class="success-screen">
+  <div class="success-icon">🎉</div>
+  <div class="success-title">הימור נרשם!</div>
+  <div class="success-sub">אתה מהמר על:</div>
+  <div class="success-pick" id="success-pick-name"></div>
+  <div style="font-size:11px;color:#5a5870;margin-top:8px">בהצלחה! 🃏</div>
+</div>
+
+<script>
+const FIREBASE_URL = 'https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app';
+
+// קבל username מה-URL: ?u=yairmoree
+const params = new URLSearchParams(location.search);
+const ADMIN = params.get('u') || '';
+
+let rkData = null;
+let selectedPid = null;
+let myName = '';
+
+async function init(){
+  if(!ADMIN){
+    showMsg('חסר פרמטר u בURL', 'error');
+    hide('screen-loading');
+    return;
+  }
+
+  try{
+    // טען rebuyKing מ-Firebase
+    const resp = await fetch(`${FIREBASE_URL}/users/${encodeURIComponent(ADMIN)}/rebuyKing.json`);
+    const data = await resp.json();
+
+    hide('screen-loading');
+
+    if(!data || !data.active){
+      show('screen-closed');
+      return;
+    }
+
+    rkData = data;
+
+    // בדוק אם כבר הימרנו (localStorage)
+    const myBetKey = 'rk_bet_'+ADMIN;
+    const existing = localStorage.getItem(myBetKey);
+    if(existing){
+      const ex = JSON.parse(existing);
+      document.getElementById('already-pick').textContent = '→ '+ex.pickedName;
+      show('screen-already');
+      return;
+    }
+
+    // טען שחקנים פעילים
+    const snapResp = await fetch(`${FIREBASE_URL}/users/${encodeURIComponent(ADMIN)}.json?shallow=true`);
+
+    // בנה מסך ראשי
+    buildMain();
+
+  } catch(e){
+    hide('screen-loading');
+    showMsg('שגיאה בטעינה: '+e.message, 'error');
+  }
+}
+
+function buildMain(){
+  // subtitle
+  const dateStr = rkData.startedAt ? new Date(rkData.startedAt).toLocaleDateString('he-IL') : '';
+  document.getElementById('tourn-subtitle').textContent = dateStr ? 'טורניר · '+dateStr : 'טורניר פוקר';
+  document.getElementById('bet-amount').textContent = rkData.amount||50;
+
+  // חשב קופה
+  const betCount = Object.keys(rkData.bets||{}).length;
+  document.getElementById('pool-amount').textContent = (betCount*(rkData.amount||50)).toLocaleString();
+
+  // בנה grid שחקנים
+  const candidates = rkData.candidates || [];
+  const grid = document.getElementById('players-grid');
+  grid.innerHTML = candidates.map(p=>`
+    <div class="player-card" onclick="selectPlayer(this,'${p.id}','${escHtml(p.name)}')" data-pid="${p.id}">
+      <div class="player-avatar">${p.name[0].toUpperCase()}</div>
+      <div class="player-name">${escHtml(p.name)}</div>
+      <div class="player-rebuys" id="pc-rebuys-${p.id}">${p.rebuy||0} rebuys</div>
+    </div>`).join('');
+
+  show('screen-main');
+
+  // האזן לשינויים בשם
+  document.getElementById('name-input').addEventListener('input', updateConfirmBtn);
+}
+
+function selectPlayer(el, pid, name){
+  document.querySelectorAll('.player-card').forEach(c=>{
+    c.classList.remove('selected');
+  });
+  el.classList.add('selected');
+  selectedPid = pid;
+  window._selectedName = name;
+  updateConfirmBtn();
+}
+
+function updateConfirmBtn(){
+  const name = document.getElementById('name-input').value.trim();
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = !(name && selectedPid);
+  btn.textContent = name && selectedPid
+    ? `👑 אני מהמר על ${window._selectedName}`
+    : '👑 אני מהמר';
+}
+
+async function submitBet(){
+  const name = document.getElementById('name-input').value.trim();
+  if(!name){ showMsg('הכנס שם', 'error'); return; }
+  if(!selectedPid){ showMsg('בחר שחקן', 'error'); return; }
+
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ שולח...';
+
+  try{
+    // בדוק שם כפול ב-Firebase
+    const checkResp = await fetch(`${FIREBASE_URL}/users/${encodeURIComponent(ADMIN)}/rebuyKing/bets/${encodeURIComponent(name)}.json`);
+    const existing = await checkResp.json();
+    if(existing){
+      showMsg('השם "'+name+'" כבר הימר! נסה שם אחר', 'error');
+      btn.disabled = false;
+      updateConfirmBtn();
+      return;
+    }
+
+    // שמור הימור
+    const pickedName = window._selectedName;
+    await fetch(`${FIREBASE_URL}/users/${encodeURIComponent(ADMIN)}/rebuyKing/bets/${encodeURIComponent(name)}.json`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({pickedPid: selectedPid, pickedName, bettorName: name, ts: Date.now()})
+    });
+
+    // שמור ב-localStorage למניעת כפילות
+    localStorage.setItem('rk_bet_'+ADMIN, JSON.stringify({pickedPid: selectedPid, pickedName}));
+
+    // הצג הצלחה
+    hide('screen-main');
+    document.getElementById('success-pick-name').textContent = pickedName;
+    show('screen-success');
+
+  } catch(e){
+    showMsg('שגיאה: '+e.message, 'error');
+    btn.disabled = false;
+    updateConfirmBtn();
+  }
+}
+
+function show(id){ document.getElementById(id).style.display='flex'; }
+function hide(id){ document.getElementById(id).style.display='none'; }
+function escHtml(s){ return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function showMsg(txt, type){
+  const el = document.getElementById('msg-box');
+  el.textContent = txt;
+  el.className = 'msg '+type;
+  el.style.display = 'block';
+  setTimeout(()=>el.style.display='none', 4000);
+}
+
+init();
+</script>
+</body>
+</html>
