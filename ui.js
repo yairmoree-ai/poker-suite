@@ -1212,7 +1212,9 @@ function startRebuyKing(){
   const waMsg = encodeURIComponent(`👑 Rebuy King!\nמהמרים מי יסיים עם הכי הרבה rebuys\nלחץ להמר: ${shareUrl}`);
   const waUrl = `https://wa.me/?text=${waMsg}`;
 
+  const shareUrlEncoded = shareUrl.replace(/'/g,"\\'");
   const shareBox = document.createElement('div');
+  shareBox.id='rk-share-box';
   shareBox.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   shareBox.innerHTML=`
     <div style="width:100%;max-width:360px;background:#0d1120;border-radius:16px;border:1px solid rgba(200,169,110,0.3);padding:20px 16px;direction:rtl;text-align:center">
@@ -1223,16 +1225,14 @@ function startRebuyKing(){
       <a href="${waUrl}" target="_blank" style="display:block;width:100%;padding:12px;border-radius:10px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.4);color:#25d366;font-size:14px;font-weight:800;text-decoration:none;margin-bottom:8px">
         📲 שתף בוואטסאפ
       </a>
-      <button onclick="navigator.clipboard?.writeText('${shareUrl}').then(()=>notify('✓ הועתק!')).catch(()=>{})" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:12px;cursor:pointer;margin-bottom:8px">
+      <button onclick="navigator.clipboard?.writeText('${shareUrlEncoded}').then(()=>notify('✓ הועתק!')).catch(()=>{})" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:12px;cursor:pointer;margin-bottom:8px">
         📋 העתק לינק
       </button>
-      <button onclick="this.closest('div[style]').remove();renderTournList()" style="width:100%;padding:10px;border-radius:10px;border:none;background:transparent;color:#3a3850;font-size:11px;cursor:pointer">
+      <button onclick="document.getElementById('rk-share-box').remove()" style="width:100%;padding:10px;border-radius:10px;border:none;background:transparent;color:#3a3850;font-size:11px;cursor:pointer">
         סגור
       </button>
     </div>`;
   document.body.appendChild(shareBox);
-  renderTournList();
-}
 
 function showRebuyKingStatus(){
   const rk = S.rebuyKing;
@@ -1818,3 +1818,4 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
+
