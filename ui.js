@@ -1057,8 +1057,8 @@ function openRebuyKing(){
     showRebuyKingStatus(); return;
   }
   // פתח דיאלוג הגדרה
-  const players = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id));
-  if(players.length<2){ notify('צריך לפחות 2 שחקנים פעילים'); return; }
+  const players = S.playerLib;
+  if(players.length<2){ notify("צריך לפחות 2 שחקנים"); return; }
 
   const box = document.createElement('div');
   box.id = 'rebuy-king-box';
