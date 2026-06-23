@@ -1197,7 +1197,7 @@ function startRebuyKing(){
   persist();
 
   // שמור גם ב-Firebase ישירות לדף החיצוני
-  const uname = currentUser?.username||'';
+  const uname = encodeURIComponent(currentUser?.username||'');
   if(uname){
     fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname}/rebuyKing.json`,{
       method:'PUT', headers:{'Content-Type':'application/json'},
