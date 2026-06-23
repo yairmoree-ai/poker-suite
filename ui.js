@@ -1057,8 +1057,9 @@ function openRebuyKing(){
     showRebuyKingStatus(); return;
   }
   // פתח דיאלוג הגדרה
-  const players = S.playerLib;
-  if(players.length<2){ notify("צריך לפחות 2 שחקנים"); return; }
+  const candidates = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id)); // על מי אפשר להמר
+  const bettors = S.playerLib; // מי יכול להמר
+  if(candidates.length<2){ notify('צריך לפחות 2 שחקנים פעילים בטורניר'); return; }
 
   const box = document.createElement('div');
   box.id = 'rebuy-king-box';
@@ -1079,9 +1080,9 @@ function openRebuyKing(){
         <button onclick="document.getElementById('rk-amount').value=100" style="padding:6px 10px;border-radius:7px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:11px;cursor:pointer">₪100</button>
       </div>
 
-      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">כל שחקן בוחר את ה-Rebuy King שלו:</div>
+      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">על מי להמר? (שחקנים פעילים)</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px" id="rk-players-grid">
-        ${players.map(p=>`
+        ${candidates.map(p=>`
           <div onclick="rkToggle(this,'${p.id}')"
             style="padding:10px 4px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);text-align:center;cursor:pointer;transition:all .15s"
             data-pid="${p.id}">
@@ -1093,7 +1094,7 @@ function openRebuyKing(){
 
       <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">הימורי שחקנים:</div>
       <div id="rk-bets-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px">
-        ${players.map(p=>`
+        ${bettors.map(p=>`
           <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)" id="rk-bet-${p.id}">
             <div style="font-size:12px;font-weight:700">${p.name}</div>
             <div style="font-size:11px;color:#3a3850" id="rk-pick-${p.id}">לא הימר</div>
@@ -1128,7 +1129,7 @@ function rkToggle(el, pickedPid){
   // שאל מי מהמר
   const bettorBox = document.getElementById('rk-bettor-selector');
   if(!bettorBox){
-    const players = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id));
+    const players = S.playerLib;
     const sel = document.createElement('div');
     sel.id='rk-bettor-selector';
     sel.style.cssText='margin-bottom:8px';
