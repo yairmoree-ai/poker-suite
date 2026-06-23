@@ -721,10 +721,23 @@ async function syncFromSheets(){
 
       applySnapshot(data);
       try{ localStorage.setItem('ps_lib', JSON.stringify(S.playerLib)); }catch(e){}
+
+      // סנכרן rebuyKing מ-Firebase
+      try{
+        const rkResp = await fetch(baseUrl+'/rebuyKing.json');
+        const rkData = await rkResp.json();
+        if(rkData && rkData.active !== undefined){
+          S.rebuyKing = rkData;
+        }
+      }catch(e){ console.log('RK sync error',e); }
+
       render();
       renderHandList();
       renderTournList();
-      // debug removed
+      let dbg = document.getElementById('sync-debug');
+      if(!dbg){ dbg=document.createElement('div'); dbg.id='sync-debug'; dbg.style.cssText='position:fixed;bottom:60px;left:8px;right:8px;background:rgba(0,0,0,0.85);color:#5fc47a;font-size:10px;padding:8px;border-radius:8px;z-index:9999;font-family:monospace;direction:ltr'; document.body.appendChild(dbg); }
+      dbg.innerHTML = `${new Date().toLocaleTimeString()}<br>firebase hands=${Object.keys(handsData||{}).length}<br>local hands: ${beforeHands}→${S.handLog?.length||0}`;
+      setTimeout(()=>{ if(dbg) dbg.remove(); }, 10000);
       updateSyncDot('ok');
       setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
     } else {
