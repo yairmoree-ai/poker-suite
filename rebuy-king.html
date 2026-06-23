@@ -154,7 +154,7 @@ async function init(){
 
   try{
     // טען rebuyKing מ-Firebase
-    const resp = await fetch(`${FIREBASE_URL}/users/${encodeURIComponent(ADMIN)}/rebuyKing.json`);
+    const resp = await fetch(`${FIREBASE_URL}/users/${ADMIN}/rebuyKing.json`);
     const data = await resp.json();
 
     hide('screen-loading');
@@ -177,7 +177,7 @@ async function init(){
     }
 
     // טען שחקנים פעילים
-    const snapResp = await fetch(`${FIREBASE_URL}/users/${encodeURIComponent(ADMIN)}.json?shallow=true`);
+    const snapResp = await fetch(`${FIREBASE_URL}/users/${ADMIN}.json?shallow=true`);
 
     // בנה מסך ראשי
     buildMain();
@@ -244,7 +244,7 @@ async function submitBet(){
 
   try{
     // בדוק שם כפול ב-Firebase
-    const checkResp = await fetch(`${FIREBASE_URL}/users/${encodeURIComponent(ADMIN)}/rebuyKing/bets/${encodeURIComponent(name)}.json`);
+    const checkResp = await fetch(`${FIREBASE_URL}/users/${ADMIN}/rebuyKing/bets/${encodeURIComponent(name)}.json`);
     const existing = await checkResp.json();
     if(existing){
       showMsg('השם "'+name+'" כבר הימר! נסה שם אחר', 'error');
@@ -255,7 +255,7 @@ async function submitBet(){
 
     // שמור הימור
     const pickedName = window._selectedName;
-    await fetch(`${FIREBASE_URL}/users/${encodeURIComponent(ADMIN)}/rebuyKing/bets/${encodeURIComponent(name)}.json`, {
+    await fetch(`${FIREBASE_URL}/users/${ADMIN}/rebuyKing/bets/${encodeURIComponent(name)}.json`, {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({pickedPid: selectedPid, pickedName, bettorName: name, ts: Date.now()})
