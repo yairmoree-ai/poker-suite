@@ -1247,7 +1247,7 @@ function showRebuyKingStatus(){
   const leaderName = pName(leaderId)||'?';
   const leaderRebuys = sorted[0]?.[1]||0;
 
-  const pool = Object.keys(rk.bets).length * rk.amount;
+  const pool = Object.keys(rk.bets||{}).length * (rk.amount||50);
 
   const box = document.createElement('div');
   box.id = 'rebuy-king-box';
@@ -1272,7 +1272,7 @@ function showRebuyKingStatus(){
 
       <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">הימורים:</div>
       <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px">
-        ${Object.entries(rk.bets).map(([bettorPid, pickedPid])=>{
+        ${Object.entries(rk.bets||{}).map(([bettorPid, pickedPid])=>{
           const isLeading = pickedPid===leaderId;
           return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;background:${isLeading?'rgba(95,196,122,0.06)':'rgba(255,255,255,0.03)'};border:1px solid ${isLeading?'rgba(95,196,122,0.2)':'rgba(255,255,255,0.06)'}">
             <div style="font-size:12px;font-weight:700">${pName(bettorPid)}</div>
@@ -1303,8 +1303,8 @@ function resolveRebuyKing(){
   });
   if(!kingPid){ notify('אין rebuys להכריז'); return; }
 
-  const pool = Object.keys(rk.bets).length * rk.amount;
-  const winners = Object.entries(rk.bets).filter(([,pickedPid])=>pickedPid===kingPid).map(([bettorPid])=>bettorPid);
+  const pool = Object.keys(rk.bets||{}).length * (rk.amount||50);
+  const winners = Object.entries(rk.bets||{}).filter(([,pickedPid])=>pickedPid===kingPid).map(([bettorPid])=>bettorPid);
   const prize = winners.length ? Math.floor(pool/winners.length) : 0;
 
   // שמור תוצאה ב-S
