@@ -1181,17 +1181,56 @@ function rkPlaceBet(bettorPid){
 function startRebuyKing(){
   const amt = parseInt(document.getElementById('rk-amount').value)||50;
   const bets = window._rkBets||{};
-  if(Object.keys(bets).length===0){ notify('אף אחד לא הימר עדיין'); return; }
+
+  // בנה רשימת candidates לדף החיצוני
+  const candidatesList = S.playerLib
+    .filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id))
+    .map(p=>({id:p.id, name:p.name, rebuy:S.buyins[p.id]?.rebuy||0}));
 
   S.rebuyKing = {
     active: true,
     amount: amt,
-    bets: {...bets}, // {bettorPid: pickedPid}
+    bets: {...bets},
+    candidates: candidatesList,
     startedAt: Date.now(),
   };
   persist();
+
+  // שמור גם ב-Firebase ישירות לדף החיצוני
+  const uname = encodeURIComponent(currentUser?.username||'');
+  if(uname){
+    fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname}/rebuyKing.json`,{
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(S.rebuyKing)
+    }).catch(e=>console.log('RK sync error',e));
+  }
+
   document.getElementById('rebuy-king-box').remove();
-  notify('👑 Rebuy King פעיל! קופה: ₪'+(Object.keys(bets).length*amt).toLocaleString());
+
+  // הצג כפתור שיתוף
+  const shareUrl = `https://${location.host}/rebuy-king.html?u=${currentUser?.username||''}`;
+  const waMsg = encodeURIComponent(`👑 Rebuy King!\nמהמרים מי יסיים עם הכי הרבה rebuys\nלחץ להמר: ${shareUrl}`);
+  const waUrl = `https://wa.me/?text=${waMsg}`;
+
+  const shareBox = document.createElement('div');
+  shareBox.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  shareBox.innerHTML=`
+    <div style="width:100%;max-width:360px;background:#0d1120;border-radius:16px;border:1px solid rgba(200,169,110,0.3);padding:20px 16px;direction:rtl;text-align:center">
+      <div style="font-size:28px;margin-bottom:8px">👑</div>
+      <div style="font-size:16px;font-weight:900;color:#c8a96e;margin-bottom:4px">Rebuy King פתוח!</div>
+      <div style="font-size:11px;color:#5a5870;margin-bottom:16px">שתף לחברים להמר</div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;font-size:11px;color:#5a5870;margin-bottom:14px;word-break:break-all;direction:ltr;text-align:left">${shareUrl}</div>
+      <a href="${waUrl}" target="_blank" style="display:block;width:100%;padding:12px;border-radius:10px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.4);color:#25d366;font-size:14px;font-weight:800;text-decoration:none;margin-bottom:8px">
+        📲 שתף בוואטסאפ
+      </a>
+      <button onclick="navigator.clipboard?.writeText('${shareUrl}').then(()=>notify('✓ הועתק!')).catch(()=>{})" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:12px;cursor:pointer;margin-bottom:8px">
+        📋 העתק לינק
+      </button>
+      <button onclick="this.closest('div[style]').remove();renderTournList()" style="width:100%;padding:10px;border-radius:10px;border:none;background:transparent;color:#3a3850;font-size:11px;cursor:pointer">
+        סגור
+      </button>
+    </div>`;
+  document.body.appendChild(shareBox);
   renderTournList();
 }
 
