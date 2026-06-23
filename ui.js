@@ -1080,25 +1080,33 @@ function openRebuyKing(){
         <button onclick="document.getElementById('rk-amount').value=100" style="padding:6px 10px;border-radius:7px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:11px;cursor:pointer">₪100</button>
       </div>
 
-      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">על מי להמר? (שחקנים פעילים)</div>
+      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">בחר שחקן → בחר מי מהמר עליו</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px" id="rk-players-grid">
         ${candidates.map(p=>`
-          <div onclick="rkToggle(this,'${p.id}')"
+          <div onclick="rkSelectCandidate(this,'${p.id}')"
             style="padding:10px 4px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);text-align:center;cursor:pointer;transition:all .15s"
             data-pid="${p.id}">
             <div style="width:30px;height:30px;border-radius:15px;background:rgba(200,169,110,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#c8a96e;margin:0 auto 4px">${p.name[0].toUpperCase()}</div>
             <div style="font-size:11px;font-weight:700">${p.name}</div>
-            <div style="font-size:9px;color:#5a5870;margin-top:1px">${(S.buyins[p.id]?.rebuy||0)} rebuys</div>
+            <div style="font-size:9px;color:#5a5870;margin-top:1px" id="rk-cand-count-${p.id}">0 מהמרים</div>
           </div>`).join('')}
       </div>
 
-      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">הימורי שחקנים:</div>
+      <!-- רשימת bettors תיפתח כאן -->
+      <div id="rk-bettor-panel" style="display:none;margin-bottom:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(200,169,110,0.2);border-radius:10px;padding:10px 12px">
+        <div style="font-size:10px;color:#c8a96e;font-weight:700;margin-bottom:8px" id="rk-bettor-title">מי מהמר על ?</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px" id="rk-bettor-btns">
+          ${bettors.map(p=>`
+            <button onclick="rkPlaceBet('${p.id}')" id="rk-bettor-btn-${p.id}"
+              style="padding:5px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#8a8799;font-size:10px;font-weight:700;cursor:pointer">
+              ${p.name}
+            </button>`).join('')}
+        </div>
+      </div>
+
+      <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">הימורים שנרשמו:</div>
       <div id="rk-bets-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px">
-        ${bettors.map(p=>`
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)" id="rk-bet-${p.id}">
-            <div style="font-size:12px;font-weight:700">${p.name}</div>
-            <div style="font-size:11px;color:#3a3850" id="rk-pick-${p.id}">לא הימר</div>
-          </div>`).join('')}
+        <div style="font-size:10px;color:#3a3850;text-align:center;padding:8px">אין הימורים עדיין</div>
       </div>
 
       <div style="background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.2);border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;margin-bottom:14px">
@@ -1116,8 +1124,8 @@ function openRebuyKing(){
   window._rkCurrentBettor = null;
 }
 
-function rkToggle(el, pickedPid){
-  // בחירת שחקן להמר עליו
+function rkSelectCandidate(el, pickedPid){
+  // הדגש שחקן שנבחר
   document.querySelectorAll('#rk-players-grid > div').forEach(d=>{
     d.style.background='rgba(255,255,255,0.03)';
     d.style.borderColor='rgba(255,255,255,0.08)';
@@ -1126,41 +1134,48 @@ function rkToggle(el, pickedPid){
   el.style.borderColor='rgba(200,169,110,0.5)';
   window._rkSelectedPick = pickedPid;
 
-  // שאל מי מהמר
-  const bettorBox = document.getElementById('rk-bettor-selector');
-  if(!bettorBox){
-    const players = S.playerLib;
-    const sel = document.createElement('div');
-    sel.id='rk-bettor-selector';
-    sel.style.cssText='margin-bottom:8px';
-    sel.innerHTML=`<div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:6px">מי מהמר?</div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px">
-        ${players.map(p=>`<button onclick="rkPlaceBet('${p.id}')"
-          style="padding:5px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#8a8799;font-size:10px;font-weight:700;cursor:pointer"
-          id="rk-bettor-btn-${p.id}">${p.name}</button>`).join('')}
-      </div>`;
-    document.getElementById('rk-bets-list').before(sel);
-  }
+  // פתח panel bettors
+  const panel = document.getElementById('rk-bettor-panel');
+  const title = document.getElementById('rk-bettor-title');
+  panel.style.display='block';
+  title.textContent='מי מהמר על '+pName(pickedPid)+'?';
+
+  // עדכן כפתורים — השבת מי שכבר הימר
+  Object.keys(window._rkBets||{}).forEach(bpid=>{
+    const btn=document.getElementById('rk-bettor-btn-'+bpid);
+    if(btn){ btn.style.opacity='.3'; btn.disabled=true; }
+  });
 }
+
+function rkToggle(){} // נשאר ריק לתאימות לאחור
 
 function rkPlaceBet(bettorPid){
   const pickedPid = window._rkSelectedPick;
   if(!pickedPid){ notify('בחר קודם שחקן'); return; }
-  if(window._rkBets[bettorPid]){ notify('כבר הימרת!'); return; }
+  if(window._rkBets[bettorPid]){ notify(pName(bettorPid)+' כבר הימר!'); return; }
 
   window._rkBets[bettorPid] = pickedPid;
-  const pickedName = pName(pickedPid);
-  const el = document.getElementById('rk-pick-'+bettorPid);
-  if(el) el.innerHTML = `<span style="color:#c8a96e;font-weight:800">${pickedName} ✓</span>`;
 
-  // עדכן קופה
+  // הסתר כפתור bettor
+  const btn = document.getElementById('rk-bettor-btn-'+bettorPid);
+  if(btn){ btn.style.opacity='.3'; btn.disabled=true; }
+
+  // עדכן מונה על הcandidate
+  const countEl = document.getElementById('rk-cand-count-'+pickedPid);
+  const currentCount = Object.values(window._rkBets).filter(p=>p===pickedPid).length;
+  if(countEl) countEl.textContent = currentCount+' מהמרים';
+
+  // עדכן רשימת הימורים
   const amt = parseInt(document.getElementById('rk-amount').value)||50;
   const pool = Object.keys(window._rkBets).length * amt;
   document.getElementById('rk-pool-display').textContent = '₪'+pool.toLocaleString();
 
-  // הסתר סלקטור bettor אחרי בחירה
-  const btn = document.getElementById('rk-bettor-btn-'+bettorPid);
-  if(btn){ btn.style.opacity='.3'; btn.disabled=true; }
+  const betsList = document.getElementById('rk-bets-list');
+  betsList.innerHTML = Object.entries(window._rkBets).map(([bpid,ppid])=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">
+      <div style="font-size:12px;font-weight:700">${pName(bpid)}</div>
+      <div style="font-size:11px;color:#c8a96e;font-weight:700">→ ${pName(ppid)}</div>
+    </div>`).join('');
 }
 
 function startRebuyKing(){
