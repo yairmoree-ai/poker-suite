@@ -1309,7 +1309,7 @@ async function showRebuyKingStatus(){
   document.body.appendChild(box);
 }
 
-function resolveRebuyKing(){
+async function resolveRebuyKing(){
   const rk = S.rebuyKing;
   if(!rk) return;
 
@@ -1331,26 +1331,140 @@ function resolveRebuyKing(){
 
   document.getElementById('rebuy-king-box').remove();
 
-  // הצג תוצאה
+  // טען bets עדכניים מ-Firebase
+  try{
+    const uname2 = encodeURIComponent(currentUser?.username||'');
+    const betsResp = await fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname2}/rebuyKing/bets.json`);
+    const remoteBets = await betsResp.json();
+    if(remoteBets) rk.bets = remoteBets;
+  } catch(e){}
+
+  // בנה נתוני הימורים לתצוגה
+  const allBets = Object.entries(rk.bets||{}).map(([bettor, picked])=>{
+    const bettorName = typeof picked==='object' ? picked.bettorName : (pName(bettor)||bettor);
+    const pickedName = typeof picked==='object' ? picked.pickedName : (pName(picked)||picked);
+    const pickedId   = typeof picked==='object' ? picked.pickedPid : picked;
+    const isWinner   = pickedId===kingPid || pickedName===pName(kingPid);
+    const winAmount  = isWinner ? prize : -(rk.amount||50);
+    return { bettorName, pickedName, isWinner, winAmount };
+  });
+
+  // הצג תוצאה + כרטיס שיתוף
+  const dateStr = new Date().toLocaleDateString('he-IL');
   const box = document.createElement('div');
-  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  box.innerHTML=`
-    <div style="width:100%;max-width:380px;background:#0d1120;border-radius:18px;border:1px solid rgba(200,169,110,0.4);padding:24px 16px;direction:rtl;text-align:center">
-      <div style="font-size:40px;margin-bottom:8px">👑</div>
-      <div style="font-size:22px;font-weight:900;color:#c8a96e;margin-bottom:4px">${pName(kingPid)}</div>
-      <div style="font-size:12px;color:#5a5870;margin-bottom:16px">${maxRebuy} rebuys · Rebuy King!</div>
-      ${winners.length>0
-        ? `<div style="background:rgba(95,196,122,0.08);border:1px solid rgba(95,196,122,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px">
-            <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:4px">ניחשו נכון:</div>
-            <div style="font-size:14px;font-weight:900;color:#5fc47a">${winners.map(pid=>pName(pid)).join(', ')}</div>
-            <div style="font-size:18px;font-weight:900;color:#5fc47a;font-family:monospace;margin-top:4px">+₪${prize.toLocaleString()} כל אחד</div>
-           </div>`
-        : `<div style="font-size:13px;color:#e07b6a;margin-bottom:16px">אף אחד לא ניחש נכון 😅</div>`}
-      <button onclick="document.getElementById('rk-result-box').remove();renderTournList()" style="width:100%;padding:11px;border-radius:10px;border:none;background:rgba(200,169,110,0.15);color:#c8a96e;font-size:13px;font-weight:800;cursor:pointer;border:1px solid rgba(200,169,110,0.4)">סגור</button>
-    </div>`;
   box.id='rk-result-box';
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+  box.innerHTML=`
+    <div style="width:100%;max-width:380px;direction:rtl">
+
+      <!-- כרטיס שיתוף -->
+      <div id="rk-share-card" style="background:linear-gradient(135deg,#0d1120 0%,#111828 100%);border-radius:20px;border:1px solid rgba(200,169,110,0.4);padding:24px 20px;text-align:center;margin-bottom:14px;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
+
+        <!-- כותרת -->
+        <div style="font-size:11px;font-weight:700;color:#5a5870;letter-spacing:1px;margin-bottom:6px">REBUY KING · ${dateStr}</div>
+        <div style="font-size:36px;margin-bottom:6px">👑</div>
+        <div style="font-size:24px;font-weight:900;color:#c8a96e;margin-bottom:2px">${pName(kingPid)}</div>
+        <div style="font-size:13px;color:#5a5870;margin-bottom:20px">${maxRebuy} rebuys</div>
+
+        <!-- קו הפרדה -->
+        <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,110,0.3),transparent);margin-bottom:16px"></div>
+
+        <!-- טבלת הימורים -->
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;text-align:right">
+          ${allBets.sort((a,b)=>b.isWinner-a.isWinner).map(b=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:10px;background:${b.isWinner?'rgba(95,196,122,0.1)':'rgba(255,255,255,0.03)'};border:1px solid ${b.isWinner?'rgba(95,196,122,0.25)':'rgba(255,255,255,0.06)'}">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:14px">${b.isWinner?'✅':'❌'}</span>
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:#e2ddd4">${b.bettorName}</div>
+                  <div style="font-size:10px;color:#5a5870">→ ${b.pickedName}</div>
+                </div>
+              </div>
+              <div style="font-size:13px;font-weight:900;color:${b.isWinner?'#5fc47a':'#e07b6a'};font-family:monospace">${b.isWinner?'+':'-'}₪${Math.abs(b.winAmount).toLocaleString()}</div>
+            </div>`).join('')}
+        </div>
+
+        <!-- קו הפרדה -->
+        <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,110,0.2),transparent);margin-bottom:12px"></div>
+
+        <!-- סיכום -->
+        <div style="display:flex;justify-content:space-between;padding:0 4px">
+          <div style="text-align:right">
+            <div style="font-size:9px;color:#5a5870;font-weight:700">קופה</div>
+            <div style="font-size:16px;font-weight:900;color:#c8a96e;font-family:monospace">₪${pool.toLocaleString()}</div>
+          </div>
+          ${prize>0?`<div style="text-align:left">
+            <div style="font-size:9px;color:#5a5870;font-weight:700">לכל זוכה</div>
+            <div style="font-size:16px;font-weight:900;color:#5fc47a;font-family:monospace">₪${prize.toLocaleString()}</div>
+          </div>`:''}
+        </div>
+
+        <!-- watermark -->
+        <div style="margin-top:14px;font-size:9px;color:#2a2838;font-weight:700">♠ Poker Suite</div>
+      </div>
+
+      <!-- כפתורים -->
+      <button onclick="shareRKImage()" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(37,211,102,0.4);background:rgba(37,211,102,0.12);color:#25d366;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">
+        📸 שתף תמונה בוואטסאפ
+      </button>
+      <button onclick="document.getElementById('rk-result-box').remove();renderTournList()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#5a5870;font-size:12px;cursor:pointer">
+        סגור
+      </button>
+    </div>`;
   document.body.appendChild(box);
   renderTournList();
+}
+
+async function shareRKImage(){
+  const card = document.getElementById('rk-share-card');
+  if(!card){ notify('שגיאה ביצירת תמונה'); return; }
+
+  const btn = document.querySelector('[onclick*="shareRKImage"]');
+  if(btn){ btn.textContent='⏳ יוצר תמונה...'; btn.disabled=true; }
+
+  try{
+    // טען html2canvas דינמית
+    if(!window.html2canvas){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#0d1120',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // נסה Web Share API (מובייל)
+    if(navigator.share && navigator.canShare){
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], 'rebuy-king.png', {type:'image/png'});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'👑 Rebuy King תוצאות'});
+        return;
+      }
+    }
+
+    // fallback — הורד תמונה
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'rebuy-king.png';
+    a.click();
+    notify('📸 תמונה הורדה — שתף בוואטסאפ');
+
+  } catch(e){
+    console.log('shareRKImage error',e);
+    notify('שגיאה: '+e.message);
+  } finally {
+    if(btn){ btn.textContent='📸 שתף תמונה בוואטסאפ'; btn.disabled=false; }
+  }
 }
 
 function closeRebuyKingBetting(){
