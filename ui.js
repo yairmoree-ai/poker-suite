@@ -1238,9 +1238,17 @@ async function startRebuyKing(){
   document.body.appendChild(shareBox);
 }
 
-function showRebuyKingStatus(){
+async function showRebuyKingStatus(){
   const rk = S.rebuyKing;
   if(!rk) return;
+
+  // טען bets עדכניים מ-Firebase
+  try{
+    const uname = encodeURIComponent(currentUser?.username||'');
+    const resp = await fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname}/rebuyKing/bets.json`);
+    const remoteBets = await resp.json();
+    if(remoteBets) rk.bets = remoteBets;
+  } catch(e){ console.log('RK bets fetch error',e); }
 
   // מצא מי מוביל
   const rebuyCounts = {};
@@ -1275,11 +1283,15 @@ function showRebuyKingStatus(){
 
       <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:8px">הימורים:</div>
       <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px">
-        ${Object.entries(rk.bets||{}).map(([bettorPid, pickedPid])=>{
-          const isLeading = pickedPid===leaderId;
+        ${Object.entries(rk.bets||{}).map(([bettor, picked])=>{
+          // bettor ו-picked יכולים להיות ID או {pickedPid, pickedName, bettorName}
+          const bettorName = typeof picked==='object' ? picked.bettorName : (pName(bettor)||bettor);
+          const pickedName = typeof picked==='object' ? picked.pickedName : (pName(picked)||picked);
+          const pickedId   = typeof picked==='object' ? picked.pickedPid : picked;
+          const isLeading  = pickedId===leaderId || pickedName===pName(leaderId);
           return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;background:${isLeading?'rgba(95,196,122,0.06)':'rgba(255,255,255,0.03)'};border:1px solid ${isLeading?'rgba(95,196,122,0.2)':'rgba(255,255,255,0.06)'}">
-            <div style="font-size:12px;font-weight:700">${pName(bettorPid)}</div>
-            <div style="font-size:11px;color:${isLeading?'#5fc47a':'#5a5870'};font-weight:${isLeading?800:400}">${pName(pickedPid)}${isLeading?' 🔥':''}</div>
+            <div style="font-size:12px;font-weight:700">${bettorName}</div>
+            <div style="font-size:11px;color:${isLeading?'#5fc47a':'#5a5870'};font-weight:${isLeading?800:400}">${pickedName}${isLeading?' 🔥':''}</div>
           </div>`;
         }).join('')}
       </div>
@@ -1843,3 +1855,4 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
+
