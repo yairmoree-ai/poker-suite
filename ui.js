@@ -1179,7 +1179,7 @@ function rkPlaceBet(bettorPid){
     </div>`).join('');
 }
 
-function startRebuyKing(){
+async function startRebuyKing(){
   const amt = parseInt(document.getElementById('rk-amount').value)||50;
   const bets = window._rkBets||{};
 
@@ -1200,10 +1200,12 @@ function startRebuyKing(){
   // שמור גם ב-Firebase ישירות לדף החיצוני
   const uname = encodeURIComponent(currentUser?.username||'');
   if(uname){
-    fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname}/rebuyKing.json`,{
-      method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(S.rebuyKing)
-    }).catch(e=>console.log('RK sync error',e));
+    try{
+      await fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname}/rebuyKing.json`,{
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(S.rebuyKing)
+      });
+    } catch(e){ console.log('RK sync error',e); }
   }
 
   document.getElementById('rebuy-king-box').remove();
@@ -1841,4 +1843,3 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
-
