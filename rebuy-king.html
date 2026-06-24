@@ -164,11 +164,6 @@ async function init(){
       return;
     }
 
-    if(data.bettingClosed){
-      show('screen-closed');
-      return;
-    }
-
     rkData = data;
 
     // בדוק אם כבר הימרנו בטורניר הנוכחי (לפי startedAt)
@@ -188,6 +183,13 @@ async function init(){
 
     // טען שחקנים פעילים
     const snapResp = await fetch(`${FIREBASE_URL}/users/${ADMIN}.json?shallow=true`);
+
+    // הצג הודעה אם הימורים נסגרו
+    if(data.bettingClosed){
+      document.getElementById('confirm-btn').disabled = true;
+      document.getElementById('confirm-btn').textContent = '🔒 ההימורים נסגרו';
+      document.getElementById('confirm-btn').style.opacity = '0.5';
+    }
 
     // בנה מסך ראשי
     buildMain();
@@ -244,6 +246,7 @@ function updateConfirmBtn(){
 }
 
 async function submitBet(){
+  if(rkData.bettingClosed){ showMsg('ההימורים נסגרו', 'info'); return; }
   const name = document.getElementById('name-input').value.trim();
   if(!name){ showMsg('הכנס שם', 'error'); return; }
   if(!selectedPid){ showMsg('בחר שחקן', 'error'); return; }
