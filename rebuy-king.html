@@ -171,14 +171,19 @@ async function init(){
 
     rkData = data;
 
-    // בדוק אם כבר הימרנו (localStorage)
+    // בדוק אם כבר הימרנו בטורניר הנוכחי (לפי startedAt)
     const myBetKey = 'rk_bet_'+ADMIN;
     const existing = localStorage.getItem(myBetKey);
     if(existing){
       const ex = JSON.parse(existing);
-      document.getElementById('already-pick').textContent = '→ '+ex.pickedName;
-      show('screen-already');
-      return;
+      // אם ההימור שייך לטורניר הנוכחי — הצג "כבר הימרת"
+      if(ex.startedAt && ex.startedAt === data.startedAt){
+        document.getElementById('already-pick').textContent = '→ '+ex.pickedName;
+        show('screen-already');
+        return;
+      }
+      // אחרת — טורניר חדש, מחק את ההימור הישן
+      localStorage.removeItem(myBetKey);
     }
 
     // טען שחקנים פעילים
@@ -267,7 +272,7 @@ async function submitBet(){
     });
 
     // שמור ב-localStorage למניעת כפילות
-    localStorage.setItem('rk_bet_'+ADMIN, JSON.stringify({pickedPid: selectedPid, pickedName}));
+    localStorage.setItem('rk_bet_'+ADMIN, JSON.stringify({pickedPid: selectedPid, pickedName, startedAt: rkData.startedAt}));
 
     // הצג הצלחה
     hide('screen-main');
