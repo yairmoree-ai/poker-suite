@@ -1152,6 +1152,7 @@ function rkToggle(){} // נשאר ריק לתאימות לאחור
 function rkPlaceBet(bettorPid){
   const pickedPid = window._rkSelectedPick;
   if(!pickedPid){ notify('בחר קודם שחקן'); return; }
+  if(bettorPid === pickedPid){ notify('לא ניתן להמר על עצמך 😄'); return; }
   if(window._rkBets[bettorPid]){ notify(pName(bettorPid)+' כבר הימר!'); return; }
 
   window._rkBets[bettorPid] = pickedPid;
@@ -1328,8 +1329,9 @@ function resolveRebuyKing(){
             <div style="font-size:18px;font-weight:900;color:#5fc47a;font-family:monospace;margin-top:4px">+₪${prize.toLocaleString()} כל אחד</div>
            </div>`
         : `<div style="font-size:13px;color:#e07b6a;margin-bottom:16px">אף אחד לא ניחש נכון 😅</div>`}
-      <button onclick="this.closest('div[style]').remove();renderTournList()" style="width:100%;padding:11px;border-radius:10px;border:none;background:rgba(200,169,110,0.15);color:#c8a96e;font-size:13px;font-weight:800;cursor:pointer;border:1px solid rgba(200,169,110,0.4)">סגור</button>
+      <button onclick="document.getElementById('rk-result-box').remove();renderTournList()" style="width:100%;padding:11px;border-radius:10px;border:none;background:rgba(200,169,110,0.15);color:#c8a96e;font-size:13px;font-weight:800;cursor:pointer;border:1px solid rgba(200,169,110,0.4)">סגור</button>
     </div>`;
+  box.id='rk-result-box';
   document.body.appendChild(box);
   renderTournList();
 }
@@ -1819,3 +1821,4 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
+
