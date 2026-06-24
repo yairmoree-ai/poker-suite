@@ -1282,6 +1282,9 @@ function showRebuyKingStatus(){
         }).join('')}
       </div>
 
+      <button onclick="closeRebuyKingBetting()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:6px">
+        🔒 סגור הימורים (מניעת הימורים חדשים)
+      </button>
       <button onclick="resolveRebuyKing()" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.15);color:#5fc47a;font-size:13px;font-weight:800;cursor:pointer">
         🏆 הכרז מנצח וסיים
       </button>
@@ -1333,6 +1336,23 @@ function resolveRebuyKing(){
     </div>`;
   box.id='rk-result-box';
   document.body.appendChild(box);
+  renderTournList();
+}
+
+function closeRebuyKingBetting(){
+  if(!S.rebuyKing) return;
+  S.rebuyKing.bettingClosed = true;
+  persist();
+  // עדכן Firebase
+  const uname = encodeURIComponent(currentUser?.username||'');
+  if(uname){
+    fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname}/rebuyKing/bettingClosed.json`,{
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: 'true'
+    }).catch(e=>console.log('RK close error',e));
+  }
+  document.getElementById('rebuy-king-box')?.remove();
+  notify('🔒 הימורים נסגרו');
   renderTournList();
 }
 
