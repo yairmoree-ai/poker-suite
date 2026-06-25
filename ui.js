@@ -1242,12 +1242,13 @@ async function showRebuyKingStatus(){
   const rk = S.rebuyKing;
   if(!rk) return;
 
-  // טען bets עדכניים מ-Firebase
+  // טען bets עדכניים מ-Firebase ומזג עם המקומי
   try{
     const uname = encodeURIComponent(currentUser?.username||'');
     const resp = await fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname}/rebuyKing/bets.json`);
     const remoteBets = await resp.json();
-    if(remoteBets) rk.bets = remoteBets;
+    // מזג — Firebase + מקומי (מקומי גובר במקרה של קונפליקט)
+    if(remoteBets) rk.bets = {...remoteBets, ...(rk.bets||{})};
   } catch(e){ console.log('RK bets fetch error',e); }
 
   // מצא מי מוביל
