@@ -1470,24 +1470,67 @@ async function shareRKImage(){
   }
 }
 
-async function addManualRKBet(){
+function addManualRKBet(){
   const rk = S.rebuyKing;
   if(!rk) return;
   const candidates = rk.candidates||[];
   if(!candidates.length){ notify('אין שחקנים'); return; }
 
-  const bettorName = prompt('שם המהמר:')?.trim();
-  if(!bettorName) return;
+  // בנה panel בתוך הדיאלוג הקיים
+  const existing = document.getElementById('rk-manual-panel');
+  if(existing){ existing.remove(); return; }
+
+  const panel = document.createElement('div');
+  panel.id = 'rk-manual-panel';
+  panel.style.cssText = 'margin-top:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;direction:rtl';
+  panel.innerHTML = `
+    <div style="font-size:10px;color:#5b9bd5;font-weight:700;margin-bottom:8px">➕ הימור ידני</div>
+    <input id="rk-manual-name" type="text" placeholder="שם המהמר..."
+      style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 10px;color:#e2ddd4;font-size:13px;outline:none;margin-bottom:8px;direction:rtl">
+    <div style="font-size:10px;color:#5a5870;font-weight:700;margin-bottom:6px">מהמר על:</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      ${candidates.map(c=>`
+        <button onclick="rkManualSelectPick(this,'${c.id}','${c.name}')"
+          data-pid="${c.id}"
+          style="padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#8a8799;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">
+          ${c.name}
+        </button>`).join('')}
+    </div>
+    <button onclick="submitManualRKBet()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.12);color:#5b9bd5;font-size:12px;font-weight:800;cursor:pointer">
+      ✓ אשר הימור
+    </button>`;
+
+  // הוסף לתוך הדיאלוג
+  const box = document.getElementById('rebuy-king-box');
+  if(box) box.querySelector('div').appendChild(panel);
+
+  window._rkManualPick = null;
+}
+
+function rkManualSelectPick(el, pid, name){
+  document.querySelectorAll('#rk-manual-panel button[data-pid]').forEach(b=>{
+    b.style.background='rgba(255,255,255,0.04)';
+    b.style.borderColor='rgba(255,255,255,0.1)';
+    b.style.color='#8a8799';
+  });
+  el.style.background='rgba(91,155,213,0.15)';
+  el.style.borderColor='rgba(91,155,213,0.5)';
+  el.style.color='#5b9bd5';
+  window._rkManualPick = {pid, name};
+}
+
+async function submitManualRKBet(){
+  const rk = S.rebuyKing;
+  if(!rk) return;
+  const bettorName = document.getElementById('rk-manual-name')?.value.trim();
+  if(!bettorName){ notify('הכנס שם'); return; }
+  if(!window._rkManualPick){ notify('בחר שחקן'); return; }
+  const {pid, name: pickedName} = window._rkManualPick;
+  if(bettorName===pickedName){ notify('לא ניתן להמר על עצמך'); return; }
   if(rk.bets?.[bettorName]){ notify(bettorName+' כבר הימר!'); return; }
 
-  const num = parseInt(prompt(`${bettorName} מהמר על מי?\n${candidates.map((c,i)=>`${i+1}. ${c.name}`).join('\n')}\n\nהכנס מספר:`));
-  if(!num||num<1||num>candidates.length){ notify('בחירה לא תקינה'); return; }
-
-  const picked = candidates[num-1];
-  if(bettorName===picked.name){ notify('לא ניתן להמר על עצמך'); return; }
-
   if(!rk.bets) rk.bets={};
-  rk.bets[bettorName]={pickedPid:picked.id,pickedName:picked.name,bettorName,ts:Date.now()};
+  rk.bets[bettorName]={pickedPid:pid, pickedName, bettorName, ts:Date.now()};
   S.rebuyKing=rk; persist();
 
   const uname=encodeURIComponent(currentUser?.username||'');
@@ -1496,8 +1539,8 @@ async function addManualRKBet(){
     body:JSON.stringify(rk.bets[bettorName])
   }).catch(e=>console.log(e));
 
+  notify(`✓ ${bettorName} → ${pickedName}`);
   document.getElementById('rebuy-king-box')?.remove();
-  notify(`✓ ${bettorName} → ${picked.name}`);
   showRebuyKingStatus();
 }
 
