@@ -1296,8 +1296,11 @@ async function showRebuyKingStatus(){
         }).join('')}
       </div>
 
+      <button onclick="addManualRKBet()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(91,155,213,0.3);background:rgba(91,155,213,0.08);color:#5b9bd5;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:6px">
+        ➕ הוסף הימור ידני
+      </button>
       <button onclick="closeRebuyKingBetting()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:6px">
-        🔒 סגור הימורים (מניעת הימורים חדשים)
+        🔒 סגור הימורים
       </button>
       <button onclick="resolveRebuyKing()" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.15);color:#5fc47a;font-size:13px;font-weight:800;cursor:pointer">
         🏆 הכרז מנצח וסיים
@@ -1465,6 +1468,37 @@ async function shareRKImage(){
   } finally {
     if(btn){ btn.textContent='📸 שתף תמונה בוואטסאפ'; btn.disabled=false; }
   }
+}
+
+async function addManualRKBet(){
+  const rk = S.rebuyKing;
+  if(!rk) return;
+  const candidates = rk.candidates||[];
+  if(!candidates.length){ notify('אין שחקנים'); return; }
+
+  const bettorName = prompt('שם המהמר:')?.trim();
+  if(!bettorName) return;
+  if(rk.bets?.[bettorName]){ notify(bettorName+' כבר הימר!'); return; }
+
+  const num = parseInt(prompt(`${bettorName} מהמר על מי?\n${candidates.map((c,i)=>`${i+1}. ${c.name}`).join('\n')}\n\nהכנס מספר:`));
+  if(!num||num<1||num>candidates.length){ notify('בחירה לא תקינה'); return; }
+
+  const picked = candidates[num-1];
+  if(bettorName===picked.name){ notify('לא ניתן להמר על עצמך'); return; }
+
+  if(!rk.bets) rk.bets={};
+  rk.bets[bettorName]={pickedPid:picked.id,pickedName:picked.name,bettorName,ts:Date.now()};
+  S.rebuyKing=rk; persist();
+
+  const uname=encodeURIComponent(currentUser?.username||'');
+  await fetch(`https://poker-suite-db-default-rtdb.europe-west1.firebasedatabase.app/users/${uname}/rebuyKing/bets/${encodeURIComponent(bettorName)}.json`,{
+    method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(rk.bets[bettorName])
+  }).catch(e=>console.log(e));
+
+  document.getElementById('rebuy-king-box')?.remove();
+  notify(`✓ ${bettorName} → ${picked.name}`);
+  showRebuyKingStatus();
 }
 
 function closeRebuyKingBetting(){
