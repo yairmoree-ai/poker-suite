@@ -721,16 +721,6 @@ async function syncFromSheets(){
 
       applySnapshot(data);
       try{ localStorage.setItem('ps_lib', JSON.stringify(S.playerLib)); }catch(e){}
-
-      // סנכרן rebuyKing מ-Firebase
-      try{
-        const rkResp = await fetch(baseUrl+'/rebuyKing.json');
-        const rkData = await rkResp.json();
-        if(rkData && rkData.active !== undefined){
-          S.rebuyKing = rkData;
-        }
-      }catch(e){ console.log('RK sync error',e); }
-
       render();
       renderHandList();
       renderTournList();
