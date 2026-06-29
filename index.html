@@ -227,7 +227,7 @@
 </div>
 </div>
 <!-- CARD PICKER -->
-<div id="card-picker" onclick="if(event.target===this)this.classList.remove('open')"><div id="cpbox" onclick="event.stopPropagation()">
+<div id="card-picker"><div id="cpbox">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
     <button onclick="document.getElementById('card-picker').classList.remove('open')" style="background:none;border:none;color:#5a5870;font-size:13px;cursor:pointer;padding:4px">← חזור</button>
     <div style="font-size:13px;color:var(--gold);font-weight:700" id="cp-title">בחר קלף</div>
@@ -423,5 +423,20 @@
 <script src="game.js"></script>
 <script src="features.js"></script>
 <script src="ui.js"></script>
-</body>
+<script>
+// הצג banner רק בדפדפן (לא ב-Web App)
+if(!window.navigator.standalone && !window.matchMedia('(display-mode: standalone)').matches){
+  window.addEventListener('load', function(){
+    const b = document.createElement('div');
+    b.id = 'install-banner';
+    b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a2a1a;border-top:1px solid rgba(200,169,110,0.3);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;z-index:9998;gap:10px';
+    b.innerHTML = `
+      <span style="font-size:11px;color:#c8a96e;font-weight:700">💡 לחווית שימוש מיטבית — שמור למסך הבית</span>
+      <button onclick="document.getElementById('install-banner').remove();localStorage.setItem('hideBanner','1')" style="background:none;border:none;color:#5a5870;font-size:16px;cursor:pointer;padding:0">✕</button>
+    `;
+    if(!localStorage.getItem('hideBanner')) document.body.appendChild(b);
+  });
+}
+</script>
+
 </html>
