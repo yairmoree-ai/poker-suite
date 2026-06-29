@@ -1357,16 +1357,11 @@ async function _openCameraForCardsInner(target){
       
       if(target==='board'){
         // Fill next empty board slots
-        let filled = 0, dupes = 0;
+        let filled = 0;
         cards.forEach(c=>{
           const slot = S.board.findIndex(b=>!b);
-          if(slot<0||slot>=5) return;
-          // ולידציה: בדוק כפילויות
-          const alreadyUsed = allUsedCards().some(u=>u&&u.rank===c.rank&&u.suit===c.suit);
-          if(alreadyUsed){ dupes++; return; }
-          S.board[slot]=c; filled++;
+          if(slot>=0&&slot<5){ S.board[slot]=c; filled++; }
         });
-        if(dupes) notify('⚠️ '+dupes+' קלפים כפולים הושמטו');
         persist(); renderBoard();
         notify('✓ זוהו '+filled+' קלפים');
         document.getElementById('card-picker').classList.remove('open');
@@ -1374,11 +1369,7 @@ async function _openCameraForCardsInner(target){
         // Fill seat cards (target = seatIdx)
         const seat = S.seats.find(s=>s.seatIdx===parseInt(target));
         if(seat){
-          // ולידציה: סנן קלפים תפוסים
-          const otherUsed = [...(S.board||[]), ...S.seats.filter(s=>s.seatIdx!==seat.seatIdx).flatMap(s=>s.cards||[])].filter(Boolean);
-          const validCards = cards.filter(c=>c&&!otherUsed.some(u=>u.rank===c.rank&&u.suit===c.suit));
-          if(validCards.length < cards.length) notify('⚠️ '+(cards.length-validCards.length)+' קלפים כפולים הושמטו');
-          seat.cards = [validCards[0]||null, validCards[1]||null];
+          seat.cards = [cards[0]||null, cards[1]||null];
           persist(); renderSeats(); renderSeatPanel();
           notify('✓ קלפי שחקן זוהו');
         }
@@ -1676,7 +1667,6 @@ function render(){
   }
   renderTableShape();
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
-  renderPotOdds();
   // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
