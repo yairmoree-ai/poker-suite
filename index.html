@@ -109,8 +109,6 @@
         <button id="blinds-btn" onclick="openBlindsPanel()">-/-</button>
       </div>
     </div>
-    <!-- Pot Odds Bar -->
-    <div id="pot-odds-bar" style="display:none;width:100%;max-width:400px;margin-top:8px;padding:0 10px;box-sizing:border-box"></div>
     <!-- Seat panel -->
     <div class="panel" id="seat-panel">
       <div class="panel-header">
@@ -196,7 +194,14 @@
   </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;color:var(--gold)">🏆 טורנירים</div>
+      <button id="btn-save-tourn" class="btn btn-gold btn-sm" onclick="showSaveTournDialog()">שמור טורניר נוכחי</button>
     </div>
+    <div style="display:flex;gap:7px;margin-bottom:12px">
+      <button id="btn-reset-tourn" class="btn btn-red btn-sm" onclick="resetTournament()">אפס טורניר</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;padding:6px 12px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05)">
+    <button onclick="exportTournsToCSV()" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer">📥 ייצוא לExcel</button>
+  </div>
   <div id="tourn-list"></div>
   </div>
   <!-- PLAYERS -->
@@ -222,7 +227,7 @@
 </div>
 </div>
 <!-- CARD PICKER -->
-<div id="card-picker"><div id="cpbox">
+<div id="card-picker" onclick="if(event.target===this)this.classList.remove('open')"><div id="cpbox" onclick="event.stopPropagation()">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
     <button onclick="document.getElementById('card-picker').classList.remove('open')" style="background:none;border:none;color:#5a5870;font-size:13px;cursor:pointer;padding:4px">← חזור</button>
     <div style="font-size:13px;color:var(--gold);font-weight:700" id="cp-title">בחר קלף</div>
@@ -357,7 +362,6 @@
     <button onclick="showDriveRestore()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(95,196,122,0.3);background:rgba(95,196,122,0.08);color:#5fc47a;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">🔍 שחזר מגיבוי Drive</button>
     <button onclick="showStatistics()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">📊 Statistics</button>
     <button onclick="showUsersManager()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(91,155,213,0.3);background:rgba(91,155,213,0.08);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px" id="btn-users-mgmt">👥 ניהול משתמשים</button>
-    <button id="btn-toggle-pot-odds" onclick="S.showPotOdds=(S.showPotOdds===false);persist();renderPotOdds();this.textContent=S.showPotOdds===false?'📐 הפעל Pot Odds':'📐 כבה Pot Odds'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(126,184,164,0.3);background:rgba(126,184,164,0.07);color:#7eb8a4;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">📐 כבה Pot Odds</button>
     <button onclick="document.getElementById('settings-box').style.display='none'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">סגור</button>
   </div>
 </div>
