@@ -1186,7 +1186,7 @@ function renderCP(){
       const bg = u?'rgba(255,255,255,0.06)':'#fff';
       const rankCol = u?'#666':(isRed?'#d42020':'#111');
       const suitCol = u?'#888':(isRed?'#d42020':'#111');
-      return `<button style="width:36px;height:48px;border-radius:6px;border:1.5px solid ${u?'rgba(255,255,255,0.08)':'#ddd'};background:${bg};cursor:${u?'not-allowed':'pointer'};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;box-shadow:${u?'none':'0 1px 3px rgba(0,0,0,0.4)'};opacity:${u?'0.35':'1'}" ${u?'disabled onclick="return false"':`onclick="cpRank='${rank}';pickCard('${suit}')"`}>
+      return `<button style="width:36px;height:48px;border-radius:6px;border:1.5px solid ${u?'rgba(255,255,255,0.08)':'#ddd'};background:${bg};cursor:${u?'not-allowed':'pointer'};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;box-shadow:${u?'none':'0 1px 3px rgba(0,0,0,0.4)'};opacity:${u?'0.35':'1'}" ${u?'disabled onclick="return false"':`onclick="event.stopPropagation();cpRank='${rank}';pickCard('${suit}')"`}>
         <span style="font-size:13px;font-weight:900;color:${rankCol};line-height:1">${rank}</span>
         <span style="font-size:11px;color:${suitCol};line-height:1">${suit}</span>
       </button>`;
@@ -1526,4 +1526,3 @@ function notify(msg){
   const el=document.getElementById('notif'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2200);
 }
-
