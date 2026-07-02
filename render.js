@@ -1703,6 +1703,8 @@ function renderStats(){
   document.getElementById('sel-table-size').value=S.tableSize;
 }
 function renderSeats(){
+  // אל תרנדר מחדש כשcard-picker פתוח
+  if(document.getElementById('card-picker')?.classList.contains('open')) return;
   const cont=document.getElementById('seats-container'); cont.innerHTML='';
   // class לאפקט scale
   const hasActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null;
