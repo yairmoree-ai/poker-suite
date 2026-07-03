@@ -53,11 +53,18 @@ function pickSeatCard(seatIdx, rank, suit, forceSlot){
     persist(); renderSeats(); renderSeatPanel(); return;
   }
   
-  // Find which slot to fill
   const slot = forceSlot!==undefined ? forceSlot : (!seat.cards[0] ? 0 : !seat.cards[1] ? 1 : 0);
   seat.cards[slot]={rank,suit};
   persist();
-  setTimeout(()=>{ renderSeats(); renderSeatPanel(); }, 50);
+
+  if(slot===0 && !seat.cards[1]){
+    // קלף ראשון נבחר — פתח לוח לקלף שני
+    setTimeout(()=>openSeatCardPicker(seatIdx, 1), 50);
+  } else {
+    // קלף שני נבחר — סגור לוח וחזור לשולחן
+    document.getElementById('card-picker').classList.remove('open');
+    setTimeout(()=>{ renderSeats(); renderSeatPanel(); }, 50);
+  }
 }
 
 function renderSeatPanel(){
