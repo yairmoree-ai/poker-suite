@@ -14,6 +14,35 @@ function savePlayerNote(seatIdx, note){
   persist();
 }
 
+function openSeatCardPicker(seatIdx, slotIdx){
+  // פותח card-picker ייעודי לשחקן עם cpTarget מיוחד
+  cpTarget = 'seat'+seatIdx+'_c'+slotIdx;
+  cpRank = null;
+  // בנה לוח קלפים ייעודי
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  const usedCards = [...(S.board||[]), ...(S.seats.filter(s=>s.seatIdx!==seatIdx).flatMap(s=>s.cards||[]))].filter(Boolean);
+  const suits = ['♠','♥','♦','♣'];
+  const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const SC2 = {'♠':'#111','♥':'#d32f2f','♦':'#d32f2f','♣':'#111'};
+  const rows = suits.map(suit=>{
+    const btns = ranks.map(rank=>{
+      const used = usedCards.some(c=>c&&c.rank===rank&&c.suit===suit);
+      const isSelected = (seat?.cards||[]).some(c=>c&&c.rank===rank&&c.suit===suit);
+      const isRed = suit==='♥'||suit==='♦';
+      const bg = isSelected?'#c8a96e':used?'rgba(255,255,255,0.08)':'#fff';
+      const col = used?'#888':isSelected?'#000':(isRed?'#d32f2f':'#111');
+      return `<button style="width:34px;height:46px;border-radius:5px;border:1.5px solid ${used&&!isSelected?'rgba(255,255,255,0.08)':'#ddd'};background:${bg};cursor:${used&&!isSelected?'not-allowed':'pointer'};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;opacity:${used&&!isSelected?'0.3':'1'}" ${used&&!isSelected?'disabled':''} onclick="pickSeatCard(${seatIdx},'${rank}','${suit}',${slotIdx});document.getElementById('card-picker').classList.remove('open')">
+        <span style="font-size:12px;font-weight:900;color:${col};line-height:1">${rank}</span>
+        <span style="font-size:11px;color:${col};line-height:1">${suit}</span>
+      </button>`;
+    }).join('');
+    return `<div style="display:flex;gap:2px;margin-bottom:2px;direction:ltr">${btns}</div>`;
+  }).join('');
+  document.getElementById('cp-title').textContent = 'קלף '+(slotIdx===0?'ראשון':'שני');
+  document.getElementById('cp-content').innerHTML = `<div style="padding:4px;direction:ltr">${rows}</div>`;
+  document.getElementById('card-picker').classList.add('open');
+}
+
 function pickSeatCard(seatIdx, rank, suit, forceSlot){
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat) return;
@@ -27,14 +56,8 @@ function pickSeatCard(seatIdx, rank, suit, forceSlot){
   // Find which slot to fill
   const slot = forceSlot!==undefined ? forceSlot : (!seat.cards[0] ? 0 : !seat.cards[1] ? 1 : 0);
   seat.cards[slot]={rank,suit};
-  persist(); renderSeats();
-  
-  // Auto-advance to second card
-  if(slot===0 && !seat.cards[1]){
-    renderSeatPanel(); // re-render to show second slot active
-  } else {
-    renderSeatPanel();
-  }
+  persist();
+  setTimeout(()=>{ renderSeats(); renderSeatPanel(); }, 50);
 }
 
 function renderSeatPanel(){
@@ -605,12 +628,7 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   }
   // Give each action a global index for ordering
   const allActCount = S.seats.reduce((n,s)=>(s.actions||[]).length+n, 0);
-  const actionObj = {street,type,displayType,amount:deltaAmt?String(deltaAmt):"",raiseRound:currentRound,idx:allActCount};
-  if(type==="Call" && S._potOddsSnapshot && S._potOddsSnapshot.callAmt > 0){
-    actionObj.potOdds = Object.assign({},S._potOddsSnapshot);
-    S._potOddsSnapshot = null;
-  }
-  seat.actions.push(actionObj);
+  seat.actions.push({street,type,displayType,amount:deltaAmt?String(deltaAmt):'',raiseRound:currentRound,idx:allActCount});
   if(isRaise){
     S.lastRaiser = {seat:seatIdx, round:currentRound};
     // After a raise, next actor starts from player AFTER the raiser
