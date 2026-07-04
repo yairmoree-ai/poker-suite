@@ -51,8 +51,25 @@ const RESULTS=[
 // STATE
 // ═══════════════════════════════════════════════════════
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+// זמן יצירה של יד: שדה ts אם קיים, אחרת חילוץ מ-8 התווים האחרונים של ה-id (Date.now בבסיס 36)
+const handTs=h=>h?.ts||(h?.id?parseInt(String(h.id).slice(-8),36)||0:0);
+// ── Tombstones: סימון פריט כמחוק כדי שהסנכרון לא יחזיר אותו ──
+const TOMBSTONE_TTL = 90*24*60*60*1000; // 90 יום
+function markDeleted(kind,id){
+  if(!id) return;
+  if(!S.deleted) S.deleted={hands:{},players:{},tourns:{}};
+  if(!S.deleted[kind]) S.deleted[kind]={};
+  S.deleted[kind][id]=Date.now();
+  // ניקוי tombstones ישנים
+  const cutoff=Date.now()-TOMBSTONE_TTL;
+  Object.keys(S.deleted).forEach(k=>{
+    Object.entries(S.deleted[k]).forEach(([i,t])=>{ if(t<cutoff) delete S.deleted[k][i]; });
+  });
+}
+const isDeleted=(kind,id)=>!!(id && S.deleted?.[kind]?.[id]);
 let S={
   playerLib:[],
+  deleted:{hands:{},players:{},tourns:{}}, // tombstones: id->ts של פריטים שנמחקו — מונע "תחייה" בסנכרון
   tableSize:9,
   tableOrientation:'vertical',
   buyinCost:50,
@@ -87,26 +104,39 @@ let curHand=null, recStreet='פרה-פלופ', recActor='0';
 // STORAGE
 // ═══════════════════════════════════════════════════════
 function applySnapshot(v){
-  // מזג handLog — הוסף ידיים חסרות לפי id
+  // ── מזג tombstones נכנסים (מחיקות ממכשירים אחרים) ──
+  if(v.deleted && typeof v.deleted==='object'){
+    if(!S.deleted) S.deleted={hands:{},players:{},tourns:{}};
+    ['hands','players','tourns'].forEach(k=>{
+      Object.entries(v.deleted[k]||{}).forEach(([id,ts])=>{
+        if(!S.deleted[k][id] || ts>S.deleted[k][id]) S.deleted[k][id]=ts;
+      });
+    });
+    // הסר מקומית פריטים שנמחקו במכשיר אחר
+    S.handLog  = (S.handLog||[]).filter(h=>!isDeleted('hands',h.id));
+    S.tournLog = (S.tournLog||[]).filter(t=>!isDeleted('tourns',t.id));
+    S.playerLib= (S.playerLib||[]).filter(p=>!isDeleted('players',p.id));
+  }
+  // מזג handLog — הוסף ידיים חסרות לפי id (מדלג על מחוקות)
   if(v.handLog?.length){
     const existingIds = new Set((S.handLog||[]).map(h=>h.id).filter(Boolean));
-    const newHands = v.handLog.filter(h=>h.id && !existingIds.has(h.id));
+    const newHands = v.handLog.filter(h=>h.id && !existingIds.has(h.id) && !isDeleted('hands',h.id));
     if(newHands.length){
-      S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(b.ts||0)-(a.ts||0));
+      S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>handTs(b)-handTs(a));
     }
   }
-  // מזג tournLog — הוסף טורנירים חסרים לפי id
+  // מזג tournLog — הוסף טורנירים חסרים לפי id (מדלג על מחוקים)
   if(v.tournLog?.length){
     const existingIds = new Set((S.tournLog||[]).map(t=>t.id).filter(Boolean));
-    const newT = v.tournLog.filter(t=>t.id && !existingIds.has(t.id));
+    const newT = v.tournLog.filter(t=>t.id && !existingIds.has(t.id) && !isDeleted('tourns',t.id));
     if(newT.length){
       S.tournLog = [...(S.tournLog||[]), ...newT].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
     }
   }
-  // מזג playerLib — הוסף שחקנים חסרים לפי id
+  // מזג playerLib — הוסף שחקנים חסרים לפי id (מדלג על מחוקים)
   if(v.playerLib?.length){
     const existingIds = new Set((S.playerLib||[]).map(p=>p.id).filter(Boolean));
-    const newP = v.playerLib.filter(p=>p.id && !existingIds.has(p.id));
+    const newP = v.playerLib.filter(p=>p.id && !existingIds.has(p.id) && !isDeleted('players',p.id));
     if(newP.length) S.playerLib = [...(S.playerLib||[]), ...newP];
   }
   // שאר השדות — קח מהגרסה החדשה יותר בלבד
@@ -234,7 +264,6 @@ function loadState(){
 }
 function persist(){
   if(isViewer()) return;
-  if(isViewer()) return;
   S.savedAt = Date.now();
   const snap = fullSnapshot();
   // Save to both localStorage and sessionStorage
@@ -248,8 +277,8 @@ function persist(){
   // Save to all known old keys for migration
   try{ localStorage.setItem('ps_backup', JSON.stringify(snap)); }catch(e){}
   S._lastSaved = Date.now();
-  // Auto-sync to Google Sheets - only for admins, immediate
-  if(typeof syncToSheets === 'function' && getGsUrl() && isAdmin()) syncToSheets(true);
+  // Auto-sync to Google Sheets - only for admins, debounced (batches rapid actions into one push)
+  if(typeof syncToSheets === 'function' && getGsUrl() && isAdmin()) syncToSheets(false);
 }
 
 function fullSnapshot(){
@@ -260,7 +289,7 @@ function fullSnapshot(){
     blindLevel:S.blindLevel, customBlinds:S.customBlinds,
     customBlindLevels:S.customBlindLevels, tableSize:S.tableSize, tableOrientation:S.tableOrientation,
     houseRake:S.houseRake, place4:S.place4, place3:S.place3,
-    handLog:S.handLog, tournLog:S.tournLog,
+    handLog:S.handLog, tournLog:S.tournLog, deleted:S.deleted||{hands:{},players:{},tourns:{}},
     blindTimer:S.blindTimer, blindStructure:S.blindStructure
   };
 }

@@ -524,6 +524,7 @@ function addPlayer(){if(isViewer()){notify('צופה בלבד');return;}
   persist(); renderPlayerList(); notify('שחקן נוסף ✓');
 }
 function deletePlayer(id){if(isViewer()){notify('צופה בלבד');return;}
+  markDeleted('players',id);
   S.playerLib=S.playerLib.filter(p=>p.id!==id);
   persist(); renderPlayerList();
 }
@@ -656,9 +657,11 @@ async function syncToSheets(immediate){
     const baseUrl = FIREBASE_URL+'/users/'+uname;
 
     // שמור snapshot ראשי (ללא handLog)
+    // PATCH ולא PUT! PUT מחליף את כל הצומת ומוחק את /hands עד שיכתבו מחדש —
+    // כשל רשת באמצע היה גורם לאובדן כל הידיים בענן
     const snapWithoutHands = {...snap, handLog:[]};
     const resp = await fetch(baseUrl+'.json', {
-      method:'PUT',
+      method:'PATCH',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(snapWithoutHands)
     });
@@ -709,10 +712,10 @@ async function syncFromSheets(){
       if(handsData && typeof handsData === 'object'){
         const remoteHands = Object.values(handsData).filter(Boolean);
         const existingIds = new Set((S.handLog||[]).map(h=>h.id).filter(Boolean));
-        const newHands = remoteHands.filter(h=>h.id && !existingIds.has(h.id));
+        const newHands = remoteHands.filter(h=>h.id && !existingIds.has(h.id) && !isDeleted('hands',h.id));
         console.log('[syncFromSheets] remote='+remoteHands.length+' existing='+existingIds.size+' new='+newHands.length);
         if(newHands.length){
-          S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>(b.ts||0)-(a.ts||0));
+          S.handLog = [...(S.handLog||[]), ...newHands].sort((a,b)=>handTs(b)-handTs(a));
           try{ localStorage.setItem('ps_log', JSON.stringify(S.handLog)); }catch(e){}
         }
         // גם עדכן ידיים קיימות שמשתנות

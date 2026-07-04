@@ -734,7 +734,7 @@ function initSeatLongPress(el, seatIdx){
   el.addEventListener('touchend',   onTouchEnd,   {passive:false});
   el.addEventListener('touchcancel',cancelTimer);
 }
-function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
+// closeSeatPanel מוגדרת ב-ui.js (הוסרה כאן — הייתה הגדרה כפולה)
 function setSeatPlayer(i,pid){
   const existing = S.seats.find(s=>s.seatIdx===i);
   const stack = existing?.stack||(S.defaultRebuyAmount||50000);
@@ -855,7 +855,7 @@ function autoSaveAndPromptReset(winnerSeatIdxs){
   const swp = assignPos();
   const b = getBlinds();
   const hand = {
-    id:uid(), date:new Date().toLocaleDateString('he-IL'),
+    id:uid(), ts:Date.now(), date:new Date().toLocaleDateString("he-IL"),
     blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
     label, board:[...S.board],
     seats: swp.filter(s=>s.playerId).map(s=>({
@@ -1405,7 +1405,7 @@ function confirmResetHand(){
     const swp = assignPos();
     const b = getBlinds();
     const hand = {
-      id:uid(), date:new Date().toLocaleDateString('he-IL'),
+      id:uid(), ts:Date.now(), date:new Date().toLocaleDateString("he-IL"),
       blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
       label, board:[...S.board],
       seats: swp.filter(s=>s.playerId).map(s=>({
@@ -1468,7 +1468,7 @@ function saveHandWithLabel(){
   const swp = assignPos();
   const b = getBlinds();
   const hand = {
-    id:uid(), date:new Date().toLocaleDateString('he-IL'),
+    id:uid(), ts:Date.now(), date:new Date().toLocaleDateString("he-IL"),
     blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
     label, board:[...S.board],
     seats: swp.filter(s=>s.playerId).map(s=>({

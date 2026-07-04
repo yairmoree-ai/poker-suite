@@ -112,7 +112,7 @@ function newHand(){
   const swp=assignPos();
   const b=getBlinds();
   curHand={
-    id:uid(), date:new Date().toLocaleDateString('he-IL'),
+    id:uid(), ts:Date.now(), date:new Date().toLocaleDateString('he-IL'),
     blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
     board:[...S.board],
     seats:swp.filter(s=>s.playerId).map(s=>({
@@ -520,7 +520,7 @@ function renderHandList(){
   const search = (document.getElementById('hand-search')?.value||'').toLowerCase();
   const filterPlayer = document.getElementById('hand-filter-player')?.value||'';
   let hands = S.handLog||[];
-  hands = [...hands].sort((a,b)=>(b.ts||0)-(a.ts||0));
+  hands = [...hands].sort((a,b)=>handTs(b)-handTs(a));
   if(search) hands = hands.filter(h=>(h.label||'').toLowerCase().includes(search)||(h.seats||[]).some(s=>(s.playerName||'').toLowerCase().includes(search)));
   if(filterPlayer) hands = hands.filter(h=>(h.seats||[]).some(s=>s.playerName===filterPlayer));
 
@@ -605,7 +605,15 @@ function renderHandList(){
   }).join('');
 }
 function deleteHand(hi){
+  const hand = S.handLog[hi];
+  markDeleted('hands',hand?.id);
   S.handLog.splice(hi,1); persist(); renderHandList();
+  // מחק גם מ-Firebase — אחרת syncFromSheets ימזג את היד חזרה תוך 10 שניות
+  if(hand?.id && !isViewer() && !isLocal() && currentUser?.username){
+    const uname = encodeURIComponent(currentUser.username);
+    fetch(FIREBASE_URL+'/users/'+uname+'/hands/'+hand.id+'.json',{method:'DELETE'})
+      .catch(e=>console.log('[deleteHand] cloud delete failed:', e.message));
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -731,6 +739,7 @@ function saveTournName(ti, name){
 }
 
 function deleteTournament(ti){
+  markDeleted('tourns',S.tournLog[ti]?.id);
   S.tournLog.splice(ti,1); persist(); renderTournList();
 }
 function renderTournList(){
