@@ -1678,7 +1678,7 @@ function render(){
     if(order.includes(S.currentActor)) S.bettingClosed = false;
   }
   renderTableShape();
-  renderStats(); renderSeats(); renderBoard(); renderBlindsBtn();
+  renderStats(); renderSeats(); renderBoard(); renderBlindsBtn(); renderPotOdds();
   // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
