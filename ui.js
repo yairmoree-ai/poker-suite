@@ -279,8 +279,8 @@ function showHandDetail(hid){
     boardCards2.forEach(c=>{
       const isRed=c.suit==='♥'||c.suit==='♦';
       const bc2=document.createElement('div');
-      bc2.style.cssText = 'width:38px;height:54px;border-radius:5px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:3px;box-sizing:border-box;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6);opacity:1';
-      bc2.innerHTML='<span style="font-size:18px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:16px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
+      bc2.style.cssText = 'width:38px;height:54px;border-radius:5px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6);opacity:1';
+      bc2.innerHTML='<span style="font-size:16px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:12px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
       brow.appendChild(bc2);
     });
     const potLbl = document.createElement('div');
@@ -336,8 +336,8 @@ function showHandDetail(hid){
       seatCards.forEach(c=>{
         const isRed=c.suit==='♥'||c.suit==='♦';
         const cd=document.createElement('div');
-        cd.style.cssText = 'width:26px;height:36px;border-radius:3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;box-sizing:border-box;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);opacity:1';
-        cd.innerHTML='<span style="font-size:15px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:13px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
+        cd.style.cssText = 'width:26px;height:36px;border-radius:3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);opacity:1';
+        cd.innerHTML='<span style="font-size:13px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:10px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
         cContainer.appendChild(cd);
       });
       tableDiv.appendChild(cContainer);
