@@ -2078,6 +2078,12 @@ document.addEventListener('visibilitychange', ()=>{
 // מכסה: הופעה/היעלמות סרגלי ספארי, סיבוב מכשיר, שינוי גודל חלון בדסקטופ, כניסה/יציאה מ-PWA
 let _resizeRaf = null;
 function _handleViewportResize(){
+  // אם יש שדה קלט פעיל (המשתמש עורך ערך כרגע) — לא לרנדר מחדש.
+  // באייפון, פתיחת המקלדת הווירטואלית משנה את visualViewport.height בדיוק כמו שינוי מסך אמיתי,
+  // ובלי השורה הזו הרינדור מוחק את שדה העריכה הרגעי (כמו עריכת ערימה) לפני שהמשתמש מספיק להקליד.
+  const ae = document.activeElement;
+  if(ae && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA')) return;
+
   if(_resizeRaf) cancelAnimationFrame(_resizeRaf);
   _resizeRaf = requestAnimationFrame(()=>{
     renderTableShape();
