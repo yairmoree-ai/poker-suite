@@ -275,12 +275,12 @@ function showHandDetail(hid){
     const bc = document.createElement('div');
     bc.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px';
     const brow = document.createElement('div');
-    brow.style.cssText = 'display:flex;gap:2px;direction:ltr';
+    brow.style.cssText = 'display:flex;gap:5px;direction:ltr';
     boardCards2.forEach(c=>{
       const isRed=c.suit==='♥'||c.suit==='♦';
       const bc2=document.createElement('div');
-      bc2.style.cssText = 'width:38px;height:54px;border-radius:5px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6);opacity:1';
-      bc2.innerHTML='<span style="font-size:16px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:12px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
+      bc2.style.cssText = 'width:34px;height:48px;border-radius:5px;background:#fff;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6);opacity:1';
+      bc2.innerHTML='<span style="font-size:20px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:15px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
       brow.appendChild(bc2);
     });
     const potLbl = document.createElement('div');
@@ -332,12 +332,12 @@ function showHandDetail(hid){
       const cardOffX = (dx/len)*22; // offset toward center
       const cardOffY = (dy/len)*22;
       const cContainer = document.createElement('div');
-      cContainer.style.cssText = 'position:absolute;left:'+(px+cardOffX)+'%;top:'+(py+cardOffY)+'%;transform:translate(-50%,-50%);display:flex;gap:2px;direction:ltr;z-index:5';
+      cContainer.style.cssText = 'position:absolute;left:'+(px+cardOffX)+'%;top:'+(py+cardOffY)+'%;transform:translate(-50%,-50%);display:flex;gap:5px;direction:ltr;z-index:5';
       seatCards.forEach(c=>{
         const isRed=c.suit==='♥'||c.suit==='♦';
         const cd=document.createElement('div');
-        cd.style.cssText = 'width:26px;height:36px;border-radius:3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);opacity:1';
-        cd.innerHTML='<span style="font-size:13px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:10px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
+        cd.style.cssText = 'width:24px;height:34px;border-radius:3px;background:#fff;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);opacity:1';
+        cd.innerHTML='<span style="font-size:15px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:11px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
         cContainer.appendChild(cd);
       });
       tableDiv.appendChild(cContainer);
