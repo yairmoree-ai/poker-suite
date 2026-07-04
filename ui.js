@@ -279,12 +279,12 @@ function showHandDetail(hid){
     boardCards2.forEach(c=>{
       const isRed=c.suit==='♥'||c.suit==='♦';
       const bc2=document.createElement('div');
-      bc2.style.cssText = 'width:32px;height:46px;border-radius:5px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6);opacity:1';
-      bc2.innerHTML='<span style="color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:10px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
+      bc2.style.cssText = 'width:38px;height:54px;border-radius:5px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6);opacity:1';
+      bc2.innerHTML='<span style="color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:12px;color:'+(isRed?'#e05555':'#111')+'">'+c.suit+'</span>';
       brow.appendChild(bc2);
     });
     const potLbl = document.createElement('div');
-    potLbl.style.cssText = 'font-size:8px;font-weight:700;color:#5fc47a;background:rgba(0,0,0,0.5);padding:1px 6px;border-radius:6px';
+    potLbl.style.cssText = 'font-size:10px;font-weight:700;color:#5fc47a;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:6px';
     potLbl.textContent = 'Pot: '+(h.finalPot||calcPot()||0).toLocaleString();
     bc.appendChild(brow); bc.appendChild(potLbl);
     tableDiv.appendChild(bc);
@@ -311,17 +311,17 @@ function showHandDetail(hid){
     const posColor = s.pos==='BTN'?'#c8a96e':s.pos==='SB'?'#8b7cb8':s.pos==='BB'?'#e07b6a':'#6a8090';
     
     const circle = document.createElement('div');
-    const sz = 46; // will auto-height
+    const sz = 56; // will auto-height
     const hasCards = (s.cards||[]).filter(Boolean).length>0;
     circle.style.cssText = 'width:'+sz+'px;min-height:'+sz+'px;border-radius:8px;background:#121824;border:1.5px solid '+(s.folded?'rgba(255,255,255,0.06)':hasWon?'#5fc47a':'rgba(255,255,255,0.12)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3px 2px;opacity:'+(s.folded?0.4:1)+';'+(hasWon?'box-shadow:0 0 6px rgba(95,196,122,0.4)':'');
     
     const seatCards = (s.cards||[]).filter(Boolean);
     // Always show pos+name
     const posEl=document.createElement('div');
-    posEl.style.cssText='font-size:6px;font-weight:800;color:'+posColor+';line-height:1';
+    posEl.style.cssText='font-size:8px;font-weight:800;color:'+posColor+';line-height:1';
     posEl.textContent=s.pos||'';
     const nameEl=document.createElement('div');
-    nameEl.style.cssText='font-size:7px;font-weight:700;color:'+(isMe?'#c8a96e':'#e2ddd4')+';line-height:1.1';
+    nameEl.style.cssText='font-size:9px;font-weight:700;color:'+(isMe?'#c8a96e':'#e2ddd4')+';line-height:1.1';
     nameEl.textContent=(s.playerName||'').slice(0,5);
     circle.appendChild(posEl); circle.appendChild(nameEl);
     // Cards shown outside circle, on the table, positioned toward center
@@ -329,15 +329,15 @@ function showHandDetail(hid){
       // Calculate direction toward center
       const dx = 50 - px; const dy = 50 - py;
       const len = Math.sqrt(dx*dx+dy*dy)||1;
-      const cardOffX = (dx/len)*18; // offset toward center
-      const cardOffY = (dy/len)*18;
+      const cardOffX = (dx/len)*22; // offset toward center
+      const cardOffY = (dy/len)*22;
       const cContainer = document.createElement('div');
       cContainer.style.cssText = 'position:absolute;left:'+(px+cardOffX)+'%;top:'+(py+cardOffY)+'%;transform:translate(-50%,-50%);display:flex;gap:2px;direction:ltr;z-index:5';
       seatCards.forEach(c=>{
         const isRed=c.suit==='♥'||c.suit==='♦';
         const cd=document.createElement('div');
-        cd.style.cssText = 'width:20px;height:28px;border-radius:3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);opacity:1';
-        cd.innerHTML='<span style="color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:6px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
+        cd.style.cssText = 'width:26px;height:36px;border-radius:3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);opacity:1';
+        cd.innerHTML='<span style="color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:9px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
         cContainer.appendChild(cd);
       });
       tableDiv.appendChild(cContainer);
@@ -347,7 +347,7 @@ function showHandDetail(hid){
     // Win chip
     if(hasWon && h.finalPot){
       const chip=document.createElement('div');
-      chip.style.cssText='background:#5fc47a;color:#0a0d14;font-size:6px;font-weight:900;padding:1px 4px;border-radius:5px;white-space:nowrap';
+      chip.style.cssText='background:#5fc47a;color:#0a0d14;font-size:8px;font-weight:900;padding:1px 5px;border-radius:5px;white-space:nowrap';
       chip.textContent='+'+h.finalPot.toLocaleString();
       seatEl.appendChild(chip);
     }
