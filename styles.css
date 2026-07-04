@@ -109,6 +109,8 @@ input,select,textarea{font-family:inherit}
 #board-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;z-index:5;pointer-events:auto}
 #board-cards{display:flex;gap:4px;direction:ltr}
 #pot-display{font-size:11px;font-weight:700;color:var(--gold);text-align:center;text-shadow:0 1px 4px rgba(0,0,0,0.8);background:rgba(0,0,0,0.4);border-radius:8px;padding:2px 10px}
+#showdown-banner{font-size:18px;font-weight:900;color:#0a0d14;text-align:center;background:#c8a96e;border-radius:12px;padding:8px 20px;box-shadow:0 4px 20px rgba(200,169,110,0.6);animation:sdPulse 1.4s ease-in-out infinite}
+@keyframes sdPulse{0%,100%{transform:scale(1);box-shadow:0 4px 20px rgba(200,169,110,0.6)}50%{transform:scale(1.06);box-shadow:0 4px 28px rgba(200,169,110,0.9)}}
 .board-card-btn{border-radius:6px;background:rgba(0,0,0,0.4);border:1.5px dashed rgba(255,255,255,0.18);display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;flex-shrink:0;transition:all .15s}
 .board-card-btn:hover{border-color:var(--gold)}
 .board-card-btn.has-card{background:#fff;border-color:#ddd;border-style:solid;justify-content:flex-start;padding-top:8%}

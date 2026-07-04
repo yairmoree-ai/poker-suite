@@ -967,8 +967,8 @@ function checkAutoWin(){
   // All remaining players are all-in (no one can act) → showdown
   const canAct = active.filter(s=>!s.allin);
   if(canAct.length===0 && active.length>1){
-    // Auto-deal remaining streets and show showdown
-    setTimeout(()=>showShowdownPanel(),300);
+    // Auto-deal remaining streets and enter showdown mode (הזנת קלפים לפני בחירת מנצח)
+    setTimeout(()=>{ S._showdownMode=true; renderSeats(); },300);
     return true;
   }
   return false;
@@ -1288,13 +1288,13 @@ function advanceTurn(fromSeatIdx){
       // All-in situation: at least one player is all-in
       // After calling an all-in → deal remaining cards then showdown
       if(hasAllin){
-if(bCnt===5) showShowdownPanel();
+        if(bCnt===5){ S._showdownMode=true; renderSeats(); }
         else autoOpenNextCard();
         return;
       }
       // Normal betting close
       if(bCnt===5){
-        showShowdownPanel();
+        S._showdownMode=true; renderSeats();
       } else {
         autoOpenNextCard();
       }
