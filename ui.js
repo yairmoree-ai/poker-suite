@@ -304,45 +304,48 @@ function showHandDetail(hid){
     const py = cy + ry*Math.sin(angle);
     
     const seatEl = document.createElement('div');
-    seatEl.style.cssText = 'position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;left:'+px+'%;top:'+py+'%';
+    seatEl.style.cssText = 'position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;left:'+px+'%;top:'+py+'%;z-index:5';
     
     const isMe = s.playerName===myNameDet2||(s.playerId&&pName(s.playerId)===myNameDet2);
     const hasWon = (h.winners||[]).some(w=>w.seatIdx===s.seatIdx||w.playerId===s.playerId);
     const posColor = s.pos==='BTN'?'#c8a96e':s.pos==='SB'?'#8b7cb8':s.pos==='BB'?'#e07b6a':'#6a8090';
-    
-    const circle = document.createElement('div');
-    const sz = 56; // will auto-height
-    const hasCards = (s.cards||[]).filter(Boolean).length>0;
-    circle.style.cssText = 'width:'+sz+'px;min-height:'+sz+'px;border-radius:8px;background:#121824;border:1.5px solid '+(s.folded?'rgba(255,255,255,0.06)':hasWon?'#5fc47a':'rgba(255,255,255,0.12)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3px 2px;opacity:'+(s.folded?0.4:1)+';'+(hasWon?'box-shadow:0 0 6px rgba(95,196,122,0.4)':'');
-    
     const seatCards = (s.cards||[]).filter(Boolean);
-    // Always show pos+name
+    const hasCards = seatCards.length>0;
+
+    // Position tag
     const posEl=document.createElement('div');
-    posEl.style.cssText='font-size:8px;font-weight:800;color:'+posColor+';line-height:1';
+    posEl.style.cssText='font-size:8px;font-weight:800;color:'+posColor+';line-height:1;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:5px';
     posEl.textContent=s.pos||'';
-    const nameEl=document.createElement('div');
-    nameEl.style.cssText='font-size:9px;font-weight:700;color:'+(isMe?'#c8a96e':'#e2ddd4')+';line-height:1.1';
-    nameEl.textContent=(s.playerName||'').slice(0,5);
-    circle.appendChild(posEl); circle.appendChild(nameEl);
-    // Cards shown outside circle, on the table, positioned toward center
-    if(seatCards.length){
-      // Calculate direction toward center
-      const dx = 50 - px; const dy = 50 - py;
-      const len = Math.sqrt(dx*dx+dy*dy)||1;
-      const cardOffX = (dx/len)*22; // offset toward center
-      const cardOffY = (dy/len)*22;
-      const cContainer = document.createElement('div');
-      cContainer.style.cssText = 'position:absolute;left:'+(px+cardOffX)+'%;top:'+(py+cardOffY)+'%;transform:translate(-50%,-50%);display:flex;gap:5px;direction:ltr;z-index:5';
+    seatEl.appendChild(posEl);
+
+    if(hasCards){
+      // קלפים על המושב עצמו, השם מוצג מתחתיהם
+      const cardsRow = document.createElement('div');
+      cardsRow.style.cssText = 'display:flex;gap:4px;direction:ltr;opacity:'+(s.folded?0.4:1);
       seatCards.forEach(c=>{
         const isRed=c.suit==='♥'||c.suit==='♦';
         const cd=document.createElement('div');
-        cd.style.cssText = 'width:24px;height:34px;border-radius:3px;background:#fff;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);opacity:1';
-        cd.innerHTML='<span style="font-size:15px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:11px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
-        cContainer.appendChild(cd);
+        cd.style.cssText = 'width:26px;height:36px;border-radius:3px;background:#fff;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.6);'+(hasWon?'box-shadow:0 0 6px rgba(95,196,122,0.6),0 2px 4px rgba(0,0,0,0.6)':'');
+        cd.innerHTML='<span style="font-size:16px;color:'+(isRed?'#d42020':'#111')+'">'+c.rank+'</span><span style="font-size:12px;color:'+(isRed?'#d42020':'#111')+'">'+c.suit+'</span>';
+        cardsRow.appendChild(cd);
       });
-      tableDiv.appendChild(cContainer);
+      seatEl.appendChild(cardsRow);
+
+      const nameEl=document.createElement('div');
+      nameEl.style.cssText='font-size:9px;font-weight:700;color:'+(isMe?'#c8a96e':'#e2ddd4')+';line-height:1.1;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:5px;white-space:nowrap';
+      nameEl.textContent=(s.playerName||'').slice(0,8);
+      seatEl.appendChild(nameEl);
+    } else {
+      // אין קלפים גלויים — תיבה קומפקטית עם עמדה+שם בלבד
+      const circle = document.createElement('div');
+      const sz = 50;
+      circle.style.cssText = 'width:'+sz+'px;min-height:'+sz+'px;border-radius:8px;background:#121824;border:1.5px solid '+(s.folded?'rgba(255,255,255,0.06)':hasWon?'#5fc47a':'rgba(255,255,255,0.12)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3px 2px;opacity:'+(s.folded?0.4:1)+';'+(hasWon?'box-shadow:0 0 6px rgba(95,196,122,0.4)':'');
+      const nameEl=document.createElement('div');
+      nameEl.style.cssText='font-size:9px;font-weight:700;color:'+(isMe?'#c8a96e':'#e2ddd4')+';line-height:1.1';
+      nameEl.textContent=(s.playerName||'').slice(0,5);
+      circle.appendChild(nameEl);
+      seatEl.appendChild(circle);
     }
-    seatEl.appendChild(circle);
     
     // Win chip
     if(hasWon && h.finalPot){
