@@ -109,9 +109,9 @@ input,select,textarea{font-family:inherit}
 #board-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;z-index:5;pointer-events:auto}
 #board-cards{display:flex;gap:4px;direction:ltr}
 #pot-display{font-size:11px;font-weight:700;color:var(--gold);text-align:center;text-shadow:0 1px 4px rgba(0,0,0,0.8);background:rgba(0,0,0,0.4);border-radius:8px;padding:2px 10px}
-.board-card-btn{border-radius:6px;background:rgba(0,0,0,0.4);border:1.5px dashed rgba(255,255,255,0.18);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s}
+.board-card-btn{border-radius:6px;background:rgba(0,0,0,0.4);border:1.5px dashed rgba(255,255,255,0.18);display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;flex-shrink:0;transition:all .15s}
 .board-card-btn:hover{border-color:var(--gold)}
-.board-card-btn.has-card{background:#fff;border-color:#ddd;border-style:solid}
+.board-card-btn.has-card{background:#fff;border-color:#ddd;border-style:solid;justify-content:flex-start;padding-top:8%}
 .card-label{font-size:7px;color:rgba(255,255,255,0.2);margin-top:2px;text-align:center}
 #blinds-btn{padding:5px 14px;border-radius:18px;border:1px solid rgba(200,169,110,0.35);background:rgba(8,11,18,0.92);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(6px);white-space:nowrap}
 /* PANELS */
