@@ -57,7 +57,7 @@ input,select,textarea{font-family:inherit}
 .nav-tab{padding:5px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#5a5870;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;-webkit-appearance:none}
 .nav-tab.active{background:rgba(200,169,110,0.15);border-color:rgba(200,169,110,0.4);color:var(--gold)}
 /* MAIN */
-#main{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
+#main{flex:1;overflow-y:visible;overflow-x:hidden;position:relative;display:flex;flex-direction:column}
 /* TABLE */
 #table-view{flex:1;overflow-x:hidden;overflow-y:visible;display:flex;flex-direction:column;position:relative}
 #table-wrap{position:relative;overflow:visible;background:#080b12;width:min(96vw,600px);height:min(72vw,450px);margin:auto;flex-shrink:0;transition:width 0.3s ease, height 0.3s ease;}
