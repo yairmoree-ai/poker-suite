@@ -124,9 +124,9 @@ input,select,textarea{font-family:inherit}
 .panel-body{padding:8px 12px 80px}
 .panel-close{background:none;border:none;color:var(--muted);font-size:20px;line-height:1;padding:0}
 /* CARD PICKER */
-#card-picker{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:16px}
+#card-picker{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:8px}
 #card-picker.open{display:flex}
-#cpbox{background:#0f1420;border:1px solid rgba(200,169,110,0.18);border-radius:18px;padding:18px 14px;width:100%;max-width:380px}
+#cpbox{background:#0f1420;border:1px solid rgba(200,169,110,0.18);border-radius:18px;padding:16px 8px;width:100%;max-width:440px}
 .rank-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
 .suit-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
 .rank-btn,.suit-btn{padding:10px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text);font-weight:800;font-size:15px;cursor:pointer}
