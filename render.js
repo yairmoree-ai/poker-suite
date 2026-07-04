@@ -1589,11 +1589,23 @@ function renderTableShape(){
   if(!wrap || !svg) return;
 
   // Lovable: max-w-[420px] aspect-[3/4]
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const topBarH = 175;
+  // מדידת שטח זמין אמיתי (במקום הנחת "topBarH=175" קבועה) —
+  // כך זה מתאים את עצמו לכל דפדפן/מכשיר: ספארי עם/בלי סרגלים, כרום, דסקטופ, PWA
+  const vw = (window.visualViewport && window.visualViewport.width) || window.innerWidth;
+  const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+
+  let usedTop = 0;
+  ['viewer-banner','topbar','live-actions-bar','table-size-bar'].forEach(id=>{
+    const el = document.getElementById(id);
+    // offsetParent===null means the element is display:none ולא תופס מקום בפועל
+    if(el && el.offsetParent !== null){
+      usedTop += el.getBoundingClientRect().height;
+    }
+  });
+
+  const seatOverflowMargin = 110; // מרווח קבוע למושבים שגולשים מחוץ לגבולות האליפסה
   const maxW = Math.min(vw - 40, 360);
-  const maxH = vh - topBarH - 100; // מרווח למושבים שגולשים
+  const maxH = Math.max(vh - usedTop - seatOverflowMargin, 180); // 180 = רצפת ביטחון שהשולחן לא ייעלם
   let w = maxW;
   let h = w * 4/3;
   if(h > maxH){ h = maxH; w = h * 3/4; }
@@ -2061,3 +2073,20 @@ document.addEventListener('visibilitychange', ()=>{
     startBlindTimer();
   }
 });
+
+// רספונסיביות אמיתית: לחשב מחדש את גודל/מיקום השולחן בכל שינוי גובה/רוחב זמין בפועל —
+// מכסה: הופעה/היעלמות סרגלי ספארי, סיבוב מכשיר, שינוי גודל חלון בדסקטופ, כניסה/יציאה מ-PWA
+let _resizeRaf = null;
+function _handleViewportResize(){
+  if(_resizeRaf) cancelAnimationFrame(_resizeRaf);
+  _resizeRaf = requestAnimationFrame(()=>{
+    renderTableShape();
+    renderSeats();
+    _resizeRaf = null;
+  });
+}
+window.addEventListener('resize', _handleViewportResize);
+window.addEventListener('orientationchange', _handleViewportResize);
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', _handleViewportResize);
+}
