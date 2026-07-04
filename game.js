@@ -1074,7 +1074,7 @@ function awardPot(winnerSeatIdxs, showAnim=true){
     setTimeout(()=>{
       const nb=document.createElement('button');
       nb.id='undo-award-btn';
-      nb.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:12px;border:none;background:#c8a96e;color:#0a0d14;font-size:16px;font-weight:900;cursor:pointer;z-index:200;box-shadow:0 4px 20px rgba(200,169,110,0.6);animation:sdPulse 1.4s ease-in-out infinite;white-space:nowrap';
+      nb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);padding:10px 24px;border-radius:12px;border:none;background:#c8a96e;color:#0a0d14;font-size:16px;font-weight:900;cursor:pointer;z-index:200;box-shadow:0 4px 20px rgba(200,169,110,0.6);animation:sdPulse 1.4s ease-in-out infinite;white-space:nowrap';
       let secondsLeft = 8;
       nb.textContent = '↩ בטל הכרזה ('+secondsLeft+')';
       const tickTimer = setInterval(()=>{
