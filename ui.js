@@ -138,7 +138,7 @@ function renderRecordPanel(){
     <div style="display:flex;gap:4px;direction:ltr">
       ${h.board.map((c,i)=>{const lbl=['F1','F2','F3','T','R'][i];return`<div style="text-align:center">
         <button class="board-card-btn${c?' has-card':''}" style="width:30px;height:42px" onclick="openCPR('rb${i}')">
-          ${c?`<span style="font-size:11px;font-weight:900;color:${SC[c.suit]};line-height:1.1">${c.rank}</span><span style="font-size:9px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:14px;color:rgba(255,255,255,0.12)">+</span>`}
+          ${c?`<span style="font-size:15px;font-weight:900;color:${SC[c.suit]};line-height:1.1">${c.rank}</span><span style="font-size:9px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:14px;color:rgba(255,255,255,0.12)">+</span>`}
         </button><div class="card-label">${lbl}</div></div>`;}).join('')}
     </div></div>`;
   // Street tabs
@@ -180,7 +180,7 @@ function renderRecordPanel(){
     ${h.seats.map((s,si)=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
       <div style="font-size:10px;color:${si===0?'var(--gold)':'#e07b6a'};font-weight:700;min-width:60px">${s.playerName||'?'}</div>
       ${[0,1].map(ci=>{const c=s.cards?.[ci];return`<button class="board-card-btn${c?' has-card':''}" style="width:30px;height:42px" onclick="openCPR('rs${si}_c${ci}')">
-        ${c?`<span style="font-size:10px;font-weight:900;color:${SC[c.suit]};line-height:1.1">${c.rank}</span><span style="font-size:8px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:13px;color:rgba(255,255,255,0.12)">+</span>`}
+        ${c?`<span style="font-size:15px;font-weight:900;color:${SC[c.suit]};line-height:1.1">${c.rank}</span><span style="font-size:8px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:13px;color:rgba(255,255,255,0.12)">+</span>`}
       </button>`;}).join('')}
     </div>`).join('')}</div>`;
   // Result
@@ -482,7 +482,7 @@ function showHandDetail(hid){
           cardRow.style.cssText = 'padding:4px 6px;text-align:center';
           const cardHtml = (s.cards||[]).filter(Boolean).map(c=>{
             const isRed=c.suit==='♥'||c.suit==='♦';
-            return '<div style="width:22px;height:30px;border-radius:4px;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.6);margin:0 1px"><span style="font-size:9px;font-weight:900;color:'+(isRed?'#d42020':'#111')+';line-height:1">'+c.rank+'</span><span style="font-size:7px;color:'+(isRed?'#d42020':'#111')+';line-height:1">'+c.suit+'</span></div>';
+            return '<div style="width:22px;height:30px;border-radius:4px;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.6);margin:0 1px"><span style="font-size:13px;font-weight:900;color:'+(isRed?'#d42020':'#111')+';line-height:1">'+c.rank+'</span><span style="font-size:7px;color:'+(isRed?'#d42020':'#111')+';line-height:1">'+c.suit+'</span></div>';
           }).join('');
           cardRow.innerHTML =
             '<div style="font-size:9px;color:'+(s.folded?'#555':'#aaa')+';margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.playerName+'</div>'+
@@ -584,7 +584,7 @@ function renderHandList(){
     const myName = currentUser?.name||'';
     const mySeat = (h.seats||[]).find(s=>s.playerName===myName||(s.playerId&&pName(s.playerId)===myName));
     const myCards = mySeat?(mySeat.cards||[]).filter(Boolean):[];
-    const myCardsHtml = myCards.map(c=>`<div style="width:24px;height:34px;border-radius:4px;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.5);margin-left:3px"><span style="font-size:10px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:8px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`).join('');
+    const myCardsHtml = myCards.map(c=>`<div style="width:24px;height:34px;border-radius:4px;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.5);margin-left:3px"><span style="font-size:14px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:8px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`).join('');
     return`<div class="card-item" onclick="showHandDetail('${h.id}')" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div>
@@ -597,7 +597,7 @@ function renderHandList(){
           <button class="btn btn-red btn-xs" onclick="event.stopPropagation();deleteHand(${hi})">✕</button>
         </div>
       </div>
-      ${boardCards.length?`<div style="display:flex;gap:3px;direction:ltr">${boardCards.map(c=>`<div style="width:20px;height:28px;border-radius:3px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:8px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:6px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`).join('')}</div>`:``}
+      ${boardCards.length?`<div style="display:flex;gap:3px;direction:ltr">${boardCards.map(c=>`<div style="width:20px;height:28px;border-radius:3px;background:#fff;border:1px solid #ddd;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:11px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:7px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`).join('')}</div>`:``}
     </div>`;
   }).join('');
 }
