@@ -39,7 +39,7 @@ button{cursor:pointer;font-family:inherit}
 input,select,textarea{font-family:inherit}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px}
-#app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;padding-bottom:env(safe-area-inset-bottom)}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow-y:auto;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom)}
 /* TOP BAR */
 #topbar{flex-shrink:0;background:#080b12;border-bottom:1px solid rgba(200,169,110,0.18);z-index:40}
 #statsbar{padding:6px 8px;display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;background:#080b12}
