@@ -63,7 +63,13 @@ function pickSeatCard(seatIdx, rank, suit, forceSlot){
   } else {
     // שני קלפים נבחרו — סגור לוח וחזור לשולחן
     document.getElementById('card-picker').classList.remove('open');
-    setTimeout(()=>{ renderSeats(); renderSeatPanel(); }, 50);
+    if(S._showdownMode && eligibleHaveAllCards()){
+      // כולם הזינו קלפים — אין צורך להישאר במסך "הזן קלפים", עוברים ישר לזיהוי המנצח
+      S._showdownMode=false;
+      setTimeout(()=>showShowdownPanel(), 50);
+    } else {
+      setTimeout(()=>{ renderSeats(); renderSeatPanel(); }, 50);
+    }
   }
 }
 
@@ -957,6 +963,17 @@ function calcSidePots(){
   return sidePots;
 }
 
+// אם לכל השחקנים הרלוונטיים (לא folded) כבר יש 2 קלפים מוזנים — אין טעם להציג "הזן קלפים",
+// אפשר לעבור ישר למסך זיהוי/בחירת המנצח
+function eligibleHaveAllCards(){
+  const eligible = S.seats.filter(s=>s.playerId&&!s.folded);
+  return eligible.length>0 && eligible.every(s=>(s.cards||[]).filter(Boolean).length>=2);
+}
+function enterShowdown(){
+  if(eligibleHaveAllCards()) showShowdownPanel();
+  else { S._showdownMode=true; renderSeats(); }
+}
+
 function checkAutoWin(){
   // All folded except one (including all-in players)
   const active = S.seats.filter(s=>s.playerId&&!s.folded);
@@ -968,7 +985,7 @@ function checkAutoWin(){
   const canAct = active.filter(s=>!s.allin);
   if(canAct.length===0 && active.length>1){
     // Auto-deal remaining streets and enter showdown mode (הזנת קלפים לפני בחירת מנצח)
-    setTimeout(()=>{ S._showdownMode=true; renderSeats(); },300);
+    setTimeout(()=>{ enterShowdown(); },300);
     return true;
   }
   return false;
@@ -1057,11 +1074,17 @@ function awardPot(winnerSeatIdxs, showAnim=true){
     setTimeout(()=>{
       const nb=document.createElement('button');
       nb.id='undo-award-btn';
-      nb.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:12px;border:1px solid rgba(224,123,106,0.5);background:rgba(224,123,106,0.15);color:#e07b6a;font-size:13px;font-weight:800;cursor:pointer;z-index:200';
-      nb.textContent='↩ בטל הכרזה';
-      nb.onclick=()=>{ undoAward(); nb.remove(); clearTimeout(nb._saveTimer); };
+      nb.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:12px;border:none;background:#c8a96e;color:#0a0d14;font-size:16px;font-weight:900;cursor:pointer;z-index:200;box-shadow:0 4px 20px rgba(200,169,110,0.6);animation:sdPulse 1.4s ease-in-out infinite;white-space:nowrap';
+      let secondsLeft = 8;
+      nb.textContent = '↩ בטל הכרזה ('+secondsLeft+')';
+      const tickTimer = setInterval(()=>{
+        secondsLeft--;
+        if(secondsLeft<=0){ clearInterval(tickTimer); return; }
+        nb.textContent = '↩ בטל הכרזה ('+secondsLeft+')';
+      },1000);
+      nb.onclick=()=>{ undoAward(); nb.remove(); clearTimeout(nb._saveTimer); clearInterval(tickTimer); };
       document.body.appendChild(nb);
-      nb._saveTimer=setTimeout(()=>{ nb.remove(); autoSaveAndPromptReset(winnerSeatIdxs); },8000);
+      nb._saveTimer=setTimeout(()=>{ clearInterval(tickTimer); nb.remove(); autoSaveAndPromptReset(winnerSeatIdxs); },8000);
     },800);
   },400);
 }
@@ -1297,13 +1320,13 @@ function advanceTurn(fromSeatIdx){
       // All-in situation: at least one player is all-in
       // After calling an all-in → deal remaining cards then showdown
       if(hasAllin){
-        if(bCnt===5){ S._showdownMode=true; renderSeats(); }
+        if(bCnt===5){ enterShowdown(); }
         else autoOpenNextCard();
         return;
       }
       // Normal betting close
       if(bCnt===5){
-        S._showdownMode=true; renderSeats();
+        enterShowdown();
       } else {
         autoOpenNextCard();
       }
