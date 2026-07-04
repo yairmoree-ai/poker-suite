@@ -1115,11 +1115,20 @@ function evaluateHand(cards){
   }
 
   const HAND_NAMES=['High Card','One Pair','Two Pair','Three of a Kind','Straight','Flush','Full House','Four of a Kind','Straight Flush'];
+  // השוואה מספרית אמיתית בין מערכי tiebreak (לא מחרוזתית!) — לדוגמה [13,12,9] חייב לנצח את [13,9,8]
+  function tbCompare(a,b){
+    const len = Math.max(a.length,b.length);
+    for(let i=0;i<len;i++){
+      const av=a[i]||0, bv=b[i]||0;
+      if(av!==bv) return av-bv;
+    }
+    return 0;
+  }
   const fiveCombos = cards.length===5 ? [cards] : combos(cards, 5);
   let best = null;
   fiveCombos.forEach(combo=>{
     const s = score5(combo);
-    if(!best||s.rank>best.rank||(s.rank===best.rank&&s.tb.join()>best.tb.join())) best=s;
+    if(!best||s.rank>best.rank||(s.rank===best.rank&&tbCompare(s.tb,best.tb)>0)) best=s;
   });
   return best ? {...best, name:HAND_NAMES[best.rank]} : null;
 }
