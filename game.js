@@ -31,7 +31,7 @@ function openSeatCardPicker(seatIdx, slotIdx){
       const isRed = suit==='♥'||suit==='♦';
       const bg = isSelected?'#c8a96e':used?'rgba(255,255,255,0.08)':'#fff';
       const col = used?'#888':isSelected?'#000':(isRed?'#d32f2f':'#111');
-      return `<button style="width:34px;height:46px;border-radius:5px;border:1.5px solid ${used&&!isSelected?'rgba(255,255,255,0.08)':'#ddd'};background:${bg};cursor:${used&&!isSelected?'not-allowed':'pointer'};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;opacity:${used&&!isSelected?'0.3':'1'}" ${used&&!isSelected?'disabled':''} onclick="pickSeatCard(${seatIdx},'${rank}','${suit}',${slotIdx});document.getElementById('card-picker').classList.remove('open')">
+      return `<button style="width:34px;height:46px;border-radius:5px;border:1.5px solid ${used&&!isSelected?'rgba(255,255,255,0.08)':'#ddd'};background:${bg};cursor:${used&&!isSelected?'not-allowed':'pointer'};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;opacity:${used&&!isSelected?'0.3':'1'}" ${used&&!isSelected?'disabled':''} onclick="pickSeatCard(${seatIdx},'${rank}','${suit}',${slotIdx})">
         <span style="font-size:12px;font-weight:900;color:${col};line-height:1">${rank}</span>
         <span style="font-size:11px;color:${col};line-height:1">${suit}</span>
       </button>`;
