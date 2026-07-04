@@ -15,8 +15,6 @@ function savePlayerNote(seatIdx, note){
 }
 
 function openSeatCardPicker(seatIdx, slotIdx){
-  // פותח card-picker ייעודי לשחקן עם cpTarget מיוחד
-  cpTarget = 'seat'+seatIdx+'_c'+slotIdx;
   cpRank = null;
   // בנה לוח קלפים ייעודי
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
@@ -57,11 +55,13 @@ function pickSeatCard(seatIdx, rank, suit, forceSlot){
   seat.cards[slot]={rank,suit};
   persist();
 
-  if(slot===0 && !seat.cards[1]){
-    // קלף ראשון נבחר — פתח לוח לקלף שני
-    setTimeout(()=>openSeatCardPicker(seatIdx, 1), 50);
+  const filledCount = (seat.cards||[]).filter(Boolean).length;
+  if(filledCount < 2){
+    // עוד חסר קלף — פתח לוח לסלוט הפנוי
+    const nextSlot = !seat.cards[0] ? 0 : 1;
+    setTimeout(()=>openSeatCardPicker(seatIdx, nextSlot), 50);
   } else {
-    // קלף שני נבחר — סגור לוח וחזור לשולחן
+    // שני קלפים נבחרו — סגור לוח וחזור לשולחן
     document.getElementById('card-picker').classList.remove('open');
     setTimeout(()=>{ renderSeats(); renderSeatPanel(); }, 50);
   }
