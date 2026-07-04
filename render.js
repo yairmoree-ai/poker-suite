@@ -1,4 +1,4 @@
-//// ── Monte Carlo Equity (מקומי, ללא שרת) ───────────────────
+// ── Monte Carlo Equity (מקומי, ללא שרת) ───────────────────
 const _MC_RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 const _MC_SUITS = ['♠','♥','♦','♣'];
 const _MC_RANK_VAL = Object.fromEntries(_MC_RANKS.map((r,i)=>[r,i]));
