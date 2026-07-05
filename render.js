@@ -1688,7 +1688,10 @@ function renderTableShape(){
   const vRefresh = document.getElementById('btn-viewer-refresh');
   if(vRefresh) vRefresh.style.display = isViewer()?'':'none';
   // Hide action buttons for viewers
-  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-tablesize','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
+  // הערה: sbox-tablesize הוסר מרשימה זו בכוונה — הנראות שלו נקבעת אך ורק ע"י showView()
+  // לפי הטאב הפעיל. קודם היה כאן, וכל render() (כולל סנכרון תקופתי) היה מאפס אותו
+  // בחזרה ל-display:'' עבור אדמין, "מחייה" אותו מחדש בטאבים שבהם הוא אמור להיות מוסתר.
+  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
