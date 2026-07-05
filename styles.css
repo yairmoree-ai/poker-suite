@@ -104,7 +104,6 @@ input,select,textarea{font-family:inherit}
 .seat-pos{font-size:8px;font-weight:900;border-radius:3px;padding:1px 4px;text-transform:uppercase;letter-spacing:0.04em;line-height:1.3}
 .seat-action-label{font-size:9px;color:var(--gold);text-align:center;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seat-cards-mini{display:flex;gap:2px;margin-top:2px}
-.dealer-chip{font-size:7px;font-weight:900;background:var(--gold);color:#0a0d14;border-radius:3px;padding:1px 3px}
 /* BOARD */
 #board-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;z-index:5;pointer-events:auto}
 #board-cards{display:flex;gap:4px;direction:ltr}

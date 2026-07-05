@@ -1761,7 +1761,7 @@ function renderSeats(){
     }
     const seat=swp.find(s=>s.seatIdx===i);
     const name=seat?.playerId?pName(seat.playerId):null;
-    const isAct=activeSeat===i, isFold=seat?.folded, isAlin=seat?.allin, isBtn=i===S.btnSeat&&seat?.playerId;
+    const isAct=activeSeat===i, isFold=seat?.folded, isAlin=seat?.allin;
     const bb=getBB();
     const sbb=seat?.stack&&bb?(seat.stack/bb).toFixed(1):null;
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
@@ -1795,7 +1795,6 @@ function renderSeats(){
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
           ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
-          ${isBtn?`<span class="dealer-chip" style="cursor:pointer" onclick="event.stopPropagation();if(!S.btnLocked||confirm('להעביר את ה-BTN? היד הנוכחית תאופס')){S.btnSeat=null;S.btnLocked=false;resetHand();renderSeats();}">D</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
         ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a6a54;font-size:8px">(${sbb}) </span>`:''}<span style="font-size:9px">${seat.stack.toLocaleString()}</span></div>`:''}
