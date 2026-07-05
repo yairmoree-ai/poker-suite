@@ -253,11 +253,21 @@ function showHandDetail(hid){
   
   // Analyze button
   const analyzeBtn = document.createElement('button');
+  analyzeBtn.className = 'share-hide';
   analyzeBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
   analyzeBtn.textContent = '🔍 נתח יד';
   analyzeBtn.onclick = ()=>analyzeHand(h);
 
+  // Share button
+  const shareBtn = document.createElement('button');
+  shareBtn.className = 'share-hide';
+  shareBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+  shareBtn.textContent = '📤 שתף יד';
+  shareBtn.onclick = ()=>shareHandImage(h, box);
+
+  closeBtn.className = 'share-hide';
   hdr.appendChild(analyzeBtn);
+  hdr.appendChild(shareBtn);
   hdr.appendChild(closeBtn);
   box.appendChild(hdr);
 
@@ -503,6 +513,55 @@ function showHandDetail(hid){
 
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+}
+
+// מצלם את תצוגת היד (שולחן + טבלת פעולות) כתמונת PNG ומשתף אותה,
+// או מוריד אותה אם השיתוף לא נתמך בדפדפן.
+async function shareHandImage(h, box){
+  if(typeof html2canvas === 'undefined'){
+    notify('טעינת כלי השיתוף נכשלה — בדוק חיבור לאינטרנט');
+    return;
+  }
+  const hideEls = box.querySelectorAll('.share-hide');
+  hideEls.forEach(el=>el.style.visibility = 'hidden');
+  try{
+    const canvas = await html2canvas(box, {
+      backgroundColor: '#0a0d14',
+      scale: 2,
+      useCORS: true
+    });
+    hideEls.forEach(el=>el.style.visibility = '');
+
+    canvas.toBlob(async (blob)=>{
+      if(!blob){ notify('שגיאה ביצירת התמונה'); return; }
+      const fileName = 'poker-hand-'+(h.id||Date.now())+'.png';
+      const file = new File([blob], fileName, {type:'image/png'});
+
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({
+            files: [file],
+            title: 'יד פוקר',
+            text: (h.date||'')+' · '+(h.blinds||'')
+          });
+        }catch(shareErr){
+          // המשתמש ביטל את השיתוף — לא צריך הודעת שגיאה
+          if(shareErr?.name !== 'AbortError') console.error('share error:', shareErr);
+        }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        notify('התמונה הורדה 📥');
+      }
+    }, 'image/png');
+  }catch(err){
+    hideEls.forEach(el=>el.style.visibility = '');
+    console.error('shareHandImage error:', err);
+    notify('שגיאה בשיתוף היד');
+  }
 }
 
 function renderHandList(){
