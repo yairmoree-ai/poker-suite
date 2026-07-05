@@ -14,7 +14,7 @@ function _handRankMC(cards){
   } catch(e){ return 0; }
 }
 
-function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=8000){
+function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=3000){
   // holeCards: [{rank,suit},{rank,suit}]
   // boardCards: קלפי בורד קיימים (0-4)
   // numOpponents: מספר יריבים פעילים
@@ -23,24 +23,26 @@ function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=8000){
   const known = [...holeCards, ...boardCards].filter(Boolean);
   const knownKeys = new Set(known.map(_cardKey));
   const deck = _fullDeck().filter(c=>!knownKeys.has(_cardKey(c)));
-  const boardNeeded = 5 - boardCards.filter(Boolean).length;
+  const baseBoard = boardCards.filter(Boolean);
+  const boardNeeded = 5 - baseBoard.length;
+  const need = boardNeeded + numOpponents*2; // כמה קלפים באמת נשלפים בכל איטרציה
 
   let wins=0, ties=0;
 
   for(let i=0; i<iterations; i++){
-    // ערבוב מהיר (Fisher-Yates חלקי)
-    for(let j=deck.length-1; j>0; j--){
+    // ערבוב חלקי — רק את הקלפים שנשלפים בפועל (מסוף החפיסה), במקום ערבוב מלא
+    for(let j=deck.length-1; j>=deck.length-need; j--){
       const k=Math.floor(Math.random()*(j+1));
       [deck[j],deck[k]]=[deck[k],deck[j]];
     }
-    let idx=0;
+    let idx=deck.length-1;
     // השלמת בורד
-    const runBoard = [...boardCards.filter(Boolean)];
-    for(let b=0;b<boardNeeded;b++) runBoard.push(deck[idx++]);
+    const runBoard = baseBoard.slice();
+    for(let b=0;b<boardNeeded;b++) runBoard.push(deck[idx--]);
 
     // קלפים ליריבים
     const oppHands=[];
-    for(let o=0;o<numOpponents;o++) oppHands.push([deck[idx++],deck[idx++]]);
+    for(let o=0;o<numOpponents;o++) oppHands.push([deck[idx--],deck[idx--]]);
 
     // חישוב ידיים
     const myVal = _handRankMC([...holeCards,...runBoard]);
@@ -337,7 +339,7 @@ function _getRangeStr(tableSize, pos, action){
 }
 
 // Monte Carlo vs specific range (מחליף את הקודם)
-function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=6000){
+function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=3000){
   if(!holeCards||holeCards.filter(Boolean).length<2)return null;
   if(!rangeStr)return monteCarloEquity(holeCards,boardCards,1,iterations);
 
@@ -383,20 +385,25 @@ function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=600
 
   if(!rangeCombos.length)return monteCarloEquity(holeCards,boardCards,1,iterations);
 
+  const baseBoard=boardCards.filter(Boolean);
+  const sameCard=(a,b)=>a.rank===b.rank&&a.suit===b.suit;
   let wins=0,ties=0;
   for(let i=0;i<iterations;i++){
     // בחר קומבו אקראי מה-range
     const oppHand=rangeCombos[Math.floor(Math.random()*rangeCombos.length)];
-    // בנה deck זמני ללא קלפי היריב
-    const iterDeck=deck.filter(c=>!oppHand.some(oc=>oc.rank===c.rank&&oc.suit===c.suit));
-    // ערבב
-    for(let j=iterDeck.length-1;j>0;j--){
+    // ערבוב חלקי של סוף החפיסה — בלי לבנות deck חדש בכל איטרציה.
+    // חלון של need+2 כדי שיהיה מרווח לדלג על קלפי היריב אם נשלפו
+    const win=boardNeeded+2;
+    for(let j=deck.length-1;j>=deck.length-win&&j>0;j--){
       const k=Math.floor(Math.random()*(j+1));
-      [iterDeck[j],iterDeck[k]]=[iterDeck[k],iterDeck[j]];
+      [deck[j],deck[k]]=[deck[k],deck[j]];
     }
-    // השלם בורד
-    const runBoard=[...boardCards.filter(Boolean)];
-    for(let b=0;b<boardNeeded;b++)runBoard.push(iterDeck[b]);
+    const runBoard=baseBoard.slice();
+    let idx=deck.length-1;
+    while(runBoard.length<5){
+      const c=deck[idx--];
+      if(!sameCard(c,oppHand[0])&&!sameCard(c,oppHand[1])) runBoard.push(c);
+    }
     const myVal=_handRankMC([...holeCards,...runBoard]);
     const oppVal=_handRankMC([...oppHand,...runBoard]);
     if(myVal>oppVal)wins++;
@@ -448,21 +455,36 @@ function renderPotOdds(){
   const breakEven = breakEvenNum.toFixed(1);
   const ratio = pot / callAmt;
   const fmt = n => n>=10000 ? '₪'+(n/1000).toFixed(0)+'K' : '₪'+n.toLocaleString();
-  const ratioStr = '1:'+(ratio<2?ratio.toFixed(1):Math.round(ratio));
+  const ratioStr = (ratio%1===0?ratio.toFixed(0):ratio.toFixed(1))+':1';
 
   const holeCards = (seat.cards||[]).filter(Boolean);
   const boardCards = (S.board||[]).filter(Boolean);
   const rs = S._rangeSelection;
 
-  // חישוב equity
+  // חישוב equity — עם cache וחישוב נדחה (לא חוסם את ציור המסך)
   let equityPct = null;
+  let equityComputing = false;
   if(holeCards.length===2){
-    if(rs){
-      const rangeStr = _getRangeStr(S.tableSize, rs.pos, rs.action);
-      equityPct = monteCarloEquityVsRange(holeCards, boardCards, rangeStr);
+    const numOpp = Math.max(1, S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&s.seatIdx!==actor).length);
+    const eqKey = holeCards.map(c=>c.rank+c.suit).join('')+'|'+boardCards.map(c=>c.rank+c.suit).join('')
+      +'|'+(rs?('r:'+rs.pos+':'+rs.action+':'+S.tableSize):('n:'+numOpp));
+    if(window._eqCache?.key === eqKey){
+      equityPct = window._eqCache.val; // אותם קלפים/תנאים — אין צורך לחשב שוב
     } else {
-      const numOpp = Math.max(1, S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&s.seatIdx!==actor).length);
-      equityPct = monteCarloEquity(holeCards, boardCards, numOpp);
+      equityComputing = true;
+      const jobId = (window._eqJob = (window._eqJob||0)+1);
+      setTimeout(()=>{
+        if(jobId !== window._eqJob) return; // בינתיים נכנסה בקשה עדכנית יותר
+        let val;
+        if(rs){
+          const rStr = _getRangeStr(S.tableSize, rs.pos, rs.action);
+          val = monteCarloEquityVsRange(holeCards, boardCards, rStr);
+        } else {
+          val = monteCarloEquity(holeCards, boardCards, numOpp);
+        }
+        window._eqCache = {key: eqKey, val};
+        if(jobId === window._eqJob) renderPotOdds(); // רינדור חוזר — הפעם מה-cache
+      }, 30);
     }
   }
 
@@ -517,7 +539,9 @@ function renderPotOdds(){
         <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">EQUITY</span>
         ${equityPct!==null
           ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}`
-          : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
+          : equityComputing
+            ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
+            : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>
