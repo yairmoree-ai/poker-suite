@@ -10,7 +10,7 @@ function _handRankMC(cards){
   // שימוש ב-evaluateHand שכבר קיים ב-game.js
   try {
     const h = evaluateHand(cards);
-    return h.rank * 1e10 + (h.tiebreak||[]).reduce((a,v,i)=>a+v*Math.pow(15,4-i),0);
+    return h.rank * 1e10 + (h.tb||[]).reduce((a,v,i)=>a+v*Math.pow(15,4-i),0);
   } catch(e){ return 0; }
 }
 
@@ -412,6 +412,183 @@ function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=300
   return (wins+ties*0.5)/iterations*100;
 }
 
+// ── התאמת טווח סולבר לפי תגית שחקן (TAG/LAG/Nit/Station/Fish) ──────
+// רשימות תוספת/הפחתה כלליות (לא תלויות עמדה) — קירוב סביר, לא סולבר מדויק
+const _RANGE_LOOSEN = 'K8s,K7s,K6s,K5s,K4s,K3s,K2s,Q8s,Q7s,Q6s,Q5s,Q4s,Q3s,Q2s,J8s,J7s,J6s,T8s,T7s,97s,96s,86s,85s,75s,64s,53s,43s,32s,A9o,A8o,A7o,A6o,A5o,A4o,A3o,A2o,K9o,K8o,QTo,Q9o,J9o,T9o,98o,87o,76o,65o';
+const _RANGE_TIGHTEN = '22,33,44,55,A2s,A3s,A4s,K9s,K8s,QTs,Q9s,J9s,T9s,98s,87s,76s,65s,54s,ATo,KJo,KTo,QJo,QTo,JTo';
+const _RANGE_STATION_EXTRA = '22,33,44,55,66,77,J8o,J7o,T8o,T7o,97o,96o,86o,85o,75o,64o,54o,43o,K7o,K6o,K5o,K4o,K3o,K2o,Q8o,Q7o,Q6o,Q5o,Q4o,Q3o,Q2o';
+
+// playerType null/לא מוגדר → משאירים את טווח הסולבר כמו שהוא (טווח מאוזן, ערך+בלאף)
+// TAG → טווח הסולבר כמו שהוא. Nit → מצמצם. LAG/Station/Fish → מרחיב (Station בעיקר ב-call, Fish בכל הפעולות)
+function _adjustRangeForType(baseRangeStr, playerType, actionCat){
+  if(!playerType || playerType==='TAG') return baseRangeStr;
+  const set = _parseRangeToSet(baseRangeStr);
+  if(playerType==='Nit'){
+    _parseRangeToSet(_RANGE_TIGHTEN).forEach(h=>set.delete(h));
+  } else if(playerType==='LAG'){
+    _parseRangeToSet(_RANGE_LOOSEN).forEach(h=>set.add(h));
+  } else if(playerType==='Station'){
+    _parseRangeToSet(_RANGE_LOOSEN).forEach(h=>set.add(h));
+    if(actionCat==='call') _parseRangeToSet(_RANGE_STATION_EXTRA).forEach(h=>set.add(h));
+  } else if(playerType==='Fish'){
+    _parseRangeToSet(_RANGE_LOOSEN).forEach(h=>set.add(h));
+    _parseRangeToSet(_RANGE_STATION_EXTRA).forEach(h=>set.add(h));
+  }
+  return [...set].join(',');
+}
+
+// מזהה אוטומטית מה הייתה הפעולה האחרונה (הכי מחייבת) של השחקן פרה-פלופ,
+// כדי לבחור את קטגוריית הטווח המתאימה מהסולבר (RFI/3bet/4bet/call) בלי בחירה ידנית
+function _inferPreflopActionCat(seat){
+  const preflopActs = (seat.actions||[]).filter(a=>a.street==='פרה-פלופ' && a.type!=='SB' && a.type!=='BB');
+  if(!preflopActs.length) return 'call'; // לדוגמה BB שצ'ק אחרי לימפים
+  const last = preflopActs[preflopActs.length-1];
+  const round = last.raiseRound||0;
+  if(['Raise','Open','All-in'].includes(last.type)){
+    if(round<=1) return 'RFI';
+    if(round===2) return '3bet';
+    return '4bet';
+  }
+  return 'call';
+}
+
+// ממיר מחרוזת range (למשל "AKs,QQ,ATo") לרשימת קומבינציות קלפים בפועל,
+// תוך סינון קלפים "מתים" (כבר ידועים כתפוסים)
+function _rangeStrToCombos(rangeStr, deadKeys){
+  const combos=[];
+  if(!rangeStr) return combos;
+  const rangeSet=_parseRangeToSet(rangeStr);
+  rangeSet.forEach(h=>{
+    if(h.length===2&&h[0]===h[1]){
+      _MC_SUITS.forEach((s1,i)=>_MC_SUITS.forEach((s2,j)=>{
+        if(i<j){
+          const c1={rank:h[0],suit:s1},c2={rank:h[0],suit:s2};
+          if(!deadKeys.has(c1.rank+c1.suit)&&!deadKeys.has(c2.rank+c2.suit)) combos.push([c1,c2]);
+        }
+      }));
+    } else if(h.endsWith('s')){
+      const r1=h[0],r2=h[1];
+      _MC_SUITS.forEach(s=>{
+        const c1={rank:r1,suit:s},c2={rank:r2,suit:s};
+        if(!deadKeys.has(c1.rank+c1.suit)&&!deadKeys.has(c2.rank+c2.suit)) combos.push([c1,c2]);
+      });
+    } else if(h.endsWith('o')){
+      const r1=h[0],r2=h[1];
+      _MC_SUITS.forEach(s1=>_MC_SUITS.forEach(s2=>{
+        if(s1!==s2){
+          const c1={rank:r1,suit:s1},c2={rank:r2,suit:s2};
+          if(!deadKeys.has(c1.rank+c1.suit)&&!deadKeys.has(c2.rank+c2.suit)) combos.push([c1,c2]);
+        }
+      }));
+    }
+  });
+  return combos;
+}
+
+// Monte Carlo מאוחד: כל יריב יכול להיות "ידוע" (קלפים קבועים) או "עם טווח"
+// (מערך קומבינציות אפשריות; null = ללא הגבלה, קלף אקראי מהחפיסה). מטפל בהתנגשויות
+// בין קלפי יריבים שונים באותה איטרציה.
+function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists, iterations=3000){
+  if(!holeCards || holeCards.filter(Boolean).length < 2) return null;
+  const baseBoard = boardCards.filter(Boolean);
+  const boardNeeded = 5 - baseBoard.length;
+  const staticKnown = [...holeCards, ...baseBoard, ...knownOppHands.flat()].filter(Boolean);
+  const staticKeys = new Set(staticKnown.map(_cardKey));
+  const fullDeck = _fullDeck();
+
+  let wins=0, ties=0, done=0, guard=0;
+  while(done < iterations && guard < iterations*3){
+    guard++;
+    const usedKeys = new Set(staticKeys);
+    const rangedHands = [];
+    let bail=false;
+    for(const combos of oppCombosLists){
+      let picked=null;
+      if(combos===null || !combos.length){
+        const avail = fullDeck.filter(c=>!usedKeys.has(_cardKey(c)));
+        if(avail.length<2){ bail=true; break; }
+        const i1=Math.floor(Math.random()*avail.length);
+        const c1=avail[i1];
+        const avail2=avail.filter((c,ci)=>ci!==i1);
+        const c2=avail2[Math.floor(Math.random()*avail2.length)];
+        picked=[c1,c2];
+      } else {
+        for(let attempt=0; attempt<25 && !picked; attempt++){
+          const cand = combos[Math.floor(Math.random()*combos.length)];
+          if(cand && !usedKeys.has(_cardKey(cand[0])) && !usedKeys.has(_cardKey(cand[1]))) picked=cand;
+        }
+        if(!picked){ bail=true; break; } // הטווח הזה "נחסם" לגמרי באיטרציה הזו — דלג ונסה שוב
+      }
+      rangedHands.push(picked);
+      usedKeys.add(_cardKey(picked[0])); usedKeys.add(_cardKey(picked[1]));
+    }
+    if(bail) continue;
+
+    const deck = fullDeck.filter(c=>!usedKeys.has(_cardKey(c)));
+    for(let j=deck.length-1; j>=deck.length-boardNeeded && j>0; j--){
+      const k=Math.floor(Math.random()*(j+1));
+      [deck[j],deck[k]]=[deck[k],deck[j]];
+    }
+    const runBoard = baseBoard.slice();
+    let idx=deck.length-1;
+    for(let b=0;b<boardNeeded;b++) runBoard.push(deck[idx--]);
+
+    const oppHands = [...knownOppHands, ...rangedHands];
+    const myVal = _handRankMC([...holeCards,...runBoard]);
+    let best=myVal, iWin=true, iTie=false;
+    for(const oh of oppHands){
+      const ov=_handRankMC([...oh,...runBoard]);
+      if(ov>best){ iWin=false; iTie=false; break; }
+      if(ov===best){ iWin=false; iTie=true; }
+    }
+    if(iWin) wins++;
+    else if(iTie) ties++;
+    done++;
+  }
+  if(done===0) return null;
+  return ((wins + ties*0.5) / done * 100);
+}
+
+// Monte Carlo מול קלפי יריב/ים ידועים בפועל (שהוזנו על המושב) +
+// יריבים נוספים ללא קלפים ידועים (מוחלפים בידיים אקראיות)
+function monteCarloEquityVsKnown(holeCards, boardCards, knownOppHands, numRandomOpponents, iterations=3000){
+  if(!holeCards || holeCards.filter(Boolean).length < 2) return null;
+
+  const baseBoard = boardCards.filter(Boolean);
+  const known = [...holeCards, ...baseBoard, ...knownOppHands.flat()].filter(Boolean);
+  const knownKeys = new Set(known.map(_cardKey));
+  const deck = _fullDeck().filter(c=>!knownKeys.has(_cardKey(c)));
+  const boardNeeded = 5 - baseBoard.length;
+  const need = boardNeeded + numRandomOpponents*2;
+
+  let wins=0, ties=0;
+
+  for(let i=0; i<iterations; i++){
+    for(let j=deck.length-1; j>=deck.length-need; j--){
+      const k=Math.floor(Math.random()*(j+1));
+      [deck[j],deck[k]]=[deck[k],deck[j]];
+    }
+    let idx=deck.length-1;
+    const runBoard = baseBoard.slice();
+    for(let b=0;b<boardNeeded;b++) runBoard.push(deck[idx--]);
+
+    const oppHands = knownOppHands.map(h=>h.slice());
+    for(let o=0;o<numRandomOpponents;o++) oppHands.push([deck[idx--],deck[idx--]]);
+
+    const myVal = _handRankMC([...holeCards,...runBoard]);
+    let best = myVal, iWin=true, iTie=false;
+    for(const oh of oppHands){
+      const ov = _handRankMC([...oh,...runBoard]);
+      if(ov > best){ iWin=false; iTie=false; break; }
+      if(ov === best){ iWin=false; iTie=true; }
+    }
+    if(iWin) wins++;
+    else if(iTie) ties++;
+  }
+
+  return ((wins + ties*0.5) / iterations * 100);
+}
+
 function renderPotOdds(){
   const bar = document.getElementById('pot-odds-bar');
   if(!bar) return;
@@ -461,13 +638,42 @@ function renderPotOdds(){
   const boardCards = (S.board||[]).filter(Boolean);
   const rs = S._rangeSelection;
 
+  // יריבים פעילים (לא קיפלו, לא all-in, לא השחקן הפעיל)
+  const oppSeats = S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&s.seatIdx!==actor);
+  const swpForEq = assignPos(); // עמדות מעודכנות, לשימוש בזיהוי טווח אוטומטי
+
+  // מתוכם — מי שקלפיו הוזנו בפועל (ידועים), לעומת מי שהם עדיין "יד סמויה"
+  const knownOppSeats = oppSeats.filter(s=>(s.cards||[]).filter(Boolean).length===2);
+  const knownOppHands = knownOppSeats.map(s=>s.cards.filter(Boolean));
+  const unknownOppSeats = oppSeats.filter(s=>(s.cards||[]).filter(Boolean).length!==2);
+  const hasKnownOpp = knownOppHands.length > 0;
+
+  // לכל יריב "סמוי": אם נבחר range ידני — הוא חל על כולם; אחרת מזהים אוטומטית
+  // עמדה + פעולה שביצע ביד הזאת + תגית שחקן (TAG/LAG/Nit/Station/Fish) כדי להרחיב/להצר
+  // את טווח הסולבר בהתאם — בלי צורך לבחור range ידנית בכל פעם
+  const deadKeysBase = new Set([...holeCards, ...boardCards, ...knownOppHands.flat()].filter(Boolean).map(_cardKey));
+  const unknownOppRangeInfo = unknownOppSeats.map(s=>{
+    if(rs){
+      return {rangeStr: _getRangeStr(S.tableSize, rs.pos, rs.action), tag:'manual:'+rs.pos+':'+rs.action};
+    }
+    const swpSeat = swpForEq.find(x=>x.seatIdx===s.seatIdx);
+    const pos = swpSeat?.pos || '';
+    const actionCat = _inferPreflopActionCat(s);
+    const baseRangeStr = pos ? _getRangeStr(S.tableSize, pos, actionCat) : '';
+    const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
+    const playerType = player?.playerType || null;
+    const adjRangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
+    return {rangeStr: adjRangeStr, tag:'auto:'+pos+':'+actionCat+':'+(playerType||'none')};
+  });
+
   // חישוב equity — עם cache וחישוב נדחה (לא חוסם את ציור המסך)
   let equityPct = null;
   let equityComputing = false;
   if(holeCards.length===2){
-    const numOpp = Math.max(1, S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&s.seatIdx!==actor).length);
+    const knownOppKey = knownOppHands.map(h=>h.map(c=>c.rank+c.suit).sort().join('')).sort().join(',');
+    const rangeKey = unknownOppRangeInfo.map(r=>r.tag).sort().join(',');
     const eqKey = holeCards.map(c=>c.rank+c.suit).join('')+'|'+boardCards.map(c=>c.rank+c.suit).join('')
-      +'|'+(rs?('r:'+rs.pos+':'+rs.action+':'+S.tableSize):('n:'+numOpp));
+      +'|k:'+knownOppKey+'|u:'+rangeKey;
     if(window._eqCache?.key === eqKey){
       equityPct = window._eqCache.val; // אותם קלפים/תנאים — אין צורך לחשב שוב
     } else {
@@ -475,13 +681,11 @@ function renderPotOdds(){
       const jobId = (window._eqJob = (window._eqJob||0)+1);
       setTimeout(()=>{
         if(jobId !== window._eqJob) return; // בינתיים נכנסה בקשה עדכנית יותר
-        let val;
-        if(rs){
-          const rStr = _getRangeStr(S.tableSize, rs.pos, rs.action);
-          val = monteCarloEquityVsRange(holeCards, boardCards, rStr);
-        } else {
-          val = monteCarloEquity(holeCards, boardCards, numOpp);
-        }
+        const oppCombosLists = unknownOppRangeInfo.map(r=>{
+          const combos = _rangeStrToCombos(r.rangeStr, deadKeysBase);
+          return combos.length ? combos : null; // טווח שיצא ריק → נופל חזרה לאקראי מלא
+        });
+        const val = monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists);
         window._eqCache = {key: eqKey, val};
         if(jobId === window._eqJob) renderPotOdds(); // רינדור חוזר — הפעם מה-cache
       }, 30);
@@ -538,7 +742,7 @@ function renderPotOdds(){
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
         <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">EQUITY</span>
         ${equityPct!==null
-          ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}`
+          ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}`
           : equityComputing
             ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
             : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
