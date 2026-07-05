@@ -309,8 +309,15 @@ function _countCombos(str){
   return n;
 }
 
+function _depthFromBB(effBB){
+  if(effBB >= 75) return 'deep';
+  if(effBB >= 35) return 'mid';
+  if(effBB >= 20) return 'short';
+  return 'push';
+}
+
 function _getStackDepth(){
-  // חישוב effective stack (קטן בין currentActor לשאר) חלקי BB
+  // חישוב effective stack (קטן בין currentActor לשאר) חלקי BB — למצב חי בלבד (S.currentActor)
   const actor = S.currentActor;
   const bb = (getBlinds&&getBlinds()?.bb)||50;
   const actorSeat = S.seats.find(s=>s.seatIdx===actor);
@@ -319,10 +326,7 @@ function _getStackDepth(){
   const minOppStack = opponents.length ? Math.min(...opponents.map(s=>s.stack||0)) : actorStack;
   const effStack = Math.min(actorStack, minOppStack);
   const effBB = bb>0 ? effStack/bb : 100;
-  if(effBB >= 75) return 'deep';
-  if(effBB >= 35) return 'mid';
-  if(effBB >= 20) return 'short';
-  return 'push';
+  return _depthFromBB(effBB);
 }
 
 function _getDepthLabel(){
@@ -330,12 +334,15 @@ function _getDepthLabel(){
   return {deep:'75BB+ עמוק',mid:'35-74BB בינוני',short:'20-34BB קצר',push:'<20BB Push/Fold'}[d]||d;
 }
 
-function _getRangeStr(tableSize, pos, action){
+function _getRangeStrForDepth(tableSize, pos, action, depth){
   const ts = tableSize||S.tableSize||6;
-  const depth = _getStackDepth();
   const rBySize = _RANGES[ts]||_RANGES[6];
   const rByDepth = rBySize[depth]||rBySize.deep||rBySize;
   return (rByDepth[pos]||{})[action]||'';
+}
+
+function _getRangeStr(tableSize, pos, action){
+  return _getRangeStrForDepth(tableSize, pos, action, _getStackDepth());
 }
 
 // Monte Carlo vs specific range (מחליף את הקודם)
@@ -587,6 +594,101 @@ function monteCarloEquityVsKnown(holeCards, boardCards, knownOppHands, numRandom
   }
 
   return ((wins + ties*0.5) / iterations * 100);
+}
+
+// מחשב עבור יד היסטורית (שמורה) — לכל סטריט שבו "אני" (המשתמש המחובר) עמדתי מול
+// הימור בפועל — מה היה ה-pot, ה-call, ה-break-even וה-equity שלי באותו רגע.
+// זו הערכה בדיעבד: טווח היריב מבוסס על העמדה+הפעולה שביצע ביד + התגית הנוכחית שלו
+// (לא בהכרח זהה למה שהיה ידוע לו/לך בזמן אמת), אלא אם קלפיו ידועים בפועל (showdown).
+function computeHistoricalStreetOdds(h){
+  const myName = currentUser?.name||'';
+  const mySeat = (h.seats||[]).find(s=>s.playerName===myName||(s.playerId&&pName(s.playerId)===myName));
+  const myCards = mySeat ? (mySeat.cards||[]).filter(Boolean) : [];
+  if(!mySeat || myCards.length!==2) return [];
+
+  const bbNum = parseFloat((h.blinds||'').split('/')[1]) || 0;
+  const streetsOrder = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const boardFull = (h.board||[]).filter(Boolean);
+  const boardAtStreet = {
+    'פרה-פלופ': [],
+    'פלופ': boardFull.slice(0,3),
+    'טורן': boardFull.slice(0,4),
+    'ריבר': boardFull.slice(0,5)
+  };
+
+  const folded = new Set();
+  const results = [];
+
+  streetsOrder.forEach(street=>{
+    const acts = [];
+    (h.seats||[]).forEach(s=>{
+      (s.actions||[]).filter(a=>a.street===street && !(street==='פרה-פלופ' && (a.type==='SB'||a.type==='BB'))).forEach(a=>{
+        acts.push({...a, seatIdx:s.seatIdx});
+      });
+    });
+    acts.sort((a,b)=>(a.idx??999)-(b.idx??999));
+
+    // הפוט לפני הסטריט הזה: בליינדים + כל מה שהושקע בסטריטים קודמים
+    let potBefore = 0;
+    (h.seats||[]).forEach(s=>{
+      (s.actions||[]).forEach(a=>{
+        const curIdx = streetsOrder.indexOf(street);
+        const aIdx = streetsOrder.indexOf(a.street);
+        if(a.street==='פרה-פלופ' && (a.type==='SB'||a.type==='BB')) potBefore += Number(a.amount)||0;
+        else if(aIdx>=0 && aIdx<curIdx) potBefore += Number(a.amount)||0;
+      });
+    });
+
+    const investedThisStreet = {};
+    let lastBet = 0;
+    let recordedThisStreet = false;
+
+    for(const a of acts){
+      const already = investedThisStreet[a.seatIdx]||0;
+      if(a.seatIdx===mySeat.seatIdx && !recordedThisStreet){
+        const callAmt = lastBet - already;
+        if(callAmt > 0 && ['Call','Raise','3bet','4bet','All-in','Fold'].includes(a.type)){
+          recordedThisStreet = true;
+          const potNow = potBefore + Object.values(investedThisStreet).reduce((s,v)=>s+v,0);
+          const oppSeatsH = (h.seats||[]).filter(s=>s.playerId && s.seatIdx!==mySeat.seatIdx && !folded.has(s.seatIdx));
+          if(oppSeatsH.length){
+            const knownOppHands = oppSeatsH.filter(s=>(s.cards||[]).filter(Boolean).length===2).map(s=>s.cards.filter(Boolean));
+            const unknownOppSeatsH = oppSeatsH.filter(s=>(s.cards||[]).filter(Boolean).length!==2);
+            const boardNow = boardAtStreet[street];
+            const deadKeys = new Set([...myCards, ...boardNow, ...knownOppHands.flat()].filter(Boolean).map(_cardKey));
+            const myStack = mySeat.stack||0;
+            const minOppStack = Math.min(...oppSeatsH.map(s=>s.stack||0));
+            const effBB = bbNum>0 ? Math.min(myStack, minOppStack)/bbNum : 100;
+            const depth = _depthFromBB(effBB);
+            const tableSizeApprox = (h.seats||[]).length;
+            const combosLists = unknownOppSeatsH.map(s=>{
+              const actionCat = _inferPreflopActionCat(s);
+              const baseRangeStr = s.pos ? _getRangeStrForDepth(tableSizeApprox, s.pos, actionCat, depth) : '';
+              const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
+              const playerType = player?.playerType||null;
+              const adjRangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
+              const combos = _rangeStrToCombos(adjRangeStr, deadKeys);
+              return combos.length ? combos : null;
+            });
+            const equityPct = monteCarloEquityMulti(myCards, boardNow, knownOppHands, combosLists, 2500);
+            const totalPot = potNow + callAmt;
+            const breakEven = totalPot>0 ? (callAmt/totalPot*100) : 0;
+            const ratio = callAmt>0 ? potNow/callAmt : 0;
+            results.push({
+              street, pot: potNow, callAmt, breakEven, ratio, equityPct,
+              hasKnownOpp: knownOppHands.length>0,
+              myAction: a.type
+            });
+          }
+        }
+      }
+      investedThisStreet[a.seatIdx] = already + (Number(a.amount)||0);
+      if(investedThisStreet[a.seatIdx] > lastBet) lastBet = investedThisStreet[a.seatIdx];
+      if(a.type==='Fold') folded.add(a.seatIdx);
+    }
+  });
+
+  return results;
 }
 
 function renderPotOdds(){

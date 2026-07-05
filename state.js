@@ -51,6 +51,18 @@ const RESULTS=[
 // STATE
 // ═══════════════════════════════════════════════════════
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+// מוסיף את המשתמש המחובר (מנהל) לרשימת השחקנים אוטומטית אם עוד לא קיים שם,
+// כדי שיוכל לשבת ולשחק בלי צורך להוסיף את עצמו ידנית קודם. לא רץ עבור צופים.
+function ensureSelfAsPlayer(){
+  if(!currentUser || currentUser.role==='viewer') return;
+  if(!currentUser.name) return;
+  if(!S.playerLib) S.playerLib=[];
+  const exists = S.playerLib.some(p=>p.name===currentUser.name);
+  if(!exists){
+    S.playerLib.push({id:uid(), name:currentUser.name});
+    persist();
+  }
+}
 // זמן יצירה של יד: שדה ts אם קיים, אחרת חילוץ מ-8 התווים האחרונים של ה-id (Date.now בבסיס 36)
 const handTs=h=>h?.ts||(h?.id?parseInt(String(h.id).slice(-8),36)||0:0);
 // ── Tombstones: סימון פריט כמחוק כדי שהסנכרון לא יחזיר אותו ──

@@ -98,7 +98,7 @@ function tryUpgrade(pass){
   if(badge){ badge.textContent=u.name+(u.role==='local'?' 🔒':' 🔑'); badge.style.color=u.role==='local'?'#5b9bd5':'#c8a96e'; }
   const upBtn = document.getElementById('btn-upgrade-to-admin');
   if(upBtn) upBtn.style.display='none';
-  try{ loadState(); }catch(e){ render(); }
+  try{ loadState(); ensureSelfAsPlayer(); renderPlayerList(); }catch(e){ render(); }
   try{ showView('tourn'); }catch(e){}
   notify('ברוך הבא '+u.name+' 🔑');
 }
@@ -115,7 +115,7 @@ function loginSuccess(){
   }
   const upBtn2 = document.getElementById('btn-upgrade-to-admin');
   if(upBtn2) upBtn2.style.display='none';
-  try{ loadState(); }catch(e){ try{render();}catch(e2){} }
+  try{ loadState(); ensureSelfAsPlayer(); renderPlayerList(); }catch(e){ try{render();}catch(e2){} }
   try{ startBlindTimer(); }catch(e){}
   try{ showView('table'); }catch(e){}
   // הפעל סנכרון אוטומטי

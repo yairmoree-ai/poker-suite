@@ -369,12 +369,18 @@ function showHandDetail(hid){
   
   box.appendChild(tableDiv);
 
-
+  // Pot Odds & Equity — מחושב מראש, ישולב בהמשך ישירות בתוך שורת הפעולה שלי בטבלה
+  const streetOdds = computeHistoricalStreetOdds(h);
+  const oddsByStreet = {};
+  streetOdds.forEach(o=>{ oddsByStreet[o.street]=o; });
+  const _usedOddsStreets = new Set(); // מוודא שנצמיד את הנתון לשורה אחת בלבד לכל סטריט
 
   // Streets - column layout like poker client
   const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
   const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
   const actionColors = {Fold:'#666',Check:'#5fc47a',Call:'#5b9bd5',Raise:'#c8a96e','3bet':'#e0a030','4bet':'#e07b6a','All-in':'#e05555',BB:'#e07b6a',SB:'#8b7cb8',Bet:'#c8a96e',Open:'#c8a96e'};
+
+
 
   // Build columns grid
   const grid = document.createElement('div');
@@ -472,11 +478,24 @@ function showHandDetail(hid){
         row.style.cssText = 'padding:5px 6px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center';
         const c = actionColors[a.type]||'#e2ddd4';
         const isFold = a.type==='Fold';
+        const myOdds = oddsByStreet[street];
+        const isMyOddsRow = myOdds && !_usedOddsStreets.has(street) && a.playerName===myNameDet2 && a.type===myOdds.myAction;
+        if(isMyOddsRow) _usedOddsStreets.add(street);
+        const ev = isMyOddsRow && myOdds.equityPct!==null ? (myOdds.equityPct - myOdds.breakEven) : null;
         row.innerHTML =
           '<div style="font-size:9px;color:#5a5870;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+
           '<div style="font-size:10px;font-weight:700;color:'+(isFold?'#555':'#e2ddd4')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.playerName+'</div>'+
           '<div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:5px;background:'+c+'22;color:'+c+';font-size:9px;font-weight:800">'+a.type+'</div>'+
-          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'');
+          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'')+
+          (isMyOddsRow?
+            '<div style="margin-top:3px;padding-top:3px;border-top:1px dashed rgba(255,255,255,0.08)">'+
+            '<div style="font-size:8px;color:#5a5870">BE '+myOdds.breakEven.toFixed(0)+'%</div>'+
+            (myOdds.equityPct!==null
+              ? '<div style="font-size:12px;font-weight:900;color:#7eb8a4">'+myOdds.equityPct.toFixed(1)+'%</div>'+
+                '<div style="font-size:8px;font-weight:800;color:'+(ev>=0?'#5fc47a':'#e07b6a')+'">'+(ev>=0?'✅ +EV':'❌ -EV')+'</div>'
+              : '<div style="font-size:9px;color:#3a3850">אין נתונים</div>')+
+            '</div>'
+            :'');
         col.appendChild(row);
       });
       // Add player cards at bottom of this column
@@ -640,13 +659,20 @@ function renderHandList(){
   document.getElementById('hands-count').textContent=`${hands.length} מתוך ${S.handLog.length} ידיים`;
   if(!hands.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">🃏</div>לא נמצאו ידיים</div>';return;}
   const allHands = hands; // use filtered list below
+  const _hlCard = (c, big)=>`<div style="width:${big?24:20}px;height:${big?34:28}px;border-radius:${big?4:3}px;background:#fff;border:1px solid #ddd;display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:${big?2:1}px;box-sizing:border-box;${big?'box-shadow:0 1px 4px rgba(0,0,0,0.5);':''}margin-left:3px"><span style="font-size:${big?17:14}px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:${big?13:11}px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`;
   cont.innerHTML=allHands.map((h,hi)=>{
     const boardCards=(h.board||[]).filter(Boolean);
-    // Find my cards (current user)
+    // Find my cards (current user) — "שלי" זה תמיד המושב של המנהל/ת המחוברת
     const myName = currentUser?.name||'';
     const mySeat = (h.seats||[]).find(s=>s.playerName===myName||(s.playerId&&pName(s.playerId)===myName));
     const myCards = mySeat?(mySeat.cards||[]).filter(Boolean):[];
-    const myCardsHtml = myCards.map(c=>`<div style="width:24px;height:34px;border-radius:4px;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,0.5);margin-left:3px"><span style="font-size:17px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:13px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`).join('');
+    const myCardsHtml = myCards.map(c=>_hlCard(c,true)).join('');
+    // קלפי היד/ות המנצחת/ות (לתמיכה בחלוקת פוט — כמה מנצחים)
+    const winnerSeats = (h.winners||[]).map(w=>(h.seats||[]).find(s=>s.seatIdx===w.seatIdx||(w.playerId&&s.playerId===w.playerId))).filter(Boolean);
+    const winnerGroupsHtml = winnerSeats.map(s=>{
+      const cards=(s.cards||[]).filter(Boolean);
+      return cards.length ? `<div style="display:flex;direction:ltr">${cards.map(c=>_hlCard(c,true)).join('')}</div>` : '';
+    }).filter(Boolean).join('<span style="color:#3a3850;font-size:11px;align-self:center;margin:0 2px">+</span>');
     return`<div class="card-item" onclick="showHandDetail('${h.id}')" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div>
@@ -654,12 +680,13 @@ function renderHandList(){
           ${(h.winners||[]).length?`<div style="font-size:10px;color:#5fc47a">🏆 ${h.winners.map(w=>w.name).join(' + ')}</div>`:'' }
           <div style="font-size:10px;color:var(--muted)">${h.date} · ${h.blinds}</div>
         </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          ${myCardsHtml?`<div style="display:flex;direction:ltr">${myCardsHtml}</div>`:''}
-          <button class="btn btn-red btn-xs" onclick="event.stopPropagation();deleteHand(${hi})">✕</button>
-        </div>
+        <button class="btn btn-red btn-xs" onclick="event.stopPropagation();deleteHand(${hi})">✕</button>
       </div>
-      ${boardCards.length?`<div style="display:flex;gap:3px;direction:ltr">${boardCards.map(c=>`<div style="width:20px;height:28px;border-radius:3px;background:#fff;border:1px solid #ddd;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:1px;box-sizing:border-box"><span style="font-size:14px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:11px;color:${SC[c.suit]};line-height:1">${c.suit}</span></div>`).join('')}</div>`:``}
+      ${(winnerGroupsHtml||myCardsHtml)?`<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+        ${winnerGroupsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#5a5870">🏆</span>${winnerGroupsHtml}</div>`:''}
+        ${myCardsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#5a5870">שלי</span><div style="display:flex;direction:ltr">${myCardsHtml}</div></div>`:''}
+      </div>`:''}
+      ${boardCards.length?`<div style="display:flex;gap:3px;direction:ltr">${boardCards.map(c=>_hlCard(c,false)).join('')}</div>`:``}
     </div>`;
   }).join('');
 }
