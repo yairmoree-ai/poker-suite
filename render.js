@@ -753,18 +753,19 @@ function renderPotOdds(){
   // עמדה + פעולה שביצע ביד הזאת + תגית שחקן (TAG/LAG/Nit/Station/Fish) כדי להרחיב/להצר
   // את טווח הסולבר בהתאם — בלי צורך לבחור range ידנית בכל פעם
   const deadKeysBase = new Set([...holeCards, ...boardCards, ...knownOppHands.flat()].filter(Boolean).map(_cardKey));
+  const _eqDepth = _getStackDepth();
   const unknownOppRangeInfo = unknownOppSeats.map(s=>{
     if(rs){
-      return {rangeStr: _getRangeStr(S.tableSize, rs.pos, rs.action), tag:'manual:'+rs.pos+':'+rs.action};
+      return {rangeStr: _getRangeStrForDepth(S.tableSize, rs.pos, rs.action, _eqDepth), tag:'manual:'+rs.pos+':'+rs.action+':'+_eqDepth};
     }
     const swpSeat = swpForEq.find(x=>x.seatIdx===s.seatIdx);
     const pos = swpSeat?.pos || '';
     const actionCat = _inferPreflopActionCat(s);
-    const baseRangeStr = pos ? _getRangeStr(S.tableSize, pos, actionCat) : '';
+    const baseRangeStr = pos ? _getRangeStrForDepth(S.tableSize, pos, actionCat, _eqDepth) : '';
     const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
     const playerType = player?.playerType || null;
     const adjRangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
-    return {rangeStr: adjRangeStr, tag:'auto:'+pos+':'+actionCat+':'+(playerType||'none')};
+    return {rangeStr: adjRangeStr, tag:'auto:'+pos+':'+actionCat+':'+_eqDepth+':'+(playerType||'none')};
   });
 
   // חישוב equity — עם cache וחישוב נדחה (לא חוסם את ציור המסך)
