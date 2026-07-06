@@ -95,6 +95,7 @@ let S={
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
 let _tableLandscape=false; // דגל זמן-ריצה בלבד (לא נשמר) — מעודכן ב-renderTableShape() לפי כיוון המכשיר בפועל
+let _seatScale=1; // גורם הקטנה למושבים כששטח השולחן קומפקטי — מעודכן ב-renderTableShape()
 
 // ═══════════════════════════════════════════════════════
 // STORAGE

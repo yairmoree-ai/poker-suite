@@ -1941,14 +1941,18 @@ function renderTableShape(){
   const maxH = Math.max(vh - usedTop - seatOverflowMargin, 180); // 180 = רצפת ביטחון שהשולחן לא ייעלם
   let w, h;
   if(_tableLandscape){
-    // בלרוחב הגובה הוא המשאב המוגבל — ממלאים את כל השטח הפנוי בפועל (רוחב וגובה)
-    // במקום לכפות יחס 4:3 קבוע שרק מקטין את השולחן מיותר כשאין הרבה גובה
+    // בלרוחב הגובה הוא המשאב המוגבל — ממלאים אותו במלואו, אבל בלי למתוח את הרוחב
+    // ליחס לא-טבעי (אליפסה שטוחה מדי) — מגבילים יחס מקסימלי סביר לשולחן פוקר
     w = maxW; h = maxH;
+    const maxRatio = 1.55;
+    if(w / h > maxRatio) w = h * maxRatio;
   } else {
     w = maxW; h = w * 4/3;
     if(h > maxH){ h = maxH; w = h * 3/4; }
   }
   w = Math.round(w); h = Math.round(h);
+  // גורם הקטנה למושבים כששטח השולחן קומפקטי (בעיקר בלרוחב) — מונע חפיפה בין כרטיסי מושב
+  _seatScale = Math.max(0.62, Math.min(1, h / 420));
 
   wrap.style.width = w + 'px';
   wrap.style.height = h + 'px';
@@ -2107,10 +2111,10 @@ function renderSeats(){
     el.dataset.seat=i;
     el.style.left=`${x}%`;
     el.style.top=`${y}%`;
-    el.style.transform='translate(-50%,-50%)';
+    el.style.transform=`translate(-50%,-50%) scale(${_seatScale})`;
     if(isCurActor){
       el.classList.add('is-actor');
-      el.style.transform='translate(-50%,-50%) scale(1.35)';
+      el.style.transform=`translate(-50%,-50%) scale(${_seatScale*1.35})`;
       el.style.zIndex='30';
     }
     el.innerHTML=`<div class="${cls}" style="width:88px;min-height:64px;box-sizing:border-box" onclick="if(event.target.closest('button'))return;clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
