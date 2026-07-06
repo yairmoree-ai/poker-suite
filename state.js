@@ -30,22 +30,6 @@ const DEF_BLINDS=[
   {sb:50000,bb:100000,ante:0}
 ];
 let BLIND_LEVELS=[...DEF_BLINDS];
-const ACTIONS=[
-  {k:'Fold',   c:'#888888', amt:false},
-  {k:'Check',  c:'#7eb8a4', amt:false},
-  {k:'Call',   c:'#5b9bd5', amt:true},
-  {k:'Open',   c:'#c8a96e', amt:true},
-  {k:'Raise',  c:'#e0a050', amt:true},
-  {k:'3bet',   c:'#e07b6a', amt:true},
-  {k:'4bet',   c:'#e05555', amt:true},
-  {k:'All-in', c:'#ff2222', amt:true}
-];
-const RESULTS=[
-  {k:'win',l:'ניצחתי',e:'🏆',c:'#5fc47a'},
-  {k:'lose',l:'הפסדתי',e:'💸',c:'#e07b6a'},
-  {k:'fold_win',l:'קיפלו',e:'🤫',c:'#7eb8a4'},
-  {k:'split',l:'חלוקה',e:'🤝',c:'#c8a96e'}
-];
 
 // ═══════════════════════════════════════════════════════
 // STATE
@@ -110,7 +94,6 @@ let S={
   btnLocked:false,
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
-let curHand=null, recStreet='פרה-פלופ', recActor='0';
 
 // ═══════════════════════════════════════════════════════
 // STORAGE

@@ -106,127 +106,6 @@ function delCustomBL(idx){
 }
 
 // ═══════════════════════════════════════════════════════
-// HAND RECORDING
-// ═══════════════════════════════════════════════════════
-function newHand(){
-  const swp=assignPos();
-  const b=getBlinds();
-  curHand={
-    id:uid(), ts:Date.now(), date:new Date().toLocaleDateString('he-IL'),
-    blinds:`${b.sb}/${b.bb}`, anteStr:b.ante?`ante ${b.ante}`:'',
-    board:[...S.board],
-    seats:swp.filter(s=>s.playerId).map(s=>({
-      seatIdx:s.seatIdx, playerId:s.playerId, playerName:pName(s.playerId),
-      pos:s.pos, stack:s.stack, cards:[...(s.cards||[null,null])],
-      actions:[], folded:s.folded||false, allin:s.allin||false
-    })),
-    result:null, amount:'', notes:'', potLog:[]
-  };
-  recStreet='פרה-פלופ'; recActor='0';
-  renderRecordPanel(); openPanel('record-panel');
-}
-function renderRecordPanel(){
-  if(!curHand)return;
-  const h=curHand;
-  const streets=['פרה-פלופ','פלופ','טורן','ריבר'];
-  let potSoFar=0;
-  // Calculate pot from all recorded actions
-  h.seats.forEach(s=>(s.actions||[]).forEach(a=>{if(parseFloat(a.amount)>0)potSoFar+=parseFloat(a.amount);}));
-  let html=``;
-  // Board
-  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">לוח</span>
-    <div style="display:flex;gap:4px;direction:ltr">
-      ${h.board.map((c,i)=>{const lbl=['F1','F2','F3','T','R'][i];return`<div style="text-align:center">
-        <button class="board-card-btn${c?' has-card':''}" style="width:30px;height:42px" onclick="openCPR('rb${i}')">
-          ${c?`<span style="font-size:19px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:15px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:14px;color:rgba(255,255,255,0.12)">+</span>`}
-        </button><div class="card-label">${lbl}</div></div>`;}).join('')}
-    </div></div>`;
-  // Street tabs
-  html+=`<div style="display:flex;gap:5px;margin-bottom:8px;overflow-x:auto">
-    ${streets.map(s=>`<button style="padding:5px 9px;border-radius:7px;border:1.5px solid ${recStreet===s?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};background:${recStreet===s?'rgba(200,169,110,0.12)':'transparent'};color:${recStreet===s?'var(--gold)':'var(--muted)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0" onclick="recStreet='${s}';renderRecordPanel()">${s}</button>`).join('')}
-  </div>`;
-  // Player selector
-  html+=`<div style="display:flex;gap:5px;margin-bottom:8px;overflow-x:auto;flex-wrap:wrap">
-    ${h.seats.map((s,si)=>`<button style="padding:5px 9px;border-radius:7px;border:1.5px solid ${recActor===String(si)?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};background:${recActor===String(si)?'rgba(200,169,110,0.12)':'transparent'};color:${recActor===String(si)?'var(--gold)':'var(--muted)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap" onclick="recActor='${si}';renderRecordPanel()">
-      ${s.playerName||'?'}${s.pos?` (${s.pos})`:''}</button>`).join('')}
-  </div>`;
-  // Action buttons
-  html+=`<div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:9px;margin-bottom:10px">
-    <div style="font-size:10px;color:var(--muted);margin-bottom:6px">פועל: <strong style="color:var(--gold)">${h.seats[+recActor]?.playerName||'?'}</strong> | Pot: <strong style="color:var(--gold)">₪${potSoFar.toLocaleString()}</strong></div>
-    ${ACTIONS.map(a=>`<div class="action-row">
-      <span class="action-lbl" style="color:${a.c}">${a.k}</span>
-      ${a.amt?`<input class="action-amt" type="number" id="ra-${a.k}" placeholder="סכום" min="0" onkeydown="if(event.key==='Enter')addRecAct('${a.k}',this.value)">`:'<span style="flex:1"></span>'}
-      <button class="action-go" style="background:${a.c}22;border:1px solid ${a.c}55;color:${a.c}" onclick="addRecAct('${a.k}',${a.amt?`document.getElementById('ra-${a.k}')?.value||''`:`''`})">✓</button>
-    </div>`).join('')}
-  </div>`;
-  // Actions by street
-  const allActs=h.seats.flatMap((s,si)=>(s.actions||[]).map(a=>({...a,si,pn:s.playerName,pos:s.pos})));
-  ['פרה-פלופ','פלופ','טורן','ריבר'].forEach(st=>{
-    const sa=allActs.filter(a=>a.street===st);
-    if(!sa.length)return;
-    let runPot=0;
-    h.seats.forEach(s=>(s.actions||[]).filter(a=>a.street===st).forEach(a=>{if(parseFloat(a.amount)>0)runPot+=parseFloat(a.amount);}));
-    html+=`<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px">${st}</div>
-      ${sa.map(a=>{const def=ACTIONS.find(x=>x.k===a.type)||ACTIONS[0];const isH=a.si===0;return`<div style="display:flex;align-items:center;gap:7px;padding:5px 7px;background:rgba(0,0,0,0.18);border-radius:7px;margin-bottom:3px">
-        <span style="font-size:10px;color:${isH?'var(--gold)':'#e07b6a'};font-weight:700;min-width:55px">${a.pos?`[${a.pos}] `:''}${a.pn}</span>
-        <span style="font-size:11px;font-weight:700;color:${def.c}">${a.type}</span>
-        ${a.amount?`<span style="font-size:11px;color:var(--gold);font-weight:700">₪${Number(a.amount).toLocaleString()}</span>`:''}
-        ${a.stackAfter!==undefined?`<span style="font-size:9px;color:var(--muted)">→ ₪${Number(a.stackAfter).toLocaleString()}</span>`:''}
-      </div>`;}).join('')}
-    </div>`;
-  });
-  // Showdown cards
-  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">קלפי שחקנים</span>
-    ${h.seats.map((s,si)=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
-      <div style="font-size:10px;color:${si===0?'var(--gold)':'#e07b6a'};font-weight:700;min-width:60px">${s.playerName||'?'}</div>
-      ${[0,1].map(ci=>{const c=s.cards?.[ci];return`<button class="board-card-btn${c?' has-card':''}" style="width:30px;height:42px" onclick="openCPR('rs${si}_c${ci}')">
-        ${c?`<span style="font-size:19px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:15px;color:${SC[c.suit]};line-height:1">${c.suit}</span>`:`<span style="font-size:13px;color:rgba(255,255,255,0.12)">+</span>`}
-      </button>`;}).join('')}
-    </div>`).join('')}</div>`;
-  // Result
-  html+=`<div style="margin-bottom:10px"><span class="sec-lbl">תוצאה</span>
-    <div class="res-grid">${RESULTS.map(r=>`<button class="res-btn${h.result===r.k?' active':''}" style="${h.result===r.k?`background:${r.c}18;border-color:${r.c}55;color:${r.c}`:''}" onclick="curHand.result='${r.k}';renderRecordPanel()">
-      <div style="font-size:15px;margin-bottom:1px">${r.e}</div>${r.l}
-    </button>`).join('')}</div>
-    ${h.result?`<input type="number" value="${h.amount||''}" placeholder="סכום" style="margin-top:7px;width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--gold);font-size:13px;outline:none;text-align:center;direction:ltr" onchange="curHand.amount=this.value">`:``}
-  </div>`;
-  // Notes
-  html+=`<div><span class="sec-lbl">הערות</span>
-    <textarea rows="2" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text);font-size:12px;outline:none;resize:none;direction:rtl;line-height:1.6" placeholder="תיאור, קריאות..." onchange="curHand.notes=this.value">${h.notes||''}</textarea>
-  </div>`;
-  document.getElementById('record-body').innerHTML=html;
-}
-function addRecAct(type,amount){
-  if(!curHand)return;
-  const si=+recActor;
-  const amt=parseFloat(amount)||0;
-  const seat=curHand.seats[si]; if(!seat)return;
-  if(!seat.actions)seat.actions=[];
-  const stackBefore=seat.stack||0;
-  const stackAfter=amt>0?Math.max(0,stackBefore-amt):stackBefore;
-  seat.actions.push({street:recStreet,type,amount:amt?String(amt):'',stackAfter});
-  if(amt>0)seat.stack=stackAfter;
-  if(type==='Fold')seat.folded=true;
-  if(type==='All-in')seat.allin=true;
-  const inp=document.getElementById(`ra-${type}`); if(inp)inp.value='';
-  renderRecordPanel();
-}
-function openCPR(t){cpTarget='__r__'+t;openCP(cpTarget);}
-function saveHandRecord(){
-  if(!curHand)return;
-  // Calculate final pot
-  let pot=0;
-  curHand.seats.forEach(s=>(s.actions||[]).forEach(a=>{if(parseFloat(a.amount)>0)pot+=parseFloat(a.amount);}));
-  curHand.finalPot=pot;
-  S.handLog=[curHand,...S.handLog];
-  // Reset table
-  S.board=[null,null,null,null,null];
-  S.seats=S.seats.map(s=>({...s,cards:[null,null],actions:[],folded:false,allin:false}));
-  persist(); closePanel('record-panel'); curHand=null;
-  render(); notify('יד נשמרה ✓');
-}
-
-// ═══════════════════════════════════════════════════════
 // HAND LIST
 // ═══════════════════════════════════════════════════════
 function showHandDetail(hid){
@@ -1271,9 +1150,7 @@ function renderPlayerList(){
 // ═══════════════════════════════════════════════════════
 function openCP(target){if(isViewer()){notify('צופה בלבד');return;}cpTarget=target;cpRank=null;renderCP();document.getElementById('card-picker').classList.add('open');}
 function renderCP(){
-  const used=cpTarget?.startsWith('__r__')
-    ?(curHand?.board||[]).concat(curHand?.seats?.flatMap(s=>s.cards||[])||[]).filter(Boolean)
-    :allUsedCards();
+  const used=allUsedCards();
   document.getElementById('cp-title').textContent=cpRank?`חליפה עבור ${cpRank}`:'בחר דרגה';
   // Show full deck: 4 rows by suit
   const suits = ['♠','♥','♦','♣'];
@@ -1299,19 +1176,14 @@ function pickCard(s){
   const card={rank:cpRank,suit:s};
   // ── ולידציה: בדוק שהקלף לא כבר בשימוש ──
   const t=cpTarget;
-  const isReview = t?.startsWith('__r__');
-  const used = isReview
-    ?(curHand?.board||[]).concat(curHand?.seats?.flatMap(s=>s.cards||[])||[]).filter(Boolean)
-    :allUsedCards();
+  const used = allUsedCards();
   // אפשר לבחור קלף שכבר בסלוט הזה (החלפה)
   let currentCardInSlot = null;
-  if(!isReview){
-    if(t?.startsWith('board')){
-      currentCardInSlot = S.board[+t.replace('board','')];
-    } else if(t?.startsWith('seat')){
-      const m=t.match(/seat(\d+)_c(\d+)/);
-      if(m) currentCardInSlot = S.seats.find(s=>s.seatIdx===+m[1])?.cards?.[+m[2]];
-    }
+  if(t?.startsWith('board')){
+    currentCardInSlot = S.board[+t.replace('board','')];
+  } else if(t?.startsWith('seat')){
+    const m=t.match(/seat(\d+)_c(\d+)/);
+    if(m) currentCardInSlot = S.seats.find(s=>s.seatIdx===+m[1])?.cards?.[+m[2]];
   }
   const isDuplicate = used.some(c=>c&&c.rank===card.rank&&c.suit===card.suit
     &&!(currentCardInSlot&&currentCardInSlot.rank===c.rank&&currentCardInSlot.suit===c.suit));
@@ -1322,12 +1194,6 @@ function pickCard(s){
   }
   cpRank=null; // reset for next pick
   document.getElementById('card-picker').classList.remove('open');
-  if(t?.startsWith('__r__')){
-    const rt=t.replace('__r__','');
-    if(rt.startsWith('rb')){curHand.board[+rt.replace('rb','')]=card;}
-    else{const m=rt.match(/rs(\d+)_c(\d+)/);if(m)curHand.seats[+m[1]].cards[+m[2]]=card;}
-    renderRecordPanel(); return;
-  }
   if(t?.startsWith('board')){
     const boardIdx = +t.replace('board','');
     S.board[boardIdx]=card;
