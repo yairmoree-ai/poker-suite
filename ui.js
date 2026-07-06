@@ -371,9 +371,9 @@ function showHandDetail(hid){
 
   // Pot Odds & Equity — מחושב מראש, ישולב בהמשך ישירות בתוך שורת הפעולה שלי בטבלה
   const streetOdds = computeHistoricalStreetOdds(h);
-  const oddsByStreet = {};
-  streetOdds.forEach(o=>{ oddsByStreet[o.street]=o; });
-  const _usedOddsStreets = new Set(); // מוודא שנצמיד את הנתון לשורה אחת בלבד לכל סטריט
+  const oddsByKey = {};
+  streetOdds.forEach(o=>{ oddsByKey[o.street+'|'+o.seatIdx]=o; });
+  const _usedOddsKeys = new Set(); // מוודא שנצמיד את הנתון לשורה אחת בלבד לכל שחקן/סטריט
 
   // Streets - column layout like poker client
   const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
@@ -462,7 +462,7 @@ function showHandDetail(hid){
       const allActs = [];
       (h.seats||[]).forEach(s=>{
         (s.actions||[]).filter(a=>a.street===street&&!(street==='פרה-פלופ'&&(a.type==='SB'||a.type==='BB'))).forEach(a=>{
-          allActs.push({...a, playerName:s.playerName||s.playerId, pos:s.pos, folded:s.folded});
+          allActs.push({...a, seatIdx:s.seatIdx, playerName:s.playerName||s.playerId, pos:s.pos, folded:s.folded});
         });
       });
       // Sort: SB first, BB second, then by action index ascending
@@ -478,9 +478,10 @@ function showHandDetail(hid){
         row.style.cssText = 'padding:5px 6px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center';
         const c = actionColors[a.type]||'#e2ddd4';
         const isFold = a.type==='Fold';
-        const myOdds = oddsByStreet[street];
-        const isMyOddsRow = myOdds && !_usedOddsStreets.has(street) && a.playerName===myNameDet2 && a.type===myOdds.myAction;
-        if(isMyOddsRow) _usedOddsStreets.add(street);
+        const myOdds = oddsByKey[street+'|'+a.seatIdx];
+        const oddsKey = street+'|'+a.seatIdx;
+        const isMyOddsRow = myOdds && !_usedOddsKeys.has(oddsKey) && a.type===myOdds.myAction;
+        if(isMyOddsRow) _usedOddsKeys.add(oddsKey);
         const ev = isMyOddsRow && myOdds.equityPct!==null ? (myOdds.equityPct - myOdds.breakEven) : null;
         row.innerHTML =
           '<div style="font-size:9px;color:#5a5870;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+

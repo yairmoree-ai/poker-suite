@@ -451,7 +451,7 @@ function _inferPreflopActionCat(seat){
   if(!preflopActs.length) return 'call'; // לדוגמה BB שצ'ק אחרי לימפים
   const last = preflopActs[preflopActs.length-1];
   const round = last.raiseRound||0;
-  if(['Raise','Open','All-in'].includes(last.type)){
+  if(['Raise','Open','All-in','3bet','4bet','5bet','Bet'].includes(last.type)){
     if(round<=1) return 'RFI';
     if(round===2) return '3bet';
     return '4bet';
@@ -596,16 +596,12 @@ function monteCarloEquityVsKnown(holeCards, boardCards, knownOppHands, numRandom
   return ((wins + ties*0.5) / iterations * 100);
 }
 
-// מחשב עבור יד היסטורית (שמורה) — לכל סטריט שבו "אני" (המשתמש המחובר) עמדתי מול
-// הימור בפועל — מה היה ה-pot, ה-call, ה-break-even וה-equity שלי באותו רגע.
+// מחשב עבור יד היסטורית (שמורה) — לכל שחקן שקלפיו ידועים (הוזנו בפועל, לא משנה מי),
+// ולכל סטריט שבו הוא עמד מול הימור בפועל — מה היה ה-pot, ה-call, ה-break-even וה-equity
+// שלו באותו רגע. לא תלוי בכלל אם המנהל/ת המחובר/ת נכח/ה באותה יד או ישב/ה בשולחן.
 // זו הערכה בדיעבד: טווח היריב מבוסס על העמדה+הפעולה שביצע ביד + התגית הנוכחית שלו
-// (לא בהכרח זהה למה שהיה ידוע לו/לך בזמן אמת), אלא אם קלפיו ידועים בפועל (showdown).
+// (לא בהכרח זהה למה שהיה ידוע בזמן אמת), אלא אם קלפיו ידועים בפועל (showdown).
 function computeHistoricalStreetOdds(h){
-  const myName = currentUser?.name||'';
-  const mySeat = (h.seats||[]).find(s=>s.playerName===myName||(s.playerId&&pName(s.playerId)===myName));
-  const myCards = mySeat ? (mySeat.cards||[]).filter(Boolean) : [];
-  if(!mySeat || myCards.length!==2) return [];
-
   const bbNum = parseFloat((h.blinds||'').split('/')[1]) || 0;
   const streetsOrder = ['פרה-פלופ','פלופ','טורן','ריבר'];
   const boardFull = (h.board||[]).filter(Boolean);
@@ -618,6 +614,7 @@ function computeHistoricalStreetOdds(h){
 
   const folded = new Set();
   const results = [];
+  const tableSizeApprox = (h.seats||[]).length;
 
   streetsOrder.forEach(street=>{
     const acts = [];
@@ -641,26 +638,28 @@ function computeHistoricalStreetOdds(h){
 
     const investedThisStreet = {};
     let lastBet = 0;
-    let recordedThisStreet = false;
+    const recordedSeatsThisStreet = new Set();
 
     for(const a of acts){
       const already = investedThisStreet[a.seatIdx]||0;
-      if(a.seatIdx===mySeat.seatIdx && !recordedThisStreet){
+      const actingSeat = (h.seats||[]).find(s=>s.seatIdx===a.seatIdx);
+      const actingCards = actingSeat ? (actingSeat.cards||[]).filter(Boolean) : [];
+
+      if(actingCards.length===2 && !recordedSeatsThisStreet.has(a.seatIdx)){
         const callAmt = lastBet - already;
         if(callAmt > 0 && ['Call','Raise','3bet','4bet','All-in','Fold'].includes(a.type)){
-          recordedThisStreet = true;
+          recordedSeatsThisStreet.add(a.seatIdx);
           const potNow = potBefore + Object.values(investedThisStreet).reduce((s,v)=>s+v,0);
-          const oppSeatsH = (h.seats||[]).filter(s=>s.playerId && s.seatIdx!==mySeat.seatIdx && !folded.has(s.seatIdx));
+          const oppSeatsH = (h.seats||[]).filter(s=>s.playerId && s.seatIdx!==a.seatIdx && !folded.has(s.seatIdx));
           if(oppSeatsH.length){
             const knownOppHands = oppSeatsH.filter(s=>(s.cards||[]).filter(Boolean).length===2).map(s=>s.cards.filter(Boolean));
             const unknownOppSeatsH = oppSeatsH.filter(s=>(s.cards||[]).filter(Boolean).length!==2);
             const boardNow = boardAtStreet[street];
-            const deadKeys = new Set([...myCards, ...boardNow, ...knownOppHands.flat()].filter(Boolean).map(_cardKey));
-            const myStack = mySeat.stack||0;
+            const deadKeys = new Set([...actingCards, ...boardNow, ...knownOppHands.flat()].filter(Boolean).map(_cardKey));
+            const myStack = actingSeat.stack||0;
             const minOppStack = Math.min(...oppSeatsH.map(s=>s.stack||0));
             const effBB = bbNum>0 ? Math.min(myStack, minOppStack)/bbNum : 100;
             const depth = _depthFromBB(effBB);
-            const tableSizeApprox = (h.seats||[]).length;
             const combosLists = unknownOppSeatsH.map(s=>{
               const actionCat = _inferPreflopActionCat(s);
               const baseRangeStr = s.pos ? _getRangeStrForDepth(tableSizeApprox, s.pos, actionCat, depth) : '';
@@ -670,12 +669,12 @@ function computeHistoricalStreetOdds(h){
               const combos = _rangeStrToCombos(adjRangeStr, deadKeys);
               return combos.length ? combos : null;
             });
-            const equityPct = monteCarloEquityMulti(myCards, boardNow, knownOppHands, combosLists, 2500);
+            const equityPct = monteCarloEquityMulti(actingCards, boardNow, knownOppHands, combosLists, 2500);
             const totalPot = potNow + callAmt;
             const breakEven = totalPot>0 ? (callAmt/totalPot*100) : 0;
             const ratio = callAmt>0 ? potNow/callAmt : 0;
             results.push({
-              street, pot: potNow, callAmt, breakEven, ratio, equityPct,
+              seatIdx: a.seatIdx, street, pot: potNow, callAmt, breakEven, ratio, equityPct,
               hasKnownOpp: knownOppHands.length>0,
               myAction: a.type
             });
