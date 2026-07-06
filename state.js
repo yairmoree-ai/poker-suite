@@ -94,6 +94,7 @@ let S={
   btnLocked:false,
 };
 let activeSeat=null, cpTarget=null, cpRank=null;
+let _tableLandscape=false; // דגל זמן-ריצה בלבד (לא נשמר) — מעודכן ב-renderTableShape() לפי כיוון המכשיר בפועל
 
 // ═══════════════════════════════════════════════════════
 // STORAGE
@@ -347,8 +348,9 @@ function assignPos(){
 
 function getSeatXY(i,count){
   const gapDeg = count<=4 ? 50 : count<=6 ? 40 : count<=7 ? 32 : 22;
-  const rx = count>=8 ? 42 : 36;
-  const ry = count>=8 ? 46 : 40;
+  let rx = count>=8 ? 42 : 36;
+  let ry = count>=8 ? 46 : 40;
+  if(_tableLandscape){ const t=rx; rx=ry; ry=t; } // אליפסה רחבה: מחליפים תפקידים בין rx ל-ry
   const spreadDeg = 360 - gapDeg*2;
   const startRad = gapDeg * Math.PI/180;
   const stepRad = (spreadDeg * Math.PI/180) / (count - 1);
@@ -356,5 +358,5 @@ function getSeatXY(i,count){
   return{x:50+rx*Math.cos(angle), y:50+ry*Math.sin(angle)};
 }
 function getDealerSeatXY(){
-  return{x:50+36, y:50};
+  return _tableLandscape ? {x:50, y:50+36} : {x:50+36, y:50};
 }

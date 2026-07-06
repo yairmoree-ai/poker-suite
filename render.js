@@ -1918,11 +1918,14 @@ function renderTableShape(){
   const svg = document.getElementById('table-svg');
   if(!wrap || !svg) return;
 
-  // Lovable: max-w-[420px] aspect-[3/4]
+  // Lovable: max-w-[420px] aspect-[3/4] (portrait) / aspect-[4/3] (landscape)
   // מדידת שטח זמין אמיתי (במקום הנחת "topBarH=175" קבועה) —
   // כך זה מתאים את עצמו לכל דפדפן/מכשיר: ספארי עם/בלי סרגלים, כרום, דסקטופ, PWA
   const vw = (window.visualViewport && window.visualViewport.width) || window.innerWidth;
   const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  // מזהים אוריינטציה אמיתית של המסך (לא רק דחיסה של אותה צורה אנכית) —
+  // כשהמכשיר מוטה לרוחב, השולחן עצמו הופך לאליפסה רחבה, לא רק מוקטן
+  _tableLandscape = vw > vh;
 
   let usedTop = 0;
   ['viewer-banner','topbar','live-actions-bar','table-size-bar'].forEach(id=>{
@@ -1934,11 +1937,16 @@ function renderTableShape(){
   });
 
   const seatOverflowMargin = 110; // מרווח קבוע למושבים שגולשים מחוץ לגבולות האליפסה
-  const maxW = Math.min(vw - 40, 360);
+  const maxW = Math.min(vw - 40, _tableLandscape ? 640 : 360);
   const maxH = Math.max(vh - usedTop - seatOverflowMargin, 180); // 180 = רצפת ביטחון שהשולחן לא ייעלם
-  let w = maxW;
-  let h = w * 4/3;
-  if(h > maxH){ h = maxH; w = h * 3/4; }
+  let w, h;
+  if(_tableLandscape){
+    w = maxW; h = w * 3/4;
+    if(h > maxH){ h = maxH; w = h * 4/3; }
+  } else {
+    w = maxW; h = w * 4/3;
+    if(h > maxH){ h = maxH; w = h * 3/4; }
+  }
   w = Math.round(w); h = Math.round(h);
 
   wrap.style.width = w + 'px';
@@ -1946,8 +1954,15 @@ function renderTableShape(){
   wrap.style.borderRadius = '50%';
   wrap.style.overflow = 'visible';
 
-  // SVG viewBox 300x400 (aspect 3:4)
-  svg.setAttribute('viewBox','0 0 300 400');
+  // viewBox ופרמטרי האליפסה — מוחלפים (rx<->ry, מרכז) בין אנכי לאופקי
+  const vbW = _tableLandscape ? 400 : 300;
+  const vbH = _tableLandscape ? 300 : 400;
+  const cx = vbW/2, cy = vbH/2;
+  const railR = _tableLandscape ? {rx:184,ry:138} : {rx:138,ry:184};
+  const feltR = _tableLandscape ? {rx:170,ry:124} : {rx:124,ry:170};
+  const hiR   = _tableLandscape ? {rx:162,ry:116} : {rx:116,ry:162};
+  const goldR = _tableLandscape ? {rx:154,ry:108} : {rx:108,ry:154};
+  svg.setAttribute('viewBox',`0 0 ${vbW} ${vbH}`);
   svg.style.borderRadius = '50%';
   svg.innerHTML = `<defs>
     <radialGradient id="gFelt" cx="50%" cy="40%">
@@ -1960,14 +1975,14 @@ function renderTableShape(){
     </linearGradient>
   </defs>
   <!-- outer rail: inset 8% -->
-  <ellipse cx="150" cy="200" rx="138" ry="184" fill="url(#gRail)" filter="drop-shadow(0 20px 40px rgba(0,0,0,0.7))"/>
-  <ellipse cx="150" cy="200" rx="138" ry="184" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+  <ellipse cx="${cx}" cy="${cy}" rx="${railR.rx}" ry="${railR.ry}" fill="url(#gRail)" filter="drop-shadow(0 20px 40px rgba(0,0,0,0.7))"/>
+  <ellipse cx="${cx}" cy="${cy}" rx="${railR.rx}" ry="${railR.ry}" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
   <!-- felt: inset 13% -->
-  <ellipse cx="150" cy="200" rx="124" ry="170" fill="url(#gFelt)" filter="drop-shadow(inset 0 0 40px rgba(0,0,0,0.5))"/>
+  <ellipse cx="${cx}" cy="${cy}" rx="${feltR.rx}" ry="${feltR.ry}" fill="url(#gFelt)" filter="drop-shadow(inset 0 0 40px rgba(0,0,0,0.5))"/>
   <!-- inner highlight -->
-  <ellipse cx="150" cy="200" rx="116" ry="162" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+  <ellipse cx="${cx}" cy="${cy}" rx="${hiR.rx}" ry="${hiR.ry}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
   <!-- gold ring -->
-  <ellipse cx="150" cy="200" rx="108" ry="154" fill="none" stroke="rgba(200,169,110,0.08)" stroke-width="0.8"/>`;
+  <ellipse cx="${cx}" cy="${cy}" rx="${goldR.rx}" ry="${goldR.ry}" fill="none" stroke="rgba(200,169,110,0.08)" stroke-width="0.8"/>`;
 
   // עדכן כפתור orientation  // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
