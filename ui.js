@@ -49,61 +49,89 @@ function showActivePlayers(){
 }
 
 // ═══════════════════════════════════════════════════════
-// BLINDS PANEL
+// BLINDS PANEL (שולחן) — אותה שיטת עריכה (טבלה) כמו בטורנירים,
+// אך על נתונים נפרדים לגמרי (BLIND_LEVELS/S.customBlindLevels).
+// אין כאן שום קריאה או כתיבה ל-S.blindStructure (זה של הטורניר בלבד).
 // ═══════════════════════════════════════════════════════
 function openBlindsPanel(){
+  window._blTableWorking = null; // מתחיל עותק עבודה טרי בכל פתיחה
   renderBlindsBody();
   openPanel('blinds-panel');
+}
+function _blInputStyle(gold){
+  return 'width:100%;padding:6px 4px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:'+(gold?'var(--gold)':'#e2ddd4')+';font-size:12px;outline:none;text-align:center;direction:ltr;box-sizing:border-box';
 }
 function renderBlindsBody(){
   const b=getBlinds();
   const fmt=n=>n>=1000?(n/1000)+'K':String(n);
-  const allLvl=[...DEF_BLINDS,...S.customBlindLevels];
-  document.getElementById('blinds-body').innerHTML=`
-    <div style="display:flex;gap:7px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
-      <button class="btn btn-outline btn-sm" onclick="chgBlind(-1)">◀</button>
-      <button class="btn btn-outline btn-sm" onclick="chgBlind(1)">▶</button>
-      <span style="font-size:13px;font-weight:700;color:var(--gold)">${fmt(b.sb)}/${fmt(b.bb)}${b.ante?` ante ${fmt(b.ante)}`:''}</span>
-    </div>
-    <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;margin-bottom:12px">
-      <div style="font-size:10px;color:var(--muted);margin-bottom:7px;font-weight:600">הוסף רמה מותאמת</div>
-      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
-        <input type="number" id="cbl-sb" placeholder="SB" style="width:68px;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--gold);font-size:12px;outline:none;text-align:center;direction:ltr">
-        <span style="color:var(--muted)">/</span>
-        <input type="number" id="cbl-bb" placeholder="BB" style="width:68px;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--gold);font-size:12px;outline:none;text-align:center;direction:ltr">
-        <span style="font-size:10px;color:var(--muted)">ante</span>
-        <input type="number" id="cbl-ante" placeholder="0" style="width:60px;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--gold);font-size:12px;outline:none;text-align:center;direction:ltr">
-        <button class="btn btn-gold btn-sm" onclick="saveCustomBL()">+ שמור</button>
-      </div>
-    </div>
-    <div class="bl-grid">
-      ${allLvl.map((l,i)=>{
-        const isC=i>=DEF_BLINDS.length, isA=S.blindLevel===i&&!S.customBlinds;
-        return`<button class="bl-btn${isA?' active':''}" onclick="setBlind(${i})" style="${isC?'border-color:rgba(200,169,110,0.3)':''}">
-          <strong>${fmt(l.sb)}/${fmt(l.bb)}</strong>
-          ${l.ante?`<span class="ante">ante ${fmt(l.ante)}</span>`:''}
-          ${isC?`<span onclick="event.stopPropagation();delCustomBL(${i-DEF_BLINDS.length})" style="font-size:8px;color:rgba(200,80,80,0.6);cursor:pointer;display:block">✕</span>`:''}
-        </button>`;
-      }).join('')}
+  if(!window._blTableWorking){
+    window._blTableWorking = [...DEF_BLINDS.map(l=>({...l})), ...S.customBlindLevels.map(l=>({...l}))];
+  }
+  const working = window._blTableWorking;
+
+  const rowsHtml = working.map((l,i)=>{
+    const isActive = S.blindLevel===i && !S.customBlinds;
+    return `<div style="display:grid;grid-template-columns:20px 1fr 1fr 1fr 52px 24px;gap:4px;align-items:center;margin-bottom:5px;${isActive?'background:rgba(200,169,110,0.1);border-radius:8px;padding:3px 2px':''}">
+      <span style="font-size:10px;color:var(--muted);text-align:center">${i+1}</span>
+      <input type="number" value="${l.sb}" data-field="sb" data-idx="${i}" style="${_blInputStyle(false)}">
+      <input type="number" value="${l.bb}" data-field="bb" data-idx="${i}" style="${_blInputStyle(false)}">
+      <input type="number" value="${l.ante||0}" data-field="ante" data-idx="${i}" style="${_blInputStyle(true)}">
+      <button onclick="activateTableBlind(${i})" style="padding:5px 2px;border-radius:7px;border:1px solid ${isActive?'rgba(95,196,122,0.5)':'rgba(200,169,110,0.35)'};background:${isActive?'rgba(95,196,122,0.15)':'rgba(200,169,110,0.1)'};color:${isActive?'#5fc47a':'#c8a96e'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">${isActive?'✓ פעיל':'▶ הפעל'}</button>
+      <button onclick="delTableBlindRow(${i})" style="padding:5px 2px;border-radius:7px;border:none;background:rgba(224,123,106,0.15);color:#e07b6a;font-size:12px;cursor:pointer">✕</button>
     </div>`;
+  }).join('');
+
+  document.getElementById('blinds-body').innerHTML=`
+    <div style="margin-bottom:10px"><span style="font-size:12px;font-weight:700;color:var(--gold)">בליינדים כרגע: ${fmt(b.sb)}/${fmt(b.bb)}${b.ante?` ante ${fmt(b.ante)}`:''}</span></div>
+    <div style="display:grid;grid-template-columns:20px 1fr 1fr 1fr 52px 24px;gap:4px;margin-bottom:4px">
+      <span></span><span style="font-size:9px;color:var(--muted);text-align:center">SB</span><span style="font-size:9px;color:var(--muted);text-align:center">BB</span><span style="font-size:9px;color:var(--muted);text-align:center">Ante</span><span></span><span></span>
+    </div>
+    <div id="table-bl-rows">${rowsHtml}</div>
+    <button onclick="addTableBlindRow()" style="width:100%;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;margin-top:6px">+ הוסף רמה</button>
+    <button onclick="saveTableBlindLevels()" style="width:100%;padding:11px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer;margin-top:10px">💾 שמור רמות</button>
+    <button onclick="resetTableBlindLevels()" style="width:100%;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;margin-top:6px">איפוס לברירת מחדל</button>`;
+
+  document.querySelectorAll('#table-bl-rows input').forEach(inp=>{
+    inp.oninput = ()=>{ const i=+inp.dataset.idx, f=inp.dataset.field; working[i][f]=+inp.value||0; };
+  });
 }
-function setBlind(i){if(isViewer()){notify('צופה בלבד');return;}S.blindLevel=i;S.customBlinds=null;persist();renderBlindsBtn();renderBlindsBody();}
-function chgBlind(d){if(isViewer()){notify('צופה בלבד');return;}S.blindLevel=Math.max(0,Math.min(BLIND_LEVELS.length-1,S.blindLevel+d));S.customBlinds=null;persist();renderBlindsBtn();renderBlindsBody();}
-function saveCustomBL(){
-  const sb=parseInt(document.getElementById('cbl-sb')?.value)||0;
-  const bb=parseInt(document.getElementById('cbl-bb')?.value)||0;
-  const ante=parseInt(document.getElementById('cbl-ante')?.value)||0;
-  if(!sb||!bb){notify('הכנס SB ו-BB');return;}
-  S.customBlindLevels.push({sb,bb,ante});
-  BLIND_LEVELS=[...DEF_BLINDS,...S.customBlindLevels];
-  persist(); renderBlindsBody(); notify('רמה נשמרה ✓');
+function addTableBlindRow(){
+  if(isViewer()){notify('צופה בלבד');return;}
+  const w=window._blTableWorking;
+  const last=w[w.length-1]||{sb:500,bb:1000,ante:0};
+  w.push({sb:last.sb*2,bb:last.bb*2,ante:last.ante||0});
+  renderBlindsBody();
 }
-function delCustomBL(idx){
-  S.customBlindLevels.splice(idx,1);
-  BLIND_LEVELS=[...DEF_BLINDS,...S.customBlindLevels];
-  if(S.blindLevel>=BLIND_LEVELS.length)S.blindLevel=BLIND_LEVELS.length-1;
-  persist(); renderBlindsBody();
+function delTableBlindRow(i){
+  if(isViewer()){notify('צופה בלבד');return;}
+  const w=window._blTableWorking;
+  w.splice(i,1);
+  renderBlindsBody();
 }
+function activateTableBlind(i){
+  if(isViewer()){notify('צופה בלבד');return;}
+  S.blindLevel=i; S.customBlinds=null; persist(); renderBlindsBtn(); renderBlindsBody();
+}
+function saveTableBlindLevels(){
+  if(isViewer()){notify('צופה בלבד');return;}
+  const w=window._blTableWorking;
+  if(!w.length){notify('חייבת להישאר לפחות רמה אחת');return;}
+  S.customBlindLevels = w.slice(1); // השורה הראשונה נשארת "ברירת מחדל" רעיונית; שאר השורות נשמרות
+  BLIND_LEVELS = w.slice();
+  if(S.blindLevel>=BLIND_LEVELS.length) S.blindLevel=BLIND_LEVELS.length-1;
+  persist(); renderBlindsBtn(); renderBlindsBody();
+  notify('רמות הבליינדים נשמרו ✓');
+}
+function resetTableBlindLevels(){
+  if(isViewer()){notify('צופה בלבד');return;}
+  window._blTableWorking = [...DEF_BLINDS.map(l=>({...l}))];
+  S.customBlindLevels = [];
+  BLIND_LEVELS = [...DEF_BLINDS];
+  if(S.blindLevel>=BLIND_LEVELS.length) S.blindLevel=0;
+  persist(); renderBlindsBtn(); renderBlindsBody();
+  notify('אופס לברירת מחדל');
+}
+
 
 // ═══════════════════════════════════════════════════════
 // HAND LIST
