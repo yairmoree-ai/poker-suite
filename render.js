@@ -1936,13 +1936,14 @@ function renderTableShape(){
     }
   });
 
-  const seatOverflowMargin = 110; // מרווח קבוע למושבים שגולשים מחוץ לגבולות האליפסה
+  const seatOverflowMargin = _tableLandscape ? 60 : 110; // בלרוחב הגובה הזמין מוגבל מלכתחילה, אז שומרים פחות מרווח
   const maxW = Math.min(vw - 40, _tableLandscape ? 640 : 360);
   const maxH = Math.max(vh - usedTop - seatOverflowMargin, 180); // 180 = רצפת ביטחון שהשולחן לא ייעלם
   let w, h;
   if(_tableLandscape){
-    w = maxW; h = w * 3/4;
-    if(h > maxH){ h = maxH; w = h * 4/3; }
+    // בלרוחב הגובה הוא המשאב המוגבל — ממלאים את כל השטח הפנוי בפועל (רוחב וגובה)
+    // במקום לכפות יחס 4:3 קבוע שרק מקטין את השולחן מיותר כשאין הרבה גובה
+    w = maxW; h = maxH;
   } else {
     w = maxW; h = w * 4/3;
     if(h > maxH){ h = maxH; w = h * 3/4; }
