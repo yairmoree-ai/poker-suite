@@ -773,7 +773,12 @@ function renderPotOdds(){
   if(isOpeningSpot){
     const mySwp = swpForEq.find(x=>x.seatIdx===actor);
     const myPos = mySwp?.pos || '';
-    const myRangeStr = myPos ? _getRangeStr(S.tableSize, myPos, 'RFI') : '';
+    // עומק ה-stack להחלטת פתיחה נגזר מהמחסנית של הפותח עצמו, לא מהמחסנית
+    // הכי קצרה בשולחן (_getStackDepth) — שחקן צדדי קצר-יד לא הופך פתיחה עם 124BB לפתיחת push/fold
+    const bbNow = (getBlinds&&getBlinds()?.bb)||50;
+    const myStackNow = seat?.stack||0;
+    const myDepth = _depthFromBB(bbNow>0 ? myStackNow/bbNow : 100);
+    const myRangeStr = myPos ? _getRangeStrForDepth(S.tableSize, myPos, 'RFI', myDepth) : '';
     const handNotation = _cardsToHandNotation(holeCards);
     const rangeSet = _parseRangeToSet(myRangeStr);
     openRangeInfo = { pos: myPos, hand: handNotation, inRange: rangeSet.has(handNotation) };
