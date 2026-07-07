@@ -408,6 +408,18 @@
   </div>
 </div>
 
+  <!-- Debug Sync Panel (כלי אבחון זמני) -->
+  <div id="debug-sync-panel" style="position:fixed;bottom:0;left:0;right:0;max-height:42vh;overflow-y:auto;background:rgba(10,13,20,0.98);border-top:2px solid #c8a96e;z-index:9999;font-family:monospace;font-size:10px;direction:ltr;text-align:left;padding:6px;box-sizing:border-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;direction:rtl">
+      <span style="color:#c8a96e;font-weight:800;font-size:11px">🐛 Debug Sync</span>
+      <div style="display:flex;gap:6px">
+        <button onclick="_dbgClear()" style="background:rgba(224,123,106,0.2);border:1px solid #e07b6a;color:#e07b6a;border-radius:5px;padding:2px 8px;font-size:9px">נקה</button>
+        <button onclick="document.getElementById('debug-sync-panel').style.display='none'" style="background:rgba(255,255,255,0.1);border:none;color:#8a8878;border-radius:5px;padding:2px 8px;font-size:9px">הסתר</button>
+      </div>
+    </div>
+    <div id="debug-sync-log" style="color:#8a8878;line-height:1.5"></div>
+  </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="auth.js"></script>
 <script src="state.js"></script>

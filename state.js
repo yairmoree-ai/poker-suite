@@ -1,4 +1,25 @@
 // ═══════════════════════════════════════════════════════
+// DEBUG SYNC (כלי אבחון זמני - להסרה בהמשך)
+// ═══════════════════════════════════════════════════════
+window._dbgLogs = [];
+function _dbg(msg){
+  try{
+    const t = new Date().toLocaleTimeString('he-IL', {hour12:false});
+    window._dbgLogs.push('['+t+'] '+msg);
+    if(window._dbgLogs.length > 300) window._dbgLogs.shift();
+    const el = document.getElementById('debug-sync-log');
+    if(el) el.innerHTML = window._dbgLogs.map(l=>'<div>'+l.replace(/</g,'&lt;')+'</div>').join('');
+    const panel = document.getElementById('debug-sync-panel');
+    if(panel) panel.scrollTop = panel.scrollHeight;
+  }catch(e){}
+}
+function _dbgClear(){
+  window._dbgLogs=[];
+  const el = document.getElementById('debug-sync-log');
+  if(el) el.innerHTML='';
+}
+
+// ═══════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════
 const RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
@@ -147,6 +168,8 @@ function applySnapshot(v){
   }
   // שאר השדות — קח מהגרסה החדשה יותר בלבד
   const incomingNewer = !S.savedAt || !v.savedAt || v.savedAt > S.savedAt;
+  _dbg('applySnapshot: S.savedAt='+S.savedAt+' v.savedAt='+v.savedAt+' incomingNewer='+incomingNewer
+    +' | v.tableSize='+v.tableSize+' v.seats(playerId)='+(v.seats?.filter(s=>s.playerId).length||0));
   if(incomingNewer){
     if(v.seats) S.seats=v.seats;
     if(v.board) S.board=v.board;
@@ -206,6 +229,9 @@ function applySnapshot(v){
     // לצמיתות — למרות שהנתונים שהתקבלו כרגע *כן* יושמו בהצלחה. מתקדמים בלבד, אף פעם
     // לא אחורה, כדי לא לאבד שינויים מקומיים חדשים יותר שעוד לא נדחפו.
     if(v.savedAt && v.savedAt > (S.savedAt||0)) S.savedAt = v.savedAt;
+    _dbg('applySnapshot: applied. S.tableSize now='+S.tableSize+' S.seats(playerId) now='+(S.seats?.filter(s=>s.playerId).length||0)+' S.savedAt now='+S.savedAt);
+  } else {
+    _dbg('applySnapshot: SKIPPED (incoming not newer) — S.tableSize stays '+S.tableSize);
   }
   if(S.currentActor===undefined) S.currentActor=null;
   if(S.bettingClosed===undefined) S.bettingClosed=false;
@@ -269,12 +295,16 @@ function loadState(){
   if(tlog) S.tournLog=Array.isArray(tlog)?tlog:[];
 
   if(S.buyinCost===100) S.buyinCost=50;
+  _dbg('loadState: seats='+(S.seats?.filter(s=>s.playerId).length||0)+' tableSize='+S.tableSize+' savedAt='+S.savedAt);
   render();
 
 }
 function persist(){
   if(isViewer()) return;
+  const _prevSavedAt = S.savedAt;
   S.savedAt = Date.now();
+  const _caller = (new Error().stack||'').split('\n')[2]?.trim().slice(0,60)||'?';
+  _dbg('persist(): savedAt '+_prevSavedAt+' → '+S.savedAt+' | seats='+(S.seats?.filter(s=>s.playerId).length||0)+' | caller: '+_caller);
   const snap = fullSnapshot();
   // Save to both localStorage and sessionStorage
   try{ localStorage.setItem('ps_lib',JSON.stringify(S.playerLib)); }catch(e){}
