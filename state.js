@@ -61,21 +61,28 @@ const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 function ensureSelfAsPlayer(){
   if(!currentUser || currentUser.role==='viewer') return;
   if(!currentUser.name) return;
-  // חשוב: מושהה בכוונה (1200ms) — נותן לסנכרון מהענן (שרץ ~800ms אחרי login) הזדמנות
-  // ראשונה להביא קודם את הנתונים האמיתיים. בלי ההשהיה הזו, על הקשר אחסון ריק (למשל
-  // ספארי בפעם הראשונה, נפרד לגמרי מ-webapp ב-iOS) הבדיקה הייתה "חושבת" שהמשתמש חסר
-  // ומבצעת persist() מוקדם מדי — מה שדוחף את S.savedAt קדימה וגורם ל-applySnapshot()
-  // לפסול את העדכון האמיתי שמגיע מהענן מיד אחר כך (כי הוא "נראה" ישן יותר), ומוחק בפועל
-  // כל מה שהיה על השולחן במכשירים אחרים.
-  setTimeout(()=>{
-    if(!S.playerLib) S.playerLib=[];
-    const exists = S.playerLib.some(p=>p.name===currentUser.name);
-    if(!exists){
-      S.playerLib.push({id:uid(), name:currentUser.name});
-      persist();
-      try{ renderPlayerList(); }catch(e){}
-    }
-  }, 1200);
+  // חשוב: מחכים בפועל לסיום הסנכרון הראשוני (_initialSyncDone), לא לזמן קבוע —
+  // כי משך ה-fetch עצמו משתנה לפי מהירות הרשת, וזמן קבוע (היה 1200ms) עדיין יכול
+  // "להתעורר" בדיוק בזמן שה-fetch עוד באוויר, לפני שהתשובה חזרה בפועל.
+  // _initialSyncDone מוגדר ב-features.js; אם עדיין לא הוגדר בכלל (סקריפט לא נטען) —
+  // מתייחסים כאילו הסתיים, כדי לא להיתקע.
+  const syncPending = (typeof _initialSyncDone !== 'undefined')
+    && (typeof getGsUrl === 'function') && getGsUrl() && !_initialSyncDone;
+  if(syncPending){
+    _dbg('ensureSelfAsPlayer: waiting for _initialSyncDone... retry in 300ms');
+    setTimeout(ensureSelfAsPlayer, 300);
+    return;
+  }
+  if(!S.playerLib) S.playerLib=[];
+  const exists = S.playerLib.some(p=>p.name===currentUser.name);
+  if(!exists){
+    _dbg('ensureSelfAsPlayer: adding self as player NOW (_initialSyncDone='+_initialSyncDone+')');
+    S.playerLib.push({id:uid(), name:currentUser.name});
+    persist();
+    try{ renderPlayerList(); }catch(e){}
+  } else {
+    _dbg('ensureSelfAsPlayer: already exists, no-op');
+  }
 }
 // זמן יצירה של יד: שדה ts אם קיים, אחרת חילוץ מ-8 התווים האחרונים של ה-id (Date.now בבסיס 36)
 const handTs=h=>h?.ts||(h?.id?parseInt(String(h.id).slice(-8),36)||0:0);
