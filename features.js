@@ -645,10 +645,9 @@ const FIREBASE_URL = 'https://poker-suite-db-default-rtdb.europe-west1.firebased
 
 async function syncToSheets(immediate){
   if(isViewer()||isLocal()) return;
-  if(!S.playerLib?.length){ _dbg('syncToSheets: ABORT - playerLib empty'); return; }
-  if(!currentUser?.username){ _dbg('syncToSheets: ABORT - no currentUser.username'); return; }
+  if(!S.playerLib?.length) return;
+  if(!currentUser?.username) return;
   if(!_initialSyncDone){
-    _dbg('syncToSheets: BLOCKED (waiting for initial sync) — retry in 500ms | immediate='+immediate);
     // עדיין לא קיבלנו את הגרסה האמיתית מהענן בהקשר האחסון הזה — לא דוחפים נתונים
     // מקומיים שעלולים להיות ריקים/ישנים ולדרוס במקום. מנסים שוב בעוד רגע (לא מוותרים
     // על השינוי, רק דוחים אותו).
@@ -656,12 +655,10 @@ async function syncToSheets(immediate){
     return;
   }
   if(!immediate){
-    _dbg('syncToSheets: scheduling debounced push in 2000ms');
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
     return;
   }
-  _dbg('syncToSheets: SENDING NOW — S.tableSize='+S.tableSize+' S.seats(playerId)='+(S.seats?.filter(s=>s.playerId).length||0)+' S.savedAt(before)='+S.savedAt);
   updateSyncDot('syncing');
   setSyncStatus('שולח נתונים...', '#c8a96e');
   try{
@@ -680,7 +677,6 @@ async function syncToSheets(immediate){
       body: JSON.stringify(snapWithoutHands)
     });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
-    _dbg('syncToSheets: SENT OK — pushed tableSize='+snap.tableSize+' seats(playerId)='+(snap.seats?.filter(s=>s.playerId).length||0)+' savedAt='+snap.savedAt);
 
     // שמור כל ידיים ב-Firebase
     if(S.handLog?.length){
@@ -707,7 +703,6 @@ async function syncFromSheets(){
   if(!currentUser) return;
   const username = currentUser.username || currentUser.viewingAdmin || '';
   if(!username) return;
-  _dbg('syncFromSheets: START — username='+username+' currentUser.role='+currentUser.role);
   updateSyncDot('syncing');
   setSyncStatus('מושך נתונים...', '#c8a96e');
   try{
@@ -721,7 +716,6 @@ async function syncFromSheets(){
     ]);
     const data = await snapResp.json();
     const handsData = await handsResp.json();
-    _dbg('syncFromSheets: fetched — data.playerLib='+(data?.playerLib?.length??'null')+' data.tableSize='+data?.tableSize+' data.seats(playerId)='+(data?.seats?.filter(s=>s.playerId).length??'?')+' data.savedAt='+data?.savedAt);
 
     if(data && data.playerLib){
       const beforeHands = S.handLog?.length||0;
@@ -746,21 +740,17 @@ async function syncFromSheets(){
       renderTournList();
       updateSyncDot('ok');
       setSyncStatus('עודכן: '+new Date().toLocaleTimeString('he-IL'), '#5fc47a');
-      _dbg('syncFromSheets: DONE — S.tableSize='+S.tableSize+' S.seats(playerId)='+(S.seats?.filter(s=>s.playerId).length||0));
     } else {
       updateSyncDot('idle');
       setSyncStatus('אין נתונים שמורים עדיין', '#c8a96e');
-      _dbg('syncFromSheets: NO DATA on remote (data.playerLib missing)');
     }
   }catch(e){
     updateSyncDot('err');
     setSyncStatus('שגיאה: '+e.message, '#e07b6a');
-    _dbg('syncFromSheets: ERROR — '+e.message);
   }finally{
     // חשוב: מסמנים שהניסיון הראשון הסתיים (גם אם נכשל) — כדי ש-syncToSheets ידע
     // שמותר עכשיו לדחוף (ולא ייתקע לנצח אם הייתה שגיאת רשת חד-פעמית)
     _initialSyncDone = true;
-    _dbg('syncFromSheets: _initialSyncDone = true');
   }
 }
 
