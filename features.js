@@ -199,6 +199,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 // gsUrl — per-user, נטען מ-currentUser.sheetsUrl בעת login
 let gsUrl = ''; // fallback לתאימות לאחור
 let syncTimer = null;
+// חשוב: מונע דחיפה לענן (syncToSheets) לפני שהמשיכה הראשונית מהענן (syncFromSheets)
+// הסתיימה בהקשר האחסון הנוכחי (מכשיר/דפדפן/PWA). בלי זה, כל persist() מוקדם היה עלול
+// לדחוף נתונים מקומיים ריקים/ישנים ולדרוס בטעות נתונים אמיתיים שכבר בענן.
+let _initialSyncDone = false;
 
 function getGsUrl() {
   return currentUser?.sheetsUrl || gsUrl || '';
@@ -643,6 +647,13 @@ async function syncToSheets(immediate){
   if(isViewer()||isLocal()) return;
   if(!S.playerLib?.length) return;
   if(!currentUser?.username) return;
+  if(!_initialSyncDone){
+    // עדיין לא קיבלנו את הגרסה האמיתית מהענן בהקשר האחסון הזה — לא דוחפים נתונים
+    // מקומיים שעלולים להיות ריקים/ישנים ולדרוס במקום. מנסים שוב בעוד רגע (לא מוותרים
+    // על השינוי, רק דוחים אותו).
+    setTimeout(()=>syncToSheets(immediate), 500);
+    return;
+  }
   if(!immediate){
     clearTimeout(syncTimer);
     syncTimer = setTimeout(()=>syncToSheets(true), 2000);
@@ -736,6 +747,10 @@ async function syncFromSheets(){
   }catch(e){
     updateSyncDot('err');
     setSyncStatus('שגיאה: '+e.message, '#e07b6a');
+  }finally{
+    // חשוב: מסמנים שהניסיון הראשון הסתיים (גם אם נכשל) — כדי ש-syncToSheets ידע
+    // שמותר עכשיו לדחוף (ולא ייתקע לנצח אם הייתה שגיאת רשת חד-פעמית)
+    _initialSyncDone = true;
   }
 }
 

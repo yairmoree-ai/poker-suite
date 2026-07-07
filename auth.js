@@ -100,6 +100,15 @@ function tryUpgrade(pass){
   if(upBtn) upBtn.style.display='none';
   try{ loadState(); ensureSelfAsPlayer(); renderPlayerList(); }catch(e){ render(); }
   try{ showView('tourn'); }catch(e){}
+  // הפעל סנכרון (אם עוד לא רץ מהפעלה קודמת) — חשוב כדי ש-_initialSyncDone יתעדכן
+  // ולא יגרום ל-syncToSheets להיתקע בניסיון חוזר אינסופי
+  try{
+    loadGSUrl();
+    if(getGsUrl()){
+      setTimeout(()=>syncFromSheets(), 800);
+      setInterval(()=>{ if(getGsUrl() && currentUser) syncFromSheets(); }, 10000);
+    }
+  }catch(e){}
   notify('ברוך הבא '+u.name+' 🔑');
 }
 
