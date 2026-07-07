@@ -942,31 +942,36 @@ function undoAward(){
 // ═══════════════════════════════════════════════════════
 function calcSidePots(){
   // Returns array of {amount, eligible:[seatIdx,...]}
-  const activePlayers = S.seats.filter(s=>s.playerId&&!s.folded);
-  const contributions = activePlayers.map(s=>({
+  // חשוב: תרומת שחקנים שקיפלו נכנסת לגודל כל שכבה (הכסף שלהם עדיין בקופה בפועל),
+  // אבל הם לא זכאים לזכות באף שכבה — לכן contributions כולל את כולם (גם שקיפלו),
+  // ורק eligible מסונן למי שעדיין לא קיפל
+  const allPlayers = S.seats.filter(s=>s.playerId);
+  const contributions = allPlayers.map(s=>({
     seatIdx: s.seatIdx,
     total: (s.actions||[]).reduce((sum,a)=>sum+(Number(a.amount)||0), 0),
-    allin: s.allin||false
+    allin: s.allin||false,
+    folded: s.folded||false
   }));
   const allinLevels = [...new Set(
-    contributions.filter(c=>c.allin).map(c=>c.total)
+    contributions.filter(c=>c.allin && !c.folded).map(c=>c.total)
   )].sort((a,b)=>a-b);
 
-  if(!allinLevels.length) return [{amount: calcPot(), eligible: contributions.map(c=>c.seatIdx)}];
+  if(!allinLevels.length) return [{amount: calcPot(), eligible: contributions.filter(c=>!c.folded).map(c=>c.seatIdx)}];
 
   const sidePots = [];
   let prevLevel = 0;
   for(const level of allinLevels){
     const potSlice = level - prevLevel;
-    const eligible = contributions.filter(c=>c.total >= level).map(c=>c.seatIdx);
-    sidePots.push({amount: potSlice * eligible.length, eligible});
+    const contributors = contributions.filter(c=>c.total >= level); // כולל מי שקיפל, לצורך הגודל
+    const eligible = contributors.filter(c=>!c.folded).map(c=>c.seatIdx); // רק מי שלא קיפל זכאי לזכות
+    sidePots.push({amount: potSlice * contributors.length, eligible});
     prevLevel = level;
   }
-  // Remaining above all all-in levels → only non-allin players eligible
+  // Remaining above all all-in levels → only non-allin players eligible (מי שקיפל לא נכלל בשכבה הזו כי אין לו יותר "מעל" prevLevel רלוונטי לזכייה, אך תרומתו כבר נספרה למעלה)
   const nonAllinAbove = contributions.filter(c=>c.total > prevLevel && !c.allin);
   if(nonAllinAbove.length > 0){
     const extraAmt = nonAllinAbove.reduce((sum,c)=>sum+(c.total - prevLevel), 0);
-    const eligible = nonAllinAbove.map(c=>c.seatIdx);
+    const eligible = nonAllinAbove.filter(c=>!c.folded).map(c=>c.seatIdx);
     sidePots.push({amount: extraAmt, eligible});
   }
   return sidePots;

@@ -340,10 +340,6 @@ function _getStackDepth(){
   return _depthFromBB(effBB);
 }
 
-function _getDepthLabel(){
-  const d = _getStackDepth();
-  return {deep:'75BB+ עמוק',mid:'35-74BB בינוני',short:'20-34BB קצר',push:'<20BB Push/Fold'}[d]||d;
-}
 
 function _getRangeStrForDepth(tableSize, pos, action, depth){
   const ts = tableSize||S.tableSize||6;
@@ -794,7 +790,13 @@ function renderPotOdds(){
   // עמדה + פעולה שביצע ביד הזאת + תגית שחקן (TAG/LAG/Nit/Station/Fish) כדי להרחיב/להצר
   // את טווח הסולבר בהתאם — בלי צורך לבחור range ידנית בכל פעם
   const deadKeysBase = new Set([...holeCards, ...boardCards, ...knownOppHands.flat()].filter(Boolean).map(_cardKey));
-  const _eqDepth = _getStackDepth();
+  // עומק ה-stack לחישוב הטווח האוטומטי — לפי היריבים הרלוונטיים בפועל (oppSeats, שכבר
+  // מסונן ל"מי שבאמת פעל") ולא לפי כל שחקן פעיל בשולחן (אותו באג בדיוק כמו ב-RFI:
+  // שחקן קצר-יד באיזשהו מושב אחר לא אמור להשפיע על העומק מול היריב שבאמת בפוט)
+  const _bbNow = (getBlinds&&getBlinds()?.bb)||50;
+  const _relevantStacks = oppSeats.map(s=>s.stack||0);
+  const _minRelevantStack = _relevantStacks.length ? Math.min(seat?.stack||0, ..._relevantStacks) : (seat?.stack||0);
+  const _eqDepth = _depthFromBB(_bbNow>0 ? _minRelevantStack/_bbNow : 100);
   const unknownOppRangeInfo = unknownOppSeats.map(s=>{
     if(rs){
       return {rangeStr: _getRangeStrForDepth(S.tableSize, rs.pos, rs.action, _eqDepth), tag:'manual:'+rs.pos+':'+rs.action+':'+_eqDepth};
@@ -909,7 +911,7 @@ function renderPotOdds(){
 
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:9px;color:#5a5870;font-weight:700;letter-spacing:.4px">EFFECTIVE STACK</span>
-        <span style="font-size:10px;color:#c8a96e;font-weight:800">${_getDepthLabel()}</span>
+        <span style="font-size:10px;color:#c8a96e;font-weight:800">${({deep:'75BB+ עמוק',mid:'35-74BB בינוני',short:'20-34BB קצר',push:'<20BB Push/Fold'})[_eqDepth]||_eqDepth}</span>
       </div>
 
       <div>
