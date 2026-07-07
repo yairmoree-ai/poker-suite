@@ -285,6 +285,17 @@ const _POS_BY_SIZE = {
 };
 const _ACTIONS_LABELS = {RFI:'פתיחה','3bet':'3-Bet',call:'Call','4bet':'4-Bet'};
 
+// ממיר שני קלפים לנוטציית יד סטנדרטית (AKs / AKo / AA) — קלף גבוה קודם, בדיוק כמו בטבלת _RANGES
+function _cardsToHandNotation(cards){
+  const RANKMAP = {'2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'T','J':'J','Q':'Q','K':'K','A':'A'};
+  const RANKVAL = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+  const [c1,c2] = cards;
+  const hi = RANKVAL[c1.rank] >= RANKVAL[c2.rank] ? c1 : c2;
+  const lo = hi===c1 ? c2 : c1;
+  if(hi.rank===lo.rank) return RANKMAP[hi.rank]+RANKMAP[lo.rank];
+  return RANKMAP[hi.rank]+RANKMAP[lo.rank]+(hi.suit===lo.suit?'s':'o');
+}
+
 function _parseRangeToSet(str){
   const s=new Set();
   if(!str)return s;
@@ -639,6 +650,7 @@ function computeHistoricalStreetOdds(h){
     const investedThisStreet = {};
     let lastBet = 0;
     const recordedSeatsThisStreet = new Set();
+    const actedSeatsThisStreet = new Set(); // מי כבר פעל בפועל בסטריט הזה עד כה (לא כולל בליינדים)
 
     for(const a of acts){
       const already = investedThisStreet[a.seatIdx]||0;
@@ -650,7 +662,9 @@ function computeHistoricalStreetOdds(h){
         if(callAmt > 0 && ['Call','Raise','3bet','4bet','All-in','Fold'].includes(a.type)){
           recordedSeatsThisStreet.add(a.seatIdx);
           const potNow = potBefore + Object.values(investedThisStreet).reduce((s,v)=>s+v,0);
-          const oppSeatsH = (h.seats||[]).filter(s=>s.playerId && s.seatIdx!==a.seatIdx && !folded.has(s.seatIdx));
+          // רק יריבים שכבר פעלו בפועל בסטריט הזה (לא כל מי שעדיין לא קיפל) —
+          // מי שתורו טרם הגיע לא נחשב "יריב עם טווח" באותו רגע
+          const oppSeatsH = (h.seats||[]).filter(s=>s.playerId && s.seatIdx!==a.seatIdx && !folded.has(s.seatIdx) && actedSeatsThisStreet.has(s.seatIdx));
           if(oppSeatsH.length){
             const knownOppHands = oppSeatsH.filter(s=>(s.cards||[]).filter(Boolean).length===2).map(s=>s.cards.filter(Boolean));
             const unknownOppSeatsH = oppSeatsH.filter(s=>(s.cards||[]).filter(Boolean).length!==2);
@@ -684,6 +698,7 @@ function computeHistoricalStreetOdds(h){
       investedThisStreet[a.seatIdx] = already + (Number(a.amount)||0);
       if(investedThisStreet[a.seatIdx] > lastBet) lastBet = investedThisStreet[a.seatIdx];
       if(a.type==='Fold') folded.add(a.seatIdx);
+      actedSeatsThisStreet.add(a.seatIdx);
     }
   });
 
@@ -739,9 +754,30 @@ function renderPotOdds(){
   const boardCards = (S.board||[]).filter(Boolean);
   const rs = S._rangeSelection;
 
-  // יריבים פעילים (לא קיפלו, לא all-in, לא השחקן הפעיל)
-  const oppSeats = S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&s.seatIdx!==actor);
+  // שם הסטריט הנוכחי — אותו חישוב בדיוק כמו בשאר הקוד (game.js), לפי כמות קלפי הבורד
+  const _curStreetName = boardCards.length===0?'פרה-פלופ':boardCards.length<=3?'פלופ':boardCards.length===4?'טורן':'ריבר';
+
+  // יריבים פעילים: לא קיפלו, לא all-in, לא השחקן הפעיל, ורק מי שבאמת כבר פעל בסטריט הזה
+  // (לא רק "עוד לא קיפל") — מי שתורו טרם הגיע לא נחשב "יריב עם טווח" עדיין
+  const oppSeats = S.seats.filter(s=>{
+    if(!s.playerId || s.folded || s.allin || s.seatIdx===actor) return false;
+    return (s.actions||[]).some(a=>a.street===_curStreetName && a.type!=='SB' && a.type!=='BB');
+  });
   const swpForEq = assignPos(); // עמדות מעודכנות, לשימוש בזיהוי טווח אוטומטי
+
+  // "מצב פתיחה": אף יריב עדיין לא פעל בפועל (כולל אתה — זו ההחלטה הראשונה בסטריט,
+  // ל-callAmt>0 רק כי יש BB לכסות). זה לא באמת "מול טווח" — זו שאלת RFI קלאסית,
+  // וכמו כל סולבר אמיתי, זה נבדק מול טבלת הטווחים הסטטית (_RANGES), לא equity חי
+  const isOpeningSpot = _curStreetName==='פרה-פלופ' && oppSeats.length===0 && !rs && holeCards.length===2;
+  let openRangeInfo = null;
+  if(isOpeningSpot){
+    const mySwp = swpForEq.find(x=>x.seatIdx===actor);
+    const myPos = mySwp?.pos || '';
+    const myRangeStr = myPos ? _getRangeStr(S.tableSize, myPos, 'RFI') : '';
+    const handNotation = _cardsToHandNotation(holeCards);
+    const rangeSet = _parseRangeToSet(myRangeStr);
+    openRangeInfo = { pos: myPos, hand: handNotation, inRange: rangeSet.has(handNotation) };
+  }
 
   // מתוכם — מי שקלפיו הוזנו בפועל (ידועים), לעומת מי שהם עדיין "יד סמויה"
   const knownOppSeats = oppSeats.filter(s=>(s.cards||[]).filter(Boolean).length===2);
@@ -768,10 +804,11 @@ function renderPotOdds(){
     return {rangeStr: adjRangeStr, tag:'auto:'+pos+':'+actionCat+':'+_eqDepth+':'+(playerType||'none')};
   });
 
-  // חישוב equity — עם cache וחישוב נדחה (לא חוסם את ציור המסך)
+  // חישוב equity — עם cache וחישוב נדחה (לא חוסם את ציור המסך). מדלגים לגמרי במצב פתיחה
+  // (isOpeningSpot) — שם השאלה הנכונה היא "בטווח?" ולא "equity מול מה?"
   let equityPct = null;
   let equityComputing = false;
-  if(holeCards.length===2){
+  if(holeCards.length===2 && !isOpeningSpot){
     const knownOppKey = knownOppHands.map(h=>h.map(c=>c.rank+c.suit).sort().join('')).sort().join(',');
     const rangeKey = unknownOppRangeInfo.map(r=>r.tag).sort().join(',');
     const eqKey = holeCards.map(c=>c.rank+c.suit).join('')+'|'+boardCards.map(c=>c.rank+c.suit).join('')
@@ -806,6 +843,7 @@ function renderPotOdds(){
     pot, callAmt,
     breakEven: parseFloat(breakEven),
     ...(equityPct!==null ? {equity:parseFloat(equityPct.toFixed(1)),ev:parseFloat((ev||0).toFixed(1)),evPositive:ev>=0} : {}),
+    ...(openRangeInfo ? {openRange:{...openRangeInfo}} : {}),
     ...(rs ? {range:{...rs}} : {}),
   };
 
@@ -842,12 +880,14 @@ function renderPotOdds(){
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">EQUITY</span>
-        ${equityPct!==null
-          ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}`
-          : equityComputing
-            ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
-            : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">${openRangeInfo?'RFI '+openRangeInfo.pos:'EQUITY'}</span>
+        ${openRangeInfo
+          ? `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.2;margin-top:2px">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ לטווח'}</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${openRangeInfo.hand}</span>`
+          : equityPct!==null
+            ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}`
+            : equityComputing
+              ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
+              : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>

@@ -577,11 +577,20 @@ function showQuickInput(seatIdx, type){
   const seat4Allin = S.seats.find(s=>s.seatIdx===seatIdx);
   const allinTotal = (seat4Allin?.stack||0) + getStreetInvested(seatIdx);
   const defaultAmt = type==='Call'?getCallAmount(seatIdx):type==='All-in'?allinTotal:type==='Raise'?minRaise:'';
-  box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:16px;width:220px;text-align:center';
+  box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:16px;width:240px;text-align:center';
   box.onclick = e=>e.stopPropagation();
+  const sliderHtml = (type==='Raise' && allinTotal>minRaise)
+    ? '<input id="quick-amt-slider" type="range" min="'+minRaise+'" max="'+allinTotal+'" step="1" value="'+defaultAmt+'"'
+      + ' style="width:100%;margin-bottom:6px;accent-color:#c8a96e"'
+      + ' oninput="document.getElementById(\'quick-amt-inp\').value=this.value">'
+      + '<div style="display:flex;justify-content:space-between;font-size:10px;color:#5a5870;margin-bottom:8px">'
+      + '<span>'+minRaise.toLocaleString()+'</span><span>All-in '+allinTotal.toLocaleString()+'</span></div>'
+    : '';
   box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#c8a96e;margin-bottom:10px">'+type+'</div>' +
+    sliderHtml +
     '<input id="quick-amt-inp" type="number" inputmode="numeric" value="'+defaultAmt+'" placeholder="סכום..."' +
     ' style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:16px;text-align:center;outline:none;box-sizing:border-box;margin-bottom:10px;-webkit-appearance:none"' +
+    ' oninput="const sl=document.getElementById(\'quick-amt-slider\');if(sl)sl.value=this.value;"' +
     ' onkeydown="if(event.key===\'Enter\'){doAction('+seatIdx+',\''+type+'\',this.value);document.getElementById(\'quick-input-overlay\')?.remove();}">' +
     '<div style="display:flex;gap:8px">' +
     '<button onclick="doAction('+seatIdx+',\''+type+'\',document.getElementById(\'quick-amt-inp\').value);document.getElementById(\'quick-input-overlay\')?.remove()"' +
