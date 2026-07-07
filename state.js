@@ -201,7 +201,11 @@ function applySnapshot(v){
     if(v.place3!==undefined) S.place3=v.place3;
     if(v.place1Override!==undefined) S.place1Override=v.place1Override;
     if(v.place2Override!==undefined) S.place2Override=v.place2Override;
-    // לא מעדכנים S.savedAt — רק persist() יעדכן אותו
+    // חשוב: מקדמים את S.savedAt לפי מה שהתקבל בפועל. בלי זה, ברגע שכל persist() מקומי
+    // לא קשור (אפילו תמים) דוחף את S.savedAt קדימה, כל משיכה עתידית מהענן הייתה נחסמת
+    // לצמיתות — למרות שהנתונים שהתקבלו כרגע *כן* יושמו בהצלחה. מתקדמים בלבד, אף פעם
+    // לא אחורה, כדי לא לאבד שינויים מקומיים חדשים יותר שעוד לא נדחפו.
+    if(v.savedAt && v.savedAt > (S.savedAt||0)) S.savedAt = v.savedAt;
   }
   if(S.currentActor===undefined) S.currentActor=null;
   if(S.bettingClosed===undefined) S.bettingClosed=false;
