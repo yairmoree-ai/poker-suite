@@ -40,12 +40,21 @@ const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 function ensureSelfAsPlayer(){
   if(!currentUser || currentUser.role==='viewer') return;
   if(!currentUser.name) return;
-  if(!S.playerLib) S.playerLib=[];
-  const exists = S.playerLib.some(p=>p.name===currentUser.name);
-  if(!exists){
-    S.playerLib.push({id:uid(), name:currentUser.name});
-    persist();
-  }
+  // חשוב: מושהה בכוונה (1200ms) — נותן לסנכרון מהענן (שרץ ~800ms אחרי login) הזדמנות
+  // ראשונה להביא קודם את הנתונים האמיתיים. בלי ההשהיה הזו, על הקשר אחסון ריק (למשל
+  // ספארי בפעם הראשונה, נפרד לגמרי מ-webapp ב-iOS) הבדיקה הייתה "חושבת" שהמשתמש חסר
+  // ומבצעת persist() מוקדם מדי — מה שדוחף את S.savedAt קדימה וגורם ל-applySnapshot()
+  // לפסול את העדכון האמיתי שמגיע מהענן מיד אחר כך (כי הוא "נראה" ישן יותר), ומוחק בפועל
+  // כל מה שהיה על השולחן במכשירים אחרים.
+  setTimeout(()=>{
+    if(!S.playerLib) S.playerLib=[];
+    const exists = S.playerLib.some(p=>p.name===currentUser.name);
+    if(!exists){
+      S.playerLib.push({id:uid(), name:currentUser.name});
+      persist();
+      try{ renderPlayerList(); }catch(e){}
+    }
+  }, 1200);
 }
 // זמן יצירה של יד: שדה ts אם קיים, אחרת חילוץ מ-8 התווים האחרונים של ה-id (Date.now בבסיס 36)
 const handTs=h=>h?.ts||(h?.id?parseInt(String(h.id).slice(-8),36)||0:0);
