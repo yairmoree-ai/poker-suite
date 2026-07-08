@@ -785,6 +785,8 @@ function renderPotOdds(){
   const knownOppHands = knownOppSeats.map(s=>s.cards.filter(Boolean));
   const unknownOppSeats = oppSeats.filter(s=>(s.cards||[]).filter(Boolean).length!==2);
   const hasKnownOpp = knownOppHands.length > 0;
+  _dbg('EQ: oppSeats='+oppSeats.map(s=>s.pos+'('+pName(s.playerId)+')').join(',')
+    +' | known='+knownOppSeats.map(s=>pName(s.playerId)+':'+s.cards.filter(Boolean).map(c=>c.rank+c.suit).join(''))+ ' | unknown='+unknownOppSeats.length);
 
   // לכל יריב "סמוי": אם נבחר range ידני — הוא חל על כולם; אחרת מזהים אוטומטית
   // עמדה + פעולה שביצע ביד הזאת + תגית שחקן (TAG/LAG/Nit/Station/Fish) כדי להרחיב/להצר
@@ -822,8 +824,10 @@ function renderPotOdds(){
       +'|k:'+knownOppKey+'|u:'+rangeKey;
     if(window._eqCache?.key === eqKey){
       equityPct = window._eqCache.val; // אותם קלפים/תנאים — אין צורך לחשב שוב
+      _dbg('EQ: CACHE HIT key='+eqKey+' val='+equityPct?.toFixed(1));
     } else {
       equityComputing = true;
+      _dbg('EQ: CACHE MISS, computing. key='+eqKey);
       const jobId = (window._eqJob = (window._eqJob||0)+1);
       setTimeout(()=>{
         if(jobId !== window._eqJob) return; // בינתיים נכנסה בקשה עדכנית יותר
@@ -832,6 +836,7 @@ function renderPotOdds(){
           return combos.length ? combos : null; // טווח שיצא ריק → נופל חזרה לאקראי מלא
         });
         const val = monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists);
+        _dbg('EQ: computed val='+val?.toFixed(1)+' | knownOppHands='+JSON.stringify(knownOppHands.map(h=>h.map(c=>c.rank+c.suit)))+' | combosLists.lengths='+oppCombosLists.map(c=>c?c.length:'null'));
         window._eqCache = {key: eqKey, val};
         if(jobId === window._eqJob) renderPotOdds(); // רינדור חוזר — הפעם מה-cache
       }, 30);
