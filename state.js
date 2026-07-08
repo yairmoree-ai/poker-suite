@@ -1,4 +1,25 @@
 // ═══════════════════════════════════════════════════════
+// DEBUG (כלי אבחון זמני - להסרה בהמשך)
+// ═══════════════════════════════════════════════════════
+window._dbgLogs = [];
+function _dbg(msg){
+  try{
+    const t = new Date().toLocaleTimeString('he-IL', {hour12:false});
+    window._dbgLogs.push('['+t+'] '+msg);
+    if(window._dbgLogs.length > 300) window._dbgLogs.shift();
+    const el = document.getElementById('debug-sync-log');
+    if(el) el.innerHTML = window._dbgLogs.map(l=>'<div>'+l.replace(/</g,'&lt;')+'</div>').join('');
+    const panel = document.getElementById('debug-sync-panel');
+    if(panel) panel.scrollTop = panel.scrollHeight;
+  }catch(e){}
+}
+function _dbgClear(){
+  window._dbgLogs=[];
+  const el = document.getElementById('debug-sync-log');
+  if(el) el.innerHTML='';
+}
+
+// ═══════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════
 const RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
