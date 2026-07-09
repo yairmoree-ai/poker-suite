@@ -1,10 +1,15 @@
 // ── Monte Carlo Equity (מקומי, ללא שרת) ───────────────────
-const _MC_RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+const _MC_RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const _MC_SUITS = ['♠','♥','♦','♣'];
 const _MC_RANK_VAL = Object.fromEntries(_MC_RANKS.map((r,i)=>[r,i]));
 
 function _fullDeck(){ const d=[]; _MC_RANKS.forEach(r=>_MC_SUITS.forEach(s=>d.push({rank:r,suit:s}))); return d; }
 function _cardKey(c){ return c.rank+c.suit; }
+// ממיר תו נוטציה בודד ('T' מתוך מחרוזות range כמו "ATs") לדרגת הקלף האמיתית ('10')
+// שבה משתמשים evaluateHand ושאר האפליקציה. קריטי: בלעדיו, קלפי עשר שנוצרים בתוך
+// סימולציות Monte Carlo (מטווחים) מוערכים כ"חסרי ערך" (rank 0) על ידי evaluateHand,
+// כי היא לא מזהה 'T' — רק '10'.
+function _notationRankToCard(r){ return r==='T' ? '10' : r; }
 function _handRankMC(cards){
   // מחזיר ערך השוואה (מספר גדול = יד טובה יותר)
   // שימוש ב-evaluateHand שכבר קיים ב-game.js
@@ -14,7 +19,7 @@ function _handRankMC(cards){
   } catch(e){ return 0; }
 }
 
-function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=3000){
+function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=8000){
   // holeCards: [{rank,suit},{rank,suit}]
   // boardCards: קלפי בורד קיימים (0-4)
   // numOpponents: מספר יריבים פעילים
@@ -69,13 +74,15 @@ const _RANGES = {
   6: {
     deep: { // 75BB+ — פתיחות 2.5-3x, ranges מלאים לפי solver
       BTN:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,QJs,QTs,Q9s,JTs,J9s,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,ATo,KQo,KJo,KTo,QJo,QTo,JTo',
+        // מעודכן לפי מקורות סולבר עדכניים (100BB, 6-max): ~43% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,K4s,K3s,K2s,QJs,QTs,Q9s,Q8s,Q7s,Q6s,Q5s,Q4s,Q3s,JTs,J9s,J8s,J7s,J6s,J5s,J4s,T9s,T8s,T7s,T6s,98s,97s,96s,87s,86s,85s,76s,75s,65s,64s,54s,53s,AKo,AQo,AJo,ATo,A9o,A8o,A7o,A6o,A5o,A4o,KQo,KJo,KTo,K9o,K8o,QJo,QTo,Q9o,JTo,J9o,T9o,T8o,98o',
         '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AJs,AKo,AQo,A5s,A4s,A3s,A2s,KQs,98s,87s,76s',
         call:  'TT,99,88,77,66,ATs,A9s,A8s,KJs,KTs,K9s,QJs,QTs,Q9s,JTs,J9s,T9s,AJo,ATo,KQo,KJo',
         '4bet': 'AA,KK,QQ,AKs,AKo,A5s,A4s',
       },
       CO:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A5s,A4s,A3s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,J9s,T9s,98s,87s,76s,65s,AKo,AQo,AJo,ATo,KQo,KJo,QJo',
+        // מעודכן לפי מקורות סולבר עדכניים (100BB, 6-max): ~28% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,K4s,K3s,QJs,QTs,Q9s,Q8s,Q7s,Q6s,JTs,J9s,J8s,T9s,T8s,T7s,98s,97s,87s,76s,AKo,AQo,AJo,ATo,A9o,A8o,KQo,KJo,KTo,QJo,QTo,JTo',
         '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s,KQs,76s,65s',
         call:  'TT,99,88,77,AJs,ATs,A9s,KJs,KTs,QJs,QTs,JTs,T9s,AJo,ATo,KQo',
         '4bet': 'AA,KK,QQ,AKs,AKo,A5s',
@@ -87,14 +94,15 @@ const _RANGES = {
         '4bet': 'AA,KK,QQ,AKs,AKo',
       },
       MP:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo',
+        // מעודכן לפי מקורות סולבר עדכניים (100BB, 6-max): ~21% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,QJs,QTs,Q9s,JTs,J9s,T9s,98s,87s,76s,AKo,AQo,AJo,ATo,KQo,KJo,KTo,QJo,QTo',
         '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,A4s',
         call:  'TT,99,88,AQs,AJs,ATs,KQs,KJs,QJs,JTs,AQo,KQo',
         '4bet': 'AA,KK,QQ,AKs,AKo',
       },
       UTG:{
-        // ThinkGTO solver: 22-AA, AKs/AQs/AJs/ATs, A5s-A2s, KQs/KJs, QJs, JTs, T9s, 98s + AKo/AQo/KQo
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A5s,A4s,A3s,A2s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,KQo',
+        // מעודכן לפי מקורות סולבר עדכניים (100BB, 6-max): ~17% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,T9s,AKo,AQo,AJo,ATo,KQo,KJo,QJo',
         '3bet': 'AA,KK,QQ,AKs,AKo',
         call:  'JJ,TT,AQs,AJs,KQs,AQo',
         '4bet': 'AA,KK,AKs,AKo',
@@ -115,13 +123,15 @@ const _RANGES = {
     },
     mid: { // 35-74BB — ranges יותר צרים, פחות speculative
       BTN:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,J9s,T9s,98s,87s,76s,65s,AKo,AQo,AJo,ATo,KQo,KJo,QJo,JTo',
+        // מעודכן: ~38% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,K4s,K3s,K2s,QJs,QTs,Q9s,Q8s,Q7s,Q6s,Q5s,Q4s,JTs,J9s,J8s,J7s,J6s,T9s,T8s,T7s,T6s,98s,97s,96s,87s,86s,85s,76s,75s,65s,64s,54s,AKo,AQo,AJo,ATo,A9o,A8o,A7o,A6o,KQo,KJo,KTo,K9o,QJo,QTo,Q9o,JTo,J9o,T9o,98o',
         '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s,KQs',
         call:  'TT,99,88,77,AJs,ATs,KJs,QJs,JTs,T9s,AJo,KQo',
         '4bet': 'AA,KK,QQ,AKs,AKo',
       },
       CO:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,KTs,QJs,JTs,T9s,98s,87s,AKo,AQo,AJo,KQo,KJo,QJo',
+        // מעודכן: ~25% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,QJs,QTs,Q9s,Q8s,Q7s,JTs,J9s,J8s,T9s,T8s,98s,97s,87s,76s,AKo,AQo,AJo,ATo,A9o,KQo,KJo,KTo,QJo,QTo',
         '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,KQs',
         call:  'TT,99,88,AJs,ATs,KJs,QJs,JTs,AJo,KQo',
         '4bet': 'AA,KK,AKs,AKo',
@@ -133,13 +143,15 @@ const _RANGES = {
         '4bet': 'AA,KK,AKs,AKo',
       },
       MP:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,A5s,KQs,KJs,QJs,JTs,T9s,AKo,AQo,AJo,KQo',
+        // מעודכן: ~19% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,KTo,QJo',
         '3bet': 'AA,KK,QQ,AKs,AKo,A5s',
         call:  'JJ,TT,AQs,AJs,KQs,AQo',
         '4bet': 'AA,KK,AKs,AKo',
       },
       UTG:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,A5s,KQs,KJs,QJs,JTs,AKo,AQo,KQo',
+        // מעודכן: ~15% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,KQs,KJs,KTs,K9s,QJs,QTs,Q9s,JTs,J9s,T9s,AKo,AQo,AJo,ATo,KQo,KJo',
         '3bet': 'AA,KK,QQ,AKs,AKo',
         call:  'JJ,TT,AQs,AJs,KQs',
         '4bet': 'AA,KK,AKs,AKo',
@@ -159,13 +171,15 @@ const _RANGES = {
     },
     short: { // 20-34BB — ranges צרים, value-heavy, פחות bluffs
       BTN:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A5s,A4s,KQs,KJs,KTs,QJs,JTs,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,QJo',
+        // מעודכן: ~25% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,QJs,QTs,Q9s,Q8s,JTs,J9s,J8s,T9s,T8s,98s,97s,87s,76s,AKo,AQo,AJo,ATo,A9o,A8o,KQo,KJo,KTo,QJo,QTo',
         '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s',
         call:  'TT,99,88,AJs,KQs,QJs,JTs,AJo,KQo',
         '4bet': 'AA,KK,AKs,AKo',
       },
       CO:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo,KJo',
+        // מעודכן: ~18% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo',
         '3bet': 'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',
         call:  'TT,99,AJs,KQs,JTs,AJo,KQo',
         '4bet': 'AA,KK,AKs,AKo',
@@ -177,13 +191,15 @@ const _RANGES = {
         '4bet': 'AA,KK,AKs,AKo',
       },
       MP:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,KQs,KJs,QJs,JTs,AKo,AQo,KQo',
+        // מעודכן: ~13% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,T9s,98s,AKo,AQo,AJo,KQo',
         '3bet': 'AA,KK,QQ,AKs,AKo',
         call:  'JJ,TT,AQs,KQs',
         '4bet': 'AA,KK,AKs,AKo',
       },
       UTG:{
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,AKs,AQs,AJs,ATs,KQs,KJs,AKo,AQo,KQo',
+        // מעודכן: ~12% מהידיים
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,A9s,A8s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,T9s,AKo,AQo,AJo,ATo,KQo',
         '3bet': 'AA,KK,QQ,AKs,AKo',
         call:  'JJ,TT,AQs',
         '4bet': 'AA,KK,AKs',
@@ -353,7 +369,7 @@ function _getRangeStr(tableSize, pos, action){
 }
 
 // Monte Carlo vs specific range (מחליף את הקודם)
-function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=3000){
+function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=8000){
   if(!holeCards||holeCards.filter(Boolean).length<2)return null;
   if(!rangeStr)return monteCarloEquity(holeCards,boardCards,1,iterations);
 
@@ -371,22 +387,23 @@ function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=300
   rangeSet.forEach(h=>{
     if(h.length===2&&h[0]===h[1]){
       // pair
+      const rr=_notationRankToCard(h[0]);
       _MC_SUITS.forEach((s1,i)=>_MC_SUITS.forEach((s2,j)=>{
         if(i<j){
-          const c1={rank:h[0],suit:s1},c2={rank:h[0],suit:s2};
+          const c1={rank:rr,suit:s1},c2={rank:rr,suit:s2};
           if(!knownKeys.has(c1.rank+c1.suit)&&!knownKeys.has(c2.rank+c2.suit))
             rangeCombos.push([c1,c2]);
         }
       }));
     } else if(h.endsWith('s')){
-      const r1=h[0],r2=h[1];
+      const r1=_notationRankToCard(h[0]),r2=_notationRankToCard(h[1]);
       _MC_SUITS.forEach(s=>{
         const c1={rank:r1,suit:s},c2={rank:r2,suit:s};
         if(!knownKeys.has(c1.rank+c1.suit)&&!knownKeys.has(c2.rank+c2.suit))
           rangeCombos.push([c1,c2]);
       });
     } else if(h.endsWith('o')){
-      const r1=h[0],r2=h[1];
+      const r1=_notationRankToCard(h[0]),r2=_notationRankToCard(h[1]);
       _MC_SUITS.forEach(s1=>_MC_SUITS.forEach(s2=>{
         if(s1!==s2){
           const c1={rank:r1,suit:s1},c2={rank:r2,suit:s2};
@@ -468,26 +485,52 @@ function _inferPreflopActionCat(seat){
 
 // ממיר מחרוזת range (למשל "AKs,QQ,ATo") לרשימת קומבינציות קלפים בפועל,
 // תוך סינון קלפים "מתים" (כבר ידועים כתפוסים)
+// ── דירוג קבוע: כל 169 סוגי הידיים, מהחזקה לחלשה ──────────────
+// מבוסס על equity ממוצע מול יד אקראית לחלוטין (Monte Carlo, 4000 איטרציות/יד,
+// חושב חד-פעמית מראש). זו נקודת מוצא ל"top X%" — קירוב טוב לטווחי solver ליניאריים
+// (כמו RFI), אבל לא זהה במדויק (סולבר מתחשב גם ב-realized equity וכיסוי בורד,
+// וטווחי 3bet/4bet לרוב מקוטבים ולא ליניאריים בכלל).
+const _HAND_RANKING = ['AA','KK','QQ','JJ','TT','99','88','AQs','AKs','77','ATs','AKo','AJs','AQo','A9s','66','KQs','AJo','ATo','A8s','A7s','KJs','KTs','A9o','KQo','KJo','A8o','A6s','QJs','55','A5s','K8s','Q9s','A7o','A4s','KTo','QTs','K9s','A4o','A5o','QJo','J9s','K9o','A3s','K7s','A2s','K5s','44','K6s','JTs','A6o','K8o','K3s','QTo','K4s','A3o','Q8s','J8s','K7o','Q7s','Q9o','A2o','33','Q8o','K2s','T9s','K5o','K4o','Q5s','JTo','K6o','J9o','Q4s','J7s','Q7o','98s','Q3s','T8s','T9o','Q6s','K2o','Q2s','J8o','T7s','Q5o','K3o','J5s','22','Q6o','J6s','J4s','T6s','T8o','Q4o','97s','J6o','J3s','J7o','J2s','Q3o','87s','T7o','96s','Q2o','98o','T5s','97o','J5o','J4o','T4s','86s','T6o','95s','T3s','T2s','96o','87o','76s','J3o','J2o','95o','94s','T4o','93s','85s','75s','T3o','86o','T5o','65s','76o','54s','T2o','84s','74s','92s','64s','65o','94o','93o','85o','75o','83s','82s','73s','63s','84o','72s','92o','83o','74o','43s','52s','54o','53s','64o','62s','63o','42s','73o','43o','53o','72o','82o','32s','62o','42o','52o','32o'];
+
+// ממיר אחוז (0-100) לרשימת ידיים בפועל, לפי צבירת קומבינציות (לא סוגי-יד!) תוך
+// ירידה בדירוג הקבוע, עד הגעה ל-X% מתוך 1,326 הקומבינציות הכולל. קריטי: סוגי יד
+// שונים שווים במשקל שונה (זוג=6, סוטד=4, לא-סוטד=12 קומבינציות) — לכן חובה לספור
+// קומבינציות בפועל, לא רק לקחת את N הראשונות ברשימה.
+function _topPercentRange(pct){
+  if(!pct || pct<=0) return '';
+  const targetCombos = (pct/100) * 1326;
+  const combosOf = h => h.length===2 ? 6 : (h.endsWith('s') ? 4 : 12);
+  let acc = 0;
+  const out = [];
+  for(const h of _HAND_RANKING){
+    if(acc >= targetCombos) break;
+    out.push(h);
+    acc += combosOf(h);
+  }
+  return out.join(',');
+}
+
 function _rangeStrToCombos(rangeStr, deadKeys){
   const combos=[];
   if(!rangeStr) return combos;
   const rangeSet=_parseRangeToSet(rangeStr);
   rangeSet.forEach(h=>{
     if(h.length===2&&h[0]===h[1]){
+      const rr=_notationRankToCard(h[0]);
       _MC_SUITS.forEach((s1,i)=>_MC_SUITS.forEach((s2,j)=>{
         if(i<j){
-          const c1={rank:h[0],suit:s1},c2={rank:h[0],suit:s2};
+          const c1={rank:rr,suit:s1},c2={rank:rr,suit:s2};
           if(!deadKeys.has(c1.rank+c1.suit)&&!deadKeys.has(c2.rank+c2.suit)) combos.push([c1,c2]);
         }
       }));
     } else if(h.endsWith('s')){
-      const r1=h[0],r2=h[1];
+      const r1=_notationRankToCard(h[0]),r2=_notationRankToCard(h[1]);
       _MC_SUITS.forEach(s=>{
         const c1={rank:r1,suit:s},c2={rank:r2,suit:s};
         if(!deadKeys.has(c1.rank+c1.suit)&&!deadKeys.has(c2.rank+c2.suit)) combos.push([c1,c2]);
       });
     } else if(h.endsWith('o')){
-      const r1=h[0],r2=h[1];
+      const r1=_notationRankToCard(h[0]),r2=_notationRankToCard(h[1]);
       _MC_SUITS.forEach(s1=>_MC_SUITS.forEach(s2=>{
         if(s1!==s2){
           const c1={rank:r1,suit:s1},c2={rank:r2,suit:s2};
@@ -502,7 +545,7 @@ function _rangeStrToCombos(rangeStr, deadKeys){
 // Monte Carlo מאוחד: כל יריב יכול להיות "ידוע" (קלפים קבועים) או "עם טווח"
 // (מערך קומבינציות אפשריות; null = ללא הגבלה, קלף אקראי מהחפיסה). מטפל בהתנגשויות
 // בין קלפי יריבים שונים באותה איטרציה.
-function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists, iterations=3000){
+function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists, iterations=8000){
   if(!holeCards || holeCards.filter(Boolean).length < 2) return null;
   const baseBoard = boardCards.filter(Boolean);
   const boardNeeded = 5 - baseBoard.length;
@@ -565,7 +608,7 @@ function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLi
 
 // Monte Carlo מול קלפי יריב/ים ידועים בפועל (שהוזנו על המושב) +
 // יריבים נוספים ללא קלפים ידועים (מוחלפים בידיים אקראיות)
-function monteCarloEquityVsKnown(holeCards, boardCards, knownOppHands, numRandomOpponents, iterations=3000){
+function monteCarloEquityVsKnown(holeCards, boardCards, knownOppHands, numRandomOpponents, iterations=8000){
   if(!holeCards || holeCards.filter(Boolean).length < 2) return null;
 
   const baseBoard = boardCards.filter(Boolean);
@@ -679,7 +722,7 @@ function computeHistoricalStreetOdds(h){
               const combos = _rangeStrToCombos(adjRangeStr, deadKeys);
               return combos.length ? combos : null;
             });
-            const equityPct = monteCarloEquityMulti(actingCards, boardNow, knownOppHands, combosLists, 2500);
+            const equityPct = monteCarloEquityMulti(actingCards, boardNow, knownOppHands, combosLists, 8000);
             const totalPot = potNow + callAmt;
             const breakEven = totalPot>0 ? (callAmt/totalPot*100) : 0;
             const ratio = callAmt>0 ? potNow/callAmt : 0;
@@ -699,6 +742,82 @@ function computeHistoricalStreetOdds(h){
   });
 
   return results;
+}
+
+// ── עורך טווח ידני per-player (גריד 13×13) ─────────────────────
+// נשמר ב-S.playerRanges[playerId], מתמיד עד שינוי ידני, דורס את הזיהוי האוטומטי
+// לאותו שחקן בלבד. _rangeEditPid/_rangeEditSel הם מצב זמן-ריצה של העורך בלבד.
+let _rangeEditPid = null;      // playerId שנערך כרגע (null = עורך סגור)
+let _rangeEditSel = new Set(); // בחירת הידיים הנוכחית בעורך (טרם נשמרה)
+
+const _GRID_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+
+function _openRangeEditor(pid){
+  _rangeEditPid = pid;
+  // נקודת פתיחה: הטווח הידני השמור אם קיים, אחרת ריק (בחירה נקייה)
+  const existing = S.playerRanges?.[pid] || '';
+  _rangeEditSel = new Set(existing ? existing.split(',').map(x=>x.trim()).filter(Boolean) : []);
+  renderPotOdds();
+}
+function _closeRangeEditor(){
+  _rangeEditPid = null;
+  _rangeEditSel = new Set();
+  renderPotOdds();
+}
+function _toggleRangeCell(hand){
+  if(_rangeEditSel.has(hand)) _rangeEditSel.delete(hand);
+  else _rangeEditSel.add(hand);
+  renderPotOdds();
+}
+function _rangeEditorApplyTopPct(pct){
+  const rs = _topPercentRange(Number(pct));
+  _rangeEditSel = new Set(rs ? rs.split(',') : []);
+  renderPotOdds();
+}
+function _saveRangeEditor(){
+  if(!_rangeEditPid) return;
+  if(!S.playerRanges) S.playerRanges = {};
+  const arr = [..._rangeEditSel];
+  if(arr.length){
+    // שומרים בסדר הדירוג הקבוע (קריא יותר מסדר הקלקה אקראי)
+    const orderIdx = Object.fromEntries(_HAND_RANKING.map((h,i)=>[h,i]));
+    arr.sort((a,b)=>(orderIdx[a]??999)-(orderIdx[b]??999));
+    S.playerRanges[_rangeEditPid] = arr.join(',');
+  } else {
+    delete S.playerRanges[_rangeEditPid]; // בחירה ריקה = כמו "חזרה לאוטומטי"
+  }
+  persist();
+  window._eqCache = null; // הטווח השתנה — חובה לחשב equity מחדש
+  _closeRangeEditor();
+}
+function _clearPlayerRange(pid){
+  if(S.playerRanges) delete S.playerRanges[pid];
+  persist();
+  window._eqCache = null;
+  _closeRangeEditor();
+}
+function _rangeEditorSelCombos(){
+  let n=0;
+  _rangeEditSel.forEach(h=>{ n += h.length===2 ? 6 : (h.endsWith('s') ? 4 : 12); });
+  return n;
+}
+// בונה את ה-HTML של הגריד 13×13: אלכסון=זוגות, מעל=סוטד, מתחת=אופסוט
+function _rangeEditorGridHtml(){
+  let rows='';
+  for(let i=0;i<13;i++){
+    let cells='';
+    for(let j=0;j<13;j++){
+      const r1=_GRID_RANKS[i], r2=_GRID_RANKS[j];
+      const hand = i===j ? r1+r2 : (i<j ? r1+r2+'s' : r2+r1+'o');
+      const on = _rangeEditSel.has(hand);
+      const isPair = i===j;
+      const bg = on ? (isPair?'#c8a96e':'#5b9bd5') : 'rgba(255,255,255,0.04)';
+      const fg = on ? '#0a0d14' : (isPair?'#8a8799':'#5a5870');
+      cells += `<div onclick="_toggleRangeCell('${hand}')" style="flex:1;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${bg};color:${fg};font-size:6.5px;font-weight:800;border-radius:2px;cursor:pointer;user-select:none;min-width:0;overflow:hidden">${hand}</div>`;
+    }
+    rows += `<div style="display:flex;gap:1px">${cells}</div>`;
+  }
+  return `<div style="display:flex;flex-direction:column;gap:1px;direction:ltr">${rows}</div>`;
 }
 
 function renderPotOdds(){
@@ -785,8 +904,6 @@ function renderPotOdds(){
   const knownOppHands = knownOppSeats.map(s=>s.cards.filter(Boolean));
   const unknownOppSeats = oppSeats.filter(s=>(s.cards||[]).filter(Boolean).length!==2);
   const hasKnownOpp = knownOppHands.length > 0;
-  _dbg('EQ: oppSeats='+oppSeats.map(s=>s.pos+'('+pName(s.playerId)+')').join(',')
-    +' | known='+knownOppSeats.map(s=>pName(s.playerId)+':'+s.cards.filter(Boolean).map(c=>c.rank+c.suit).join(''))+ ' | unknown='+unknownOppSeats.length);
 
   // לכל יריב "סמוי": אם נבחר range ידני — הוא חל על כולם; אחרת מזהים אוטומטית
   // עמדה + פעולה שביצע ביד הזאת + תגית שחקן (TAG/LAG/Nit/Station/Fish) כדי להרחיב/להצר
@@ -800,9 +917,16 @@ function renderPotOdds(){
   const _minRelevantStack = _relevantStacks.length ? Math.min(seat?.stack||0, ..._relevantStacks) : (seat?.stack||0);
   const _eqDepth = _depthFromBB(_bbNow>0 ? _minRelevantStack/_bbNow : 100);
   const unknownOppRangeInfo = unknownOppSeats.map(s=>{
+    // עדיפות 1: טווח ידני ששמור לשחקן הזה (נבנה בפאנל הגריד, צמוד ל-playerId)
+    const manualR = S.playerRanges?.[s.playerId];
+    if(manualR){
+      return {rangeStr: manualR, tag:'pmanual:'+s.playerId+':'+manualR.length+':'+_countCombos(manualR)};
+    }
+    // עדיפות 2: בחירה גלובלית מהפאנל הישן (עמדה+פעולה, חלה על כל היריבים ללא טווח ידני)
     if(rs){
       return {rangeStr: _getRangeStrForDepth(S.tableSize, rs.pos, rs.action, _eqDepth), tag:'manual:'+rs.pos+':'+rs.action+':'+_eqDepth};
     }
+    // עדיפות 3: זיהוי אוטומטי — עמדה + פעולה + תגית שחקן
     const swpSeat = swpForEq.find(x=>x.seatIdx===s.seatIdx);
     const pos = swpSeat?.pos || '';
     const actionCat = _inferPreflopActionCat(s);
@@ -824,10 +948,8 @@ function renderPotOdds(){
       +'|k:'+knownOppKey+'|u:'+rangeKey;
     if(window._eqCache?.key === eqKey){
       equityPct = window._eqCache.val; // אותם קלפים/תנאים — אין צורך לחשב שוב
-      _dbg('EQ: CACHE HIT key='+eqKey+' val='+equityPct?.toFixed(1));
     } else {
       equityComputing = true;
-      _dbg('EQ: CACHE MISS, computing. key='+eqKey);
       const jobId = (window._eqJob = (window._eqJob||0)+1);
       setTimeout(()=>{
         if(jobId !== window._eqJob) return; // בינתיים נכנסה בקשה עדכנית יותר
@@ -836,7 +958,6 @@ function renderPotOdds(){
           return combos.length ? combos : null; // טווח שיצא ריק → נופל חזרה לאקראי מלא
         });
         const val = monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists);
-        _dbg('EQ: computed val='+val?.toFixed(1)+' | knownOppHands='+JSON.stringify(knownOppHands.map(h=>h.map(c=>c.rank+c.suit)))+' | combosLists.lengths='+oppCombosLists.map(c=>c?c.length:'null'));
         window._eqCache = {key: eqKey, val};
         if(jobId === window._eqJob) renderPotOdds(); // רינדור חוזר — הפעם מה-cache
       }, 30);
@@ -913,6 +1034,40 @@ function renderPotOdds(){
     <!-- Range selector (מתרחב) -->
     ${showRange ? `
     <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:8px">
+
+      <!-- טווח ידני per-player -->
+      ${unknownOppSeats.length ? `
+      <div>
+        <div style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.5px;margin-bottom:5px">טווח ידני לשחקן (גובר על הכל)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${unknownOppSeats.map(s=>{
+            const nm = pName(s.playerId)||('מושב '+(s.seatIdx+1));
+            const has = !!(S.playerRanges?.[s.playerId]);
+            const editing = _rangeEditPid===s.playerId;
+            return `<button style="${chipStyle(editing||has, has?'#5fc47a':'#c8a96e')}" onclick="${editing?'_closeRangeEditor()':`_openRangeEditor('${s.playerId}')`}">${nm}${has?' 🎯':''}</button>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- עורך הגריד -->
+      ${_rangeEditPid ? `
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:10px;color:#c8a96e;font-weight:800">עריכת טווח: ${pName(_rangeEditPid)||''}</span>
+          <span style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
+        </div>
+        ${_rangeEditorGridHtml()}
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:8px;color:#5a5870;white-space:nowrap">Top %</span>
+          <input type="range" min="0" max="100" step="1" value="${Math.round(_rangeEditorSelCombos()/1326*100)}"
+            style="flex:1;accent-color:#c8a96e" oninput="_rangeEditorApplyTopPct(this.value)">
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>
+          <button onclick="_clearPlayerRange('${_rangeEditPid}')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(126,184,164,0.4);background:rgba(126,184,164,0.08);color:#7eb8a4;font-weight:700;font-size:10px;cursor:pointer">🤖 חזרה לאוטומטי</button>
+          <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:11px;cursor:pointer">✕</button>
+        </div>
+      </div>` : ''}
 
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:9px;color:#5a5870;font-weight:700;letter-spacing:.4px">EFFECTIVE STACK</span>
