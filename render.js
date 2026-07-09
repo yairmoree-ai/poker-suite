@@ -545,11 +545,14 @@ function _rangeStrToCombos(rangeStr, deadKeys){
 // Monte Carlo מאוחד: כל יריב יכול להיות "ידוע" (קלפים קבועים) או "עם טווח"
 // (מערך קומבינציות אפשריות; null = ללא הגבלה, קלף אקראי מהחפיסה). מטפל בהתנגשויות
 // בין קלפי יריבים שונים באותה איטרציה.
-function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists, iterations=8000){
-  if(!holeCards || holeCards.filter(Boolean).length < 2) return null;
+// heroCombos (אופציונלי): אם holeCards ריק ו-heroCombos סופק — גם היד של השחקן
+// הפועל נדגמת מתוך טווח בכל איטרציה (חישוב "טווח מול טווח").
+function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists, iterations=8000, heroCombos=null){
+  const heroFixed = holeCards && holeCards.filter(Boolean).length === 2;
+  if(!heroFixed && !(heroCombos && heroCombos.length)) return null;
   const baseBoard = boardCards.filter(Boolean);
   const boardNeeded = 5 - baseBoard.length;
-  const staticKnown = [...holeCards, ...baseBoard, ...knownOppHands.flat()].filter(Boolean);
+  const staticKnown = [...(heroFixed?holeCards:[]), ...baseBoard, ...knownOppHands.flat()].filter(Boolean);
   const staticKeys = new Set(staticKnown.map(_cardKey));
   const fullDeck = _fullDeck();
 
@@ -557,6 +560,18 @@ function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLi
   while(done < iterations && guard < iterations*3){
     guard++;
     const usedKeys = new Set(staticKeys);
+
+    // אם היד שלנו מגיעה מטווח — דוגמים אותה ראשונה בכל איטרציה
+    let heroHand = heroFixed ? holeCards : null;
+    if(!heroFixed){
+      for(let attempt=0; attempt<25 && !heroHand; attempt++){
+        const cand = heroCombos[Math.floor(Math.random()*heroCombos.length)];
+        if(cand && !usedKeys.has(_cardKey(cand[0])) && !usedKeys.has(_cardKey(cand[1]))) heroHand=cand;
+      }
+      if(!heroHand) continue;
+      usedKeys.add(_cardKey(heroHand[0])); usedKeys.add(_cardKey(heroHand[1]));
+    }
+
     const rangedHands = [];
     let bail=false;
     for(const combos of oppCombosLists){
@@ -591,7 +606,7 @@ function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLi
     for(let b=0;b<boardNeeded;b++) runBoard.push(deck[idx--]);
 
     const oppHands = [...knownOppHands, ...rangedHands];
-    const myVal = _handRankMC([...holeCards,...runBoard]);
+    const myVal = _handRankMC([...heroHand,...runBoard]);
     let best=myVal, iWin=true, iTie=false;
     for(const oh of oppHands){
       const ov=_handRankMC([...oh,...runBoard]);
@@ -939,12 +954,18 @@ function renderPotOdds(){
 
   // חישוב equity — עם cache וחישוב נדחה (לא חוסם את ציור המסך). מדלגים לגמרי במצב פתיחה
   // (isOpeningSpot) — שם השאלה הנכונה היא "בטווח?" ולא "equity מול מה?"
+  // מצב "טווח מול טווח": אם לשחקן הפועל אין קלפים מוזנים אבל יש לו טווח ידני שמור —
+  // היד שלו נדגמת מהטווח בכל איטרציה (heroCombos), במקום לדרוש קלפים ספציפיים.
+  const heroManualRange = (holeCards.length!==2) ? (S.playerRanges?.[seat?.playerId] || null) : null;
+  const heroRangeMode = !!heroManualRange;
   let equityPct = null;
   let equityComputing = false;
-  if(holeCards.length===2 && !isOpeningSpot){
+  if((holeCards.length===2 || heroRangeMode) && !isOpeningSpot){
     const knownOppKey = knownOppHands.map(h=>h.map(c=>c.rank+c.suit).sort().join('')).sort().join(',');
     const rangeKey = unknownOppRangeInfo.map(r=>r.tag).sort().join(',');
-    const eqKey = holeCards.map(c=>c.rank+c.suit).join('')+'|'+boardCards.map(c=>c.rank+c.suit).join('')
+    const heroKey = heroRangeMode ? 'hr:'+seat.playerId+':'+heroManualRange.length+':'+_countCombos(heroManualRange)
+                                  : holeCards.map(c=>c.rank+c.suit).join('');
+    const eqKey = heroKey+'|'+boardCards.map(c=>c.rank+c.suit).join('')
       +'|k:'+knownOppKey+'|u:'+rangeKey;
     if(window._eqCache?.key === eqKey){
       equityPct = window._eqCache.val; // אותם קלפים/תנאים — אין צורך לחשב שוב
@@ -957,7 +978,8 @@ function renderPotOdds(){
           const combos = _rangeStrToCombos(r.rangeStr, deadKeysBase);
           return combos.length ? combos : null; // טווח שיצא ריק → נופל חזרה לאקראי מלא
         });
-        const val = monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists);
+        const heroCombos = heroRangeMode ? _rangeStrToCombos(heroManualRange, deadKeysBase) : null;
+        const val = monteCarloEquityMulti(heroRangeMode?[]:holeCards, boardCards, knownOppHands, oppCombosLists, 8000, heroCombos);
         window._eqCache = {key: eqKey, val};
         if(jobId === window._eqJob) renderPotOdds(); // רינדור חוזר — הפעם מה-cache
       }, 30);
@@ -1017,7 +1039,7 @@ function renderPotOdds(){
         ${openRangeInfo
           ? `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.2;margin-top:2px">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ לטווח'}</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${openRangeInfo.hand}</span>`
           : equityPct!==null
-            ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}`
+            ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}${heroRangeMode?`<span style="font-size:7px;color:#5b9bd5;font-weight:800;margin-top:1px">טווח מול טווח</span>`:''}`
             : equityComputing
               ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
               : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
@@ -1037,9 +1059,9 @@ function renderPotOdds(){
 
       <!-- טווח ידני per-player -->
       ${(()=>{
-        // לעריכת טווח מציגים את *כל* היריבים הפעילים בשולחן (לא רק מי שכבר פעל ביד —
-        // בניית טווח היא הכנה, והמשתמש ירצה להגדיר אותה גם לפני שהיריב פעל)
-        const editableOpps = S.seats.filter(s=>s.playerId && !s.folded && s.seatIdx!==actor);
+        // לעריכת טווח מציגים את *כל* השחקנים הפעילים — כולל השחקן הפועל עצמו
+        // (טווח לפועל = חישוב "טווח מול טווח" כשלא הוזנו לו קלפים ספציפיים)
+        const editableOpps = S.seats.filter(s=>s.playerId && !s.folded);
         if(!editableOpps.length) return '';
         return `
       <div>
@@ -1047,9 +1069,10 @@ function renderPotOdds(){
         <div style="display:flex;flex-wrap:wrap;gap:5px">
           ${editableOpps.map(s=>{
             const nm = pName(s.playerId)||('מושב '+(s.seatIdx+1));
+            const isActor = s.seatIdx===actor;
             const has = !!(S.playerRanges?.[s.playerId]);
             const editing = _rangeEditPid===s.playerId;
-            return `<button style="${chipStyle(editing||has, has?'#5fc47a':'#c8a96e')}" onclick="${editing?'_closeRangeEditor()':`_openRangeEditor('${s.playerId}')`}">${nm}${has?' 🎯':''}</button>`;
+            return `<button style="${chipStyle(editing||has, has?'#5fc47a':(isActor?'#5b9bd5':'#c8a96e'))}" onclick="${editing?'_closeRangeEditor()':`_openRangeEditor('${s.playerId}')`}">${nm}${isActor?' (בתור)':''}${has?' 🎯':''}</button>`;
           }).join('')}
         </div>
       </div>`;
