@@ -1036,18 +1036,24 @@ function renderPotOdds(){
     <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:8px">
 
       <!-- טווח ידני per-player -->
-      ${unknownOppSeats.length ? `
+      ${(()=>{
+        // לעריכת טווח מציגים את *כל* היריבים הפעילים בשולחן (לא רק מי שכבר פעל ביד —
+        // בניית טווח היא הכנה, והמשתמש ירצה להגדיר אותה גם לפני שהיריב פעל)
+        const editableOpps = S.seats.filter(s=>s.playerId && !s.folded && s.seatIdx!==actor);
+        if(!editableOpps.length) return '';
+        return `
       <div>
         <div style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.5px;margin-bottom:5px">טווח ידני לשחקן (גובר על הכל)</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px">
-          ${unknownOppSeats.map(s=>{
+          ${editableOpps.map(s=>{
             const nm = pName(s.playerId)||('מושב '+(s.seatIdx+1));
             const has = !!(S.playerRanges?.[s.playerId]);
             const editing = _rangeEditPid===s.playerId;
             return `<button style="${chipStyle(editing||has, has?'#5fc47a':'#c8a96e')}" onclick="${editing?'_closeRangeEditor()':`_openRangeEditor('${s.playerId}')`}">${nm}${has?' 🎯':''}</button>`;
           }).join('')}
         </div>
-      </div>` : ''}
+      </div>`;
+      })()}
 
       <!-- עורך הגריד -->
       ${_rangeEditPid ? `
