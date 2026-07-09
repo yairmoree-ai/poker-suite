@@ -1,25 +1,4 @@
 // ═══════════════════════════════════════════════════════
-// DEBUG (כלי אבחון זמני - להסרה בהמשך)
-// ═══════════════════════════════════════════════════════
-window._dbgLogs = [];
-function _dbg(msg){
-  try{
-    const t = new Date().toLocaleTimeString('he-IL', {hour12:false});
-    window._dbgLogs.push('['+t+'] '+msg);
-    if(window._dbgLogs.length > 300) window._dbgLogs.shift();
-    const el = document.getElementById('debug-sync-log');
-    if(el) el.innerHTML = window._dbgLogs.map(l=>'<div>'+l.replace(/</g,'&lt;')+'</div>').join('');
-    const panel = document.getElementById('debug-sync-panel');
-    if(panel) panel.scrollTop = panel.scrollHeight;
-  }catch(e){}
-}
-function _dbgClear(){
-  window._dbgLogs=[];
-  const el = document.getElementById('debug-sync-log');
-  if(el) el.innerHTML='';
-}
-
-// ═══════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════
 const RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
@@ -101,6 +80,7 @@ let S={
   deleted:{hands:{},players:{},tourns:{}}, // tombstones: id->ts של פריטים שנמחקו — מונע "תחייה" בסנכרון
   tableSize:9,
   tableOrientation:'vertical',
+  playerRanges:{}, // טווחים ידניים per-player: {playerId: rangeStr} — נשמר עד שינוי ידני, דורס זיהוי אוטומטי
   buyinCost:50,
   buyins:{},       // {pid:{buyin:n,rebuy:n}}
   koOrder:[],      // pids in order of KO (first KO = last place)
@@ -225,6 +205,7 @@ function applySnapshot(v){
     if(v.place3!==undefined) S.place3=v.place3;
     if(v.place1Override!==undefined) S.place1Override=v.place1Override;
     if(v.place2Override!==undefined) S.place2Override=v.place2Override;
+    if(v.playerRanges!==undefined) S.playerRanges=v.playerRanges||{};
     // חשוב: מקדמים את S.savedAt לפי מה שהתקבל בפועל. בלי זה, ברגע שכל persist() מקומי
     // לא קשור (אפילו תמים) דוחף את S.savedAt קדימה, כל משיכה עתידית מהענן הייתה נחסמת
     // לצמיתות — למרות שהנתונים שהתקבלו כרגע *כן* יושמו בהצלחה. מתקדמים בלבד, אף פעם
@@ -292,6 +273,9 @@ function loadState(){
   const tlog=readLS(['ps_tlog','pttlog']);
   if(tlog) S.tournLog=Array.isArray(tlog)?tlog:[];
 
+  const pranges=readLS(['ps_pranges']);
+  if(pranges && typeof pranges==='object' && !Array.isArray(pranges)) S.playerRanges=pranges;
+
   if(S.buyinCost===100) S.buyinCost=50;
   render();
 
@@ -306,6 +290,7 @@ function persist(){
   try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,tableOrientation:S.tableOrientation,houseRake:S.houseRake,place4:S.place4,place3:S.place3,place1Override:S.place1Override,place2Override:S.place2Override,btnLocked:S.btnLocked,lastBet:S.lastBet,blindTimer:S.blindTimer,blindStructure:S.blindStructure})); }catch(e){}
   try{ localStorage.setItem('ps_log',JSON.stringify(S.handLog)); }catch(e){}
   try{ localStorage.setItem('ps_tlog',JSON.stringify(S.tournLog)); }catch(e){}
+  try{ localStorage.setItem('ps_pranges',JSON.stringify(S.playerRanges||{})); }catch(e){}
   // Also save full snapshot to sessionStorage (survives refresh, not new tab)
   try{ sessionStorage.setItem('ps_snap', JSON.stringify(snap)); }catch(e){}
   // Save to all known old keys for migration
@@ -324,7 +309,8 @@ function fullSnapshot(){
     customBlindLevels:S.customBlindLevels, tableSize:S.tableSize, tableOrientation:S.tableOrientation,
     houseRake:S.houseRake, place4:S.place4, place3:S.place3,
     handLog:S.handLog, tournLog:S.tournLog, deleted:S.deleted||{hands:{},players:{},tourns:{}},
-    blindTimer:S.blindTimer, blindStructure:S.blindStructure
+    blindTimer:S.blindTimer, blindStructure:S.blindStructure,
+    playerRanges:S.playerRanges||{}
   };
 }
 
