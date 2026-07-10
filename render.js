@@ -73,6 +73,10 @@ function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=8000){
 const _RANGES = {
   6: {
     deep: { // 75BB+ — פתיחות 2.5-3x, ranges מלאים לפי solver
+      'BTN/SB':{
+        // ראש-בראש: הכפתור/סמול פותח רחב מאוד. נוצר מ-_HAND_RANKING (top X%)
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,AQs,AKs,77,ATs,AKo,AJs,AQo,A9s,66,KQs,AJo,ATo,A8s,A7s,KJs,KTs,A9o,KQo,KJo,A8o,A6s,QJs,55,A5s,K8s,Q9s,A7o,A4s,KTo,QTs,K9s,A4o,A5o,QJo,J9s,K9o,A3s,K7s,A2s,K5s,44,K6s,JTs,A6o,K8o,K3s,QTo,K4s,A3o,Q8s,J8s,K7o,Q7s,Q9o,A2o,33,Q8o,K2s,T9s,K5o,K4o,Q5s,JTo,K6o,J9o,Q4s,J7s,Q7o,98s,Q3s,T8s,T9o,Q6s,K2o,Q2s,J8o,T7s,Q5o,K3o,J5s,22,Q6o,J6s,J4s,T6s,T8o,Q4o,97s,J6o,J3s,J7o,J2s,Q3o,87s,T7o,96s,Q2o,98o,T5s,97o,J5o,J4o,T4s,86s,T6o,95s,T3s,T2s,96o,87o,76s,J3o,J2o,95o,94s,T4o,93s,85s,75s,T3o,86o,T5o,65s,76o,54s,T2o,84s,74s,92s,64s,65o,94o,93o,85o,75o',
+      },
       BTN:{
         // מעודכן לפי מקורות סולבר עדכניים (100BB, 6-max): ~43% מהידיים
         RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,K4s,K3s,K2s,QJs,QTs,Q9s,Q8s,Q7s,Q6s,Q5s,Q4s,Q3s,JTs,J9s,J8s,J7s,J6s,J5s,J4s,T9s,T8s,T7s,T6s,98s,97s,96s,87s,86s,85s,76s,75s,65s,64s,54s,53s,AKo,AQo,AJo,ATo,A9o,A8o,A7o,A6o,A5o,A4o,KQo,KJo,KTo,K9o,K8o,QJo,QTo,Q9o,JTo,J9o,T9o,T8o,98o',
@@ -122,6 +126,10 @@ const _RANGES = {
       },
     },
     mid: { // 35-74BB — ranges יותר צרים, פחות speculative
+      'BTN/SB':{
+        // ראש-בראש: הכפתור/סמול פותח רחב מאוד. נוצר מ-_HAND_RANKING (top X%)
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,AQs,AKs,77,ATs,AKo,AJs,AQo,A9s,66,KQs,AJo,ATo,A8s,A7s,KJs,KTs,A9o,KQo,KJo,A8o,A6s,QJs,55,A5s,K8s,Q9s,A7o,A4s,KTo,QTs,K9s,A4o,A5o,QJo,J9s,K9o,A3s,K7s,A2s,K5s,44,K6s,JTs,A6o,K8o,K3s,QTo,K4s,A3o,Q8s,J8s,K7o,Q7s,Q9o,A2o,33,Q8o,K2s,T9s,K5o,K4o,Q5s,JTo,K6o,J9o,Q4s,J7s,Q7o,98s,Q3s,T8s,T9o,Q6s,K2o,Q2s,J8o,T7s,Q5o,K3o,J5s,22,Q6o,J6s,J4s,T6s,T8o,Q4o,97s,J6o,J3s,J7o,J2s,Q3o,87s,T7o,96s,Q2o,98o,T5s,97o,J5o,J4o,T4s,86s,T6o,95s,T3s,T2s,96o,87o,76s,J3o,J2o,95o,94s,T4o,93s,85s,75s,T3o,86o,T5o,65s,76o',
+      },
       BTN:{
         // מעודכן: ~38% מהידיים
         RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,K4s,K3s,K2s,QJs,QTs,Q9s,Q8s,Q7s,Q6s,Q5s,Q4s,JTs,J9s,J8s,J7s,J6s,T9s,T8s,T7s,T6s,98s,97s,96s,87s,86s,85s,76s,75s,65s,64s,54s,AKo,AQo,AJo,ATo,A9o,A8o,A7o,A6o,KQo,KJo,KTo,K9o,QJo,QTo,Q9o,JTo,J9o,T9o,98o',
@@ -170,6 +178,10 @@ const _RANGES = {
       },
     },
     short: { // 20-34BB — ranges צרים, value-heavy, פחות bluffs
+      'BTN/SB':{
+        // ראש-בראש: הכפתור/סמול פותח רחב מאוד. נוצר מ-_HAND_RANKING (top X%)
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,AQs,AKs,77,ATs,AKo,AJs,AQo,A9s,66,KQs,AJo,ATo,A8s,A7s,KJs,KTs,A9o,KQo,KJo,A8o,A6s,QJs,55,A5s,K8s,Q9s,A7o,A4s,KTo,QTs,K9s,A4o,A5o,QJo,J9s,K9o,A3s,K7s,A2s,K5s,44,K6s,JTs,A6o,K8o,K3s,QTo,K4s,A3o,Q8s,J8s,K7o,Q7s,Q9o,A2o,33,Q8o,K2s,T9s,K5o,K4o,Q5s,JTo,K6o,J9o,Q4s,J7s,Q7o,98s,Q3s,T8s,T9o,Q6s,K2o,Q2s,J8o,T7s,Q5o,K3o,J5s,22,Q6o,J6s,J4s,T6s,T8o,Q4o,97s,J6o,J3s,J7o,J2s,Q3o,87s,T7o,96s,Q2o,98o,T5s,97o,J5o,J4o,T4s,86s,T6o,95s,T3s,T2s,96o',
+      },
       BTN:{
         // מעודכן: ~25% מהידיים
         RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,QJs,QTs,Q9s,Q8s,JTs,J9s,J8s,T9s,T8s,98s,97s,87s,76s,AKo,AQo,AJo,ATo,A9o,A8o,KQo,KJo,KTo,QJo,QTo',
@@ -361,15 +373,11 @@ function _getRangeStrForDepth(tableSize, pos, action, depth){
   const ts = tableSize||S.tableSize||6;
   const rBySize = _RANGES[ts]||_RANGES[6];
   const rByDepth = rBySize[depth]||rBySize.deep||rBySize;
-  let entry = rByDepth[pos];
-  if(!entry){
-    // עמדות שאין להן טבלה ייעודית — ממופות לעמדה הקרובה ביותר שקיימת.
-    // בלי זה החיפוש מחזיר טווח ריק ⇒ שום יד לא "בטווח" (אפילו KK).
-    // BTN/SB (ראש-בראש): ממופה ל-BTN — שמרני, כי בפועל HU פותחים רחב עוד יותר.
-    const alias = {'BTN/SB':'BTN','UTG+1':'UTG','UTG+2':'MP','LJ':'MP','MP+1':'HJ'}[pos];
-    if(alias) entry = rByDepth[alias];
-  }
-  return (entry||{})[action]||'';
+  // עמדות ללא טבלה מלאה ממופות לעמדה הקרובה ביותר. ה-fallback הוא ברמת *הפעולה*:
+  // ל-BTN/SB יש כניסת RFI ייעודית (HU, רחבה), אבל 3bet/call/4bet נופלים ל-BTN.
+  // בלי fallback, חיפוש שנכשל מחזיר טווח ריק ⇒ שום יד לא "בטווח" (אפילו KK).
+  const alias = {'BTN/SB':'BTN','UTG+1':'UTG','UTG+2':'MP','LJ':'MP','MP+1':'HJ'}[pos];
+  return (rByDepth[pos]||{})[action] || (alias ? ((rByDepth[alias]||{})[action]||'') : '');
 }
 
 function _getRangeStr(tableSize, pos, action){

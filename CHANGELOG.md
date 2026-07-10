@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-07-11 — Dedicated heads-up (BTN/SB) opening ranges
+**Files: render.js**
+
+- User field-tested HU and correctly flagged that mapping BTN/SB→BTN
+  (38-43%) is far too tight for heads-up — real HU SB opens ~75-85%,
+  and at short depth K3s fell outside the mapped range.
+- Added dedicated 'BTN/SB' RFI entries at all three depths, generated
+  from _HAND_RANKING (combo-weighted top-X%): deep 82.2%, mid 75.3%,
+  short 65.3%. K3s/Q5o in at every depth; 72o out.
+- _getRangeStrForDepth fallback upgraded from entry-level to
+  ACTION-level: BTN/SB has its own RFI but 3bet/call/4bet fall back to
+  BTN's tables (previously a partial entry would have returned empty
+  strings for missing actions).
+- Verified: all depths include K3s; 3bet fallback non-empty; regular
+  positions unchanged (BTN 42.8%, UTG 17.0%).
+- Note: the earlier screenshot (K3s out at 44BB) also reflected the
+  pre-alias code — with the previous fix alone K3s was already in at
+  deep/mid; this change makes HU ranges properly wide at all depths.
+
 ## 2026-07-11 — Fix "KK out of range" on BTN/SB; clearer opening-spot message
 **Files: render.js**
 
