@@ -38,13 +38,13 @@ const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 // מוסיף את המשתמש המחובר (מנהל) לרשימת השחקנים אוטומטית אם עוד לא קיים שם,
 // כדי שיוכל לשבת ולשחק בלי צורך להוסיף את עצמו ידנית קודם. לא רץ עבור צופים.
 function ensureSelfAsPlayer(){
+  // הפיצ'ר המקורי (הוספה אוטומטית של המנהל כשחקן) *בוטל* — הוא יצר כפילויות
+  // (בדיקה לפי שם + id חדש בכל פעם + מיזוג סנכרון לפי id), והמשתמש ממילא משתמש
+  // בשחקן שיצר בעצמו מזמן. במקומו הפונקציה מנקה: מאחדת כפילויות שם, ומוחקת את
+  // כל העותקים בשם המנהל שאין עליהם שום נתון (buyin/מושב/KO/טווח) — עם tombstone
+  // כדי שלא יחזרו בסנכרון ממכשירים אחרים. עותק עם נתונים לעולם לא נמחק.
   if(!currentUser || currentUser.role==='viewer') return;
   if(!currentUser.name) return;
-  // חשוב: מחכים בפועל לסיום הסנכרון הראשוני (_initialSyncDone), לא לזמן קבוע —
-  // כי משך ה-fetch עצמו משתנה לפי מהירות הרשת, וזמן קבוע (היה 1200ms) עדיין יכול
-  // "להתעורר" בדיוק בזמן שה-fetch עוד באוויר, לפני שהתשובה חזרה בפועל.
-  // _initialSyncDone מוגדר ב-features.js; אם עדיין לא הוגדר בכלל (סקריפט לא נטען) —
-  // מתייחסים כאילו הסתיים, כדי לא להיתקע.
   const syncPending = (typeof _initialSyncDone !== 'undefined')
     && (typeof getGsUrl === 'function') && getGsUrl() && !_initialSyncDone;
   if(syncPending){
@@ -52,9 +52,19 @@ function ensureSelfAsPlayer(){
     return;
   }
   if(!S.playerLib) S.playerLib=[];
-  const exists = S.playerLib.some(p=>p.name===currentUser.name);
-  if(!exists){
-    S.playerLib.push({id:uid(), name:currentUser.name});
+  let changed = dedupePlayersByName();
+  const hasData = p => (S.buyins?.[p.id]?.buyin>0 || S.buyins?.[p.id]?.rebuy>0)
+    || (S.seats||[]).some(s=>s.playerId===p.id)
+    || (S.koOrder||[]).includes(p.id)
+    || !!S.playerRanges?.[p.id];
+  const unused = S.playerLib.filter(p=>p.name===currentUser.name && !hasData(p));
+  if(unused.length){
+    const ids = new Set(unused.map(p=>p.id));
+    S.playerLib = S.playerLib.filter(p=>!ids.has(p.id));
+    unused.forEach(p=>markDeleted('players', p.id));
+    changed += unused.length;
+  }
+  if(changed){
     persist();
     try{ renderPlayerList(); }catch(e){}
   }
@@ -75,6 +85,49 @@ function markDeleted(kind,id){
   });
 }
 const isDeleted=(kind,id)=>!!(id && S.deleted?.[kind]?.[id]);
+
+// ── איחוד כפילויות שחקנים לפי שם ─────────────────────────────
+// רקע: ensureSelfAsPlayer בודקת קיום לפי *שם* אבל יוצרת id חדש בכל פעם, ומיזוג
+// הסנכרון (applySnapshot) ממזג לפי *id* — כך שכניסות מהקשרי אחסון שונים (ספארי/webapp)
+// או משיכה ראשונית שנכשלה יצרו עותקים כפולים של אותו שחקן. הפונקציה מאחדת:
+// שומרת את הרשומה הוותיקה ביותר לכל שם, ממזגת אליה נתונים (buyins/טווחים/מושבים/KO),
+// ומסמנת את הכפולות ב-tombstone כדי שהסנכרון לא יחזיר אותן ממכשירים אחרים.
+function dedupePlayersByName(){
+  if(!S.playerLib?.length) return 0;
+  const byName = {};
+  const drops = []; // [{dropId, keepId}]
+  S.playerLib.forEach(p=>{
+    const nm = (p.name||'').trim();
+    if(!nm) return;
+    if(byName[nm]===undefined){ byName[nm]=p; return; }
+    drops.push({dropId:p.id, keepId:byName[nm].id});
+  });
+  if(!drops.length) return 0;
+  const remap = Object.fromEntries(drops.map(d=>[d.dropId, d.keepId]));
+  // מיזוג buyins אל הרשומה הנשמרת
+  drops.forEach(({dropId, keepId})=>{
+    const b = S.buyins?.[dropId];
+    if(b){
+      if(!S.buyins[keepId]) S.buyins[keepId]={buyin:0,rebuy:0};
+      S.buyins[keepId].buyin = (S.buyins[keepId].buyin||0)+(b.buyin||0);
+      S.buyins[keepId].rebuy = (S.buyins[keepId].rebuy||0)+(b.rebuy||0);
+      delete S.buyins[dropId];
+    }
+    // טווח ידני: אם לנשמרת אין — מעבירים; אם יש — שלה גוברת
+    if(S.playerRanges?.[dropId]){
+      if(!S.playerRanges[keepId]) S.playerRanges[keepId]=S.playerRanges[dropId];
+      delete S.playerRanges[dropId];
+    }
+  });
+  // רימאפ הפניות חיות
+  (S.seats||[]).forEach(s=>{ if(s.playerId && remap[s.playerId]) s.playerId=remap[s.playerId]; });
+  if(Array.isArray(S.koOrder)) S.koOrder = [...new Set(S.koOrder.map(pid=>remap[pid]||pid))];
+  // הסרה + tombstones
+  const dropSet = new Set(drops.map(d=>d.dropId));
+  S.playerLib = S.playerLib.filter(p=>!dropSet.has(p.id));
+  drops.forEach(d=>markDeleted('players', d.dropId));
+  return drops.length;
+}
 let S={
   playerLib:[],
   deleted:{hands:{},players:{},tourns:{}}, // tombstones: id->ts של פריטים שנמחקו — מונע "תחייה" בסנכרון
@@ -148,6 +201,8 @@ function applySnapshot(v){
     const existingIds = new Set((S.playerLib||[]).map(p=>p.id).filter(Boolean));
     const newP = v.playerLib.filter(p=>p.id && !existingIds.has(p.id) && !isDeleted('players',p.id));
     if(newP.length) S.playerLib = [...(S.playerLib||[]), ...newP];
+    // אחרי מיזוג לפי id — איחוד כפילויות של אותו שם שנוצרו מהקשרים שונים
+    dedupePlayersByName();
   }
   // שאר השדות — קח מהגרסה החדשה יותר בלבד
   const incomingNewer = !S.savedAt || !v.savedAt || v.savedAt > S.savedAt;

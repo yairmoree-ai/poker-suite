@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-07-11 — Remove auto-add-admin feature; purge its duplicates
+**Files: state.js**
+
+- The auto-add-admin-as-player feature created duplicates on every
+  fresh-context login (name-based existence check + new id each time +
+  id-based sync merge → dozens of empty "יאיר מורה" entries). Per user
+  decision the feature is now REMOVED — the user plays with a player
+  they created manually long ago; auto-created entries were never used.
+- ensureSelfAsPlayer repurposed as self-cleanup (all existing call
+  sites in auth.js remain valid): merges name-duplicates
+  (dedupePlayersByName, also runs after sync merge) and then deletes
+  every entry matching the admin's name that carries NO data — with a
+  safety net: any entry that has buyins, an occupied seat, a KO record,
+  or a saved manual range is never deleted. Deleted ids get tombstones
+  so other devices' pushes cannot resurrect them.
+- Verified: 10 empty auto-copies → all removed with tombstones; the
+  real manually-created player and other players untouched; a
+  same-named entry WITH a buyin survives; remote pushing old copies is
+  blocked.
+
+## 2026-07-11 — (superseded by the entry above) dedupe-by-name groundwork
+**Files: state.js**
+
+- ensureSelfAsPlayer checked existence by NAME but created a new id
+  each time, while sync merge (applySnapshot) merges playerLib by ID —
+  so fresh storage contexts (Safari vs webapp) and failed initial pulls
+  each spawned another "יאיר מורה" copy; merge-by-id kept them all
+  (dozens accumulated during testing).
+- New dedupePlayersByName(): keeps the oldest entry per name, merges
+  data into it (buyins summed, manual range moved, seat playerId and
+  koOrder remapped), removes the rest, and marks dropped ids with
+  tombstones so sync cannot resurrect them from other devices.
+- Runs after playerLib merge in applySnapshot and on login in
+  ensureSelfAsPlayer — existing duplicates clean themselves up
+  automatically on next load/sync across all devices.
+- Verified: 10 copies with data scattered across them → 1 entry with
+  all data merged (buyin+rebuy, range, seat, KO order); remote pushing
+  old copies blocked by tombstones; real players untouched.
+
 ## 2026-07-11 — Fix meaningless 100% equity with zero opponents
 **Files: render.js**
 
