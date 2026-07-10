@@ -973,10 +973,13 @@ function renderPotOdds(){
   // מצב "טווח מול טווח": אם לשחקן הפועל אין קלפים מוזנים אבל יש לו טווח ידני שמור —
   // היד שלו נדגמת מהטווח בכל איטרציה (heroCombos), במקום לדרוש קלפים ספציפיים.
   const heroManualRange = (holeCards.length!==2) ? (S.playerRanges?.[seat?.playerId] || null) : null;
-  const heroRangeMode = !!heroManualRange;
+  // מצב טווח-מול-טווח דורש לפחות יריב אחד בחישוב (ידוע או עם טווח). בלי אף יריב
+  // שפעל, "equity" הוא 100% חסר משמעות (אין מול מי להפסיד) — אז לא מחשבים.
+  const heroRangeMode = !!heroManualRange && (knownOppHands.length + unknownOppSeats.length) > 0;
   let equityPct = null;
   let equityComputing = false;
-  if((holeCards.length===2 || heroRangeMode) && !isOpeningSpot){
+  const _hasOppInCalc = (knownOppHands.length + unknownOppSeats.length) > 0;
+  if((holeCards.length===2 || heroRangeMode) && !isOpeningSpot && _hasOppInCalc){
     const knownOppKey = knownOppHands.map(h=>h.map(c=>c.rank+c.suit).sort().join('')).sort().join(',');
     const rangeKey = unknownOppRangeInfo.map(r=>r.tag).sort().join(',');
     const heroKey = heroRangeMode ? 'hr:'+seat.playerId+':'+heroManualRange.length+':'+_countCombos(heroManualRange)
@@ -1058,7 +1061,7 @@ function renderPotOdds(){
             ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}${heroRangeMode?`<span style="font-size:7px;color:#5b9bd5;font-weight:800;margin-top:1px">טווח מול טווח</span>`:''}`
             : equityComputing
               ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
-              : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
+              : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${!_hasOppInCalc?'ממתין ליריב':holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>

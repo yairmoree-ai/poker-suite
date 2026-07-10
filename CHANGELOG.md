@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-07-11 — Fix meaningless 100% equity with zero opponents
+**Files: render.js**
+
+- Range-vs-range mode computed equity even when NO opponent had acted
+  yet (hero first to act, saved range from a previous session) —
+  zero opponents in the simulation → hero "wins" every iteration →
+  meaningless 100.0% displayed.
+- The fixed-cards mode had the isOpeningSpot guard, but it requires
+  entered hole cards, so hero-range mode slipped past it. A similar
+  pre-existing hole existed for fixed cards + global range selection +
+  no opponents acted.
+- Fix: equity (both modes) now requires at least one opponent in the
+  calculation (known cards or acted-with-range). Otherwise shows
+  "ממתין ליריב" instead of a number.
+- Verified: exact screenshot scenario reproduced → no 100%, shows
+  waiting message; after an opponent raises, real range-vs-range
+  equity (42.9%) appears with its label.
+
 ## 2026-07-10 — Slider fixes: RTL direction + smooth dragging
 **Files: render.js, game.js**
 
