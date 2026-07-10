@@ -972,18 +972,42 @@ function renderPotOdds(){
   // (isOpeningSpot) — שם השאלה הנכונה היא "בטווח?" ולא "equity מול מה?"
   // מצב "טווח מול טווח": אם לשחקן הפועל אין קלפים מוזנים אבל יש לו טווח ידני שמור —
   // היד שלו נדגמת מהטווח בכל איטרציה (heroCombos), במקום לדרוש קלפים ספציפיים.
+  // עדיפות טווח לפועל: קלפים מוזנים > טווח ידני שמור > אוטומטי.
+  // אוטומטי: אם הפועל כבר פעל ביד — לפי פעולתו (כמו אצל יריבים); אם טרם פעל —
+  // "טווח ההמשך" של עמדתו (איחוד call+3bet): בהנחה שממשיך, ככה נראה הטווח שלו.
   const heroManualRange = (holeCards.length!==2) ? (S.playerRanges?.[seat?.playerId] || null) : null;
+  let heroAutoRange = null, heroAutoTag = '';
+  if(holeCards.length!==2 && !heroManualRange && seat){
+    const heroPos = swpForEq.find(x=>x.seatIdx===actor)?.pos || '';
+    if(heroPos){
+      const heroActs = (seat.actions||[]).filter(a=>a.street==='פרה-פלופ' && a.type!=='SB' && a.type!=='BB');
+      if(heroActs.length){
+        const cat = _inferPreflopActionCat(seat);
+        heroAutoRange = _getRangeStrForDepth(S.tableSize, heroPos, cat, _eqDepth) || null;
+        heroAutoTag = 'hauto:'+heroPos+':'+cat+':'+_eqDepth;
+      } else {
+        const callR = _getRangeStrForDepth(S.tableSize, heroPos, 'call', _eqDepth) || '';
+        const bet3R = _getRangeStrForDepth(S.tableSize, heroPos, '3bet', _eqDepth) || '';
+        const merged = [...new Set([...callR.split(','), ...bet3R.split(',')].map(x=>x.trim()).filter(Boolean))];
+        heroAutoRange = merged.length ? merged.join(',') : null;
+        heroAutoTag = 'hcont:'+heroPos+':'+_eqDepth;
+      }
+    }
+  }
+  const heroRangeStr = heroManualRange || heroAutoRange;
+  const heroRangeIsAuto = !heroManualRange && !!heroAutoRange;
   // מצב טווח-מול-טווח דורש לפחות יריב אחד בחישוב (ידוע או עם טווח). בלי אף יריב
   // שפעל, "equity" הוא 100% חסר משמעות (אין מול מי להפסיד) — אז לא מחשבים.
-  const heroRangeMode = !!heroManualRange && (knownOppHands.length + unknownOppSeats.length) > 0;
+  const heroRangeMode = !!heroRangeStr && (knownOppHands.length + unknownOppSeats.length) > 0;
   let equityPct = null;
   let equityComputing = false;
   const _hasOppInCalc = (knownOppHands.length + unknownOppSeats.length) > 0;
   if((holeCards.length===2 || heroRangeMode) && !isOpeningSpot && _hasOppInCalc){
     const knownOppKey = knownOppHands.map(h=>h.map(c=>c.rank+c.suit).sort().join('')).sort().join(',');
     const rangeKey = unknownOppRangeInfo.map(r=>r.tag).sort().join(',');
-    const heroKey = heroRangeMode ? 'hr:'+seat.playerId+':'+heroManualRange.length+':'+_countCombos(heroManualRange)
-                                  : holeCards.map(c=>c.rank+c.suit).join('');
+    const heroKey = heroRangeMode
+      ? (heroManualRange ? 'hr:'+seat.playerId+':'+heroManualRange.length+':'+_countCombos(heroManualRange) : heroAutoTag)
+      : holeCards.map(c=>c.rank+c.suit).join('');
     const eqKey = heroKey+'|'+boardCards.map(c=>c.rank+c.suit).join('')
       +'|k:'+knownOppKey+'|u:'+rangeKey;
     if(window._eqCache?.key === eqKey){
@@ -997,7 +1021,7 @@ function renderPotOdds(){
           const combos = _rangeStrToCombos(r.rangeStr, deadKeysBase);
           return combos.length ? combos : null; // טווח שיצא ריק → נופל חזרה לאקראי מלא
         });
-        const heroCombos = heroRangeMode ? _rangeStrToCombos(heroManualRange, deadKeysBase) : null;
+        const heroCombos = heroRangeMode ? _rangeStrToCombos(heroRangeStr, deadKeysBase) : null;
         const val = monteCarloEquityMulti(heroRangeMode?[]:holeCards, boardCards, knownOppHands, oppCombosLists, 8000, heroCombos);
         window._eqCache = {key: eqKey, val};
         if(jobId === window._eqJob) renderPotOdds(); // רינדור חוזר — הפעם מה-cache
@@ -1058,7 +1082,7 @@ function renderPotOdds(){
         ${openRangeInfo
           ? `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.2;margin-top:2px">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ לטווח'}</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${openRangeInfo.hand}</span>`
           : equityPct!==null
-            ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}${heroRangeMode?`<span style="font-size:7px;color:#5b9bd5;font-weight:800;margin-top:1px">טווח מול טווח</span>`:''}`
+            ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}${heroRangeMode?`<span style="font-size:7px;color:#5b9bd5;font-weight:800;margin-top:1px">טווח ${heroRangeIsAuto?'(אוטו׳) ':''}מול טווח</span>`:''}`
             : equityComputing
               ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
               : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${!_hasOppInCalc?'ממתין ליריב':holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}

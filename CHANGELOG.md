@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-11 — Auto range for the acting player (range-vs-range by default)
+**Files: render.js**
+
+- Previously the acting player needed entered cards OR a saved manual
+  range for equity to compute — a hero who hadn't acted showed
+  "הזן קלפים" even when opponents had ranges (auto-detection only ever
+  applied to opponents, since it infers ranges from actions taken).
+- New hero range priority: entered cards > saved manual range > AUTO:
+  if the hero already acted this hand — range inferred from their
+  action (same logic as opponents); if they haven't acted yet — their
+  position's "continue range" (union of call + 3bet tables at current
+  depth), i.e. "assuming they continue, this is their range".
+- Equity label distinguishes: "טווח (אוטו׳) מול טווח" vs manual
+  "טווח מול טווח". Cache keys include hcont/hauto tags.
+- Verified vs direct engine runs: CO continue (9.5%) vs top-19% =
+  57.1%; manual AA,KK override = 80.0-80.7%; label toggles correctly;
+  manual range still beats auto.
+- Known caveat (by design): the auto number assumes the hero continues
+  — it measures how the ranges match up, not whether a specific hand
+  should continue.
+
 ## 2026-07-11 — Remove temporary cleanup mechanism (cleanup completed)
 **Files: state.js**
 
