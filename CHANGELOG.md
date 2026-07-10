@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-11 — Fix "KK out of range" on BTN/SB; clearer opening-spot message
+**Files: render.js**
+
+- BUG: heads-up hands assign the combined position label "BTN/SB",
+  which has no entry in the _RANGES tables — range lookups returned an
+  EMPTY string, so the RFI check declared every hand (even KK!)
+  "מחוץ לטווח". Fixed at the single choke point (_getRangeStrForDepth):
+  positions without a dedicated table map to the closest existing one
+  (BTN/SB→BTN — conservative, real HU opens even wider; also
+  UTG+1→UTG, UTG+2→MP, LJ→MP, MP+1→HJ for larger tables).
+- UX: opening spot (preflop, nobody acted) with no hero cards showed
+  the misleading "ממתין ליריב" — the missing piece there is the hero's
+  cards (for the RFI check), not an opponent. Now shows
+  "פתיחה — הזן קלפים". No behavior change beyond the message —
+  intentionally still no equity in this spot (nothing meaningful to
+  compute; opponents' ranges unknown until they act).
+- Verified: BTN/SB RFI now 504 combos, KK/QJs in, 72o out; all alias
+  positions resolve; new message shows in the exact screenshot
+  scenario; entering cards still triggers the RFI in-range check.
+
 ## 2026-07-11 — Auto range for the acting player (range-vs-range by default)
 **Files: render.js**
 

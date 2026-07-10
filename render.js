@@ -361,7 +361,15 @@ function _getRangeStrForDepth(tableSize, pos, action, depth){
   const ts = tableSize||S.tableSize||6;
   const rBySize = _RANGES[ts]||_RANGES[6];
   const rByDepth = rBySize[depth]||rBySize.deep||rBySize;
-  return (rByDepth[pos]||{})[action]||'';
+  let entry = rByDepth[pos];
+  if(!entry){
+    // עמדות שאין להן טבלה ייעודית — ממופות לעמדה הקרובה ביותר שקיימת.
+    // בלי זה החיפוש מחזיר טווח ריק ⇒ שום יד לא "בטווח" (אפילו KK).
+    // BTN/SB (ראש-בראש): ממופה ל-BTN — שמרני, כי בפועל HU פותחים רחב עוד יותר.
+    const alias = {'BTN/SB':'BTN','UTG+1':'UTG','UTG+2':'MP','LJ':'MP','MP+1':'HJ'}[pos];
+    if(alias) entry = rByDepth[alias];
+  }
+  return (entry||{})[action]||'';
 }
 
 function _getRangeStr(tableSize, pos, action){
@@ -1085,7 +1093,7 @@ function renderPotOdds(){
             ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}${heroRangeMode?`<span style="font-size:7px;color:#5b9bd5;font-weight:800;margin-top:1px">טווח ${heroRangeIsAuto?'(אוטו׳) ':''}מול טווח</span>`:''}`
             : equityComputing
               ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
-              : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${!_hasOppInCalc?'ממתין ליריב':holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
+              : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${(_curStreetName==='פרה-פלופ' && oppSeats.length===0 && holeCards.length<2)?'פתיחה — הזן קלפים':!_hasOppInCalc?'ממתין ליריב':holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>
