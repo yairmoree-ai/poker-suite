@@ -38,36 +38,11 @@ const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 // מוסיף את המשתמש המחובר (מנהל) לרשימת השחקנים אוטומטית אם עוד לא קיים שם,
 // כדי שיוכל לשבת ולשחק בלי צורך להוסיף את עצמו ידנית קודם. לא רץ עבור צופים.
 function ensureSelfAsPlayer(){
-  // הפיצ'ר המקורי (הוספה אוטומטית של המנהל כשחקן) *בוטל* — הוא יצר כפילויות
-  // (בדיקה לפי שם + id חדש בכל פעם + מיזוג סנכרון לפי id), והמשתמש ממילא משתמש
-  // בשחקן שיצר בעצמו מזמן. במקומו הפונקציה מנקה: מאחדת כפילויות שם, ומוחקת את
-  // כל העותקים בשם המנהל שאין עליהם שום נתון (buyin/מושב/KO/טווח) — עם tombstone
-  // כדי שלא יחזרו בסנכרון ממכשירים אחרים. עותק עם נתונים לעולם לא נמחק.
-  if(!currentUser || currentUser.role==='viewer') return;
-  if(!currentUser.name) return;
-  const syncPending = (typeof _initialSyncDone !== 'undefined')
-    && (typeof getGsUrl === 'function') && getGsUrl() && !_initialSyncDone;
-  if(syncPending){
-    setTimeout(ensureSelfAsPlayer, 300);
-    return;
-  }
-  if(!S.playerLib) S.playerLib=[];
-  let changed = dedupePlayersByName();
-  const hasData = p => (S.buyins?.[p.id]?.buyin>0 || S.buyins?.[p.id]?.rebuy>0)
-    || (S.seats||[]).some(s=>s.playerId===p.id)
-    || (S.koOrder||[]).includes(p.id)
-    || !!S.playerRanges?.[p.id];
-  const unused = S.playerLib.filter(p=>p.name===currentUser.name && !hasData(p));
-  if(unused.length){
-    const ids = new Set(unused.map(p=>p.id));
-    S.playerLib = S.playerLib.filter(p=>!ids.has(p.id));
-    unused.forEach(p=>markDeleted('players', p.id));
-    changed += unused.length;
-  }
-  if(changed){
-    persist();
-    try{ renderPlayerList(); }catch(e){}
-  }
+  // פונקציה ריקה בכוונה. גלגולים קודמים: (1) הוסיפה את המנהל אוטומטית כשחקן —
+  // בוטל, יצר כפילויות (בדיקה לפי שם + id חדש בכל פעם + מיזוג סנכרון לפי id);
+  // (2) שימשה זמנית לניקוי הכפילויות שנוצרו — הושלם ב-11/07/26, ה-tombstones
+  // שנרשמו מונעים את חזרתן. נשמרת כ-no-op כי auth.js קורא לה בכמה מסלולי כניסה.
+  // ההגנה הקבועה מפני כפילויות שם עתידיות: dedupePlayersByName ב-applySnapshot.
 }
 // זמן יצירה של יד: שדה ts אם קיים, אחרת חילוץ מ-8 התווים האחרונים של ה-id (Date.now בבסיס 36)
 const handTs=h=>h?.ts||(h?.id?parseInt(String(h.id).slice(-8),36)||0:0);

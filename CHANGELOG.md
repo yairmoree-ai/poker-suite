@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-07-11 — Remove temporary cleanup mechanism (cleanup completed)
+**Files: state.js**
+
+- The one-time purge of duplicate admin entries completed successfully
+  on all storage contexts (user confirmed clean lists on webapp and
+  Safari); tombstones now prevent any resurrection.
+- ensureSelfAsPlayer reduced to an intentional no-op (kept because
+  auth.js calls it on several login paths; history documented inline).
+- Permanent protection retained: dedupePlayersByName still runs after
+  every playerLib sync merge — guards against future same-name
+  duplicates created concurrently on different devices.
+- Verified: no-op is safe (no add, no delete, no crash); permanent
+  dedupe still merges same-name players arriving from sync.
+
 ## 2026-07-11 — Remove auto-add-admin feature; purge its duplicates
 **Files: state.js**
 
