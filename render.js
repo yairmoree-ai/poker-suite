@@ -782,12 +782,28 @@ function _closeRangeEditor(){
 function _toggleRangeCell(hand){
   if(_rangeEditSel.has(hand)) _rangeEditSel.delete(hand);
   else _rangeEditSel.add(hand);
-  renderPotOdds();
+  _rangeEditorRefresh(true);
 }
 function _rangeEditorApplyTopPct(pct){
   const rs = _topPercentRange(Number(pct));
   _rangeEditSel = new Set(rs ? rs.split(',') : []);
-  renderPotOdds();
+  // בזמן גרירת הסליידר — עדכון ממוקד בלבד, בלי לבנות מחדש את הסליידר עצמו
+  // (בנייה מחדש באמצע גרירה שוברת את המחווה וגורמת לתחושת "קפיצות")
+  _rangeEditorRefresh(false);
+}
+// מעדכן רק את הגריד והמונה (ואופציונלית את מיקום הסליידר) בלי לבנות את כל הפאנל.
+// updateSlider=false בזמן שהסליידר עצמו נגרר (אסור "להילחם" בגרירה של המשתמש).
+function _rangeEditorRefresh(updateSlider){
+  const grid = document.getElementById('range-editor-grid');
+  const count = document.getElementById('range-editor-count');
+  if(!grid || !count){ renderPotOdds(); return; } // fallback אם הפאנל טרם צויר
+  grid.innerHTML = _rangeEditorGridHtml();
+  const c = _rangeEditorSelCombos();
+  count.textContent = c + ' combos · ' + (c/1326*100).toFixed(1) + '%';
+  if(updateSlider){
+    const slider = document.getElementById('range-editor-slider');
+    if(slider) slider.value = Math.round(c/1326*100);
+  }
 }
 function _saveRangeEditor(){
   if(!_rangeEditPid) return;
@@ -1083,13 +1099,13 @@ function renderPotOdds(){
       <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span style="font-size:10px;color:#c8a96e;font-weight:800">עריכת טווח: ${pName(_rangeEditPid)||''}</span>
-          <span style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
+          <span id="range-editor-count" style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
         </div>
-        ${_rangeEditorGridHtml()}
-        <div style="display:flex;align-items:center;gap:7px">
+        <div id="range-editor-grid">${_rangeEditorGridHtml()}</div>
+        <div style="display:flex;align-items:center;gap:7px;direction:ltr">
           <span style="font-size:8px;color:#5a5870;white-space:nowrap">Top %</span>
-          <input type="range" min="0" max="100" step="1" value="${Math.round(_rangeEditorSelCombos()/1326*100)}"
-            style="flex:1;accent-color:#c8a96e" oninput="_rangeEditorApplyTopPct(this.value)">
+          <input id="range-editor-slider" type="range" min="0" max="100" step="1" value="${Math.round(_rangeEditorSelCombos()/1326*100)}"
+            style="flex:1;accent-color:#c8a96e;direction:ltr" oninput="_rangeEditorApplyTopPct(this.value)">
         </div>
         <div style="display:flex;gap:6px">
           <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>

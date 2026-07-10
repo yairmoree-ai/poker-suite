@@ -581,9 +581,9 @@ function showQuickInput(seatIdx, type){
   box.onclick = e=>e.stopPropagation();
   const sliderHtml = (type==='Raise' && allinTotal>minRaise)
     ? '<input id="quick-amt-slider" type="range" min="'+minRaise+'" max="'+allinTotal+'" step="1" value="'+defaultAmt+'"'
-      + ' style="width:100%;margin-bottom:6px;accent-color:#c8a96e"'
+      + ' style="width:100%;margin-bottom:6px;accent-color:#c8a96e;direction:ltr"'
       + ' oninput="document.getElementById(\'quick-amt-inp\').value=this.value">'
-      + '<div style="display:flex;justify-content:space-between;font-size:10px;color:#5a5870;margin-bottom:8px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:10px;color:#5a5870;margin-bottom:8px;direction:ltr">'
       + '<span>'+minRaise.toLocaleString()+'</span><span>All-in '+allinTotal.toLocaleString()+'</span></div>'
     : '';
   box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#c8a96e;margin-bottom:10px">'+type+'</div>' +
