@@ -75,7 +75,7 @@ const _RANGES = {
     deep: { // 75BB+ — פתיחות 2.5-3x, ranges מלאים לפי solver
       'BTN/SB':{
         // ראש-בראש: הכפתור/סמול פותח רחב מאוד. נוצר מ-_HAND_RANKING (top X%)
-        RFI: 'AA,KK,QQ,JJ,TT,99,88,AQs,AKs,77,ATs,AKo,AJs,AQo,A9s,66,KQs,AJo,ATo,A8s,A7s,KJs,KTs,A9o,KQo,KJo,A8o,A6s,QJs,55,A5s,K8s,Q9s,A7o,A4s,KTo,QTs,K9s,A4o,A5o,QJo,J9s,K9o,A3s,K7s,A2s,K5s,44,K6s,JTs,A6o,K8o,K3s,QTo,K4s,A3o,Q8s,J8s,K7o,Q7s,Q9o,A2o,33,Q8o,K2s,T9s,K5o,K4o,Q5s,JTo,K6o,J9o,Q4s,J7s,Q7o,98s,Q3s,T8s,T9o,Q6s,K2o,Q2s,J8o,T7s,Q5o,K3o,J5s,22,Q6o,J6s,J4s,T6s,T8o,Q4o,97s,J6o,J3s,J7o,J2s,Q3o,87s,T7o,96s,Q2o,98o,T5s,97o,J5o,J4o,T4s,86s,T6o,95s,T3s,T2s,96o,87o,76s,J3o,J2o,95o,94s,T4o,93s,85s,75s,T3o,86o,T5o,65s,76o,54s,T2o,84s,74s,92s,64s,65o,94o,93o,85o,75o',
+        RFI: 'AA,KK,QQ,JJ,TT,99,88,AQs,AKs,77,ATs,AKo,AJs,AQo,A9s,66,KQs,AJo,ATo,A8s,A7s,KJs,KTs,A9o,KQo,KJo,A8o,A6s,QJs,55,A5s,K8s,Q9s,A7o,A4s,KTo,QTs,K9s,A4o,A5o,QJo,J9s,K9o,A3s,K7s,A2s,K5s,44,K6s,JTs,A6o,K8o,K3s,QTo,K4s,A3o,Q8s,J8s,K7o,Q7s,Q9o,A2o,33,Q8o,K2s,T9s,K5o,K4o,Q5s,JTo,K6o,J9o,Q4s,J7s,Q7o,98s,Q3s,T8s,T9o,Q6s,K2o,Q2s,J8o,T7s,Q5o,K3o,J5s,22,Q6o,J6s,J4s,T6s,T8o,Q4o,97s,J6o,J3s,J7o,J2s,Q3o,87s,T7o,96s,Q2o,98o,T5s,97o,J5o,J4o,T4s,86s,T6o,95s,T3s,T2s,96o,87o,76s,J3o,J2o,95o,94s,T4o,93s,85s,75s,T3o,86o,T5o,65s,76o,54s,T2o,84s,74s,92s,64s,65o,94o,93o,85o,75o,83s,82s,73s,63s,72s,43s,52s,53s,62s,42s,32s',
       },
       BTN:{
         // מעודכן לפי מקורות סולבר עדכניים (100BB, 6-max): ~43% מהידיים

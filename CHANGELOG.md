@@ -5,6 +5,43 @@
 
 ---
 
+## 2026-07-12 — Widen HU (BTN/SB) deep RFI: add missing low suited connectors
+**Files: render.js**
+
+- User field intuition flagged that the deep BTN/SB (HU, 75BB+) range
+  felt too narrow at the bottom despite K3s now correctly showing
+  in-range: many low suited connectors/gappers seemed to be missing.
+- Verified against the range string: 11 suited hands were absent from
+  the deep list — 32s,42s,43s,52s,53s,62s,63s,72s,73s,82s,83s (the
+  bottom tier of _HAND_RANKING). Confirmed all Kxs were already
+  present (K2s-K9s) — only the very bottom suited connectors/gappers
+  were missing. Range was 142/169 hands (1,090/1,326 combos = 82.2%).
+- Researched real solver sources before changing anything (per user
+  request): true heads-up SB opens are ante-dependent — GTO Wizard's
+  AI HU solver shows SB folding only 4% at 50BB WITH a 0.12bb ante
+  (~96% open); PokerCoaching's no-ante 6-max blind-vs-blind numbers
+  (structurally equivalent to HU sizing, since action is already
+  folded to SB) show 62.3% GTO / 69% exploitative at 100BB no ante,
+  widening to 81.6% at 75BB MTT (likely ante-influenced). The app's
+  default blind structure uses ante:0 at every level (user-configurable,
+  usage varies) — so no single authoritative % target exists without
+  knowing whether antes are active. Deferred a full re-target of the
+  RFI width; made the narrower, unambiguous fix instead.
+- Fix: added the 11 missing suited hands to deep BTN/SB RFI (in
+  _HAND_RANKING order). This particular gap (excluding an entire tier
+  of suited hands wholesale) isn't defensible under ANY of the sourced
+  ranges — every source above includes suited connectors/gappers all
+  the way down when opening this wide. mid (75.3%) and short (65.3%)
+  left untouched pending the same source-by-source review.
+- New deep BTN/SB: 153/169 hands (1,134/1,326 combos = 85.5%).
+- Verified: node --check passed; all Kxs and all suited hands now
+  present in deep BTN/SB (0 missing); combo-weighted % recount matches
+  85.5% exactly.
+- Open item: mid/short BTN/SB not yet reviewed against sourced data;
+  the ante-dependence question (deep/short specific %) remains
+  unresolved — revisit if/when a genuine HU solver becomes available
+  (user has GTO Wizard free tier, but it caps at 8-max, no HU access).
+
 ## 2026-07-12 — REAL fix for K3s/BTN-SB: per-table-size range tables
 **Files: render.js**
 
@@ -133,7 +170,7 @@
 - New dedupePlayersByName(): keeps the oldest entry per name, merges
   data into it (buyins summed, manual range moved, seat playerId and
   koOrder remapped), removes the rest, and marks dropped ids with
-  tombstones so sync cannot resurrect them from other devices.
+  tombstones so sync cannot resurrect them.
 - Runs after playerLib merge in applySnapshot and on login in
   ensureSelfAsPlayer — existing duplicates clean themselves up
   automatically on next load/sync across all devices.
