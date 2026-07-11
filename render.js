@@ -489,10 +489,13 @@ function _adjustRangeForType(baseRangeStr, playerType, actionCat){
 }
 
 // מזהה אוטומטית מה הייתה הפעולה האחרונה (הכי מחייבת) של השחקן פרה-פלופ,
-// כדי לבחור את קטגוריית הטווח המתאימה מהסולבר (RFI/3bet/4bet/call) בלי בחירה ידנית
-function _inferPreflopActionCat(seat){
+// כדי לבחור את קטגוריית הטווח המתאימה מהסולבר (RFI/3bet/4bet/call) בלי בחירה ידנית.
+// אם עדיין לא פעל בכלל: BB מקבל 'call' (מגן/צ'ק-אופציה — לא הוא זה שפותח את הפוט);
+// כל עמדה אחרת (UTG/MP/CO/BTN/SB) מקבלת 'RFI' — כי אם עוד לא נפל עליה תור, ההנחה
+// הסבירה היא שהיא זו שתפתח (לא "תקרא" למשהו שעוד לא קרה).
+function _inferPreflopActionCat(seat, pos){
   const preflopActs = (seat.actions||[]).filter(a=>a.street==='פרה-פלופ' && a.type!=='SB' && a.type!=='BB');
-  if(!preflopActs.length) return 'call'; // לדוגמה BB שצ'ק אחרי לימפים
+  if(!preflopActs.length) return pos==='BB' ? 'call' : 'RFI';
   const last = preflopActs[preflopActs.length-1];
   const round = last.raiseRound||0;
   if(['Raise','Open','All-in','3bet','4bet','5bet','Bet'].includes(last.type)){
@@ -504,14 +507,15 @@ function _inferPreflopActionCat(seat){
 }
 
 // הטווח האוטומטי המלא של מושב נתון: עמדה (מ-assignPos) + פעולה שביצע ביד הנוכחית
-// (או 'call' כברירת מחדל אם עדיין לא פעל) + עומק לפי הערימה שלו (BB) + התאמת סוג
-// שחקן. משמש הן לתצוגה בפאנל המושב (כשאין טווח ידני) והן כנקודת-פתיחה לעריכה.
+// (או ברירת מחדל לפי עמדה אם עדיין לא פעל — ראו _inferPreflopActionCat) + עומק לפי
+// הערימה שלו (BB) + התאמת סוג שחקן. משמש הן לתצוגה בפאנל המושב (כשאין טווח ידני)
+// והן כנקודת-פתיחה לעריכה.
 function _getAutoRangeForSeat(seatIdx){
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat) return {rangeStr:'', pos:'', actionCat:'', depth:''};
   const swp = assignPos();
   const pos = swp.find(s=>s.seatIdx===seatIdx)?.pos || '';
-  const actionCat = _inferPreflopActionCat(seat);
+  const actionCat = _inferPreflopActionCat(seat, pos);
   const bb = getBB();
   const depth = _depthFromBB(bb>0 ? (seat.stack||0)/bb : 100);
   const baseRangeStr = pos ? _getRangeStrForDepth(S.tableSize, pos, actionCat, depth) : '';
@@ -519,6 +523,31 @@ function _getAutoRangeForSeat(seatIdx){
   const playerType = player?.playerType || null;
   const rangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
   return {rangeStr, pos, actionCat, depth, playerType};
+}
+
+// לימפים אמפיריים ידועים לשחקן: סורק את S.handLog (היסטוריית ידיים אמיתית, לא
+// חישוב חי) ומאתר ידיים שבהן (א) הקלפים של השחקן הוזנו ו-(ב) פעולתו הפרה-פלופית
+// הראשונה (לא כולל SB/BB) הייתה Call ב-raiseRound===0 — כלומר כניסה ראשונה בלי
+// שהייתה כבר העלאה, שזו ההגדרה המדויקת של "לימפ" (בניגוד ל-call על העלאה של מישהו
+// אחר). מחזיר {hand: count} — מידע בלבד, לא נוגע בשום חישוב equity או בטווח האוטומטי.
+// הטיה ידועה: סופר רק ידיים שבהן הוזנו קלפים בפועל (בד"כ showdown) — לימפים חלשים
+// שקופלו מוקדם ולא הוזנו קלפים לרוב לא ייספרו כאן, כך שהתמונה עלולה להיראות "חזקה"
+// יותר משהיא באמת.
+function _getEmpiricalLimpHands(pid){
+  const tally = {};
+  (S.handLog||[]).forEach(h=>{
+    const seat = (h.seats||[]).find(s=>s.playerId===pid);
+    if(!seat) return;
+    const cards = (seat.cards||[]).filter(Boolean);
+    if(cards.length!==2) return;
+    const preflopActs = (seat.actions||[]).filter(a=>a.street==='פרה-פלופ' && a.type!=='SB' && a.type!=='BB');
+    const first = preflopActs[0];
+    if(first && first.type==='Call' && (first.raiseRound||0)===0){
+      const hType = _cardsToHandNotation(cards);
+      tally[hType] = (tally[hType]||0)+1;
+    }
+  });
+  return tally;
 }
 
 // ממיר מחרוזת range (למשל "AKs,QQ,ATo") לרשימת קומבינציות קלפים בפועל,
@@ -767,7 +796,7 @@ function computeHistoricalStreetOdds(h){
             const effBB = bbNum>0 ? Math.min(myStack, minOppStack)/bbNum : 100;
             const depth = _depthFromBB(effBB);
             const combosLists = unknownOppSeatsH.map(s=>{
-              const actionCat = _inferPreflopActionCat(s);
+              const actionCat = _inferPreflopActionCat(s, s.pos);
               const baseRangeStr = s.pos ? _getRangeStrForDepth(tableSizeApprox, s.pos, actionCat, depth) : '';
               const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
               const playerType = player?.playerType||null;
@@ -812,6 +841,14 @@ function _openRangeEditor(pid){
   const existing = S.playerRanges?.[pid] || '';
   const seed = existing || (typeof activeSeat==='number' && activeSeat!==null ? _getAutoRangeForSeat(activeSeat).rangeStr : '');
   _rangeEditSel = new Set(seed ? seed.split(',').map(x=>x.trim()).filter(Boolean) : []);
+  renderSeatPanel();
+}
+// קיצור: פותח את עורך הטווח ומיד מציג רק את הלימפים האמפיריים הידועים (במקום את
+// הטווח האוטומטי/הידני הרגיל) — לכניסה מהירה מכפתור "🃏 X לימפים ידועים" בפאנל.
+function _openRangeEditorShowLimps(pid){
+  _rangeEditPid = pid;
+  const limpTally = _getEmpiricalLimpHands(pid);
+  _rangeEditSel = new Set(Object.keys(limpTally));
   renderSeatPanel();
 }
 function _closeRangeEditor(){
@@ -872,8 +909,11 @@ function _rangeEditorSelCombos(){
   _rangeEditSel.forEach(h=>{ n += h.length===2 ? 6 : (h.endsWith('s') ? 4 : 12); });
   return n;
 }
-// בונה את ה-HTML של הגריד 13×13: אלכסון=זוגות, מעל=סוטד, מתחת=אופסוט
+// בונה את ה-HTML של הגריד 13×13: אלכסון=זוגות, מעל=סוטד, מתחת=אופסוט.
+// אם לשחקן הנערך יש לימפים אמפיריים ידועים (S.handLog) — מסומנים במסגרת סגולה
+// נוספת מעל כל צביעת בחירה/אי-בחירה רגילה (מידע בלבד, לא משפיע על הבחירה עצמה).
 function _rangeEditorGridHtml(){
+  const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
   let rows='';
   for(let i=0;i<13;i++){
     let cells='';
@@ -884,20 +924,40 @@ function _rangeEditorGridHtml(){
       const isPair = i===j;
       const bg = on ? (isPair?'#c8a96e':'#5b9bd5') : 'rgba(255,255,255,0.04)';
       const fg = on ? '#0a0d14' : (isPair?'#8a8799':'#5a5870');
-      cells += `<div onclick="_toggleRangeCell('${hand}')" style="flex:1;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${bg};color:${fg};font-size:6.5px;font-weight:800;border-radius:2px;cursor:pointer;user-select:none;min-width:0;overflow:hidden">${hand}</div>`;
+      const limpCount = limpTally[hand]||0;
+      const border = limpCount ? '2px solid #b47eea' : '1px solid transparent';
+      cells += `<div onclick="_toggleRangeCell('${hand}')" title="${limpCount?limpCount+' לימפ/ים ידועים':''}" style="flex:1;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${bg};color:${fg};font-size:6.5px;font-weight:800;border-radius:2px;border:${border};box-sizing:border-box;cursor:pointer;user-select:none;min-width:0;overflow:hidden">${hand}</div>`;
     }
     rows += `<div style="display:flex;gap:1px">${cells}</div>`;
   }
   return `<div style="display:flex;flex-direction:column;gap:1px;direction:ltr">${rows}</div>`;
 }
 
+// מחליף את הבחירה הנוכחית בעורך בדיוק בסט הידיים שנצפו אמפירית כלימפ (מידע בלבד —
+// לא נשמר עד לחיצה על 💾 שמור, בדיוק כמו כל שינוי אחר בעורך).
+function _isolateLimpRange(){
+  if(!_rangeEditPid) return;
+  const limpTally = _getEmpiricalLimpHands(_rangeEditPid);
+  _rangeEditSel = new Set(Object.keys(limpTally));
+  _rangeEditorRefresh(true);
+}
+
 // מייצר את בלוק ה-HTML המלא של עורך הטווח (גריד+סליידר+כפתורים) — לשימוש בתוך
 // פאנל המושב. _rangeEditPid חייב להיות מוגדר לפני הקריאה.
 function _rangeEditorPanelHtml(){
+  const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
+  const limpHands = Object.keys(limpTally);
+  const limpTotal = limpHands.reduce((n,h)=>n+limpTally[h],0);
   return `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px;margin-top:8px">
     <div style="display:flex;justify-content:flex-end">
       <span id="range-editor-count" style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
     </div>
+    ${limpHands.length ? `
+    <div style="background:rgba(180,126,234,0.08);border:1px solid rgba(180,126,234,0.3);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:5px">
+      <div style="font-size:8px;color:#b47eea;font-weight:800">🃏 ${limpTotal} לימפ/ים ידועים (מסומן במסגרת סגולה בגריד) · ${limpHands.map(h=>h+(limpTally[h]>1?'×'+limpTally[h]:'')).join(', ')}</div>
+      <div style="font-size:7px;color:#5a5870">מבוסס רק על ידיים שבהן הוזנו קלפים (בד"כ showdown) — ייתכן הטיה כלפי ידיים חזקות</div>
+      <button onclick="_isolateLimpRange()" style="padding:5px;border-radius:6px;border:1px solid rgba(180,126,234,0.5);background:rgba(180,126,234,0.12);color:#b47eea;font-weight:800;font-size:10px;cursor:pointer">🃏 בודד לימפים בלבד</button>
+    </div>` : ''}
     <div id="range-editor-grid">${_rangeEditorGridHtml()}</div>
     <div style="display:flex;align-items:center;gap:7px;direction:ltr">
       <span style="font-size:8px;color:#5a5870;white-space:nowrap">Top %</span>
@@ -1020,7 +1080,7 @@ function renderPotOdds(){
     // עדיפות 3: זיהוי אוטומטי — עמדה + פעולה + תגית שחקן
     const swpSeat = swpForEq.find(x=>x.seatIdx===s.seatIdx);
     const pos = swpSeat?.pos || '';
-    const actionCat = _inferPreflopActionCat(s);
+    const actionCat = _inferPreflopActionCat(s, pos);
     const baseRangeStr = pos ? _getRangeStrForDepth(S.tableSize, pos, actionCat, _eqDepth) : '';
     const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
     const playerType = player?.playerType || null;
@@ -1042,7 +1102,7 @@ function renderPotOdds(){
     if(heroPos){
       const heroActs = (seat.actions||[]).filter(a=>a.street==='פרה-פלופ' && a.type!=='SB' && a.type!=='BB');
       if(heroActs.length){
-        const cat = _inferPreflopActionCat(seat);
+        const cat = _inferPreflopActionCat(seat, heroPos);
         heroAutoRange = _getRangeStrForDepth(S.tableSize, heroPos, cat, _eqDepth) || null;
         heroAutoTag = 'hauto:'+heroPos+':'+cat+':'+_eqDepth;
       } else {

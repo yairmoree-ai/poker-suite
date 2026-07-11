@@ -156,6 +156,14 @@ function renderSeatPanel(){
         <button onclick="${editing?'_closeRangeEditor()':`_openRangeEditor('${seat.playerId}')`}" style="flex:1;padding:6px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-weight:800;font-size:11px;cursor:pointer">${editing?'✕ סגור עריכה':(rangeVal?'✏️ ערוך טווח':'✏️ ערוך את הטווח האוטומטי')}</button>
         ${rangeVal?`<button onclick="_clearPlayerRange('${seat.playerId}')" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(126,184,164,0.4);background:rgba(126,184,164,0.08);color:#7eb8a4;font-size:10px;cursor:pointer;white-space:nowrap">🤖 אוטומטי</button>`:''}
       </div>
+      ${(()=>{
+        if(editing) return ''; // הכפתור הזה מיותר כשהעורך כבר פתוח - הבידוד זמין שם
+        const limpTally = _getEmpiricalLimpHands(seat.playerId);
+        const limpHandCount = Object.keys(limpTally).length;
+        if(!limpHandCount) return '';
+        const limpTotal = Object.values(limpTally).reduce((a,b)=>a+b,0);
+        return `<button onclick="_openRangeEditorShowLimps('${seat.playerId}')" style="width:100%;margin-top:6px;padding:6px;border-radius:8px;border:1px solid rgba(180,126,234,0.4);background:rgba(180,126,234,0.08);color:#b47eea;font-weight:800;font-size:10px;cursor:pointer">🃏 ${limpTotal} לימפ/ים ידועים</button>`;
+      })()}
       ${editing ? _rangeEditorPanelHtml() : ''}
     </div>`;
   }

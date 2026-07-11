@@ -5,7 +5,77 @@
 
 ---
 
-## 2026-07-12 — Show + edit the actual auto-detected range (not just a label)
+## 2026-07-12 — Empirical limp-range info (from hand history, view-only)
+**Files: render.js, game.js**
+
+- User question surfaced a real gap: the app has no distinct concept
+  of "open-limp" vs. "call a raise" — both are logged as the same
+  `type:'Call'` and mapped to the same narrow, value-heavy 'call'
+  range table (e.g. UTG deep: JJ,TT,AQs,AJs,KQs,AQo — deliberately
+  excludes premiums, which "should" 3-bet instead). That table was
+  never meant to represent limping, and no solver-sourced limp range
+  exists for most positions anyway (mainstream theory is raise-or-fold
+  — limping usually isn't a GTO action to begin with), so building a
+  static theoretical limp table isn't defensible the way the BTN/SB
+  fix earlier this session was.
+- Instead, added a purely informational, opt-in empirical view: new
+  `_getEmpiricalLimpHands(pid)` scans `S.handLog` (existing persistent
+  hand history) for hands where this player's cards were known AND
+  their first preflop action was `Call` with `raiseRound===0` (the
+  data needed to distinguish limp-from-nothing vs. call-a-raise
+  already existed via `raiseRound`, just wasn't being used this way).
+  Tallies real hands seen limped, by hand-type.
+- Zero changes to the equity engine or `_getAutoRangeForSeat` — this
+  is deliberately kept separate. The only integration point is the
+  EXISTING manual-range save path (`S.playerRanges[pid]`), so if the
+  user chooses to save an isolated limp set, the equity engine picks
+  it up automatically as a normal manual range — no new equity code,
+  ever, even if this proves useful later.
+- Seat panel: new "🃏 N לימפ/ים ידועים" button (shown from the very
+  first known limp — no minimum sample threshold, per user's explicit
+  choice) opens the range editor pre-isolated to just the observed
+  limp hands. Editor grid also gained a persistent purple-border
+  overlay marking every cell with known limp history (with a count),
+  independent of what's currently selected — plus a "🃏 בודד לימפים
+  בלבד" button inside the editor itself for the same isolate action
+  mid-edit. Nothing is saved until the user explicitly hits 💾 שמור —
+  purely a view/isolate aid, exactly as scoped.
+- Explicit bias warning shown inline wherever the limp data appears:
+  only hands with entered cards count (usually showdowns), so it likely
+  skews toward stronger-looking limped hands than reality.
+- Verified (jsdom, synthetic hand history): correctly counted a
+  hand limped twice (73s → count 2) while excluding a call-after-raise
+  (AKs, raiseRound 1) and a limp with no known cards; seat panel button
+  text and count correct; isolate produces exactly the limped set;
+  save flows through the existing, already-tested manual-range path
+  with no special-casing.
+
+
+**Files: render.js**
+
+- User caught it live via the new auto-range display (this session's
+  previous change): UTG player, no actions yet this hand, showed
+  "UTG · Call · 35-74BB" — a "call" range for the first player to act,
+  who by definition has nothing to call yet.
+- Root cause: `_inferPreflopActionCat(seat)` defaulted EVERY seat with
+  no recorded preflop actions to `'call'`. That's the right guess for
+  BB (can "check" without a logged action if everyone limped) but
+  wrong for UTG/MP/CO/BTN/SB — a seat that hasn't acted and is first
+  in line is about to *open*, not call something that hasn't happened.
+  This bug pre-dates today's session (the function itself is older)
+  but was invisible until the new auto-range display surfaced it
+  directly in the UI; the live hero-equity code elsewhere already had
+  a separate, deliberate workaround for the same issue (union of
+  call+3bet as a "continue range") that wasn't applied consistently.
+- Fix: `_inferPreflopActionCat(seat, pos)` now takes position; default
+  with no actions is `pos==='BB' ? 'call' : 'RFI'`. Updated all 4 call
+  sites (new `_getAutoRangeForSeat`, historical postflop-equity replay,
+  live opponent auto-range, hero auto-range) to pass position through.
+- Verified (jsdom): reproduced the exact screenshot scenario (4-max,
+  no actions yet) — UTG-equivalent seat now returns RFI; heads-up
+  BTN/SB → RFI, BB → call (unchanged, correct as before).
+
+
 **Files: render.js, game.js**
 
 - The seat panel's range section previously just said "אוטומטי" with no
