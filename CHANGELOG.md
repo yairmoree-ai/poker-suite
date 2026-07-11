@@ -5,7 +5,46 @@
 
 ---
 
-## 2026-07-12 — Empirical limp-range info (from hand history, view-only)
+## 2026-07-12 — Toggle between base range and limp view (before AND after saving)
+**Files: render.js, game.js, ui.js**
+
+- User feedback on the empirical-limp feature (previous entry today):
+  isolating limps overwrote the working selection with no way back
+  except fully closing the editor; and once a limp-only range was
+  *saved* as the manual range, there was no way to get back to the
+  theoretical base without leaving the editor and using the separate
+  "🤖 אוטומטי" button (which deletes the manual range entirely rather
+  than letting you preview-then-resave the base).
+- Added `_setRangeEditorView('base'|'limp')` + `_rangeEditActiveView`
+  state: two tab buttons at the top of the range editor ("🎯 בסיס
+  (אוטומטי)" / "🃏 לימפים (N)") that fully swap the working grid
+  selection between the theoretical auto range (recomputed fresh via
+  `_getAutoRangeForSeat` — deliberately ignores whatever's currently
+  saved, so it's always available as a revert target) and the
+  empirical limp set. Works identically whether opening on a fresh
+  seat, an auto-seeded editor, or one seeded from an already-saved
+  manual range — reopening the editor on a saved limp-only range still
+  lets you tab back to "בסיס" and resave it, achieving the requested
+  "resettable, not saved" toggle.
+- `_rangeEditActiveView` resets to `null` (custom/unlabeled) on any
+  manual cell tap or Top% slider use — those are deliberate departures
+  from either pure view, so neither tab should show as "active"
+  afterward. Old `_isolateLimpRange()` kept as a thin alias to
+  `_setRangeEditorView('limp')` for backward compatibility with the
+  seat-panel shortcut button.
+- Reset wired into all 4 seat-panel close paths (`closeSeatPanel`,
+  seat re-tap toggle-close, `removeSeat`, `doKO`) alongside the
+  existing `_rangeEditPid`/`_rangeEditSel` resets, so no stale view
+  state leaks into the next seat opened.
+- Verified (jsdom): base→limp→base cycle preserves the correct
+  131-combo base range each time, including after an intermediate
+  save/reopen; manual cell edit and slider both correctly clear the
+  active-view highlight; a test-harness mistake (an accidental
+  double `clickSeat` closing the panel) was caught and fixed during
+  verification, not a real bug — confirms the toggle only behaves
+  correctly within the actual open-panel flow the UI enforces.
+
+
 **Files: render.js, game.js**
 
 - User question surfaced a real gap: the app has no distinct concept

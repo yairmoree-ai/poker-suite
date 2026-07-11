@@ -724,7 +724,7 @@ function rmSeatAction(seatIdx,ai){
 // ═══════════════════════════════════════════════════════
 function clickSeat(i){
   if(isViewer()){notify('צופה בלבד – אין הרשאת עריכה');return;}
-  if(activeSeat===i){activeSeat=null;_rangeEditPid=null;_rangeEditSel=new Set();closePanel('seat-panel');return;}
+  if(activeSeat===i){activeSeat=null;_rangeEditPid=null;_rangeEditSel=new Set();_rangeEditActiveView=null;closePanel('seat-panel');return;}
   if(!S.seats.find(s=>s.seatIdx===i))
     S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:(S.defaultRebuyAmount||50000),pos:'',cards:[null,null],actions:[],folded:false,allin:false});
   const seat = S.seats.find(s=>s.seatIdx===i);
@@ -777,7 +777,7 @@ function updSeat(i,upd){
 }
 function removeSeat(i){
   S.seats=S.seats.filter(s=>s.seatIdx!==i);
-  activeSeat=null; _rangeEditPid=null; _rangeEditSel=new Set(); closePanel('seat-panel');
+  activeSeat=null; _rangeEditPid=null; _rangeEditSel=new Set(); _rangeEditActiveView=null; closePanel('seat-panel');
   persist(); render();
 }
 // ═══════════════════════════════
@@ -1539,7 +1539,7 @@ function doKO(){if(isViewer()){notify('צופה בלבד');return;}
   const name = pName(pid)||'שחקן';
   if(pid&&!S.koOrder.includes(pid))S.koOrder.push(pid);
   seat.playerId='';seat.stack=0;seat.cards=[null,null];seat.actions=[];seat.folded=false;seat.allin=false;
-  activeSeat=null; _rangeEditPid=null; _rangeEditSel=new Set(); closePanel('seat-panel');
+  activeSeat=null; _rangeEditPid=null; _rangeEditSel=new Set(); _rangeEditActiveView=null; closePanel('seat-panel');
   const activePids = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id));
   const totalPlayers = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0).length;
   const place = activePids.length + S.koOrder.length;

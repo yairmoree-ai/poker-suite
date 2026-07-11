@@ -841,29 +841,36 @@ function _openRangeEditor(pid){
   const existing = S.playerRanges?.[pid] || '';
   const seed = existing || (typeof activeSeat==='number' && activeSeat!==null ? _getAutoRangeForSeat(activeSeat).rangeStr : '');
   _rangeEditSel = new Set(seed ? seed.split(',').map(x=>x.trim()).filter(Boolean) : []);
+  // אם נפתח מטווח שמור — 'null' (מותאם-אישית, לא בהכרח תואם ל"בסיס"); אחרת 'base'
+  _rangeEditActiveView = existing ? null : 'base';
   renderSeatPanel();
 }
 // קיצור: פותח את עורך הטווח ומיד מציג רק את הלימפים האמפיריים הידועים (במקום את
 // הטווח האוטומטי/הידני הרגיל) — לכניסה מהירה מכפתור "🃏 X לימפים ידועים" בפאנל.
+// גם מכאן אפשר לעבור חזרה ל"בסיס" בכל רגע דרך הטאב בעורך עצמו.
 function _openRangeEditorShowLimps(pid){
   _rangeEditPid = pid;
   const limpTally = _getEmpiricalLimpHands(pid);
   _rangeEditSel = new Set(Object.keys(limpTally));
+  _rangeEditActiveView = 'limp';
   renderSeatPanel();
 }
 function _closeRangeEditor(){
   _rangeEditPid = null;
   _rangeEditSel = new Set();
+  _rangeEditActiveView = null;
   renderSeatPanel();
 }
 function _toggleRangeCell(hand){
   if(_rangeEditSel.has(hand)) _rangeEditSel.delete(hand);
   else _rangeEditSel.add(hand);
+  _rangeEditActiveView = null; // עריכה ידנית של תא בודד = כבר לא "בסיס" טהור ולא "לימפים" טהור
   _rangeEditorRefresh(true);
 }
 function _rangeEditorApplyTopPct(pct){
   const rs = _topPercentRange(Number(pct));
   _rangeEditSel = new Set(rs ? rs.split(',') : []);
+  _rangeEditActiveView = null; // סליידר = בחירה חדשה, לא "בסיס" ולא "לימפים"
   // בזמן גרירת הסליידר — עדכון ממוקד בלבד, בלי לבנות מחדש את הסליידר עצמו
   // (בנייה מחדש באמצע גרירה שוברת את המחווה וגורמת לתחושת "קפיצות")
   _rangeEditorRefresh(false);
@@ -933,14 +940,27 @@ function _rangeEditorGridHtml(){
   return `<div style="display:flex;flex-direction:column;gap:1px;direction:ltr">${rows}</div>`;
 }
 
-// מחליף את הבחירה הנוכחית בעורך בדיוק בסט הידיים שנצפו אמפירית כלימפ (מידע בלבד —
-// לא נשמר עד לחיצה על 💾 שמור, בדיוק כמו כל שינוי אחר בעורך).
-function _isolateLimpRange(){
+// מעבר בין "בסיס" (הטווח האוטומטי התיאורטי — תמיד מחושב מחדש, זמין תמיד ללא
+// קשר למה ששמור כרגע) לבין "לימפים" (הסט האמפירי שנצפה) — ולהפך. כל מעבר מחליף
+// את הבחירה הנוכחית בעורך לגמרי (לא משמר עריכות ידניות שנעשו על התצוגה הקודמת).
+// שימושי גם לפני שמירה וגם אחרי — פתיחת עורך על טווח שכבר נשמר עדיין מאפשרת לחזור
+// ל"בסיס" התיאורטי ולשמור אותו מחדש, בלי לצאת מהעורך.
+let _rangeEditActiveView = null; // 'base' | 'limp' | null (null = טווח שמור/מותאם-אישית)
+function _setRangeEditorView(view){
   if(!_rangeEditPid) return;
-  const limpTally = _getEmpiricalLimpHands(_rangeEditPid);
-  _rangeEditSel = new Set(Object.keys(limpTally));
+  if(view==='base'){
+    const seatIdx = typeof activeSeat==='number' ? activeSeat : null;
+    const auto = seatIdx!==null ? _getAutoRangeForSeat(seatIdx) : {rangeStr:''};
+    _rangeEditSel = new Set(auto.rangeStr ? auto.rangeStr.split(',').filter(Boolean) : []);
+  } else if(view==='limp'){
+    const limpTally = _getEmpiricalLimpHands(_rangeEditPid);
+    _rangeEditSel = new Set(Object.keys(limpTally));
+  }
+  _rangeEditActiveView = view;
   _rangeEditorRefresh(true);
 }
+// נשמר לשם תאימות לאחור (נקרא גם מ-_openRangeEditorShowLimps) — alias ל-view='limp'
+function _isolateLimpRange(){ _setRangeEditorView('limp'); }
 
 // מייצר את בלוק ה-HTML המלא של עורך הטווח (גריד+סליידר+כפתורים) — לשימוש בתוך
 // פאנל המושב. _rangeEditPid חייב להיות מוגדר לפני הקריאה.
@@ -948,7 +968,12 @@ function _rangeEditorPanelHtml(){
   const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
   const limpHands = Object.keys(limpTally);
   const limpTotal = limpHands.reduce((n,h)=>n+limpTally[h],0);
+  const tabBtn = (view,label,active)=>`<button onclick="_setRangeEditorView('${view}')" style="flex:1;padding:6px;border-radius:7px;border:1px solid ${active?'#c8a96e':'rgba(255,255,255,0.12)'};background:${active?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.03)'};color:${active?'#c8a96e':'#5a5870'};font-weight:800;font-size:10px;cursor:pointer">${label}</button>`;
   return `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px;margin-top:8px">
+    <div style="display:flex;gap:6px">
+      ${tabBtn('base','🎯 בסיס (אוטומטי)', _rangeEditActiveView==='base')}
+      ${limpHands.length ? tabBtn('limp','🃏 לימפים ('+limpTotal+')', _rangeEditActiveView==='limp') : ''}
+    </div>
     <div style="display:flex;justify-content:flex-end">
       <span id="range-editor-count" style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
     </div>
@@ -956,7 +981,6 @@ function _rangeEditorPanelHtml(){
     <div style="background:rgba(180,126,234,0.08);border:1px solid rgba(180,126,234,0.3);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:5px">
       <div style="font-size:8px;color:#b47eea;font-weight:800">🃏 ${limpTotal} לימפ/ים ידועים (מסומן במסגרת סגולה בגריד) · ${limpHands.map(h=>h+(limpTally[h]>1?'×'+limpTally[h]:'')).join(', ')}</div>
       <div style="font-size:7px;color:#5a5870">מבוסס רק על ידיים שבהן הוזנו קלפים (בד"כ showdown) — ייתכן הטיה כלפי ידיים חזקות</div>
-      <button onclick="_isolateLimpRange()" style="padding:5px;border-radius:6px;border:1px solid rgba(180,126,234,0.5);background:rgba(180,126,234,0.12);color:#b47eea;font-weight:800;font-size:10px;cursor:pointer">🃏 בודד לימפים בלבד</button>
     </div>` : ''}
     <div id="range-editor-grid">${_rangeEditorGridHtml()}</div>
     <div style="display:flex;align-items:center;gap:7px;direction:ltr">
