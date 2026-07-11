@@ -373,11 +373,15 @@ function _getRangeStrForDepth(tableSize, pos, action, depth){
   const ts = tableSize||S.tableSize||6;
   const rBySize = _RANGES[ts]||_RANGES[6];
   const rByDepth = rBySize[depth]||rBySize.deep||rBySize;
-  // עמדות ללא טבלה מלאה ממופות לעמדה הקרובה ביותר. ה-fallback הוא ברמת *הפעולה*:
-  // ל-BTN/SB יש כניסת RFI ייעודית (HU, רחבה), אבל 3bet/call/4bet נופלים ל-BTN.
-  // בלי fallback, חיפוש שנכשל מחזיר טווח ריק ⇒ שום יד לא "בטווח" (אפילו KK).
+  // שרשרת fallback (חשוב: _RANGES מכיל טבלה לכל גודל שולחן 2-9, לכן עמדה שחסרה
+  // בטבלת הגודל הנוכחי חייבת ליפול קודם לטבלת ה-6 — שם יושבות כניסות מיוחדות כמו
+  // BTN/SB של ראש-בראש — ורק אז לעמדת ה-alias הקרובה. בלי זה, חיפוש שנכשל מחזיר
+  // טווח ריק ⇒ שום יד לא "בטווח" (אפילו KK).
+  const six = _RANGES[6][depth]||_RANGES[6].deep;
   const alias = {'BTN/SB':'BTN','UTG+1':'UTG','UTG+2':'MP','LJ':'MP','MP+1':'HJ'}[pos];
-  return (rByDepth[pos]||{})[action] || (alias ? ((rByDepth[alias]||{})[action]||'') : '');
+  return (rByDepth[pos]||{})[action]
+      || (six[pos]||{})[action]
+      || (alias ? (((rByDepth[alias]||{})[action]) || ((six[alias]||{})[action]) || '') : '');
 }
 
 function _getRangeStr(tableSize, pos, action){

@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-07-12 — REAL fix for K3s/BTN-SB: per-table-size range tables
+**Files: render.js**
+
+- Root cause finally found (previous cache explanations were wrong —
+  user correctly persisted): _RANGES contains a table for EVERY table
+  size (2-9, some built programmatically further down the file). With
+  the table configured to 3 players, lookups hit _RANGES[3] — an old,
+  narrow standalone table (BTN K8s+ only, no BTN/SB key) — and never
+  fell through to _RANGES[6], which is the only place the dedicated
+  HU entries and the updated ranges were added. The alias then mapped
+  BTN/SB→BTN *of the size-3 table* → K3s out of range. All my prior
+  tests ran with tableSize=6, which is why they passed.
+- Fix in _getRangeStrForDepth: fallback chain is now
+  size-table[pos] → SIX-table[pos] → size-table[alias] → six[alias].
+  Special entries (BTN/SB HU ranges) and future updates to the 6-max
+  tables are now reachable from every table size; size-specific tables
+  still win when they define a position.
+- Verified: exact reproduction (tableSize=3, 39.5BB, K♠3♠, BTN/SB) now
+  in range (75.3% HU mid); K3s in at ALL sizes 2-9 × all depths;
+  BTN/SB 3bet resolves via alias; regular positions unchanged
+  (size-3 BTN 25.5% as before, 6-max BTN 42.8%, UTG 17.0%, 9-max
+  untouched).
+
 ## 2026-07-11 — Dedicated heads-up (BTN/SB) opening ranges
 **Files: render.js**
 
