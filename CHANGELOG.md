@@ -5,7 +5,81 @@
 
 ---
 
-## 2026-07-12 — Widen HU (BTN/SB) deep RFI: add missing low suited connectors
+## 2026-07-12 — Show + edit the actual auto-detected range (not just a label)
+**Files: render.js, game.js**
+
+- The seat panel's range section previously just said "אוטומטי" with no
+  detail when no manual range was saved, and "✏️ ערוך טווח" opened an
+  EMPTY grid — editing meant rebuilding a range from scratch even
+  though the app already computes a perfectly good default.
+- New `_getAutoRangeForSeat(seatIdx)`: reuses the exact same logic the
+  equity engine already applies per-opponent (assignPos → position,
+  _inferPreflopActionCat → RFI/call/3bet/4bet, seat's own stack/BB →
+  depth, _adjustRangeForType → player-type adjustment) but as a
+  standalone, reusable lookup — no hand/equity context required, so it
+  works from the seat panel alone.
+- Seat panel now shows real combos/% for the auto range when no manual
+  range is saved, plus a one-line breakdown ("מבוסס על: BB · Call ·
+  35-74BB · Fish") so the number is explainable, not a black box.
+- `_openRangeEditor` seeds `_rangeEditSel` from the auto range (not
+  empty) whenever there's no existing manual range — editing starts as
+  fine-tuning a real baseline. Once saved, it becomes a normal manual
+  range (same override behavior as before — playerType stops applying).
+- Verified (jsdom, full app loaded, real function calls — not just
+  syntax check): auto range for BB/call/mid-depth = 19 hand-types,
+  editor opens pre-filled with exactly those 19; save flips status to
+  "ידני" correctly; edge case (no valid position resolved) degrades to
+  "אין נתונים מספיקים" instead of crashing.
+- Also ran a broader regression pass on the prior seat-panel
+  restructure (this session's earlier change) before adding this:
+  full jsdom simulation of seat/player/range/card-picker/KO/remove-seat
+  flows across table sizes 3 and 6, mid-edit switching between two
+  players, and panel-close from all 4 close paths — no errors, no
+  stale `_rangeEditPid` state.
+
+## 2026-07-12 — Consolidate player attributes (range, type) into the seat panel
+**Files: render.js, game.js, ui.js**
+
+- User feedback: card selection was duplicated (mini-cards on the seat
+  itself vs. a full 52-button grid inside the seat panel), and
+  range/player-type editing lived in a separate Pot Odds panel instead
+  of naturally living next to the player being edited.
+- Removed the redundant inline 52-button card grid + preview boxes
+  from the seat panel entirely — card picking now happens exclusively
+  via the seat's own mini-card buttons (table view), which open the
+  existing per-slot popup (`openSeatCardPicker`).
+- Added a clear ("🗑️ נקה קלף") button directly inside that popup, plus
+  a restored camera/AI-recognition button ("📷 זהה") — both were only
+  reachable from the removed seat-panel grid before, so neither was
+  dropped, just relocated to the popup's header.
+- Seat panel gained two new sections in the freed space:
+  - **Player type** (TAG/LAG/Nit/Station/Fish chips) — new
+    `setSeatPlayerType()` writes directly to `playerLib` and persists
+    immediately (no separate "save profile" step needed, unlike the
+    Players-tab editor which still uses its own save flow).
+  - **Manual range** — status line (auto vs. manual + combos/%) with
+    edit/clear buttons. Editing opens the existing 13×13 grid + Top%
+    slider inline in the seat panel.
+- Range editor internals (`_openRangeEditor`, `_closeRangeEditor`,
+  `_rangeEditorRefresh` fallback) now target `renderSeatPanel()`
+  instead of `renderPotOdds()`. Grid-building logic extracted into
+  `_rangeEditorPanelHtml()` for reuse. `_rangeEditPid` is reset on every
+  seat-panel close path (toggle-close, remove seat, KO, `closeSeatPanel`)
+  to avoid stale editor state reopening on a different seat.
+- Removed the old per-player range chip row from the Pot Odds panel
+  (Range selector there now only covers the position/action reference
+  tool, which is a separate feature — not player-specific — and was
+  left untouched). Added a one-line hint pointing to the seat instead.
+- Verified: node --check passed on all three files; no dangling
+  references to the removed `editableOpps`/old grid markup; the single
+  `range-editor-grid/-count/-slider` DOM ids now only defined once
+  (in `_rangeEditorPanelHtml`), no duplicate-id conflicts with the old
+  Pot Odds copy.
+- Not yet field-tested: this is a structural UI change — needs a real
+  device pass (tapping through seat → type → range → save/cancel, and
+  card popup clear/camera) before considering it fully verified.
+
+
 **Files: render.js**
 
 - User field intuition flagged that the deep BTN/SB (HU, 75BB+) range

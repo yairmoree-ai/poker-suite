@@ -1302,7 +1302,7 @@ function closeAllPanels(){
   document.getElementById('players-popup').classList.remove('open');
   activeSeat=null; renderSeats();
 }
-function closeSeatPanel(){activeSeat=null;closePanel('seat-panel');renderSeats();}
+function closeSeatPanel(){activeSeat=null;_rangeEditPid=null;_rangeEditSel=new Set();closePanel('seat-panel');renderSeats();}
 function showView(v){
   // Viewers can only see players and tournaments
   if(isViewer() && (v==='table'||v==='hands')){

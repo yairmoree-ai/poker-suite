@@ -14,6 +14,15 @@ function savePlayerNote(seatIdx, note){
   persist();
 }
 
+function setSeatPlayerType(pid, type){
+  const p = S.playerLib.find(x=>x.id===pid);
+  if(!p) return;
+  p.playerType = type || undefined;
+  persist();
+  renderSeatPanel();
+  if(document.getElementById('player-list')) renderPlayerList();
+}
+
 function openSeatCardPicker(seatIdx, slotIdx){
   cpRank = null;
   // בנה לוח קלפים ייעודי
@@ -37,7 +46,12 @@ function openSeatCardPicker(seatIdx, slotIdx){
     return `<div style="display:flex;gap:2px;margin-bottom:2px;direction:ltr">${btns}</div>`;
   }).join('');
   document.getElementById('cp-title').textContent = 'קלף '+(slotIdx===0?'ראשון':'שני');
-  document.getElementById('cp-content').innerHTML = `<div style="padding:4px;direction:ltr">${rows}</div>`;
+  const hasCard = !!(seat?.cards||[])[slotIdx];
+  const topBtns = `<div style="display:flex;gap:6px;padding:4px 4px 0">
+    ${hasCard ? `<button onclick="pickSeatCard(${seatIdx},null,null,${slotIdx})" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.1);color:#e07b6a;font-weight:800;font-size:12px;cursor:pointer">🗑️ נקה קלף</button>` : ''}
+    <button onclick="openCameraForCards('${seatIdx}')" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-weight:800;font-size:12px;cursor:pointer">📷 זהה משני הקלפים</button>
+  </div>`;
+  document.getElementById('cp-content').innerHTML = `${topBtns}<div style="padding:4px;direction:ltr">${rows}</div>`;
   document.getElementById('card-picker').classList.add('open');
 }
 
@@ -48,6 +62,7 @@ function pickSeatCard(seatIdx, rank, suit, forceSlot){
   
   if(rank===null){ // clear slot
     seat.cards[forceSlot]=null;
+    document.getElementById('card-picker').classList.remove('open');
     persist(); renderSeats(); renderSeatPanel(); return;
   }
   
@@ -106,49 +121,44 @@ function renderSeatPanel(){
       ${btnLabel}
     </button></div>`;
 
-  // Inline card picker
-  const suits = ['♠','♥','♦','♣'];
-  const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-  const usedCards = [...(S.board||[]), ...(S.seats.filter(s=>s.seatIdx!==i).flatMap(s=>s.cards||[]))].filter(Boolean);
-  let cardPickingSlot = (seat.cards?.[0]&&seat.cards?.[1]) ? null : !seat.cards?.[0] ? 0 : 1;
-  
-  const rows = suits.map(suit=>{
-    const btns = ranks.map(rank=>{
-      const used = usedCards.some(c=>c&&c.rank===rank&&c.suit===suit);
-      const isSelected = (seat.cards?.[0]?.rank===rank&&seat.cards?.[0]?.suit===suit)||(seat.cards?.[1]?.rank===rank&&seat.cards?.[1]?.suit===suit);
-      const isRed = suit==='♥'||suit==='♦';
-      const bg = isSelected?'#c8a96e':used?'rgba(255,255,255,0.08)':'#fff';
-      const border = isSelected?'#c8a96e':used?'rgba(255,255,255,0.08)':'#ddd';
-      const rankCol = used?'#999':isSelected?'#0a0d14':(isRed?'#d42020':'#111');
-      const suitCol = used?'#aaa':isSelected?'#0a0d14':(isRed?'#d42020':'#111');
-      return `<button style="width:34px;height:46px;border-radius:5px;border:1.5px solid ${border};background:${bg};cursor:${used?'default':'pointer'};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;box-shadow:${used?'none':'0 1px 3px rgba(0,0,0,0.4)'}" ${used&&!isSelected?'disabled':''} onclick="pickSeatCard(${i},'${rank}','${suit}')">
-        <span style="font-size:12px;font-weight:900;color:${rankCol};line-height:1">${rank}</span>
-        <span style="font-size:11px;color:${suitCol};line-height:1">${suit}</span>
-      </button>`;
-    }).join('');
-    return `<div style="display:flex;gap:2px;margin-bottom:2px;direction:ltr">${btns}</div>`;
-  }).join('');
-  
-  html+=`<div style="margin-bottom:8px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <span class="sec-lbl">קלפי שחקן</span>
-      <button onclick="openCameraForCards('${i}')" style="background:none;border:1px solid rgba(200,169,110,0.3);border-radius:8px;color:#c8a96e;font-size:14px;cursor:pointer;padding:3px 8px">📷</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
-      ${[0,1].map(ci=>{
-        const c=seat.cards?.[ci];
-        const isRed=c&&(c.suit==='♥'||c.suit==='♦');
-        return`<div style="width:44px;height:60px;border-radius:7px;border:2px solid ${c?'#c8a96e':'rgba(255,255,255,0.2)'};background:${c?'#fff':'rgba(255,255,255,0.06)'};display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:${c?'0 2px 8px rgba(0,0,0,0.4)':'none'}" onclick="pickSeatCard(${i},null,null,${ci})">
-          ${c
-            ?`<span style="font-size:18px;font-weight:900;color:${isRed?'#d42020':'#111'};line-height:1">${c.rank}</span><span style="font-size:14px;color:${isRed?'#d42020':'#111'};line-height:1">${c.suit}</span>`
-            :`<span style="color:rgba(255,255,255,0.2);font-size:22px;line-height:1">+</span>`
-          }
-        </div>`;
-      }).join('')}
-      ${(seat.cards||[]).some(Boolean)?`<button class="btn btn-gray btn-xs" style="margin-right:4px" onclick="updSeat(${i},{cards:[null,null]})">✕</button>`:''}
-    </div>
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;direction:ltr">${rows}</div>
-  </div>`;
+  // סוג שחקן
+  const player = S.playerLib.find(pl=>pl.id===seat.playerId);
+  if(player){
+    html+=`<div style="margin-bottom:10px">
+      <span class="sec-lbl" style="margin-bottom:5px;display:block">סוג שחקן</span>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${Object.entries(PLAYER_TYPES).map(([key,t])=>{
+          const active = player.playerType===key;
+          return `<button onclick="setSeatPlayerType('${player.id}','${key}')" style="padding:5px 10px;border-radius:8px;border:1px solid ${active?t.color+'88':'rgba(255,255,255,0.1)'};background:${active?t.color+'22':'rgba(255,255,255,0.04)'};color:${active?t.color:'#5a5870'};font-size:11px;font-weight:800;cursor:pointer">${t.label}</button>`;
+        }).join('')}
+        ${player.playerType?`<button onclick="setSeatPlayerType('${player.id}',null)" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#3a3850;font-size:10px;cursor:pointer">✕ נקה</button>`:''}
+      </div>
+    </div>`;
+  }
+
+  // טווח ידני
+  if(has){
+    const rangeVal = S.playerRanges?.[seat.playerId];
+    const editing = _rangeEditPid === seat.playerId;
+    const combosCount = rangeVal ? rangeVal.split(',').reduce((n,h)=>n+(h.length===2?6:h.endsWith('s')?4:12),0) : 0;
+    const auto = !rangeVal ? _getAutoRangeForSeat(i) : null;
+    const autoCombos = auto?.rangeStr ? auto.rangeStr.split(',').reduce((n,h)=>n+(h.length===2?6:h.endsWith('s')?4:12),0) : 0;
+    const depthLabel = {deep:'75BB+',mid:'35-74BB',short:'20-34BB',push:'<20BB'};
+    html+=`<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <span class="sec-lbl">🎯 טווח</span>
+        <span style="font-size:9px;color:${rangeVal?'#5fc47a':'#5a5870'}">${rangeVal
+          ? combosCount+' combos · '+(combosCount/1326*100).toFixed(1)+'% (ידני)'
+          : (auto?.rangeStr ? autoCombos+' combos · '+(autoCombos/1326*100).toFixed(1)+'% (אוטומטי)' : 'אין נתונים מספיקים')}</span>
+      </div>
+      ${!rangeVal && auto?.pos ? `<div style="font-size:8px;color:#3a3850;margin-bottom:5px">מבוסס על: ${auto.pos} · ${_ACTIONS_LABELS[auto.actionCat]||auto.actionCat} · ${depthLabel[auto.depth]||auto.depth}${auto.playerType?' · '+auto.playerType:''}</div>` : ''}
+      <div style="display:flex;gap:6px">
+        <button onclick="${editing?'_closeRangeEditor()':`_openRangeEditor('${seat.playerId}')`}" style="flex:1;padding:6px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-weight:800;font-size:11px;cursor:pointer">${editing?'✕ סגור עריכה':(rangeVal?'✏️ ערוך טווח':'✏️ ערוך את הטווח האוטומטי')}</button>
+        ${rangeVal?`<button onclick="_clearPlayerRange('${seat.playerId}')" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(126,184,164,0.4);background:rgba(126,184,164,0.08);color:#7eb8a4;font-size:10px;cursor:pointer;white-space:nowrap">🤖 אוטומטי</button>`:''}
+      </div>
+      ${editing ? _rangeEditorPanelHtml() : ''}
+    </div>`;
+  }
   html+=`</div>`;
   document.getElementById('spb').innerHTML=html;
 }
@@ -706,7 +716,7 @@ function rmSeatAction(seatIdx,ai){
 // ═══════════════════════════════════════════════════════
 function clickSeat(i){
   if(isViewer()){notify('צופה בלבד – אין הרשאת עריכה');return;}
-  if(activeSeat===i){activeSeat=null;closePanel('seat-panel');return;}
+  if(activeSeat===i){activeSeat=null;_rangeEditPid=null;_rangeEditSel=new Set();closePanel('seat-panel');return;}
   if(!S.seats.find(s=>s.seatIdx===i))
     S.seats.push({id:uid(),seatIdx:i,playerId:'',stack:(S.defaultRebuyAmount||50000),pos:'',cards:[null,null],actions:[],folded:false,allin:false});
   const seat = S.seats.find(s=>s.seatIdx===i);
@@ -759,7 +769,7 @@ function updSeat(i,upd){
 }
 function removeSeat(i){
   S.seats=S.seats.filter(s=>s.seatIdx!==i);
-  activeSeat=null; closePanel('seat-panel');
+  activeSeat=null; _rangeEditPid=null; _rangeEditSel=new Set(); closePanel('seat-panel');
   persist(); render();
 }
 // ═══════════════════════════════
@@ -1521,7 +1531,7 @@ function doKO(){if(isViewer()){notify('צופה בלבד');return;}
   const name = pName(pid)||'שחקן';
   if(pid&&!S.koOrder.includes(pid))S.koOrder.push(pid);
   seat.playerId='';seat.stack=0;seat.cards=[null,null];seat.actions=[];seat.folded=false;seat.allin=false;
-  activeSeat=null; closePanel('seat-panel');
+  activeSeat=null; _rangeEditPid=null; _rangeEditSel=new Set(); closePanel('seat-panel');
   const activePids = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0&&!S.koOrder.includes(p.id));
   const totalPlayers = S.playerLib.filter(p=>S.buyins[p.id]?.buyin>0).length;
   const place = activePids.length + S.koOrder.length;

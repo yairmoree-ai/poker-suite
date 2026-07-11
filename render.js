@@ -503,6 +503,24 @@ function _inferPreflopActionCat(seat){
   return 'call';
 }
 
+// הטווח האוטומטי המלא של מושב נתון: עמדה (מ-assignPos) + פעולה שביצע ביד הנוכחית
+// (או 'call' כברירת מחדל אם עדיין לא פעל) + עומק לפי הערימה שלו (BB) + התאמת סוג
+// שחקן. משמש הן לתצוגה בפאנל המושב (כשאין טווח ידני) והן כנקודת-פתיחה לעריכה.
+function _getAutoRangeForSeat(seatIdx){
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
+  if(!seat) return {rangeStr:'', pos:'', actionCat:'', depth:''};
+  const swp = assignPos();
+  const pos = swp.find(s=>s.seatIdx===seatIdx)?.pos || '';
+  const actionCat = _inferPreflopActionCat(seat);
+  const bb = getBB();
+  const depth = _depthFromBB(bb>0 ? (seat.stack||0)/bb : 100);
+  const baseRangeStr = pos ? _getRangeStrForDepth(S.tableSize, pos, actionCat, depth) : '';
+  const player = (S.playerLib||[]).find(p=>p.id===seat.playerId);
+  const playerType = player?.playerType || null;
+  const rangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
+  return {rangeStr, pos, actionCat, depth, playerType};
+}
+
 // ממיר מחרוזת range (למשל "AKs,QQ,ATo") לרשימת קומבינציות קלפים בפועל,
 // תוך סינון קלפים "מתים" (כבר ידועים כתפוסים)
 // ── דירוג קבוע: כל 169 סוגי הידיים, מהחזקה לחלשה ──────────────
@@ -789,15 +807,17 @@ const _GRID_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
 
 function _openRangeEditor(pid){
   _rangeEditPid = pid;
-  // נקודת פתיחה: הטווח הידני השמור אם קיים, אחרת ריק (בחירה נקייה)
+  // נקודת פתיחה: הטווח הידני השמור אם קיים; אחרת הטווח האוטומטי של המושב הפתוח
+  // (עמדה/פעולה/עומק/סוג שחקן) — כך שהעריכה היא כוונון-עדין ולא בחירה מאפס
   const existing = S.playerRanges?.[pid] || '';
-  _rangeEditSel = new Set(existing ? existing.split(',').map(x=>x.trim()).filter(Boolean) : []);
-  renderPotOdds();
+  const seed = existing || (typeof activeSeat==='number' && activeSeat!==null ? _getAutoRangeForSeat(activeSeat).rangeStr : '');
+  _rangeEditSel = new Set(seed ? seed.split(',').map(x=>x.trim()).filter(Boolean) : []);
+  renderSeatPanel();
 }
 function _closeRangeEditor(){
   _rangeEditPid = null;
   _rangeEditSel = new Set();
-  renderPotOdds();
+  renderSeatPanel();
 }
 function _toggleRangeCell(hand){
   if(_rangeEditSel.has(hand)) _rangeEditSel.delete(hand);
@@ -816,7 +836,7 @@ function _rangeEditorApplyTopPct(pct){
 function _rangeEditorRefresh(updateSlider){
   const grid = document.getElementById('range-editor-grid');
   const count = document.getElementById('range-editor-count');
-  if(!grid || !count){ renderPotOdds(); return; } // fallback אם הפאנל טרם צויר
+  if(!grid || !count){ renderSeatPanel(); return; } // fallback אם הפאנל טרם צויר
   grid.innerHTML = _rangeEditorGridHtml();
   const c = _rangeEditorSelCombos();
   count.textContent = c + ' combos · ' + (c/1326*100).toFixed(1) + '%';
@@ -869,6 +889,26 @@ function _rangeEditorGridHtml(){
     rows += `<div style="display:flex;gap:1px">${cells}</div>`;
   }
   return `<div style="display:flex;flex-direction:column;gap:1px;direction:ltr">${rows}</div>`;
+}
+
+// מייצר את בלוק ה-HTML המלא של עורך הטווח (גריד+סליידר+כפתורים) — לשימוש בתוך
+// פאנל המושב. _rangeEditPid חייב להיות מוגדר לפני הקריאה.
+function _rangeEditorPanelHtml(){
+  return `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px;margin-top:8px">
+    <div style="display:flex;justify-content:flex-end">
+      <span id="range-editor-count" style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
+    </div>
+    <div id="range-editor-grid">${_rangeEditorGridHtml()}</div>
+    <div style="display:flex;align-items:center;gap:7px;direction:ltr">
+      <span style="font-size:8px;color:#5a5870;white-space:nowrap">Top %</span>
+      <input id="range-editor-slider" type="range" min="0" max="100" step="1" value="${Math.round(_rangeEditorSelCombos()/1326*100)}"
+        style="flex:1;accent-color:#c8a96e;direction:ltr" oninput="_rangeEditorApplyTopPct(this.value)">
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>
+      <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:11px;cursor:pointer">ביטול</button>
+    </div>
+  </div>`;
 }
 
 function renderPotOdds(){
@@ -1120,46 +1160,9 @@ function renderPotOdds(){
     ${showRange ? `
     <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:8px">
 
-      <!-- טווח ידני per-player -->
-      ${(()=>{
-        // לעריכת טווח מציגים את *כל* השחקנים הפעילים — כולל השחקן הפועל עצמו
-        // (טווח לפועל = חישוב "טווח מול טווח" כשלא הוזנו לו קלפים ספציפיים)
-        const editableOpps = S.seats.filter(s=>s.playerId && !s.folded);
-        if(!editableOpps.length) return '';
-        return `
-      <div>
-        <div style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.5px;margin-bottom:5px">טווח ידני לשחקן (גובר על הכל)</div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px">
-          ${editableOpps.map(s=>{
-            const nm = pName(s.playerId)||('מושב '+(s.seatIdx+1));
-            const isActor = s.seatIdx===actor;
-            const has = !!(S.playerRanges?.[s.playerId]);
-            const editing = _rangeEditPid===s.playerId;
-            return `<button style="${chipStyle(editing||has, has?'#5fc47a':(isActor?'#5b9bd5':'#c8a96e'))}" onclick="${editing?'_closeRangeEditor()':`_openRangeEditor('${s.playerId}')`}">${nm}${isActor?' (בתור)':''}${has?' 🎯':''}</button>`;
-          }).join('')}
-        </div>
-      </div>`;
-      })()}
-
-      <!-- עורך הגריד -->
-      ${_rangeEditPid ? `
-      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:10px;color:#c8a96e;font-weight:800">עריכת טווח: ${pName(_rangeEditPid)||''}</span>
-          <span id="range-editor-count" style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
-        </div>
-        <div id="range-editor-grid">${_rangeEditorGridHtml()}</div>
-        <div style="display:flex;align-items:center;gap:7px;direction:ltr">
-          <span style="font-size:8px;color:#5a5870;white-space:nowrap">Top %</span>
-          <input id="range-editor-slider" type="range" min="0" max="100" step="1" value="${Math.round(_rangeEditorSelCombos()/1326*100)}"
-            style="flex:1;accent-color:#c8a96e;direction:ltr" oninput="_rangeEditorApplyTopPct(this.value)">
-        </div>
-        <div style="display:flex;gap:6px">
-          <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>
-          <button onclick="_clearPlayerRange('${_rangeEditPid}')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(126,184,164,0.4);background:rgba(126,184,164,0.08);color:#7eb8a4;font-weight:700;font-size:10px;cursor:pointer">🤖 חזרה לאוטומטי</button>
-          <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:11px;cursor:pointer">✕</button>
-        </div>
-      </div>` : ''}
+      <div style="font-size:9px;color:#5a5870;text-align:center;padding:2px 0">
+        💡 לעריכת טווח ידני לשחקן — לחץ על המושב שלו בשולחן
+      </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:9px;color:#5a5870;font-weight:700;letter-spacing:.4px">EFFECTIVE STACK</span>
@@ -2001,6 +2004,7 @@ async function _openCameraForCardsInner(target){
           seat.cards = [cards[0]||null, cards[1]||null];
           persist(); renderSeats(); renderSeatPanel();
           notify('✓ קלפי שחקן זוהו');
+          document.getElementById('card-picker').classList.remove('open');
         }
       }
     } catch(e){
