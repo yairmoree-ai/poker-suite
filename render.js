@@ -837,19 +837,25 @@ const _GRID_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
 function _openRangeEditor(pid){
   _rangeEditPid = pid;
   // נקודת פתיחה: הטווח הידני השמור אם קיים; אחרת הטווח האוטומטי של המושב הפתוח
-  // (עמדה/פעולה/עומק/סוג שחקן) — כך שהעריכה היא כוונון-עדין ולא בחירה מאפס
+  // (עמדה/פעולה/עומק/סוג שחקן) — כך שהעריכה היא כוונון-עדין ולא בחירה מאפס.
+  // _rangeEditOriginal מתעד את זה בדיוק (מחרוזת, לא Set) ולא משתנה כל עוד העורך
+  // פתוח — זו נקודת "המקורי" שחוזרים אליה, גם אם הקצית טווח ידני מותאם-אישית
+  // (לא רק הטווח התיאורטי הגנרי — ראו הבחנה מול 'auto' למטה).
   const existing = S.playerRanges?.[pid] || '';
   const seed = existing || (typeof activeSeat==='number' && activeSeat!==null ? _getAutoRangeForSeat(activeSeat).rangeStr : '');
+  _rangeEditOriginal = seed;
   _rangeEditSel = new Set(seed ? seed.split(',').map(x=>x.trim()).filter(Boolean) : []);
-  // אם נפתח מטווח שמור — 'null' (מותאם-אישית, לא בהכרח תואם ל"בסיס"); אחרת 'base'
-  _rangeEditActiveView = existing ? null : 'base';
+  _rangeEditActiveView = 'original';
   renderSeatPanel();
 }
 // קיצור: פותח את עורך הטווח ומיד מציג רק את הלימפים האמפיריים הידועים (במקום את
 // הטווח האוטומטי/הידני הרגיל) — לכניסה מהירה מכפתור "🃏 X לימפים ידועים" בפאנל.
-// גם מכאן אפשר לעבור חזרה ל"בסיס" בכל רגע דרך הטאב בעורך עצמו.
+// גם מכאן אפשר לעבור חזרה ל"מקורי" בכל רגע דרך הטאב בעורך עצמו — לכן חייבים לחשב
+// ולתעד את _rangeEditOriginal בדיוק כמו ב-_openRangeEditor, לא לדלג על זה.
 function _openRangeEditorShowLimps(pid){
   _rangeEditPid = pid;
+  const existing = S.playerRanges?.[pid] || '';
+  _rangeEditOriginal = existing || (typeof activeSeat==='number' && activeSeat!==null ? _getAutoRangeForSeat(activeSeat).rangeStr : '');
   const limpTally = _getEmpiricalLimpHands(pid);
   _rangeEditSel = new Set(Object.keys(limpTally));
   _rangeEditActiveView = 'limp';
@@ -859,6 +865,7 @@ function _closeRangeEditor(){
   _rangeEditPid = null;
   _rangeEditSel = new Set();
   _rangeEditActiveView = null;
+  _rangeEditOriginal = '';
   renderSeatPanel();
 }
 function _toggleRangeCell(hand){
@@ -940,15 +947,22 @@ function _rangeEditorGridHtml(){
   return `<div style="display:flex;flex-direction:column;gap:1px;direction:ltr">${rows}</div>`;
 }
 
-// מעבר בין "בסיס" (הטווח האוטומטי התיאורטי — תמיד מחושב מחדש, זמין תמיד ללא
-// קשר למה ששמור כרגע) לבין "לימפים" (הסט האמפירי שנצפה) — ולהפך. כל מעבר מחליף
-// את הבחירה הנוכחית בעורך לגמרי (לא משמר עריכות ידניות שנעשו על התצוגה הקודמת).
-// שימושי גם לפני שמירה וגם אחרי — פתיחת עורך על טווח שכבר נשמר עדיין מאפשרת לחזור
-// ל"בסיס" התיאורטי ולשמור אותו מחדש, בלי לצאת מהעורך.
-let _rangeEditActiveView = null; // 'base' | 'limp' | null (null = טווח שמור/מותאם-אישית)
+// מעבר בין שלוש תצוגות בעורך הטווח:
+//  'original' — בדיוק מה שהיה שמור לשחקן ברגע פתיחת העורך (טווח ידני מותאם-אישית
+//               שהקצית בעבר, אם היה כזה; אחרת הטווח האוטומטי). זו נקודת "חזרה
+//               אחורה" האמיתית — לא מאבדים הקצאה ידנית קודמת.
+//  'auto'     — הטווח התיאורטי הגנרי (עמדה/פעולה/עומק/סוג שחקן), מחושב תמיד מחדש,
+//               לצורך השוואה בלבד — לא בהכרח זהה ל-'original' אם הוקצה טווח ידני.
+//  'limp'     — הסט האמפירי שנצפה בהיסטוריית הידיים.
+// כל מעבר מחליף את הבחירה הנוכחית בעורך לגמרי (לא משמר עריכות ידניות שנעשו על
+// התצוגה הקודמת). שום דבר לא נשמר עד לחיצה על 💾 שמור.
+let _rangeEditActiveView = null; // 'original' | 'auto' | 'limp' | null (null = נערך ידנית מאז המעבר האחרון)
+let _rangeEditOriginal = ''; // מחרוזת טווח — מוקפא בפתיחת העורך, לא משתנה עד סגירה
 function _setRangeEditorView(view){
   if(!_rangeEditPid) return;
-  if(view==='base'){
+  if(view==='original'){
+    _rangeEditSel = new Set(_rangeEditOriginal ? _rangeEditOriginal.split(',').map(x=>x.trim()).filter(Boolean) : []);
+  } else if(view==='auto'){
     const seatIdx = typeof activeSeat==='number' ? activeSeat : null;
     const auto = seatIdx!==null ? _getAutoRangeForSeat(seatIdx) : {rangeStr:''};
     _rangeEditSel = new Set(auto.rangeStr ? auto.rangeStr.split(',').filter(Boolean) : []);
@@ -961,6 +975,14 @@ function _setRangeEditorView(view){
 }
 // נשמר לשם תאימות לאחור (נקרא גם מ-_openRangeEditorShowLimps) — alias ל-view='limp'
 function _isolateLimpRange(){ _setRangeEditorView('limp'); }
+// כפתור יחיד שמחליף בין 'original' ל-'limp' (במקום שתי כרטיסיות נפרדות) — הלייבל
+// שלו משתנה לפי המצב הנוכחי: אם כרגע על לימפים, הכפתור מציע לחזור למקורי, ולהפך.
+// אם אין בכלל נתוני לימפ לשחקן — הכפתור תמיד רק חוזר ל'original' (לא "מחליף" לריק).
+function _toggleOriginalLimpView(){
+  if(_rangeEditActiveView==='limp'){ _setRangeEditorView('original'); return; }
+  const hasLimpData = _rangeEditPid && Object.keys(_getEmpiricalLimpHands(_rangeEditPid)).length>0;
+  _setRangeEditorView(hasLimpData ? 'limp' : 'original');
+}
 
 // מייצר את בלוק ה-HTML המלא של עורך הטווח (גריד+סליידר+כפתורים) — לשימוש בתוך
 // פאנל המושב. _rangeEditPid חייב להיות מוגדר לפני הקריאה.
@@ -968,11 +990,13 @@ function _rangeEditorPanelHtml(){
   const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
   const limpHands = Object.keys(limpTally);
   const limpTotal = limpHands.reduce((n,h)=>n+limpTally[h],0);
-  const tabBtn = (view,label,active)=>`<button onclick="_setRangeEditorView('${view}')" style="flex:1;padding:6px;border-radius:7px;border:1px solid ${active?'#c8a96e':'rgba(255,255,255,0.12)'};background:${active?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.03)'};color:${active?'#c8a96e':'#5a5870'};font-weight:800;font-size:10px;cursor:pointer">${label}</button>`;
+  const tabBtn = (onclick,label,active)=>`<button onclick="${onclick}" style="flex:1;padding:6px 4px;border-radius:7px;border:1px solid ${active?'#c8a96e':'rgba(255,255,255,0.12)'};background:${active?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.03)'};color:${active?'#c8a96e':'#5a5870'};font-weight:800;font-size:9px;cursor:pointer;white-space:nowrap">${label}</button>`;
+  const toggleLabel = _rangeEditActiveView==='limp' ? '↩️ המקורי' : (limpHands.length ? `🃏 לימפים (${limpTotal})` : '↩️ המקורי');
+  const toggleActive = _rangeEditActiveView==='original' || _rangeEditActiveView==='limp';
   return `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px;margin-top:8px">
-    <div style="display:flex;gap:6px">
-      ${tabBtn('base','🎯 בסיס (אוטומטי)', _rangeEditActiveView==='base')}
-      ${limpHands.length ? tabBtn('limp','🃏 לימפים ('+limpTotal+')', _rangeEditActiveView==='limp') : ''}
+    <div style="display:flex;gap:5px">
+      ${tabBtn("_setRangeEditorView('auto')",'🎯 אוטומטי', _rangeEditActiveView==='auto')}
+      ${tabBtn('_toggleOriginalLimpView()', toggleLabel, toggleActive)}
     </div>
     <div style="display:flex;justify-content:flex-end">
       <span id="range-editor-count" style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
@@ -992,6 +1016,7 @@ function _rangeEditorPanelHtml(){
       <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>
       <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:11px;cursor:pointer">ביטול</button>
     </div>
+    <div style="font-size:7px;color:#3a3850;text-align:center">שינויים כאן זמניים עד ✕/ביטול — שום דבר לא נשמר עד 💾</div>
   </div>`;
 }
 

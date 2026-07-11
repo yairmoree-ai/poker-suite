@@ -5,7 +5,64 @@
 
 ---
 
-## 2026-07-12 — Toggle between base range and limp view (before AND after saving)
+## 2026-07-12 — Simplify to 2 buttons: אוטומטי + toggle(מקורי/לימפים)
+**Files: render.js**
+
+- User asked to collapse the 3-tab layout (המקורי / אוטומטי / לימפים)
+  down to 2 buttons: one for "אוטומטי" (unchanged), and a single button
+  that toggles between "המקורי" and "לימפים" rather than two separate
+  tabs for those.
+- New `_toggleOriginalLimpView()`: if currently on 'limp', switches to
+  'original'; otherwise switches to 'limp' — but only if the player
+  actually has limp data. If not, it always resolves to 'original'
+  (never toggles into an empty limp view), so the button's label and
+  behavior are guaranteed to match — no dead-end where the label says
+  one thing and the click does another.
+- Button label is computed dynamically each render: "↩️ המקורי" while
+  on the limp view, "🃏 לימפים (N)" otherwise (or "↩️ המקורי" always,
+  for a player with zero limp history — the button never disappears,
+  so there's always a way back to "המקורי" even from the "אוטומטי" tab).
+- Verified (jsdom): full toggle cycle (original→limp→original) still
+  round-trips a custom manual range exactly, same as the 3-button
+  version; clicking toggle while on "אוטומטי" jumps straight to limp
+  when data exists; a player with no limp history gets a button that's
+  always labeled "המקורי" and always lands on the real (auto-seeded)
+  original range, never an empty grid.
+
+
+**Files: render.js**
+
+- User caught a real gap in the base/limp toggle added moments earlier
+  this session: "בסיס" always recomputed the generic theoretical auto
+  range, so a player with a hand-picked custom manual range (not equal
+  to auto) who isolated limps and then went "back" would get the
+  generic solver range instead of what they'd actually assigned —
+  silently discarding their custom range.
+- Fix: split into three distinct, separately-tracked views instead of
+  two. New `_rangeEditOriginal` (string) snapshots exactly what was
+  saved for the player at the moment the editor opened — the existing
+  custom manual range if one existed, or the auto range only as a
+  fallback if none did — and never changes while the editor stays
+  open, regardless of how many times the view is switched.
+  - **↩️ המקורי** → restores `_rangeEditOriginal` exactly (the "go
+    back" the user actually wanted — protects a real custom
+    assignment, not just a generic recompute).
+  - **🎯 אוטומטי** → theoretical solver range, recomputed fresh, for
+    comparison only — intentionally separate from "המקורי" now, since
+    the two can differ.
+  - **🃏 לימפים (N)** → unchanged, empirical set from hand history.
+- `_openRangeEditorShowLimps` (the seat-panel shortcut button) updated
+  to compute and store `_rangeEditOriginal` the same way — it was
+  skipping this before, which would have left "המקורי" stale/wrong
+  when entering via that shortcut specifically.
+- Verified (jsdom): assigned a custom manual range (AA,KK,QQ,AKs — not
+  matching the deep-auto range for that seat), isolated to a known limp
+  (73s), switched back to "המקורי" — got exactly AA,KK,QQ,AKs back
+  (not the 131-combo auto range); "אוטומטי" tab independently showed
+  the real auto range for comparison; re-saving after returning to
+  "המקורי" round-tripped correctly.
+
+
 **Files: render.js, game.js, ui.js**
 
 - User feedback on the empirical-limp feature (previous entry today):
