@@ -5,7 +5,166 @@
 
 ---
 
-## 2026-07-12 — Simplify to 2 buttons: אוטומטי + toggle(מקורי/לימפים)
+## 2026-07-12 — Context-aware auto-range for EVERY seat, not just hero-vs-opponent
+**Files: render.js**
+
+- User's concrete test case: UTG opens (RFI). Before this fix, the
+  next player's auto-range (seat panel, or as an "unknown opponent" in
+  equity) showed RFI too — identical to the case where UTG hadn't
+  acted at all — because `_getAutoRangeForSeat`/`_inferPreflopActionCat`
+  only ever looked at a seat's OWN action history, never at what had
+  already happened elsewhere at the table. A player facing an open
+  isn't a candidate to open themselves anymore; showing RFI there
+  implied a decision that's no longer available. Explicit ask: this
+  needed to work between any two players at the table, not just
+  hero-vs-a-specific-opponent.
+- New `_getContextualRangeInfo(seat, pos, tableSize, depth,
+  currentRaiseRound)`: single shared function now used by every
+  auto-range call site (seat panel, live opponent equity, hero range).
+  If the seat has already acted, unchanged (their real action). If
+  not, checks `S.raiseRound` (the live global preflop raise counter,
+  already tracked and reset per-hand/street — reused, not new state):
+  - 0 raises so far → they're first up: RFI (or `call` for BB),
+    exactly as before.
+  - 1 raise so far → facing an open, undecided yet: union(call,3bet)
+    — the "continue range" concept already used for the hero in one
+    specific spot, now generalized to every seat via one function
+    instead of a second, slightly different, hand-written copy.
+  - 2+ raises → a third player facing a 3bet+ isn't a spot the basic
+    per-position RFI/3bet/call/4bet tables were built to describe
+    accurately (they only chart the original-raiser/original-caller
+    roles) — consistent with the limp decision earlier today, returns
+    no theoretical range rather than stretching a table beyond its
+    design. New `'unclear'` category/label, same empty-range behavior
+    as `'limp'` (including through the `_adjustRangeForType` empty-stays-empty
+    guard from the previous fix — verified no player-type leak here either).
+  - `_unionRangeStr` restored (it existed briefly for the reverted
+    VPIP-union attempt, removed, now needed again for a genuinely
+    well-founded reason: this is a real "continuing range" concept,
+    not a guess at what a limp represents).
+- Hero's auto-range in `renderPotOdds` now calls the same function
+  instead of its own hand-written duplicate — which also fixes a
+  latent version of the same bug for hero specifically (the old hero
+  code used call∪3bet unconditionally whenever hero hadn't acted, with
+  no check for whether hero was actually first-to-act with nothing
+  having happened yet).
+- Live opponent equity range also switched to the shared function for
+  consistency, though in practice `unknownOppSeats` is already filtered
+  to opponents who've acted this street, so this call site's behavior
+  is unchanged (defensive alignment, not a functional fix there).
+- Verified (jsdom): UTG-hasn't-opened → next seat gets RFI (43 hands,
+  unchanged); UTG opens → next seat now gets `facing-open` (12 hands,
+  confirmed equal to the real call∪3bet union for that position/depth,
+  not a coincidental RFI match); a third seat behind an existing 3bet
+  gets `unclear` with an empty range across all player types (TAG,
+  Fish); UTG's own range after opening is unaffected; real-limp
+  regression still empty; range editor opens correctly pre-seeded from
+  `facing-open`; `renderPotOdds` runs cleanly end-to-end in a live
+  facing-open scenario with no errors.
+
+
+**Files: render.js**
+
+- User pushback (correctly) on both of the last two attempts: RFI-only
+  and RFI∪call-union are both fabrications feeding into equity math as
+  if they were real strategy, and the team had already agreed earlier
+  today not to spend effort inventing limp-range tables — the correct
+  long-term answer is the empirical "🃏 לימפים ידועים" feature, built
+  from real hand documentation over time, not a synthesized guess.
+  Explicit instruction: stay theory-clean, don't touch equity-calc
+  logic to "solve" limping.
+- `_inferPreflopActionCat`: real limp (`Call` with `raiseRound===0`)
+  now returns `'limp'` — a key that exists in NO `_RANGES` table for
+  any position/depth/size. `_getRangeStrForDepth`'s existing fallback
+  chain naturally resolves this to `''` everywhere it's called (seat
+  panel auto-range, live opponent equity, historical hand equity, hero
+  auto-range) — one change, uniform "no theoretical range" result,
+  no per-call-site special-casing needed.
+  `'RFI'` for no-action-yet (this session's earlier fix) is unchanged.
+- `_getAutoRangeForSeat` reverted to the simple single-lookup version
+  (the union logic added an entry ago is fully removed).
+- Found and fixed a related leak while re-verifying end-to-end:
+  `_adjustRangeForType` was unconditionally adding `_RANGE_LOOSEN` /
+  `_RANGE_STATION_EXTRA` hands for LAG/Station/Fish-tagged players
+  even when `baseRangeStr` was already empty — silently manufacturing
+  a non-empty range purely from the type-adjustment step, defeating
+  the "no theoretical range" guarantee for exactly the players most
+  likely to be flagged as limpers. Fixed with an early return: empty
+  base stays empty regardless of player type.
+- `_ACTIONS_LABELS.limp` set to an explicit, honest label pointing at
+  the empirical feature instead of implying a table exists.
+- Verified (jsdom): all 5 player types (TAG/Nit/LAG/Station/Fish) now
+  return `rangeStr:''` for a real limp with no exceptions; normal RFI
+  (not a limp) is unaffected — Fish (141 hands) still wider than TAG
+  (131), confirming the type-adjustment fix didn't break the working
+  case; full equity-input chain confirmed 0 combos for a Fish limper,
+  which correctly triggers the pre-existing (untouched) random-hand
+  fallback already built into `monteCarloEquityMulti` — no new equity
+  code written or modified anywhere in this fix.
+
+
+**Files: render.js**
+
+- User pushed back on the previous fix (real limp → RFI as the
+  approximation): showing pure RFI implies "the hands they'd open
+  with," which is backwards for a player who specifically chose NOT to
+  open. Correct theoretical framing instead: since no limp-range table
+  exists, show every hand that's VPIP-consistent — the union of RFI
+  and call, without claiming more precision than that.
+- New `_unionRangeStr(a,b)`: dedupes two comma-separated hand lists
+  into one. `_getAutoRangeForSeat` now detects a true limp (last
+  preflop action `Call` with `raiseRound===0`) directly (not just via
+  the `_inferPreflopActionCat` category, which only returns a single
+  label) and computes `_getRangeStrForDepth(...,'RFI',...) ∪
+  _getRangeStrForDepth(...,'call',...)` instead of RFI alone.
+- Player-type adjustment for this case now runs with `actionCat='call'`
+  (not RFI) when passed to `_adjustRangeForType` — a limp is
+  fundamentally a calling action, so a Station/Fish-tagged player
+  correctly gets the extra wide-calling-range boost (`_RANGE_STATION_EXTRA`)
+  that only applies to the 'call' category, not the RFI-only path.
+- Display label added: `_ACTIONS_LABELS.VPIP = 'VPIP (לימפ)'` — the
+  seat panel's "מבוסס על:" line now says VPIP instead of misleadingly
+  saying "פתיחה" (RFI) for a hand the player didn't open.
+- Verified (jsdom): BTN/SB heads-up limp → union (131 hand-types,
+  equal to RFI alone here since the small call table is already a
+  subset of the wide BTN/SB RFI range — union logic confirmed correct
+  even where it doesn't visibly change the count); Fish-tagged limp
+  (141) ≥ TAG-tagged limp (131), confirming the call-path type
+  adjustment fired; a real call-vs-raise (`raiseRound:1`) is
+  unaffected, still resolves to plain `call`.
+
+
+**Files: render.js**
+
+- Closed the gap flagged in the flowchart discussion two entries ago:
+  `_inferPreflopActionCat` already defaulted a not-yet-acted non-BB
+  seat to RFI (earlier fix today), but a seat that had *actually*
+  limped this hand (last preflop action is `Call` with `raiseRound===0`
+  — i.e. a real call with no raise having happened yet) still fell
+  through to the generic `return 'call'` at the end of the function,
+  pulling the narrow flat-vs-raise table (e.g. UTG: JJ,TT,AQs,AJs,
+  KQs,AQo) for a player who, by definition, had no raise to flat
+  against.
+- Fix: `Call` actions now branch on `round`— `round===0` (true limp)
+  returns `'RFI'` (same approximation already used for the no-action
+  default, for consistency); `round>=1` (calling an actual raise)
+  keeps returning `'call'`, unchanged, since that's exactly what the
+  table represents.
+- Documented explicitly, in code and to the user, that this is a
+  deliberate approximation, not a precise fix: RFI describes hands a
+  player *would open*, while a player who chose to limp specifically
+  chose *not* to open — there's no solver-sourced "limp range" table
+  to fall back on instead (mainstream theory mostly doesn't recommend
+  limping at all). The empirical "🃏 לימפים ידועים" feature (added
+  earlier today) remains the accurate tool for a specific player's
+  real limping tendency; the auto-range is, and will stay, a
+  reasonable-but-imperfect default.
+- Verified (jsdom): a seat with `actions:[{type:'Call',raiseRound:0}]`
+  now returns RFI (wide open-range) instead of the narrow call table;
+  a seat calling an actual raise (`raiseRound:1`) is unaffected,
+  still correctly returns `call` with the narrow table.
+
+
 **Files: render.js**
 
 - User asked to collapse the 3-tab layout (המקורי / אוטומטי / לימפים)

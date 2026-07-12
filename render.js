@@ -311,7 +311,7 @@ const _POS_BY_SIZE = {
   8:['BTN','CO','HJ','LJ','MP','UTG','SB','BB'],
   9:['BTN','CO','HJ','LJ','MP','UTG+1','UTG','SB','BB'],
 };
-const _ACTIONS_LABELS = {RFI:'פתיחה','3bet':'3-Bet',call:'Call','4bet':'4-Bet'};
+const _ACTIONS_LABELS = {RFI:'פתיחה','3bet':'3-Bet',call:'Call','4bet':'4-Bet',limp:'לימפ (אין טווח תיאורטי — ראו 🃏 לימפים ידועים)','facing-open':'מול פתיחה (call∪3bet — טרם החליט)',unclear:'מצב רב-שכבתי (אין טווח תיאורטי מדויק)'};
 
 // ממיר שני קלפים לנוטציית יד סטנדרטית (AKs / AKo / AA) — קלף גבוה קודם, בדיוק כמו בטבלת _RANGES
 function _cardsToHandNotation(cards){
@@ -472,6 +472,7 @@ const _RANGE_STATION_EXTRA = '22,33,44,55,66,77,J8o,J7o,T8o,T7o,97o,96o,86o,85o,
 // playerType null/לא מוגדר → משאירים את טווח הסולבר כמו שהוא (טווח מאוזן, ערך+בלאף)
 // TAG → טווח הסולבר כמו שהוא. Nit → מצמצם. LAG/Station/Fish → מרחיב (Station בעיקר ב-call, Fish בכל הפעולות)
 function _adjustRangeForType(baseRangeStr, playerType, actionCat){
+  if(!baseRangeStr) return baseRangeStr; // אין בסיס תיאורטי (למשל לימפ אמיתי) — נשאר ריק, לא "ממלאים" מהתוספות
   if(!playerType || playerType==='TAG') return baseRangeStr;
   const set = _parseRangeToSet(baseRangeStr);
   if(playerType==='Nit'){
@@ -503,22 +504,76 @@ function _inferPreflopActionCat(seat, pos){
     if(round===2) return '3bet';
     return '4bet';
   }
-  return 'call';
+  // Call: אם round===0 — אין עדיין raise על השולחן, זה לימפ אמיתי. בהתאם להחלטה
+  // מפורשת: לא ממציאים קירוב תיאורטי (לא RFI, לא איחוד RFI∪call) — GTO preflop
+  // הוא בעיקרו עץ raise-or-fold ואין בו בכלל "צומת לימפ" עבור רוב העמדות, ואין
+  // טעם לזייף דיוק שלא קיים, בטח לא בתוך חישובי equity. מחזירים 'limp' — מפתח
+  // שלא קיים באף טבלת _RANGES, ולכן _getRangeStrForDepth יחזיר '' בכל מקום שבו
+  // נעשה בו שימוש (תצוגת הפאנל, equity חי, equity היסטורי) — "אין טווח תיאורטי"
+  // באופן אחיד, בלי טיפול מיוחד בכל אתר קריאה בנפרד. הכלי הנכון ללימפ הוא ה"🃏
+  // לימפים ידועים" האמפירי (נבנה מתיעוד ידיים אמיתי לאורך זמן), לא ניחוש אוטומטי.
+  // round>=1 = call אמיתי מול raise שכבר קיים — זו בדיוק ההגדרה של טבלת 'call'.
+  return round===0 ? 'limp' : 'call';
 }
 
 // הטווח האוטומטי המלא של מושב נתון: עמדה (מ-assignPos) + פעולה שביצע ביד הנוכחית
 // (או ברירת מחדל לפי עמדה אם עדיין לא פעל — ראו _inferPreflopActionCat) + עומק לפי
 // הערימה שלו (BB) + התאמת סוג שחקן. משמש הן לתצוגה בפאנל המושב (כשאין טווח ידני)
+// הטווח האוטומטי המלא של מושב נתון: עמדה (מ-assignPos) + פעולה שביצע ביד הנוכחית
+// (או ברירת מחדל לפי עמדה אם עדיין לא פעל — ראו _inferPreflopActionCat) + עומק לפי
+// הערימה שלו (BB) + התאמת סוג שחקן. משמש הן לתצוגה בפאנל המושב (כשאין טווח ידני)
 // והן כנקודת-פתיחה לעריכה.
+// הערה: כששחקן למפ בפועל, _inferPreflopActionCat מחזירה 'limp' — מפתח שלא קיים
+// באף טבלת _RANGES, ולכן rangeStr יוצא ריק בכוונה ('אין טווח תיאורטי'), ואין הפעלת
+// התאמת-סוג-שחקן על טווח שלא קיים מלכתחילה. זו התנהגות מכוונת, לא חוסר. לניתוח
+// לימפים בפועל — ראו "🃏 לימפים ידועים" (_getEmpiricalLimpHands) בפאנל המושב.
+// מאחד שתי מחרוזות טווח (פסיקים) לרשימת ידיים ייחודית אחת, ללא כפילויות.
+function _unionRangeStr(a, b){
+  const set = new Set();
+  (a||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(h=>set.add(h));
+  (b||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(h=>set.add(h));
+  return [...set].join(',');
+}
+
+// קובעת את הטווח וקטגוריית הפעולה הרלוונטיים לשחקן נתון *בהתחשב במה שקרה בפועל על
+// השולחן עד כה* — לא רק לפי עמדה בבידוד. משמשת בכל מקום שמחשב טווח אוטומטי (פאנל
+// מושב, טווח לפועל) כדי שכל שחקן יקבל את הטווח הנכון לסיטואציה שהוא בה עכשיו:
+//  - אם השחקן כבר פעל ביד הנוכחית → הפעולה בפועל שלו (RFI/3bet/call/4bet כרגיל).
+//  - אם עדיין לא פעל, בודקים מול כמה raises כבר קרו בפרה-פלופ (raiseRound):
+//      0   → הוא זה ש"פותח" (RFI, או call ל-BB) — אף אחד עוד לא לחץ עליו
+//      1   → ניצב מול open אחד — טווח-המשך שלו הוא איחוד call∪3bet (עדיין לא
+//            ידוע אם יקרא או יעלה שוב, אז מציגים את כל מה שממשיך ולא מקפל)
+//      2+  → מצב רב-שכבתי (מול 3bet ומעלה) — הטבלאות הבסיסיות (RFI/3bet/call/4bet
+//            לכל עמדה) לא נבנו לתאר במדויק צד שלישי שלא היה הפותח/ה-3bettor
+//            המקורי; אין טבלה טובה, לא ממציאים — טווח ריק, בדיוק כמו לימפ.
+function _getContextualRangeInfo(seat, pos, tableSize, depth, currentRaiseRound){
+  if(!pos) return {rangeStr:'', actionCat:''};
+  const preflopActs = (seat.actions||[]).filter(a=>a.street==='פרה-פלופ' && a.type!=='SB' && a.type!=='BB');
+  if(preflopActs.length){
+    const actionCat = _inferPreflopActionCat(seat, pos);
+    return {rangeStr: _getRangeStrForDepth(tableSize, pos, actionCat, depth) || '', actionCat};
+  }
+  const round = currentRaiseRound||0;
+  if(round===0){
+    const actionCat = pos==='BB' ? 'call' : 'RFI';
+    return {rangeStr: _getRangeStrForDepth(tableSize, pos, actionCat, depth) || '', actionCat};
+  }
+  if(round===1){
+    const callR = _getRangeStrForDepth(tableSize, pos, 'call', depth) || '';
+    const bet3R = _getRangeStrForDepth(tableSize, pos, '3bet', depth) || '';
+    return {rangeStr: _unionRangeStr(callR, bet3R), actionCat:'facing-open'};
+  }
+  return {rangeStr:'', actionCat:'unclear'};
+}
+
 function _getAutoRangeForSeat(seatIdx){
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat) return {rangeStr:'', pos:'', actionCat:'', depth:''};
   const swp = assignPos();
   const pos = swp.find(s=>s.seatIdx===seatIdx)?.pos || '';
-  const actionCat = _inferPreflopActionCat(seat, pos);
   const bb = getBB();
   const depth = _depthFromBB(bb>0 ? (seat.stack||0)/bb : 100);
-  const baseRangeStr = pos ? _getRangeStrForDepth(S.tableSize, pos, actionCat, depth) : '';
+  const {rangeStr: baseRangeStr, actionCat} = _getContextualRangeInfo(seat, pos, S.tableSize, depth, S.raiseRound);
   const player = (S.playerLib||[]).find(p=>p.id===seat.playerId);
   const playerType = player?.playerType || null;
   const rangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
@@ -1129,8 +1184,7 @@ function renderPotOdds(){
     // עדיפות 3: זיהוי אוטומטי — עמדה + פעולה + תגית שחקן
     const swpSeat = swpForEq.find(x=>x.seatIdx===s.seatIdx);
     const pos = swpSeat?.pos || '';
-    const actionCat = _inferPreflopActionCat(s, pos);
-    const baseRangeStr = pos ? _getRangeStrForDepth(S.tableSize, pos, actionCat, _eqDepth) : '';
+    const {rangeStr: baseRangeStr, actionCat} = _getContextualRangeInfo(s, pos, S.tableSize, _eqDepth, S.raiseRound);
     const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
     const playerType = player?.playerType || null;
     const adjRangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
@@ -1141,26 +1195,17 @@ function renderPotOdds(){
   // (isOpeningSpot) — שם השאלה הנכונה היא "בטווח?" ולא "equity מול מה?"
   // מצב "טווח מול טווח": אם לשחקן הפועל אין קלפים מוזנים אבל יש לו טווח ידני שמור —
   // היד שלו נדגמת מהטווח בכל איטרציה (heroCombos), במקום לדרוש קלפים ספציפיים.
-  // עדיפות טווח לפועל: קלפים מוזנים > טווח ידני שמור > אוטומטי.
-  // אוטומטי: אם הפועל כבר פעל ביד — לפי פעולתו (כמו אצל יריבים); אם טרם פעל —
-  // "טווח ההמשך" של עמדתו (איחוד call+3bet): בהנחה שממשיך, ככה נראה הטווח שלו.
+  // עדיפות טווח לפועל: קלפים מוזנים > טווח ידני שמור > אוטומטי (לפי מה שקרה בפועל
+  // על השולחן — _getContextualRangeInfo, אותה פונקציה בדיוק כמו לכל שחקן/מושב אחר,
+  // כדי שהניתוח יהיה עקבי בין כל השחקנים ולא רק "אני מול יריב מסוים").
   const heroManualRange = (holeCards.length!==2) ? (S.playerRanges?.[seat?.playerId] || null) : null;
   let heroAutoRange = null, heroAutoTag = '';
   if(holeCards.length!==2 && !heroManualRange && seat){
     const heroPos = swpForEq.find(x=>x.seatIdx===actor)?.pos || '';
     if(heroPos){
-      const heroActs = (seat.actions||[]).filter(a=>a.street==='פרה-פלופ' && a.type!=='SB' && a.type!=='BB');
-      if(heroActs.length){
-        const cat = _inferPreflopActionCat(seat, heroPos);
-        heroAutoRange = _getRangeStrForDepth(S.tableSize, heroPos, cat, _eqDepth) || null;
-        heroAutoTag = 'hauto:'+heroPos+':'+cat+':'+_eqDepth;
-      } else {
-        const callR = _getRangeStrForDepth(S.tableSize, heroPos, 'call', _eqDepth) || '';
-        const bet3R = _getRangeStrForDepth(S.tableSize, heroPos, '3bet', _eqDepth) || '';
-        const merged = [...new Set([...callR.split(','), ...bet3R.split(',')].map(x=>x.trim()).filter(Boolean))];
-        heroAutoRange = merged.length ? merged.join(',') : null;
-        heroAutoTag = 'hcont:'+heroPos+':'+_eqDepth;
-      }
+      const {rangeStr: hRangeStr, actionCat: hCat} = _getContextualRangeInfo(seat, heroPos, S.tableSize, _eqDepth, S.raiseRound);
+      heroAutoRange = hRangeStr || null;
+      heroAutoTag = 'hauto:'+heroPos+':'+hCat+':'+_eqDepth;
     }
   }
   const heroRangeStr = heroManualRange || heroAutoRange;
