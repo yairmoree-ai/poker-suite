@@ -1176,7 +1176,7 @@ function renderPlayerList(){
 // ═══════════════════════════════════════════════════════
 // CARD PICKER
 // ═══════════════════════════════════════════════════════
-function openCP(target){if(isViewer()){notify('צופה בלבד');return;}cpTarget=target;cpRank=null;renderCP();document.getElementById('card-picker').classList.add('open');}
+function openCP(target){if(isViewer()){notify('צופה בלבד');return;}cpTarget=target;cpRank=null;renderCP();const camBtn=document.getElementById('cp-camera-btn');if(camBtn)camBtn.setAttribute('onclick',"openCameraForCards('board')");document.getElementById('card-picker').classList.add('open');}
 function renderCP(){
   const used=allUsedCards();
   document.getElementById('cp-title').textContent=cpRank?`חליפה עבור ${cpRank}`:'בחר דרגה';

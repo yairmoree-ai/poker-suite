@@ -63,10 +63,14 @@ function openSeatCardPicker(seatIdx, slotIdx){
   }).join('');
   document.getElementById('cp-title').textContent = 'קלף '+(slotIdx===0?'ראשון':'שני');
   const hasCard = !!(seat?.cards||[])[slotIdx];
-  const topBtns = `<div style="display:flex;gap:6px;padding:4px 4px 0">
-    ${hasCard ? `<button onclick="pickSeatCard(${seatIdx},null,null,${slotIdx})" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.1);color:#e07b6a;font-weight:800;font-size:12px;cursor:pointer">🗑️ נקה קלף</button>` : ''}
-    <button onclick="openCameraForCards('${seatIdx}')" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(200,169,110,0.3);background:rgba(200,169,110,0.08);color:#c8a96e;font-weight:800;font-size:12px;cursor:pointer">📷 זהה משני הקלפים</button>
-  </div>`;
+  // כפתור המצלמה הקבוע שכבר קיים בהדר החלונית (cp-camera-btn) מוגדר כברירת מחדל
+  // ל-'board' — כאן, בפתיחה על מושב שחקן, מכוונים אותו דינמית למושב הנכון, במקום
+  // לשכפל כפתור מצלמה שני בתוך התוכן.
+  const camBtn = document.getElementById('cp-camera-btn');
+  if(camBtn) camBtn.setAttribute('onclick', `openCameraForCards('${seatIdx}')`);
+  const topBtns = hasCard ? `<div style="padding:4px 4px 0">
+    <button onclick="pickSeatCard(${seatIdx},null,null,${slotIdx})" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.1);color:#e07b6a;font-weight:800;font-size:12px;cursor:pointer">🗑️ נקה קלף</button>
+  </div>` : '';
   document.getElementById('cp-content').innerHTML = `${topBtns}<div style="padding:4px;direction:ltr">${rows}</div>`;
   document.getElementById('card-picker').classList.add('open');
 }

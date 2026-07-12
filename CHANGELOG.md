@@ -5,7 +5,35 @@
 
 ---
 
-## 2026-07-12 — Live-refresh the range editor when switching player type
+## 2026-07-12 — Fix duplicate camera button; make the existing one context-aware
+**Files: index.html, game.js, ui.js**
+
+- User caught it via screenshot: the seat card-picker popup showed TWO
+  camera buttons — the one added earlier today inside the popup
+  content, and a pre-existing one already built into the popup's
+  header (`index.html`) that I hadn't noticed. Worse, the pre-existing
+  header button was hardcoded to `openCameraForCards('board')`
+  unconditionally — meaning if it had ever been tapped while the popup
+  was open for a SEAT card (which it always could be, since it's the
+  same shared `card-picker` element for both), it would have silently
+  tried to recognize the wrong target (the board instead of the
+  player's hand) — a latent bug independent of today's duplicate.
+- Fix: removed the duplicate button from `openSeatCardPicker`'s
+  content entirely (kept only "🗑️ נקה קלף" there). Gave the header
+  button an id (`cp-camera-btn`) and made it context-aware instead:
+  `openSeatCardPicker` points it at the specific seat
+  (`openCameraForCards('${seatIdx}')`) when opened for a player's
+  card; `openCP` (the generic board/etc. picker in ui.js) resets it
+  back to `'board'` on every open, so reopening for the board after
+  using it on a seat doesn't leave it pointed at the wrong target.
+- Verified (jsdom): exactly one `#cp-camera-btn` exists in the DOM
+  (no duplicate); opening a seat's card picker sets its onclick to
+  target that seat; no camera button duplicated in the popup content;
+  the existing clear-card button still appears correctly once a card
+  is set; reopening the generic picker for a board card resets the
+  camera button back to `'board'`.
+
+
 **Files: game.js**
 
 - User friction: to compare how a range looks under different player
