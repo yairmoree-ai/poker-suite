@@ -465,7 +465,7 @@ function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=800
 
 // ── התאמת טווח סולבר לפי תגית שחקן (TAG/LAG/Nit/Station/Fish) ──────
 // רשימות תוספת/הפחתה כלליות (לא תלויות עמדה) — קירוב סביר, לא סולבר מדויק
-const _RANGE_LOOSEN = 'K8s,K7s,K6s,K5s,K4s,K3s,K2s,Q8s,Q7s,Q6s,Q5s,Q4s,Q3s,Q2s,J8s,J7s,J6s,T8s,T7s,97s,96s,86s,85s,75s,64s,53s,43s,32s,A9o,A8o,A7o,A6o,A5o,A4o,A3o,A2o,K9o,K8o,QTo,Q9o,J9o,T9o,98o,87o,76o,65o';
+const _RANGE_LOOSEN = 'A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,K9s,K8s,K7s,K6s,K5s,K4s,K3s,K2s,Q8s,Q7s,Q6s,Q5s,Q4s,Q3s,Q2s,J8s,J7s,J6s,T8s,T7s,97s,96s,86s,85s,75s,64s,53s,43s,32s,A9o,A8o,A7o,A6o,A5o,A4o,A3o,A2o,K9o,K8o,QTo,Q9o,J9o,T9o,98o,87o,76o,65o';
 const _RANGE_TIGHTEN = '22,33,44,55,A2s,A3s,A4s,K9s,K8s,QTs,Q9s,J9s,T9s,98s,87s,76s,65s,54s,ATo,KJo,KTo,QJo,QTo,JTo';
 const _RANGE_STATION_EXTRA = '22,33,44,55,66,77,J8o,J7o,T8o,T7o,97o,96o,86o,85o,75o,64o,54o,43o,K7o,K6o,K5o,K4o,K3o,K2o,Q8o,Q7o,Q6o,Q5o,Q4o,Q3o,Q2o';
 

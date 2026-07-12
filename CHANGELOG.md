@@ -5,7 +5,35 @@
 
 ---
 
-## 2026-07-12 — Fix duplicate camera button; make the existing one context-aware
+## 2026-07-12 — Fix real gaps in _RANGE_LOOSEN: missing suited aces + K9s
+**Files: render.js**
+
+- User caught it visually across three screenshots (LAG/Station/Fish,
+  all at UTG mid-depth RFI): A4s/A3s/A2s showed as clear gaps in an
+  otherwise-continuous range, with the same missing-K9s pattern from
+  the earlier `call`-table finding now visible again at mid-depth.
+- Root cause confirmed: `_RANGE_LOOSEN` (the additive list for
+  LAG/Station/Fish) contained ZERO suited-ace hands (only offsuit A9o-
+  A2o), and jumped straight from KQs to K8s (no K9s). UTG's mid-depth
+  RFI base table only goes down to A5s — so for any position/depth
+  whose base range doesn't reach A4s-A2s, and since LOOSEN never
+  contributed any Axs at all, those hands were permanently
+  unreachable for LAG/Station/Fish, regardless of how wide the tag
+  should nominally make the range.
+- Fix: added `A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,K9s` to `_RANGE_LOOSEN`.
+  Adding hands already present in some base tables is harmless (the
+  adjustment logic already dedupes via a `Set`) — this specifically
+  targets the positions/depths where they were missing without
+  affecting anywhere they already existed.
+- Verified: LAG/Station/Fish at UTG-mid RFI now all include A4s, A3s,
+  A2s, K9s (previously absent in every one of them); TAG (no type tag)
+  produces byte-identical output to before (early-return path
+  untouched); Nit is completely unaffected (it never reads
+  `_RANGE_LOOSEN` — it only removes hands from the base range via its
+  own separate `_RANGE_TIGHTEN` list, so this change has zero surface
+  area there).
+
+
 **Files: index.html, game.js, ui.js**
 
 - User caught it via screenshot: the seat card-picker popup showed TWO
