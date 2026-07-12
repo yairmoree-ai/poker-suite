@@ -5,7 +5,41 @@
 
 ---
 
-## 2026-07-12 — Context-aware auto-range for EVERY seat, not just hero-vs-opponent
+## 2026-07-12 — Live-refresh the range editor when switching player type
+**Files: game.js**
+
+- User friction: to compare how a range looks under different player
+  types, you had to exit edit mode, tap a different type chip, then
+  re-enter edit mode — the editor's grid was only ever seeded once, at
+  open time, and never revisited on a type change while it stayed open.
+- `setSeatPlayerType` now re-seeds `_rangeEditSel` live when relevant,
+  with a careful distinction to avoid clobbering real work:
+  - No manual range saved for the player yet → the editor's default
+    view ('original') *is* effectively just the auto/theoretical
+    range under the hood, so it updates live on every type switch —
+    this is the exact case the user hit (comparing LAG/Fish/etc. on a
+    fresh, never-saved seat).
+  - A real manual range *is* saved, and the editor is showing "↩️
+    המקורי" → stays frozen. That view is an intentional anchor back to
+    what the person actually assigned; it shouldn't shift just because
+    they're experimenting with type tags.
+  - Explicit "🎯 אוטומטי" view → always live, in every case (its whole
+    purpose is to show the current theoretical range).
+  - "🃏 לימפים" view or a manually-edited grid (no active view) →
+    untouched, as before — type doesn't affect empirical limp data,
+    and hand-picked edits are never silently overwritten by a tag change.
+- Always does one full `renderSeatPanel()` regardless of the above
+  (previously always did this too) — needed so the type-chip
+  highlighting itself updates, independent of whether the grid content
+  changed.
+- Verified (jsdom): fresh seat, no saved range — TAG(131)→Fish(141)→
+  Nit(108) hand-types update live across two consecutive type switches
+  without leaving the editor; same player with a real saved manual
+  range (AA,KK,QQ) — switching type while viewing "המקורי" stays at
+  exactly 3, unmoved; explicitly switching to "אוטומטי" afterward
+  still recomputes correctly per type.
+
+
 **Files: render.js**
 
 - User's concrete test case: UTG opens (RFI). Before this fix, the

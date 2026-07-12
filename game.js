@@ -19,7 +19,23 @@ function setSeatPlayerType(pid, type){
   if(!p) return;
   p.playerType = type || undefined;
   persist();
-  renderSeatPanel();
+  // אם עורך הטווח פתוח כרגע בדיוק על השחקן הזה — מרעננים את הבחירה עם התיוג החדש
+  // לפני הרינדור, *חוץ* ממקרה אחד: אם יש לשחקן טווח ידני שמור בפועל וה-view הנוכחי
+  // הוא 'original' (המשתמש בחר "↩️ המקורי" כדי לחזור במפורש לטווח שהוא הקצה) —
+  // זו נקודת-עוגן שאמורה להישאר יציבה, לא "לזוז" רק כי נגעו בתיוג. אם אין טווח
+  // ידני שמור בכלל, 'original' הוא בפועל רק 'auto' תחת שם אחר (זו הייתה נקודת
+  // הפתיחה של העורך), אז גם הוא כן מתעדכן חי — זה בדיוק התרחיש שהמשתמש ביקש לתקן.
+  // 'לימפים'/עריכה ידנית (null) לא נדרסים — לא רוצים לאבד עבודה של המשתמש.
+  if(_rangeEditPid===pid && typeof activeSeat==='number' && activeSeat!==null){
+    const hasManualRange = !!(S.playerRanges && S.playerRanges[pid]);
+    const shouldLiveRefresh = _rangeEditActiveView==='auto' || (_rangeEditActiveView==='original' && !hasManualRange);
+    if(shouldLiveRefresh){
+      const auto = _getAutoRangeForSeat(activeSeat);
+      _rangeEditSel = new Set(auto.rangeStr ? auto.rangeStr.split(',').filter(Boolean) : []);
+      if(_rangeEditActiveView==='original' && !hasManualRange) _rangeEditOriginal = auto.rangeStr; // אין טווח ידני אמיתי - 'מקורי' כאן הוא סתם 'auto', שומרים אותו מסונכרן
+    }
+  }
+  renderSeatPanel(); // רינדור מלא תמיד - מעדכן גם את ה-highlight של כפתורי סוג השחקן
   if(document.getElementById('player-list')) renderPlayerList();
 }
 
