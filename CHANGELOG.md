@@ -5,7 +5,51 @@
 
 ---
 
-## 2026-07-12 — Split range data/logic into a new ranges.js file
+## 2026-07-12 — Fix: manual range ignored in opening-spot RFI check; new "equity vs field"
+**Files: render.js**
+
+- User caught a real, reproducible bug via screenshots: manually saved
+  a range for a player (UTG) that included 76s, but the live "בטווח/
+  מחוץ לטווח" check at the opening-spot moment still said "מחוץ לטווח"
+  for that exact hand. Root cause: `openRangeInfo` (the isOpeningSpot
+  branch) called `_getRangeStrForDepth` directly, never checking
+  `S.playerRanges[seat.playerId]` first — the ONE place in the app
+  that didn't already follow the established manual-range-first
+  priority order used everywhere else (range editor, live equity,
+  hero auto-range).
+- Fix: check the manual range first, fall back to the theoretical
+  table only if none exists — same pattern as everywhere else. Added
+  an `isManual` flag, surfaced in the UI ("RFI UTG (ידני)") so this
+  specific discrepancy is visible at a glance next time instead of
+  silently mismatching.
+- Separate follow-up from the same conversation: user asked why an
+  opening spot shows "in range?" instead of an equity number, since a
+  range's equity is computable. Explained the real reason (no actual
+  opponent has acted yet — equity vs nobody is meaningless, per the
+  "meaningless 100% equity" fix from earlier this session) — then user
+  proposed a good middle ground: equity vs the *hypothetical*
+  continue-ranges of everyone still left to act (not a single "average"
+  opponent, real multi-way equity, one range per remaining seat).
+- New "equity מול השדה" (field equity): for every other active,
+  non-folded seat, computes their continue-range via the existing
+  `_getContextualRangeInfo(seat, pos, tableSize, depth, 1)` — passing
+  a *hypothetical* raiseRound of 1 (not touching the real
+  `S.raiseRound`, since no one has actually raised yet) to simulate
+  "if I open now, what would they play back with." Runs through
+  `monteCarloEquityMulti` same as any other multi-way equity in the
+  app. Shown as an additional info column next to the existing
+  in/out-of-range check — doesn't replace it, doesn't change any
+  decision logic, purely informational.
+- Verified (jsdom): reproduced the exact screenshot scenario — before
+  the manual-range fix, 76s at UTG showed "מחוץ לטווח"; after saving a
+  manual range containing 76s, correctly flips to "✓ בטווח (ידני)".
+  Field-equity sanity check against known values: AA vs a 3-opponent
+  wide field ≈ 62.5% (real-world AA-vs-3-random reference is ~65% —
+  consistent, since the ranges here are wide but not literally
+  random); 32o ≈ 15.4%, correctly far lower — ordering and magnitude
+  both check out.
+
+
 **Files: render.js, ranges.js (new), index.html**
 
 - User's question ahead of the big solver-data update (7 positions ×

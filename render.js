@@ -550,10 +550,40 @@ function renderPotOdds(){
     const bbNow = (getBlinds&&getBlinds()?.bb)||50;
     const myStackNow = seat?.stack||0;
     const myDepth = _depthFromBB(bbNow>0 ? myStackNow/bbNow : 100);
-    const myRangeStr = myPos ? _getRangeStrForDepth(S.tableSize, myPos, 'RFI', myDepth) : '';
+    // עדיפות: טווח ידני שמור לשחקן הזה (אם קיים) > הטבלה התיאורטית — בדיוק אותו
+    // סדר עדיפויות שכבר חל בכל מקום אחר באפליקציה (עורך הטווח, equity חי וכו').
+    // בלי זה, טווח ידני ששמרת לא היה משפיע בכלל על הבדיקה הזו הספציפית — באג אמיתי.
+    const myManualRange = seat?.playerId ? S.playerRanges?.[seat.playerId] : null;
+    const myRangeStr = myManualRange || (myPos ? _getRangeStrForDepth(S.tableSize, myPos, 'RFI', myDepth) : '');
     const handNotation = _cardsToHandNotation(holeCards);
     const rangeSet = _parseRangeToSet(myRangeStr);
-    openRangeInfo = { pos: myPos, hand: handNotation, inRange: rangeSet.has(handNotation) };
+    openRangeInfo = { pos: myPos, hand: handNotation, inRange: rangeSet.has(handNotation), isManual: !!myManualRange };
+
+    // equity מול השדה (מידע נוסף, לא מחליף את בדיקת "בטווח"): ה-equity של היד
+    // הספציפית מול טווחי-ההמשך ההיפותטיים (call∪3bet, דרך _getContextualRangeInfo
+    // עם round=1 מדומה — לא נוגעים ב-S.raiseRound האמיתי) של כל שאר השחקנים
+    // שעדיין לא פעלו. שונה מ-equity "רגיל": כאן אין יריב קונקרטי שכבר פעל — כולם
+    // עדיין "שדה" תיאורטי, בהנחה שאני פותח עכשיו. יוזם השאלה: המשתמש, בעקבות דיון
+    // על equity-of-range שאין ל-RFI רגיל יריב אמיתי לחשב מולו.
+    const remainingSeats = S.seats.filter(s=>s.playerId && !s.folded && !s.allin && s.seatIdx!==actor);
+    if(remainingSeats.length){
+      const deadKeysField = new Set([...holeCards, ...boardCards].filter(Boolean).map(_cardKey));
+      const fieldStacks = remainingSeats.map(s=>s.stack||0);
+      const fieldMinStack = Math.min(myStackNow, ...fieldStacks);
+      const fieldDepth = _depthFromBB(bbNow>0 ? fieldMinStack/bbNow : 100);
+      const fieldCombosLists = remainingSeats.map(s=>{
+        const pos2 = swpForEq.find(x=>x.seatIdx===s.seatIdx)?.pos || '';
+        const {rangeStr: baseR, actionCat: actCat2} = _getContextualRangeInfo(s, pos2, S.tableSize, fieldDepth, 1);
+        const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
+        const adjR = _adjustRangeForType(baseR, player?.playerType||null, actCat2);
+        const combos = _rangeStrToCombos(adjR, deadKeysField);
+        return combos.length ? combos : null;
+      });
+      if(fieldCombosLists.some(c=>c)){
+        const fe = monteCarloEquityMulti(holeCards, boardCards, [], fieldCombosLists, 4000);
+        if(fe!==null) openRangeInfo.fieldEquity = fe;
+      }
+    }
   }
 
   // מתוכם — מי שקלפיו הוזנו בפועל (ידועים), לעומת מי שהם עדיין "יד סמויה"
@@ -694,7 +724,7 @@ function renderPotOdds(){
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">${openRangeInfo?'RFI '+openRangeInfo.pos:'EQUITY'}</span>
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">${openRangeInfo?'RFI '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':''):'EQUITY'}</span>
         ${openRangeInfo
           ? `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.2;margin-top:2px">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ לטווח'}</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${openRangeInfo.hand}</span>`
           : equityPct!==null
@@ -703,6 +733,13 @@ function renderPotOdds(){
               ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
               : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${(_curStreetName==='פרה-פלופ' && oppSeats.length===0 && holeCards.length<2)?'פתיחה — הזן קלפים':!_hasOppInCalc?'ממתין ליריב':holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
       </div>
+      ${openRangeInfo && openRangeInfo.fieldEquity!==undefined ? `
+      <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">EQUITY מול השדה</span>
+        <span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${openRangeInfo.fieldEquity.toFixed(1)}%</span>
+        <span style="font-size:7px;color:#5a5870;margin-top:1px">אם כולם ממשיכים (היפותטי)</span>
+      </div>` : ''}
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>
         <button onclick="S._showRangeSelector=!S._showRangeSelector;renderPotOdds()"
