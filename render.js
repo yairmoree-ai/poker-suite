@@ -565,7 +565,15 @@ function renderPotOdds(){
     // מדומה — לא נוגעים ב-S.raiseRound האמיתי) של כל שאר השחקנים שעדיין לא פעלו.
     // שונה מ-equity "רגיל": כאן אין יריב קונקרטי שכבר פעל — כולם עדיין "שדה" תיאורטי,
     // בהנחה שאני פותח עכשיו. יוזם השאלה: המשתמש, בעקבות דיון על equity-of-range.
-    const remainingSeats = S.seats.filter(s=>s.playerId && !s.folded && !s.allin && s.seatIdx!==actor);
+    const allRemainingSeats = S.seats.filter(s=>s.playerId && !s.folded && !s.allin && s.seatIdx!==actor);
+    // מיקוד על יריב ספציפי: לחיצה על אחד מהם (ראו UI למטה) מציגה equity מול הטווח שלו
+    // *בלבד* במקום מול כל השדה. שונה בכוונה ממנגנון "🎯 Range" הישן (S._rangeSelection) —
+    // כאן הבחירה מעוגנת למושב אמיתי בשולחן, ולכן "מרפאת את עצמה" אוטומטית: אם המושב
+    // הממוקד כבר לא בין allRemainingSeats (קיפל/עזב/יד חדשה) — חוזרים ל"כל השדה" לבד,
+    // בלי שום מצב-תקוע אפשרי (בניגוד לבאג שתוקן עכשיו ברכיב הישן).
+    const focusSeatIdx = (typeof S._openingFocusSeat==='number' && allRemainingSeats.some(s=>s.seatIdx===S._openingFocusSeat)) ? S._openingFocusSeat : null;
+    const remainingSeats = focusSeatIdx!==null ? allRemainingSeats.filter(s=>s.seatIdx===focusSeatIdx) : allRemainingSeats;
+    const focusName = focusSeatIdx!==null ? (pName(S.seats.find(s=>s.seatIdx===focusSeatIdx)?.playerId)||'יריב') : null;
     const computeFieldCombos = (deadKeysField) => {
       if(!remainingSeats.length) return null;
       const fieldStacks = remainingSeats.map(s=>s.stack||0);
@@ -583,7 +591,7 @@ function renderPotOdds(){
     };
 
     if(holeCards.length===2){
-      // תת-מצב 1: יד ספציפית מוזנת — בדיקת "בטווח?" + equity של היד הזו מול השדה
+      // תת-מצב 1: יד ספציפית מוזנת — בדיקת "בטווח?" + equity של היד הזו מול השדה/הממוקד
       const handNotation = _cardsToHandNotation(holeCards);
       const rangeSet = _parseRangeToSet(myRangeStr);
       openRangeInfo = { pos: myPos, hand: handNotation, inRange: rangeSet.has(handNotation), isManual: !!myManualRange };
@@ -595,7 +603,7 @@ function renderPotOdds(){
       }
     } else if(myRangeStr){
       // תת-מצב 2: אין קלפים ספציפיים, אבל יש טווח (ידני/אוטומטי) — הטווח כולו מדגם
-      // יד בכל איטרציה (heroCombos), מול אותם טווחי-שדה — "טווח פתיחה מול השדה"
+      // יד בכל איטרציה (heroCombos), מול אותם טווחי-שדה/הממוקד — "טווח מול טווח"
       const deadKeysField = new Set(boardCards.filter(Boolean).map(_cardKey));
       const heroCombosArr = _rangeStrToCombos(myRangeStr, deadKeysField);
       const fieldCombosLists = computeFieldCombos(deadKeysField);
@@ -605,6 +613,10 @@ function renderPotOdds(){
           openRangeInfo = { pos: myPos, isManual: !!myManualRange, isRangeMode: true, fieldEquity: fe, combosCount: heroCombosArr.length };
         }
       }
+    }
+    if(openRangeInfo){
+      openRangeInfo.focusName = focusName;
+      openRangeInfo.fieldSeats = allRemainingSeats.map(s=>({seatIdx:s.seatIdx, name: pName(s.playerId)||('מושב '+(s.seatIdx+1))}));
     }
   }
 
@@ -760,18 +772,28 @@ function renderPotOdds(){
       ${openRangeInfo && openRangeInfo.fieldEquity!==undefined ? `
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">EQUITY מול השדה</span>
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">EQUITY מול ${openRangeInfo.focusName?openRangeInfo.focusName:'השדה'}</span>
         <span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${openRangeInfo.fieldEquity.toFixed(1)}%</span>
-        <span style="font-size:7px;color:#5a5870;margin-top:1px">אם כולם ממשיכים (היפותטי)</span>
+        <span style="font-size:7px;color:#5a5870;margin-top:1px">${openRangeInfo.focusName?'הטווח שלו בלבד (היפותטי)':'אם כולם ממשיכים (היפותטי)'}</span>
       </div>` : ''}
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>
-        <button onclick="S._showRangeSelector=!S._showRangeSelector;renderPotOdds()"
-          style="background:${showRange?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};border:1px solid ${showRange?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};border-radius:7px;color:${showRange?'#c8a96e':'#5a5870'};font-size:10px;font-weight:800;cursor:pointer;padding:3px 7px;white-space:nowrap">
-          🎯 Range${rs?' ✓':''}
-        </button>
+        <div style="display:flex;align-items:center;gap:3px">
+          <button onclick="S._showRangeSelector=!S._showRangeSelector;renderPotOdds()"
+            style="background:${showRange?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};border:1px solid ${showRange?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};border-radius:7px;color:${showRange?'#c8a96e':'#5a5870'};font-size:10px;font-weight:800;cursor:pointer;padding:3px 7px;white-space:nowrap">
+            🎯 Range${rs?' ✓':''}
+          </button>
+          ${rs ? `<button onclick="S._rangeSelection=null;renderPotOdds()" title="נקה בחירת טווח גלובלית (חוסמת את מצב הפתיחה)" style="background:rgba(224,123,106,0.12);border:1px solid rgba(224,123,106,0.4);border-radius:7px;color:#e07b6a;font-size:10px;font-weight:800;cursor:pointer;padding:3px 6px;line-height:1">✕</button>` : ''}
+        </div>
       </div>
     </div>
+
+    <!-- בחירת יריב ממוקד ל"EQUITY מול השדה" — לחיצה על שם = מולו בלבד, "כולם" = ברירת מחדל -->
+    ${openRangeInfo && openRangeInfo.fieldSeats && openRangeInfo.fieldSeats.length ? `
+    <div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+      <button onclick="S._openingFocusSeat=null;renderPotOdds()" style="${chipStyle(!openRangeInfo.focusName,'#7eb8a4')}">🌐 כולם</button>
+      ${openRangeInfo.fieldSeats.map(fs=>`<button onclick="S._openingFocusSeat=${fs.seatIdx};renderPotOdds()" style="${chipStyle(openRangeInfo.focusName===fs.name,'#5b9bd5')}">${fs.name}</button>`).join('')}
+    </div>` : ''}
 
     <!-- Range selector (מתרחב) -->
     ${showRange ? `

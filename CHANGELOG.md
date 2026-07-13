@@ -5,7 +5,77 @@
 
 ---
 
-## 2026-07-12 — Opening spot now supports "range vs field", not just "hand vs field"
+## 2026-07-12 — "Equity vs field" can now focus on one specific opponent
+**Files: render.js**
+
+- Direct response to the sticky-selection bug fixed a moment ago: user
+  proposed a cleaner redesign instead of just adding a quick-clear
+  button — let "equity vs field" default to the full field (unchanged),
+  but add the ability to tap any *specific* remaining opponent and see
+  equity vs just their range, with an obvious way back to the default.
+  This replaces the disconnected old `S._rangeSelection` mechanism
+  (arbitrary position/action lookup, not tied to real seats — the thing
+  that got stuck) with something anchored to actual seats at the table.
+- New `S._openingFocusSeat` (a seatIdx or null). In the opening-spot
+  calc, `remainingSeats` narrows to just that one seat when set;
+  `computeFieldCombos()` (shared by both hand-mode and range-mode,
+  already extracted last entry) works unchanged either way — it just
+  receives a shorter seat list. Hero side (fixed hand or range) is
+  completely untouched by which mode is active, exactly as the user
+  described ("of course, if you pick a hand it changes accordingly" —
+  it already did, no new code needed there).
+- Self-healing by construction, not by extra logic: `focusSeatIdx` is
+  only honored if it's still present in the *current* `allRemainingSeats`
+  list (recomputed fresh every render from live seat state) — if the
+  focused seat folded, left, or simply doesn't exist (e.g. stale seatIdx
+  from a previous hand), it silently falls back to full-field mode.
+  Structurally cannot get stuck the way the old selector did, since
+  there's no separate "clear" step required — invalid input just isn't
+  matched, full stop.
+- UI: label switches "EQUITY מול השדה" → "EQUITY מול {name}" when
+  focused, with matching sub-caption ("הטווח שלו בלבד" vs "אם כולם
+  ממשיכים"). New chip row below the main bar (only shown when field
+  data exists): "🌐 כולם" (reset) plus one chip per remaining opponent's
+  actual name — tapping any of them sets the focus, "כולם" clears it.
+- Verified (jsdom): AA vs full 3-opponent field = 62.7% (consistent with
+  the earlier ~62–65% reference range); AA focused on a single opponent
+  = 83.9% (consistent with the well-known AA-vs-1-random ≈ 85%
+  reference — confirms the narrowed field-combos path computes
+  correctly, not just a UI label change); explicit clear-back-to-field
+  works; deliberately setting an invalid seatIdx (99, simulating a
+  stale/impossible focus) self-heals to full-field mode automatically
+  with no separate recovery action needed — the exact property the
+  previous fix had to bolt on manually for the old selector.
+
+
+**Files: render.js**
+
+- User reproduced exactly: opened the old position/action reference
+  selector ("🎯 Range"), picked BB, then picked BTN again — but the
+  new opening-spot info (RFI check, range-vs-field, everything from
+  the last few entries) stayed hidden even after "switching back."
+  Root cause (pre-existing design, not introduced today, but now much
+  more consequential since more useful info depends on it):
+  `isOpeningSpot` requires `!rs` (`rs = S._rangeSelection`) — picking
+  ANY position in that selector sets `_rangeSelection` to a non-null
+  object and it *stays* non-null no matter what you pick next;
+  "switching back to BTN" just changes its value, never clears it.
+  The only clear path (`S._rangeSelection=null`) was a small text link
+  buried *inside* the expanded selector panel — invisible once you
+  collapse it, so there was no way back without reopening it.
+- Fix: added a small red "✕" button next to the "🎯 Range ✓" toggle
+  itself, shown whenever `rs` is truthy — reachable whether the panel
+  is expanded or collapsed, one tap to clear
+  (`S._rangeSelection=null`) and restore the opening-spot behavior
+  immediately. The original clear link inside the expanded panel is
+  untouched (still works, just no longer the only way).
+- Verified (jsdom): reproduced the exact reported sequence (select
+  BB → select BTN, no explicit clear) — opening-spot info correctly
+  absent, matching the bug report; new quick-clear button confirmed
+  present in that state; clicking it (simulated) restores the display
+  immediately.
+
+
 **Files: render.js**
 
 - Direct follow-up to the "equity vs field" feature from a few messages
