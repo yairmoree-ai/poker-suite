@@ -5,7 +5,50 @@
 
 ---
 
-## 2026-07-12 — Fix real gaps in _RANGE_LOOSEN: missing suited aces + K9s
+## 2026-07-12 — Split range data/logic into a new ranges.js file
+**Files: render.js, ranges.js (new), index.html**
+
+- User's question ahead of the big solver-data update (7 positions ×
+  multiple depths incoming): with `render.js` about to grow
+  significantly from range tables alone, does it make sense to split
+  that out, and is it even possible given the app has no bundler
+  (plain `<script>` tags, everything global via `window`, no
+  import/export)? Confirmed: yes, trivially — global scripts don't
+  care which file a function/const lives in, only that all relevant
+  files have executed before anything is actually called at runtime
+  (already relied on this today for render.js/game.js cross-references).
+- Extracted a single clean, contiguous block (`render.js` lines
+  73–665) into new `ranges.js`: `_RANGES` (all table sizes/depths),
+  `_POS_BY_SIZE`, `_ACTIONS_LABELS`, `_HAND_RANKING`, `_RANGE_LOOSEN`/
+  `_RANGE_TIGHTEN`/`_RANGE_STATION_EXTRA`, and every function that
+  operates on this data: `_depthFromBB`, `_getRangeStrForDepth`,
+  `_adjustRangeForType`, `_inferPreflopActionCat`,
+  `_getContextualRangeInfo`, `_getAutoRangeForSeat`,
+  `_getEmpiricalLimpHands`, `_topPercentRange`, `_rangeStrToCombos`,
+  `_cardsToHandNotation`, `_parseRangeToSet`, `_unionRangeStr`. The
+  Monte Carlo equity engine itself (`monteCarloEquity`,
+  `monteCarloEquityMulti`, `_fullDeck`, `_handRankMC`, etc.) is a
+  separate concern — deliberately left in `render.js`, since it
+  doesn't grow with new solver data the way the range tables do.
+  `index.html` updated with `<script src="ranges.js"></script>`
+  right before `render.js`.
+- `render.js`: 2893 → 2295 lines. New `ranges.js`: 603 lines, with
+  room to grow as the 7-position × multi-depth solver dataset
+  (collected this session, not yet applied) gets added — without
+  bloating the UI/rendering file further.
+- Verified (jsdom, loading all 7 scripts in the exact `index.html`
+  order): `_RANGES`/`_getAutoRangeForSeat`/`_HAND_RANKING` (169
+  entries) all accessible after the split; re-ran this session's key
+  scenarios end-to-end post-split — facing-open (UTG opens → MP gets
+  `facing-open`, 12 hands), real limp (still empty/`'limp'`, no
+  fabrication), range editor open + live type-switch refresh
+  (TAG→Fish, 19→101 hands), HU deep BTN/SB still includes 32s (this
+  session's very first fix) — all identical to pre-split behavior;
+  `node --check` clean on all 4 changed/new files; no duplicate or
+  missing function definitions between the two files (every extracted
+  name confirmed to exist exactly once, total).
+
+
 **Files: render.js**
 
 - User caught it visually across three screenshots (LAG/Station/Fish,
