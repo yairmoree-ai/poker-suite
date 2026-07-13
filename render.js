@@ -538,9 +538,13 @@ function renderPotOdds(){
   const swpForEq = assignPos(); // עמדות מעודכנות, לשימוש בזיהוי טווח אוטומטי
 
   // "מצב פתיחה": אף יריב עדיין לא פעל בפועל (כולל אתה — זו ההחלטה הראשונה בסטריט,
-  // ל-callAmt>0 רק כי יש BB לכסות). זה לא באמת "מול טווח" — זו שאלת RFI קלאסית,
-  // וכמו כל סולבר אמיתי, זה נבדק מול טבלת הטווחים הסטטית (_RANGES), לא equity חי
-  const isOpeningSpot = _curStreetName==='פרה-פלופ' && oppSeats.length===0 && !rs && holeCards.length===2;
+  // ל-callAmt>0 רק כי יש BB לכסות). זה לא באמת "מול טווח" במובן הרגיל — זו שאלת RFI
+  // קלאסית, ונבדקת מול טבלת הטווחים הסטטית (_RANGES)/הטווח הידני, לא equity-מול-יריב-
+  // שכבר-פעל. שני תתי-מצבים: (1) קלפים ספציפיים מוזנים — בדיקת "בטווח?" + equity של
+  // אותה יד מול טווחי-השדה. (2) אין קלפים אבל יש טווח (ידני/אוטומטי) — הטווח כולו
+  // מדגם יד בכל איטרציה (heroCombos), בדיוק כמו "טווח מול טווח" הרגיל באפליקציה,
+  // רק שהיריבים כאן הם טווחי-המשך היפותטיים במקום יריבים שכבר פעלו בפועל.
+  const isOpeningSpot = _curStreetName==='פרה-פלופ' && oppSeats.length===0 && !rs && holeCards.length!==1;
   let openRangeInfo = null;
   if(isOpeningSpot){
     const mySwp = swpForEq.find(x=>x.seatIdx===actor);
@@ -555,23 +559,19 @@ function renderPotOdds(){
     // בלי זה, טווח ידני ששמרת לא היה משפיע בכלל על הבדיקה הזו הספציפית — באג אמיתי.
     const myManualRange = seat?.playerId ? S.playerRanges?.[seat.playerId] : null;
     const myRangeStr = myManualRange || (myPos ? _getRangeStrForDepth(S.tableSize, myPos, 'RFI', myDepth) : '');
-    const handNotation = _cardsToHandNotation(holeCards);
-    const rangeSet = _parseRangeToSet(myRangeStr);
-    openRangeInfo = { pos: myPos, hand: handNotation, inRange: rangeSet.has(handNotation), isManual: !!myManualRange };
 
-    // equity מול השדה (מידע נוסף, לא מחליף את בדיקת "בטווח"): ה-equity של היד
-    // הספציפית מול טווחי-ההמשך ההיפותטיים (call∪3bet, דרך _getContextualRangeInfo
-    // עם round=1 מדומה — לא נוגעים ב-S.raiseRound האמיתי) של כל שאר השחקנים
-    // שעדיין לא פעלו. שונה מ-equity "רגיל": כאן אין יריב קונקרטי שכבר פעל — כולם
-    // עדיין "שדה" תיאורטי, בהנחה שאני פותח עכשיו. יוזם השאלה: המשתמש, בעקבות דיון
-    // על equity-of-range שאין ל-RFI רגיל יריב אמיתי לחשב מולו.
+    // equity מול השדה (מידע נוסף, לא מחליף את בדיקת "בטווח"): ה-equity של היד/הטווח
+    // מול טווחי-ההמשך ההיפותטיים (call∪3bet, דרך _getContextualRangeInfo עם round=1
+    // מדומה — לא נוגעים ב-S.raiseRound האמיתי) של כל שאר השחקנים שעדיין לא פעלו.
+    // שונה מ-equity "רגיל": כאן אין יריב קונקרטי שכבר פעל — כולם עדיין "שדה" תיאורטי,
+    // בהנחה שאני פותח עכשיו. יוזם השאלה: המשתמש, בעקבות דיון על equity-of-range.
     const remainingSeats = S.seats.filter(s=>s.playerId && !s.folded && !s.allin && s.seatIdx!==actor);
-    if(remainingSeats.length){
-      const deadKeysField = new Set([...holeCards, ...boardCards].filter(Boolean).map(_cardKey));
+    const computeFieldCombos = (deadKeysField) => {
+      if(!remainingSeats.length) return null;
       const fieldStacks = remainingSeats.map(s=>s.stack||0);
       const fieldMinStack = Math.min(myStackNow, ...fieldStacks);
       const fieldDepth = _depthFromBB(bbNow>0 ? fieldMinStack/bbNow : 100);
-      const fieldCombosLists = remainingSeats.map(s=>{
+      const lists = remainingSeats.map(s=>{
         const pos2 = swpForEq.find(x=>x.seatIdx===s.seatIdx)?.pos || '';
         const {rangeStr: baseR, actionCat: actCat2} = _getContextualRangeInfo(s, pos2, S.tableSize, fieldDepth, 1);
         const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
@@ -579,9 +579,31 @@ function renderPotOdds(){
         const combos = _rangeStrToCombos(adjR, deadKeysField);
         return combos.length ? combos : null;
       });
-      if(fieldCombosLists.some(c=>c)){
+      return lists.some(c=>c) ? lists : null;
+    };
+
+    if(holeCards.length===2){
+      // תת-מצב 1: יד ספציפית מוזנת — בדיקת "בטווח?" + equity של היד הזו מול השדה
+      const handNotation = _cardsToHandNotation(holeCards);
+      const rangeSet = _parseRangeToSet(myRangeStr);
+      openRangeInfo = { pos: myPos, hand: handNotation, inRange: rangeSet.has(handNotation), isManual: !!myManualRange };
+      const deadKeysField = new Set([...holeCards, ...boardCards].filter(Boolean).map(_cardKey));
+      const fieldCombosLists = computeFieldCombos(deadKeysField);
+      if(fieldCombosLists){
         const fe = monteCarloEquityMulti(holeCards, boardCards, [], fieldCombosLists, 4000);
         if(fe!==null) openRangeInfo.fieldEquity = fe;
+      }
+    } else if(myRangeStr){
+      // תת-מצב 2: אין קלפים ספציפיים, אבל יש טווח (ידני/אוטומטי) — הטווח כולו מדגם
+      // יד בכל איטרציה (heroCombos), מול אותם טווחי-שדה — "טווח פתיחה מול השדה"
+      const deadKeysField = new Set(boardCards.filter(Boolean).map(_cardKey));
+      const heroCombosArr = _rangeStrToCombos(myRangeStr, deadKeysField);
+      const fieldCombosLists = computeFieldCombos(deadKeysField);
+      if(heroCombosArr.length && fieldCombosLists){
+        const fe = monteCarloEquityMulti([], boardCards, [], fieldCombosLists, 4000, heroCombosArr);
+        if(fe!==null){
+          openRangeInfo = { pos: myPos, isManual: !!myManualRange, isRangeMode: true, fieldEquity: fe, combosCount: heroCombosArr.length };
+        }
       }
     }
   }
@@ -724,9 +746,11 @@ function renderPotOdds(){
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">${openRangeInfo?'RFI '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':''):'EQUITY'}</span>
+        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">${openRangeInfo?(openRangeInfo.isRangeMode?'טווח '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':' (אוטומטי)'):'RFI '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':'')):'EQUITY'}</span>
         ${openRangeInfo
-          ? `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.2;margin-top:2px">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ לטווח'}</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${openRangeInfo.hand}</span>`
+          ? (openRangeInfo.isRangeMode
+              ? `<span style="font-size:13px;font-weight:900;color:#7eb8a4;line-height:1.2;margin-top:2px">${openRangeInfo.combosCount} combos</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${(openRangeInfo.combosCount/1326*100).toFixed(1)}%</span>`
+              : `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.2;margin-top:2px">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ לטווח'}</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${openRangeInfo.hand}</span>`)
           : equityPct!==null
             ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}${heroRangeMode?`<span style="font-size:7px;color:#5b9bd5;font-weight:800;margin-top:1px">טווח ${heroRangeIsAuto?'(אוטו׳) ':''}מול טווח</span>`:''}`
             : equityComputing

@@ -5,7 +5,56 @@
 
 ---
 
-## 2026-07-12 — Fix: manual range ignored in opening-spot RFI check; new "equity vs field"
+## 2026-07-12 — Opening spot now supports "range vs field", not just "hand vs field"
+**Files: render.js**
+
+- Direct follow-up to the "equity vs field" feature from a few messages
+  ago. User's question: the hero side of that calc is currently always
+  a *fixed hand* (via `holeCards`) — but the app already supports
+  sampling the hero's hand from a *range* each iteration (`heroCombos`,
+  used elsewhere for regular "range vs range" equity). Since the field
+  side doesn't need to change at all, could the same opening-spot
+  mechanism work with the hero's assigned range instead of requiring
+  specific cards? Confirmed yes — this was a natural, low-risk
+  extension of the existing engine, not new equity logic.
+- `isOpeningSpot` broadened from requiring exactly 2 hole cards to
+  `holeCards.length!==1` (covers both 0 and 2; the ambiguous
+  half-entered state is unchanged/excluded, same as before). Inside,
+  the block now branches: **sub-mode 1** (cards entered) is the
+  existing in-range check + hand-vs-field equity, unchanged. **New
+  sub-mode 2** (no cards, but a range is available — manual save, or
+  falls through to the same theoretical position range used
+  elsewhere) samples the hero's hand from that range every Monte Carlo
+  iteration via `heroCombos`, against the exact same
+  `computeFieldCombos()` helper (extracted from the field-equity
+  feature, now shared by both sub-modes instead of duplicated).
+- Emergent (untested-for, but correct) behavior: since sub-mode 2 falls
+  back to the theoretical RFI table when no manual range exists, an
+  opening spot with no cards entered now ALWAYS shows *something*
+  (range size + field equity) rather than only "פתיחה — הזן קלפים" —
+  that fallback message is now reached only when position itself can't
+  be resolved. Not something explicitly requested, but consistent with
+  the session's running theme (prefer showing grounded information over
+  a bare placeholder) and didn't require extra code — the existing
+  manual-range-first / theoretical-fallback priority already produced it.
+- UI: label switches between "RFI {pos} (ידני)" (hand mode) and "טווח
+  {pos} (ידני/אוטומטי)" (range mode); primary display shows
+  combos/percentage instead of a specific hand's in/out-of-range
+  verdict in range mode. The "EQUITY מול השדה" column is unchanged and
+  now populates correctly in both sub-modes.
+- Verified (jsdom): no-cards + no manual range → auto theoretical UTG
+  range kicks in (202 combos/15.2%), field equity 23.0%; no-cards +
+  manual strong range (AA-88 + AK/AQ/AJ/AT, 82 combos/6.2%) → field
+  equity 30.0% (higher than the wider auto range, as expected — a
+  tighter/stronger range should out-equity a wider one against the
+  same field); specific-hand mode (AA) unaffected and still shows
+  62.1%, correctly higher than the range containing it (AA is the
+  range's strongest member, pulling the range average down) — all
+  three numbers move in the theoretically correct relative direction;
+  hand-mode display confirmed to never leak range-mode markup ("combos"
+  string absent) and vice versa.
+
+
 **Files: render.js**
 
 - User caught a real, reproducible bug via screenshots: manually saved
