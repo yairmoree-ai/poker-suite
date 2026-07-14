@@ -5,7 +5,52 @@
 
 ---
 
-## 2026-07-12 — "Equity vs field" can now focus on one specific opponent
+## 2026-07-12 — Real solver data lands: _RANGES[9].mid RFI, 7 positions
+**Files: ranges.js**
+
+- First actual application of the 60BB solver dataset (PokerCoaching,
+  collected across the last several messages) into production range
+  tables — everything up to now was comparison/analysis only.
+- Critical scoping correction caught before writing any code: the
+  original plan said "update the mid table" generically, but
+  PokerCoaching's 8-max structure (UTG, UTG+1, LJ, HJ, CO, BTN, SB — 6
+  non-blind positions) doesn't map onto `_RANGES[6]` (true 6-max: only
+  UTG, MP, HJ, CO, BTN — 5 positions, no LJ, no separate UTG+1).
+  Correct target is `_RANGES[9]`, whose 9-max position set already has
+  all 7 solved positions with no collapsing needed. Confirmed in code
+  that `_RANGES[8]=_RANGES[9]` and `_RANGES[7]=_RANGES[9]` (literal
+  same-object aliases) — so this single edit correctly covers 7, 8,
+  and 9-handed tables at once, matching the user's actual home-game
+  setup (fixed at 8-handed).
+- Only `RFI` written for each position — the one action with real
+  solver backing. `3bet`/`call`/`4bet` deliberately left undefined on
+  these mid entries; confirmed (not assumed) that `_getRangeStrForDepth`'s
+  existing fallback chain (`rByDepth[pos][action] → six[pos][action] →
+  alias chain`) already resolves them sensibly to the 6-max tables
+  without any new fallback code needed — including through the
+  `LJ→MP`/`UTG+1→UTG` alias for the two positions 6-max doesn't have
+  at all.
+- Mixed-frequency cells (e.g. K7s at ~40% raise) excluded from all 7
+  ranges, consistent with the boolean-only in/out design decided
+  earlier this session — this is why each position's combo-weighted
+  % comes in a few points below the app's own frequency-weighted
+  number (e.g. UTG here: 15.1% vs the screenshot's 16.5%) — expected,
+  not a transcription error.
+- Verified (jsdom, `_getRangeStrForDepth` called directly — not just
+  string-literal inspection): all 7 positions × table sizes 7/8/9
+  return the exact expected hand-type count (UTG 37, UTG+1 41, LJ 45,
+  HJ 59, CO 63, BTN 114, SB 153 — 21/21 checks passed) with zero
+  duplicate hands in any list; 3bet/call/4bet fallback confirmed
+  non-empty for both a position with its own 6-max entry (UTG) and one
+  that only exists via alias (LJ→MP); `deep`/`short`/`push` and the
+  untouched `MP`/`BB` positions confirmed unchanged (byte-identical
+  hand counts to before this edit).
+- Noted in passing, out of scope for this fix: `_RANGES[9].deep.UTG`
+  is oddly narrow (13 hand-types — narrower than the new mid entry at
+  37) — a pre-existing gap, not introduced or touched here; needs its
+  own deep-depth 9-max solver pass later.
+
+
 **Files: render.js**
 
 - Direct response to the sticky-selection bug fixed a moment ago: user

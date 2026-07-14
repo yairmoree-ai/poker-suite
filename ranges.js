@@ -233,6 +233,40 @@ _RANGES[9] = { deep:{
   });
   ['LJ','UTG+1'].forEach(p=>{ if(!_RANGES[9][d][p]) _RANGES[9][d][p]=_RANGES[9].deep[p]||{}; });
 });
+
+// דריסת RFI ב-mid (35-74BB) ל-7 עמדות, מבוסס סולבר אמיתי (PokerCoaching, Tournament
+// 60BB — נופל בדיוק בתוך הדלי הזה). זו ההשלמה הראשונה של mid ל-9max שלא הייתה עותק
+// גנרי של deep/6max — במיוחד עבור UTG+1/LJ שלא היה להן בכלל ייצוג ב-mid קודם.
+// כולל רק RFI (הפעולה שיש לנו עליה נתוני סולבר אמיתיים); 3bet/call/4bet נשארים
+// בכוונה לא-מוגדרים כאן ונופלים אוטומטית דרך _getRangeStrForDepth לטבלת ה-6max
+// הקיימת (six[pos][action]) — לא צריך "להמציא" נתונים שאין לנו.
+// תאי תדירות-מעורבת (למשל K7s ב-40% raise) הושמטו בכוונה — הלוח שלנו בוליאני
+// (יש/אין), לא תומך בתדירות חלקית; זו הסיבה שהאחוזים כאן נמוכים מעט מהמוצג
+// בתמונות המקור (למשל UTG כאן 15.1% מול 16.5% בתמונה — עקבי עם השיטה שהוחלט
+// עליה במהלך כל השיחה, לא טעות).
+Object.assign(_RANGES[9].mid, {
+  UTG: { ..._RANGES[9].mid.UTG,
+    RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,T9s,T8s,AKo,AQo,AJo,ATo',
+  },
+  'UTG+1': { ..._RANGES[9].mid['UTG+1'],
+    RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,J8s,T9s,T8s,98s,87s,AKo,AQo,AJo,ATo',
+  },
+  LJ: { ..._RANGES[9].mid.LJ,
+    RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,AQo,QQ,QJs,QTs,Q9s,AJo,JJ,JTs,J9s,J8s,ATo,TT,T9s,T8s,A9o,99,98s,88,87s,77,76s,66,65s,55,44,33',
+  },
+  HJ: { ..._RANGES[9].mid.HJ,
+    RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,AQo,KQo,QQ,QJs,QTs,Q9s,Q8s,AJo,KJo,QJo,JJ,JTs,J9s,J8s,ATo,KTo,QTo,JTo,TT,T9s,T8s,T7s,99,98s,97s,A8o,88,87s,77,76s,66,65s,55,44,33,22',
+  },
+  CO: { ..._RANGES[9].mid.CO,
+    RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,AQo,KQo,QQ,QJs,QTs,Q9s,Q8s,AJo,KJo,QJo,JJ,JTs,J9s,J8s,J7s,ATo,KTo,QTo,JTo,TT,T9s,T8s,T7s,T6s,99,98s,97s,96s,88,87s,86s,77,76s,75s,66,65s,55,54s,44,33,22',
+  },
+  BTN: { ..._RANGES[9].mid.BTN,
+    RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,K4s,K3s,K2s,AQo,KQo,QQ,QJs,QTs,Q9s,Q8s,Q7s,Q6s,Q5s,Q4s,Q3s,Q2s,AJo,KJo,QJo,JJ,JTs,J9s,J8s,J7s,J6s,J5s,J4s,J3s,ATo,KTo,QTo,JTo,TT,T9s,T8s,T7s,T6s,T5s,T4s,T3s,A9o,K9o,Q9o,J9o,T9o,99,98s,97s,96s,95s,A8o,K8o,Q8o,J8o,T8o,98o,88,87s,86s,85s,A7o,K7o,T7o,87o,77,76s,75s,74s,73s,A6o,K6o,66,65s,64s,63s,A5o,K5o,55,54s,53s,52s,A4o,K4o,44,43s,42s,A3o,33,32s,A2o,22',
+  },
+  SB: { ..._RANGES[9].mid.SB,
+    RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,K4s,K3s,K2s,AQo,KQo,QQ,QJs,QTs,Q9s,Q8s,Q7s,Q6s,Q5s,Q4s,Q3s,Q2s,AJo,KJo,QJo,JJ,JTs,J9s,J8s,J7s,J6s,J5s,J4s,J3s,J2s,ATo,KTo,QTo,JTo,TT,T9s,T8s,T7s,T6s,T5s,T4s,T3s,T2s,A9o,K9o,Q9o,J9o,T9o,99,98s,97s,96s,95s,94s,93s,92s,A8o,K8o,Q8o,J8o,T8o,98o,88,87s,86s,85s,84s,83s,82s,A7o,K7o,Q7o,J7o,T7o,97o,87o,77,76s,75s,74s,73s,72s,A6o,K6o,Q6o,J6o,T6o,96o,86o,76o,66,65s,64s,63s,62s,A5o,K5o,Q5o,J5o,T5o,95o,85o,75o,65o,55,54s,53s,52s,A4o,K4o,Q4o,J4o,T4o,64o,54o,44,43s,42s,A3o,K3o,Q3o,J3o,T3o,43o,33,32s,A2o,K2o,Q2o,J2o,22',
+  },
+});
 // 2-5 players
 [2,3].forEach(n=>{
   _RANGES[n]={deep:{BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,JTs,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,ATo,A9o,A8o,KQo,KJo,KTo,QJo,QTo,JTo,T9o','3bet':'AA,KK,QQ,JJ,TT,AKs,AQs,AKo,AQo',call:'99,88,AJs,KQs,AJo','4bet':'AA,KK,AKs,AKo'},SB:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,ATo,KQo,KJo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',call:'TT,99,AJs,KQs,AJo','4bet':'AA,KK,AKs,AKo'},BB:{RFI:'','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',call:'TT,99,88,77,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,AKs,AKo'}},mid:{},short:{},push:{}};
