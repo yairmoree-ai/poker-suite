@@ -968,10 +968,17 @@ function exportHandsToCSV(){
   const rows = [['תאריך','בליינדים','לוח','שחקן','עמדה','פעולות','תוצאה']];
   (S.handLog||[]).forEach(h=>{
     const board = (h.board||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
-    if(!h.seats?.length){ rows.push([h.date,h.blinds,board,'','','',h.result||'']); return; }
+    if(!h.seats?.length){ rows.push([h.date,h.blinds,board,'','','','']); return; }
     h.seats.forEach(s=>{
       const acts = (s.actions||[]).map(a=>a.type+(a.amount?'('+a.amount+')':'')).join(', ');
-      rows.push([h.date, h.blinds, board, s.playerName||s.playerId, s.pos, acts, h.result||'']);
+      // תוצאה פר-שחקן (לא פר-יד — כל שחקן באותה יד יכול היה להרוויח/להפסיד סכום שונה):
+      // סה"כ הושקע (סכימת actions[].amount, כולל בליינדים) מול מה שהתקבל בפועל אם ניצח
+      // (winners[].amount — נוסף כרגע ל-awardPot, קודם היה תמיד חסר). ליריב שהפסיד:
+      // amount=0 ממילא, אז התוצאה היא פשוט מינוס ההשקעה.
+      const totalInvested = (s.actions||[]).reduce((sum,a)=>sum+(Number(a.amount)||0),0);
+      const won = (h.winners||[]).find(w=>w.playerId===s.playerId);
+      const net = (won?.amount||0) - totalInvested;
+      rows.push([h.date, h.blinds, board, s.playerName||s.playerId, s.pos, acts, net>0?'+'+net:String(net)]);
     });
   });
   downloadCSV(rows, 'hands.csv');

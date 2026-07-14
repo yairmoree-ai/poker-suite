@@ -1074,10 +1074,15 @@ function awardPot(winnerSeatIdxs, showAnim=true){
     lastWinners: winnerSeatIdxs, pot
   };
   S._winners = winnerSeatIdxs;
+  // amount: awards כבר מחושב למעלה (מכבד side-pots + עיגול שארית) — פשוט שומרים אותו
+  // כאן במקום לתת לו "למות" אחרי האנימציה. זה בדיוק הנתון שהיה חסר לשחזור רווח/הפסד
+  // פר-יד ולחישוב "ערימה לפני היד" למנצח (ליריב שהפסיד זה כבר ניתן לחישוב מ-actions[]
+  // בלי זה; רק למנצח זה היה חסר) — עלה בסקירת מבנה הנתונים, לא ניחוש.
   S._lastWinners = winnerSeatIdxs.map(idx=>({
     seatIdx:idx,
     playerId:S.seats.find(s=>s.seatIdx===idx)?.playerId,
-    name:pName(S.seats.find(s=>s.seatIdx===idx)?.playerId)||'?'
+    name:pName(S.seats.find(s=>s.seatIdx===idx)?.playerId)||'?',
+    amount: awards[idx]||0
   }));
   renderSeats();
 
@@ -1528,7 +1533,6 @@ function saveHandWithLabel(){
       pos:s.pos, stack:s.stack, cards:[...(s.cards||[null,null])],
       actions:[...(s.actions||[])], folded:s.folded||false, allin:s.allin||false
     })),
-    result:null, amount:'', notes:'',
     finalPot: calcPot(),
     winners: (S._lastWinners||[]).map(w=>({...w}))
   };

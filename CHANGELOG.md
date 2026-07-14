@@ -5,7 +5,55 @@
 
 ---
 
-## 2026-07-12 — Real solver data lands: _RANGES[9].mid RFI, 7 positions
+## 2026-07-12 — Per-winner amount saved; dead hand-level fields removed; CSV result column fixed
+**Files: game.js, render.js**
+
+- Direct outcome of a long data-architecture review (planning ahead
+  for future stats — "show me all my AK hands", per-player win/loss
+  over time). Confirmed most of what's needed is already free from the
+  existing `handLog` (cards, position, actions, timestamp) — but found
+  two real, concrete gaps worth fixing before more hands accumulate on
+  the old shape.
+- **Gap 1 — winner amounts computed then discarded.** `awardPot()`
+  already computes exactly how much each winner receives (`awards`,
+  respecting side pots and remainder rounding) — used only for the
+  chip-flying animation, then thrown away. `S._lastWinners` (and by
+  extension every saved hand's `winners[]`) only ever stored
+  `{seatIdx, playerId, name}`. Fix: added `amount: awards[idx]||0` to
+  each entry — one field, using a number the code already had.
+- This single fix resolves two things identified during the review:
+  per-hand profit/loss per player (previously uncomputable for
+  winners — the amount simply wasn't there), and reconstructing
+  "effective stack before the hand" (confirmed via code trace that
+  `saveHandWithLabel()` reads `s.stack` *after* `awardPot()` already
+  ran — so the saved stack is post-hand, not pre-hand; pre-hand stack
+  = saved stack + total invested − amount won, and the winning amount
+  was the missing piece).
+- **Gap 2 — three unused hand-level fields.** `result:null, amount:'',
+  notes:''` on every saved hand. Searched the whole codebase for any
+  read of these before removing anything: found two, both dead —
+  `ui.js`'s `winners2` (computed, never referenced again after that
+  line) and `render.js`'s CSV export "תוצאה" column, which read
+  `h.result` — always blank in every export ever produced, since
+  nothing ever set it. Removed both fields from `saveHandWithLabel()`.
+- **CSV export fixed as a direct follow-up**, not a separate ask: the
+  "תוצאה" column was hand-level (same value shown for every player
+  row in a hand — wrong shape even if populated, since players in the
+  same hand can have opposite results). Rewritten to be per-row: sums
+  each player's `actions[].amount` (total invested, correctly handles
+  the delta-not-total storage already in place) against their
+  `winners[]` entry if any, giving true per-player net for that hand.
+- Verified (jsdom) end-to-end: played a full 2-seat hand (SB raises to
+  2000, BB calls, SB wins a 5000 pot) → `S._lastWinners[0].amount`
+  correctly 5000; saved hand's `winners[]` carries the same amount;
+  `result`/`amount`(hand-level)/`notes` confirmed absent from the
+  saved object; CSV export produced exactly `+3000` for the winner and
+  `-3000` for the loser — manually verified against the actual
+  investments (SB invested 2000 total, won 5000, net +3000; BB
+  invested 3000, won 0, net −3000) — zero-sum, as poker without rake
+  should be.
+
+
 **Files: ranges.js**
 
 - First actual application of the 60BB solver dataset (PokerCoaching,
