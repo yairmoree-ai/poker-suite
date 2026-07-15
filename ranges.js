@@ -453,7 +453,14 @@ function _adjustRangeForType(baseRangeStr, playerType, actionCat){
     _parseRangeToSet(_RANGE_LOOSEN).forEach(h=>set.add(h));
   } else if(playerType==='Station'){
     _parseRangeToSet(_RANGE_LOOSEN).forEach(h=>set.add(h));
-    if(actionCat==='call') _parseRangeToSet(_RANGE_STATION_EXTRA).forEach(h=>set.add(h));
+    // 'call' = כבר קרא בפועל ביד הזו; 'facing-open' = עוד לא פעל אבל ניצב מול
+    // open (טווח-המשך call∪3bet, ראו _getContextualRangeInfo round=0/BB ו-round=1) —
+    // שתיהן בדיוק אותה שאלה מבחינת "סטיישן קורא הרבה" ולכן צריכות להתנהג זהה.
+    // התנאי הישן (`actionCat==='call'` בלבד) גרם לשני מקומות בקוד שמחשבים את
+    // אותו טווח-המשך בדיוק (עורך הטווח מול פאנל ה-equity) להחזיר actionCat שונה
+    // ('call' מול 'facing-open' בהתאמה) ולכן טווחים שונים בפועל לאותו שחקן/סיטואציה —
+    // באג אמיתי שהתגלה כשמשתמש בדק ידנית מול מחשבון חיצוני.
+    if(actionCat==='call' || actionCat==='facing-open') _parseRangeToSet(_RANGE_STATION_EXTRA).forEach(h=>set.add(h));
   } else if(playerType==='Fish'){
     _parseRangeToSet(_RANGE_LOOSEN).forEach(h=>set.add(h));
     _parseRangeToSet(_RANGE_STATION_EXTRA).forEach(h=>set.add(h));
@@ -550,6 +557,41 @@ function _getContextualRangeInfo(seat, pos, tableSize, depth, currentRaiseRound)
     return {rangeStr: _unionRangeStr(callR, bet3R), actionCat:'facing-open'};
   }
   return {rangeStr:'', actionCat:'unclear'};
+}
+
+// ── מקור אמת יחיד ל"מה הטווח האפקטיבי של המושב הזה עכשיו" ─────────────────
+// מאחד לוגיקה שהייתה כפולה (ולסטתה בעבר, ראו CHANGELOG 2026-07-14) בשני
+// מקומות שונים ב-render.js: פאנל equity "רגיל" (יריב שכבר פעל בפועל) ופאנל
+// equity במצב-פתיחה (יריב שעוד לא פעל, טווח-המשך היפותטי). סדר עדיפויות קבוע:
+//   1. טווח ידני שמור לשחקן (S.playerRanges) — תמיד גובר, בכל מצב.
+//   2. בחירת טווח גלובלית ישנה (rs / S._rangeSelection) — חלה על כל היריבים
+//      ללא טווח ידני משלהם; לא רלוונטית במצב-פתיחה (שם rs תמיד null מלכתחילה).
+//   3. זיהוי אוטומטי — עמדה + פעולה (או actionCatOverride, לצורך פיצול
+//      call-בלבד/3bet-בלבד) + התאמת טיפוס שחקן.
+// actionCatOverride עוקף שלב 3 בלבד; טווח ידני (שלב 1) לא ניתן לפיצול
+// call/3bet מהותית (הוא רשימת ידיים שטוחה בלי הפרדה פנימית), ולכן כשמבקשים
+// override ויש גם טווח ידני — מוחזר rangeStr:null באופן מפורש (לא ממציאים).
+function _resolveOpponentRangeStr(seat, opts){
+  const {pos, tableSize, depth, round, actionCatOverride, rs} = opts;
+  const manualR = S.playerRanges?.[seat.playerId];
+  if(manualR){
+    if(actionCatOverride) return {rangeStr:null, tag:'manual-unsplittable:'+seat.playerId};
+    return {rangeStr: manualR, tag:'manual:'+seat.playerId+':'+manualR.length+':'+_countCombos(manualR)};
+  }
+  if(rs){
+    return {rangeStr: _getRangeStrForDepth(tableSize, rs.pos, rs.action, depth) || '', tag:'global:'+rs.pos+':'+rs.action+':'+depth};
+  }
+  let baseR, actCat;
+  if(actionCatOverride){
+    baseR = _getRangeStrForDepth(tableSize, pos, actionCatOverride, depth) || '';
+    actCat = actionCatOverride;
+  } else {
+    ({rangeStr: baseR, actionCat: actCat} = _getContextualRangeInfo(seat, pos, tableSize, depth, round));
+  }
+  const player = (S.playerLib||[]).find(p=>p.id===seat.playerId);
+  const playerType = player?.playerType || null;
+  const adjR = _adjustRangeForType(baseR, playerType, actCat);
+  return {rangeStr: adjR, tag:'auto:'+pos+':'+(actCat||'')+':'+depth+':'+(playerType||'none')};
 }
 
 function _getAutoRangeForSeat(seatIdx){

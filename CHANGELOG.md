@@ -1,5 +1,153 @@
 ---
 
+## 2026-07-14 (cont'd 3) — Unified the three duplicated seat-range resolvers
+**Files: ranges.js, render.js**
+
+- Direct follow-up to the three bugs fixed earlier today (BB continue-range
+  hole, Station actionCat mismatch, manual range ignored in the opening-spot
+  flow) — all three were different symptoms of the same structural problem:
+  two places in `render.js` (`unknownOppRangeInfo`'s per-seat resolver, and
+  `computeFieldCombos`) each re-implemented "what's this seat's effective
+  range" with their own inline priority logic, and drifted apart on details
+  each time. User asked directly why not fix that properly now instead of
+  leaving it as a noted risk.
+- Added `_resolveOpponentRangeStr(seat, opts)` in `ranges.js` — single
+  implementation of the priority chain used everywhere an opponent's range
+  needs resolving: (1) manually-saved range (`S.playerRanges`), (2) old
+  global range-selection (`rs`/`S._rangeSelection`, only reachable from the
+  "normal" equity flow — the opening-spot flow always has `rs===null` by its
+  own definition, so this tier is naturally inert there), (3) automatic
+  (position + action category, with player-type adjustment). Supports
+  `actionCatOverride` for the call-only/3bet-only split; if a manual range
+  is present and a split is requested, explicitly returns `rangeStr:null`
+  (still no attempt to fabricate a split from an unstructured manual range —
+  same behavior as the standalone fix from earlier today, just centralized).
+- Rewired both call sites (`unknownOppRangeInfo` and `computeFieldCombos`)
+  to call the shared function instead of their own inline copies. Left
+  `_getAutoRangeForSeat` (range-editor seed) as its own function — its
+  caller already does its own manual-range check *before* calling it
+  (`existing || _getAutoRangeForSeat(...).rangeStr`), and it intentionally
+  computes depth from the seat's own stack rather than the min-effective-
+  stack the equity flows use, which is a real, deliberate difference, not
+  drift — folding it into the shared resolver would either lose that
+  distinction or need extra parameters most callers don't need.
+- Verified (node): all three priority tiers of the unified function return
+  the expected result in isolation (manual range wins and correctly refuses
+  to split; global-selection tier reachable and scoped by table size/depth
+  as before; automatic tier reproduces both of today's earlier fixes). Most
+  importantly, the BB-hole and Station-mismatch fixes are now *structurally*
+  unified rather than just independently patched — confirmed
+  `_resolveOpponentRangeStr` gives identical combo counts for round=0 vs
+  round=1 for a Station-tagged BB (898 combos both ways), which is no longer
+  two code paths that happen to agree, but literally one code path.
+- Net effect for future changes: a fourth bug of this exact shape (someone
+  adds a new range-affecting rule to one call site and forgets the other) is
+  no longer possible for these two call sites, since there's only one place
+  left to add it.
+
+
+## 2026-07-14 (cont'd 2) — Opening-spot equity ignored manually-saved opponent ranges entirely
+**Files: render.js**
+
+- User's follow-up test was decisive and ruled out player-type as the cause,
+  as suspected: pulled up GTOWizard at 200bb (UTG open range, and BB's
+  call/raise/fold breakdown facing that open), edited both אילן's (UTG) and
+  איתן's (BB) *manually-saved* ranges in the app to match GTOWizard exactly
+  (236 combos/17.8% and 858 combos/64.7% respectively — confirmed via the
+  range editor, which displayed those exact numbers), then ran the identical
+  two ranges through PokerCruncher independently: 59.6% for the UTG hand/
+  range. The app's own equity panel showed 46.2% — a 13-point gap, this time
+  with zero player-type adjustment involved (manual ranges bypass
+  `_adjustRangeForType` entirely elsewhere in the app, by design).
+- Root cause: `computeFieldCombos` (the isOpeningSpot equity helper added/
+  touched earlier this session) built every opponent's range purely from
+  `_getContextualRangeInfo` (the theoretical solver table) — it never checked
+  `S.playerRanges[playerId]` at all. Every *other* range-lookup site in the
+  codebase (the range editor's seed, the "normal" equity-vs-already-acted-
+  opponent flow at `unknownOppRangeInfo`, hero's own range in this very same
+  isOpeningSpot block) follows a documented priority order — manual range
+  first, theoretical table as fallback. This one helper was the one place
+  that skipped straight to the fallback, silently discarding any manual
+  range the user had carefully calibrated and saved for that opponent.
+- Fix: added the same manual-range lookup (`S.playerRanges?.[s.playerId]`,
+  same priority-1 check used at the `unknownOppRangeInfo` site) at the top of
+  `computeFieldCombos`'s per-seat loop, before falling through to
+  `_getContextualRangeInfo`. One edge case handled: the call-only/3bet-only
+  split (this session's earlier addition) has no principled way to split a
+  flat manually-saved range into a call-portion and a 3bet-portion — if the
+  focused opponent has a manual range, the split silently doesn't fire for
+  that opponent (returns null, so no CALL/3BET boxes render) rather than
+  fabricating a meaningless number; the merged/full equity figure is
+  unaffected and now correctly uses the manual range.
+- Verified the lookup-priority mechanics directly (node): confirmed a
+  populated `S.playerRanges` entry now produces a materially different,
+  correctly-divergent equity figure compared to the old theoretical-only
+  path (57.5% vs 50.5% against a partial hand-reconstructed stand-in for the
+  saved BB range) — proving the priority branch is reachable and changes the
+  outcome as intended. Couldn't reproduce the user's exact 858-combo string
+  byte-for-byte outside the live app (the on-screen text was truncated with
+  "K..."), so the precise 46.2%→59.6% figures weren't independently
+  re-derived here — next step is to re-run the identical in-app scenario
+  post-fix and confirm the panel now lands close to PokerCruncher's 59.6%.
+- This is the third distinct bug this session traced to the same underlying
+  pattern: multiple code paths independently re-deriving "this seat's
+  effective range" instead of sharing one lookup, and drifting apart on
+  different dimensions each time (missing union, actionCat-gated type
+  adjustment, and now a missing priority tier entirely). Reinforces the
+  standing suggestion to eventually consolidate `_getAutoRangeForSeat`,
+  `unknownOppRangeInfo`'s per-seat resolver, and `computeFieldCombos` into
+  one shared range-resolution function used everywhere.
+
+
+## 2026-07-14 (cont'd) — Fixed Station-type widening mismatch between range editor and equity panel
+**Files: ranges.js**
+
+- User did the right thing after the earlier fix in this same session: took the
+  app's own numbers to an external tool (PokerCruncher) to verify independently
+  — hero's saved 170-combo UTG range vs. BB's auto-computed continue-range.
+  Two things looked wrong: (1) the range editor's grid for BB looked far wider
+  than the ~20% the earlier union-fix should produce, and (2) the equity panel's
+  "55.9%" didn't match PokerCruncher's "64.7%" for what should've been the same
+  matchup.
+- Root cause, found by reproducing both code paths standalone (node, with
+  `game.js`'s real `evaluateHand` loaded — an earlier attempt using a stub
+  environment without it silently returned a constant hand-rank and produced a
+  misleading flat 50% every time, worth remembering as a pitfall for future
+  headless testing here). `_adjustRangeForType`'s `Station` branch only adds
+  `_RANGE_STATION_EXTRA` (the wide extra-calling-hands set) when
+  `actionCat==='call'` exactly. But the two call sites that both ask "what's
+  this BB's continue-range" hand back *different* actionCat labels for what is
+  conceptually the identical situation: `_getAutoRangeForSeat` (seeds the
+  manual range editor) returns `'call'` for the not-yet-acted-BB case (per
+  earlier fix this session), while `computeFieldCombos` (equity panel, opening-
+  spot flow) always simulates `round=1` and gets back `'facing-open'`. For a
+  `Station`-tagged player, that label difference silently skipped
+  `_RANGE_STATION_EXTRA` in one path and not the other — editor showed ~68%
+  of hands, equity math used ~45%, hero equity came out ~55% (matching the
+  in-app panel almost exactly) instead of ~64% (matching PokerCruncher almost
+  exactly, once the correct wider range is used).
+- Fix: widened the `Station` gate to `actionCat==='call' || actionCat==='facing-open'`
+  — both labels represent the same "this player calls wide" decision point,
+  so both should get the same treatment. `Fish` was never gated this way (adds
+  `_RANGE_STATION_EXTRA` unconditionally) so it was never affected; `Nit`/`LAG`
+  don't reference `actionCat` at all.
+- Verified (node, both files + `game.js` loaded together): for a `Station`
+  player, `_adjustRangeForType(range, 'Station', 'call')` and
+  `_adjustRangeForType(range, 'Station', 'facing-open')` now both return
+  exactly 898/1326 combos (67.7%) — identical, where before they diverged
+  (898 vs 598 combos). Re-ran the actual `monteCarloEquityMulti` (12,000
+  iterations, real hero range vs. real BB continue-range) through both paths
+  post-fix and got consistent equity figures in the low-to-mid 60s for both,
+  in line with PokerCruncher's independent 64.7%.
+- Broader note for future debugging in this codebase: this is the second bug
+  in the same afternoon caused by two code paths computing "the same" derived
+  value (a seat's effective range) through parallel logic that quietly drifted
+  apart on an edge case. Worth keeping an eye out for a third instance, and
+  possibly worth a follow-up someday to unify `_getAutoRangeForSeat` and the
+  opening-spot `computeFieldCombos` into one shared helper so this class of
+  bug becomes structurally harder to reintroduce.
+
+
 ## 2026-07-14 — Fixed BB continue-range hole (call/3bet split preserved); added per-category equity split
 **Files: ranges.js, render.js**
 

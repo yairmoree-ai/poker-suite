@@ -582,20 +582,18 @@ function renderPotOdds(){
       const fieldStacks = remainingSeats.map(s=>s.stack||0);
       const fieldMinStack = Math.min(myStackNow, ...fieldStacks);
       const fieldDepth = _depthFromBB(bbNow>0 ? fieldMinStack/bbNow : 100);
+      let hasUnsplittableManual = false;
       const lists = remainingSeats.map(s=>{
         const pos2 = swpForEq.find(x=>x.seatIdx===s.seatIdx)?.pos || '';
-        let baseR, actCat2;
-        if(actionCatOverride){
-          baseR = _getRangeStrForDepth(S.tableSize, pos2, actionCatOverride, fieldDepth) || '';
-          actCat2 = actionCatOverride;
-        } else {
-          ({rangeStr: baseR, actionCat: actCat2} = _getContextualRangeInfo(s, pos2, S.tableSize, fieldDepth, 1));
-        }
-        const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
-        const adjR = _adjustRangeForType(baseR, player?.playerType||null, actCat2);
+        // rs לא נבדק כאן בכוונה: isOpeningSpot מוגדר תוך דרישה מפורשת ש-!rs
+        // (ראו למעלה), כך שבהקשר הזה rs תמיד null ממילא — התלות בסדר העדיפויות
+        // המשותף (_resolveOpponentRangeStr) מדלגת עליו אוטומטית באותו אופן.
+        const {rangeStr: adjR} = _resolveOpponentRangeStr(s, {pos: pos2, tableSize: S.tableSize, depth: fieldDepth, round: 1, actionCatOverride, rs: null});
+        if(adjR===null){ hasUnsplittableManual = true; return null; } // טווח ידני שלא ניתן לפיצול call/3bet
         const combos = _rangeStrToCombos(adjR, deadKeysField);
         return combos.length ? combos : null;
       });
+      if(actionCatOverride && hasUnsplittableManual) return null;
       return lists.some(c=>c) ? lists : null;
     };
     // פיצול call/3bet רלוונטי רק כשמפוקסים על יריב בודד (לא "כל השדה") — עם כמה
@@ -674,23 +672,8 @@ function renderPotOdds(){
   const _minRelevantStack = _relevantStacks.length ? Math.min(seat?.stack||0, ..._relevantStacks) : (seat?.stack||0);
   const _eqDepth = _depthFromBB(_bbNow>0 ? _minRelevantStack/_bbNow : 100);
   const unknownOppRangeInfo = unknownOppSeats.map(s=>{
-    // עדיפות 1: טווח ידני ששמור לשחקן הזה (נבנה בפאנל הגריד, צמוד ל-playerId)
-    const manualR = S.playerRanges?.[s.playerId];
-    if(manualR){
-      return {rangeStr: manualR, tag:'pmanual:'+s.playerId+':'+manualR.length+':'+_countCombos(manualR)};
-    }
-    // עדיפות 2: בחירה גלובלית מהפאנל הישן (עמדה+פעולה, חלה על כל היריבים ללא טווח ידני)
-    if(rs){
-      return {rangeStr: _getRangeStrForDepth(S.tableSize, rs.pos, rs.action, _eqDepth), tag:'manual:'+rs.pos+':'+rs.action+':'+_eqDepth};
-    }
-    // עדיפות 3: זיהוי אוטומטי — עמדה + פעולה + תגית שחקן
-    const swpSeat = swpForEq.find(x=>x.seatIdx===s.seatIdx);
-    const pos = swpSeat?.pos || '';
-    const {rangeStr: baseRangeStr, actionCat} = _getContextualRangeInfo(s, pos, S.tableSize, _eqDepth, S.raiseRound);
-    const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
-    const playerType = player?.playerType || null;
-    const adjRangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
-    return {rangeStr: adjRangeStr, tag:'auto:'+pos+':'+actionCat+':'+_eqDepth+':'+(playerType||'none')};
+    const pos = swpForEq.find(x=>x.seatIdx===s.seatIdx)?.pos || '';
+    return _resolveOpponentRangeStr(s, {pos, tableSize:S.tableSize, depth:_eqDepth, round:S.raiseRound, rs});
   });
 
   // חישוב equity — עם cache וחישוב נדחה (לא חוסם את ציור המסך). מדלגים לגמרי במצב פתיחה
