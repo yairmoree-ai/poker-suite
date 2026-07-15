@@ -527,7 +527,21 @@ function _getContextualRangeInfo(seat, pos, tableSize, depth, currentRaiseRound)
   }
   const round = currentRaiseRound||0;
   if(round===0){
-    const actionCat = pos==='BB' ? 'call' : 'RFI';
+    // BB בפרט: RFI ריק תמיד (BB לא "פותח"), וההגדרה של round=0 היא "אף אחד עוד
+    // לא פעל" — לא בהכרח "לא תהיה פתיחה בכלל". שימוש בטבלת 'call' בלבד כאן היה
+    // באג אמיתי: 'call' מייצגת רק את חלק ה-flat-call בתוך טווח ההמשך של BB —
+    // הידיים הכי חזקות (AA-TT, AKs/AQs/KQs וכו') מסווגות ל-'3bet' בטבלה ולכן
+    // "נעלמו" מהטווח האוטומטי/ברירת-המחדל, בעוד שבדיוק אותה סיטואציה (round=1,
+    // BB מול open) כן מאחדת call∪3bet. שני המצבים (round=0/round=1 עבור BB)
+    // מייצגים בפועל את אותה שאלה — "מה הטווח שלו כשתגיע אליו פתיחה" — ולכן
+    // צריכים להחזיר את אותו טווח מאוחד. ההפרדה בין הטבלאות 'call' ו-'3bet' עצמן
+    // *נשמרת* במלואה — האיחוד קורה רק כאן, בשכבת התצוגה/החישוב.
+    if(pos==='BB'){
+      const callR = _getRangeStrForDepth(tableSize, pos, 'call', depth) || '';
+      const bet3R = _getRangeStrForDepth(tableSize, pos, '3bet', depth) || '';
+      return {rangeStr: _unionRangeStr(callR, bet3R), actionCat:'call'};
+    }
+    const actionCat = 'RFI';
     return {rangeStr: _getRangeStrForDepth(tableSize, pos, actionCat, depth) || '', actionCat};
   }
   if(round===1){

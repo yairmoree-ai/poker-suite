@@ -1,9 +1,56 @@
-# Poker-Suite — Changelog
-
-תיעוד שינויים מסודר (במקום הודעות ה-commit הגנריות של GitSync).
-כל רשומה: תאריך, קבצים שהשתנו, ותיאור מפורט.
-
 ---
+
+## 2026-07-14 — Fixed BB continue-range hole (call/3bet split preserved); added per-category equity split
+**Files: ranges.js, render.js**
+
+- User caught it via screenshots: opened the manual range editor for a BB
+  player from an opening-spot equity screen (MP about to open, nobody has
+  acted, "EQUITY vs BB" showing 41.0%) and found the auto-seeded range had a
+  clear hole — AA/KK/QQ/JJ/TT and AKs/AQs/KQs were all missing, while weaker
+  hands directly below them (99 down to 22, AJs-A7s, KJs-K9s, etc.) were
+  present. Not a rendering bug — the actual range content had the gap.
+- Root cause: `_RANGES[6].deep.BB` correctly splits `call` and `3bet` into
+  two separate tables (premium hands live in `3bet`, not `call` — by
+  design, and this split is important and was NOT touched). The bug was in
+  `_getContextualRangeInfo`'s `round===0` branch: for BB with no actions
+  yet, it returned the `call` table alone. That's correct when BB is
+  genuinely facing zero aggression, but wrong for the common case where a
+  live actor (MP here) is mid-decision to open — in that case BB's
+  realistic continue-range is `call∪3bet`, exactly what `round===1` already
+  computes elsewhere (the field-equity calc at the old line 584, hardcoded
+  to round=1 for this exact reason). Two call sites answering the same
+  question ("BB's range once action reaches them") gave two different
+  answers because only one of them did the union.
+- Fix: `round===0` branch, BB case only, now unions `call` and `3bet` the
+  same way `round===1` does. Non-BB positions (RFI) unaffected — their
+  tables were never split this way, so there was no hole there. The
+  `call`/`3bet` table split itself is completely untouched; the union only
+  happens at the point of use.
+- Verified (node, direct call to `_getContextualRangeInfo(seat,'BB',6,'deep',0)`):
+  before fix, 29 hands / missing AA,KK,QQ,JJ,TT,AKs,AQs,KQs; after fix, 45
+  hands, all of the above present alongside the original `call`-table hands
+  (99, AJo, etc.) — hole closed, nothing dropped.
+- **Follow-up, same conversation:** since the call/3bet split is real and
+  meaningful, user asked to also surface it in the equity display rather
+  than only ever showing the merged number. Added: when focused on a
+  single opponent (the existing per-seat focus picker), the panel now also
+  shows two extra numbers — equity vs that opponent's `call`-only range and
+  vs their `3bet`-only range — alongside the existing merged equity. Only
+  fires in single-opponent focus mode (splitting call/3bet across multiple
+  simultaneous opponents has no clean combinatorial meaning, so "כולם"
+  mode still shows only the merged number, unchanged). Implemented via an
+  `actionCatOverride` param on the existing `computeFieldCombos` helper —
+  no new range data, just two extra targeted Monte Carlo calls reusing the
+  same machinery as the main figure.
+- Not yet touched, flagged for a possible separate follow-up: the
+  historical postflop-equity replay path in `render.js` (~line 256) calls
+  `_inferPreflopActionCat` directly and feeds its result straight into
+  `_getRangeStrForDepth`, bypassing `_getContextualRangeInfo` entirely —
+  so the same BB hole could still show up there for old saved hands. Left
+  alone this round since it's a different code path with different
+  side effects (historical hand replay, not live equity) and wasn't part
+  of what was reported.
+
 
 ## 2026-07-12 — Per-winner amount saved; dead hand-level fields removed; CSV result column fixed
 **Files: game.js, render.js**

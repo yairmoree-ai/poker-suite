@@ -574,14 +574,23 @@ function renderPotOdds(){
     const focusSeatIdx = (typeof S._openingFocusSeat==='number' && allRemainingSeats.some(s=>s.seatIdx===S._openingFocusSeat)) ? S._openingFocusSeat : null;
     const remainingSeats = focusSeatIdx!==null ? allRemainingSeats.filter(s=>s.seatIdx===focusSeatIdx) : allRemainingSeats;
     const focusName = focusSeatIdx!==null ? (pName(S.seats.find(s=>s.seatIdx===focusSeatIdx)?.playerId)||'יריב') : null;
-    const computeFieldCombos = (deadKeysField) => {
+    // actionCatOverride: משמש רק במצב פוקוס-על-יריב-בודד, כדי לחשב equity מול
+    // חלק ה-call או חלק ה-3bet בנפרד (במקום האיחוד call∪3bet הרגיל) — ההפרדה
+    // בין הטבלאות עצמן לא משתנה, רק בוחרים כאן איזו מהן לקחת לחישוב הזה.
+    const computeFieldCombos = (deadKeysField, actionCatOverride) => {
       if(!remainingSeats.length) return null;
       const fieldStacks = remainingSeats.map(s=>s.stack||0);
       const fieldMinStack = Math.min(myStackNow, ...fieldStacks);
       const fieldDepth = _depthFromBB(bbNow>0 ? fieldMinStack/bbNow : 100);
       const lists = remainingSeats.map(s=>{
         const pos2 = swpForEq.find(x=>x.seatIdx===s.seatIdx)?.pos || '';
-        const {rangeStr: baseR, actionCat: actCat2} = _getContextualRangeInfo(s, pos2, S.tableSize, fieldDepth, 1);
+        let baseR, actCat2;
+        if(actionCatOverride){
+          baseR = _getRangeStrForDepth(S.tableSize, pos2, actionCatOverride, fieldDepth) || '';
+          actCat2 = actionCatOverride;
+        } else {
+          ({rangeStr: baseR, actionCat: actCat2} = _getContextualRangeInfo(s, pos2, S.tableSize, fieldDepth, 1));
+        }
         const player = (S.playerLib||[]).find(p=>p.id===s.playerId);
         const adjR = _adjustRangeForType(baseR, player?.playerType||null, actCat2);
         const combos = _rangeStrToCombos(adjR, deadKeysField);
@@ -589,6 +598,9 @@ function renderPotOdds(){
       });
       return lists.some(c=>c) ? lists : null;
     };
+    // פיצול call/3bet רלוונטי רק כשמפוקסים על יריב בודד (לא "כל השדה") — עם כמה
+    // יריבים ביחד אין דרך פשוטה להציג "מול ה-call של אחד ומול ה-3bet של השני".
+    const wantSplit = focusSeatIdx!==null;
 
     if(holeCards.length===2){
       // תת-מצב 1: יד ספציפית מוזנת — בדיקת "בטווח?" + equity של היד הזו מול השדה/הממוקד
@@ -601,6 +613,18 @@ function renderPotOdds(){
         const fe = monteCarloEquityMulti(holeCards, boardCards, [], fieldCombosLists, 4000);
         if(fe!==null) openRangeInfo.fieldEquity = fe;
       }
+      if(wantSplit){
+        const callCombos = computeFieldCombos(deadKeysField, 'call');
+        const bet3Combos = computeFieldCombos(deadKeysField, '3bet');
+        if(callCombos){
+          const feCall = monteCarloEquityMulti(holeCards, boardCards, [], callCombos, 4000);
+          if(feCall!==null) openRangeInfo.fieldEquityCall = feCall;
+        }
+        if(bet3Combos){
+          const fe3bet = monteCarloEquityMulti(holeCards, boardCards, [], bet3Combos, 4000);
+          if(fe3bet!==null) openRangeInfo.fieldEquity3bet = fe3bet;
+        }
+      }
     } else if(myRangeStr){
       // תת-מצב 2: אין קלפים ספציפיים, אבל יש טווח (ידני/אוטומטי) — הטווח כולו מדגם
       // יד בכל איטרציה (heroCombos), מול אותם טווחי-שדה/הממוקד — "טווח מול טווח"
@@ -611,6 +635,18 @@ function renderPotOdds(){
         const fe = monteCarloEquityMulti([], boardCards, [], fieldCombosLists, 4000, heroCombosArr);
         if(fe!==null){
           openRangeInfo = { pos: myPos, isManual: !!myManualRange, isRangeMode: true, fieldEquity: fe, combosCount: heroCombosArr.length };
+          if(wantSplit){
+            const callCombos = computeFieldCombos(deadKeysField, 'call');
+            const bet3Combos = computeFieldCombos(deadKeysField, '3bet');
+            if(callCombos){
+              const feCall = monteCarloEquityMulti([], boardCards, [], callCombos, 4000, heroCombosArr);
+              if(feCall!==null) openRangeInfo.fieldEquityCall = feCall;
+            }
+            if(bet3Combos){
+              const fe3bet = monteCarloEquityMulti([], boardCards, [], bet3Combos, 4000, heroCombosArr);
+              if(fe3bet!==null) openRangeInfo.fieldEquity3bet = fe3bet;
+            }
+          }
         }
       }
     }
@@ -793,6 +829,22 @@ function renderPotOdds(){
     <div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
       <button onclick="S._openingFocusSeat=null;renderPotOdds()" style="${chipStyle(!openRangeInfo.focusName,'#7eb8a4')}">🌐 כולם</button>
       ${openRangeInfo.fieldSeats.map(fs=>`<button onclick="S._openingFocusSeat=${fs.seatIdx};renderPotOdds()" style="${chipStyle(openRangeInfo.focusName===fs.name,'#5b9bd5')}">${fs.name}</button>`).join('')}
+    </div>` : ''}
+
+    <!-- פיצול equity מול טווח ה-call בלבד / טווח ה-3bet בלבד של היריב הממוקד —
+         רק כשמפוקסים על יריב בודד ושני החישובים הצליחו (יש combos בכל אחד) -->
+    ${openRangeInfo && openRangeInfo.focusName && (openRangeInfo.fieldEquityCall!==undefined || openRangeInfo.fieldEquity3bet!==undefined) ? `
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
+      ${openRangeInfo.fieldEquityCall!==undefined ? `
+      <div style="flex:1;max-width:130px;background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.3);border-radius:8px;padding:5px 8px;text-align:center">
+        <div style="font-size:7px;color:#5a5870;font-weight:700">CALL בלבד</div>
+        <div style="font-size:13px;font-weight:900;color:#5b9bd5">${openRangeInfo.fieldEquityCall.toFixed(1)}%</div>
+      </div>` : ''}
+      ${openRangeInfo.fieldEquity3bet!==undefined ? `
+      <div style="flex:1;max-width:130px;background:rgba(224,123,106,0.08);border:1px solid rgba(224,123,106,0.3);border-radius:8px;padding:5px 8px;text-align:center">
+        <div style="font-size:7px;color:#5a5870;font-weight:700">3BET בלבד</div>
+        <div style="font-size:13px;font-weight:900;color:#e07b6a">${openRangeInfo.fieldEquity3bet.toFixed(1)}%</div>
+      </div>` : ''}
     </div>` : ''}
 
     <!-- Range selector (מתרחב) -->
