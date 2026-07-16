@@ -288,6 +288,11 @@ function computeHistoricalStreetOdds(h){
 // לאותו שחקן בלבד. _rangeEditPid/_rangeEditSel הם מצב זמן-ריצה של העורך בלבד.
 let _rangeEditPid = null;      // playerId שנערך כרגע (null = עורך סגור)
 let _rangeEditSel = new Set(); // בחירת הידיים הנוכחית בעורך (טרם נשמרה)
+// עוקב אחרי הערך האוטומטי האחרון שסונכרנו ממנו (מחרוזת), כדי לדעת אם מותר
+// לרענן בשקט בלי למחוק עריכה ידנית שהמשתמש כבר התחיל. null = לא במעקב-רענון
+// בכלל (יש טווח ידני שמור, או שאנחנו בתצוגת לימפים) — ראו _maybeRefreshAutoRangeEdit.
+let _rangeEditLastAutoStr = null;
+const _sortedHandsKey = str => (str? str.split(',').map(x=>x.trim()).filter(Boolean):[]).sort().join(',');
 
 const _GRID_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
 
@@ -303,6 +308,8 @@ function _openRangeEditor(pid){
   _rangeEditOriginal = seed;
   _rangeEditSel = new Set(seed ? seed.split(',').map(x=>x.trim()).filter(Boolean) : []);
   _rangeEditActiveView = 'original';
+  // טווח ידני קיים → קפוא לגמרי בכוונה, לא עוקבים אחרי שינויי מצב-שולחן.
+  _rangeEditLastAutoStr = existing ? null : seed;
   renderSeatPanel();
 }
 // קיצור: פותח את עורך הטווח ומיד מציג רק את הלימפים האמפיריים הידועים (במקום את
@@ -316,6 +323,7 @@ function _openRangeEditorShowLimps(pid){
   const limpTally = _getEmpiricalLimpHands(pid);
   _rangeEditSel = new Set(Object.keys(limpTally));
   _rangeEditActiveView = 'limp';
+  _rangeEditLastAutoStr = null; // תצוגת לימפים = דריסה מפורשת, לא עוקבים אחרי מצב-שולחן
   renderSeatPanel();
 }
 function _closeRangeEditor(){
@@ -419,13 +427,16 @@ function _setRangeEditorView(view){
   if(!_rangeEditPid) return;
   if(view==='original'){
     _rangeEditSel = new Set(_rangeEditOriginal ? _rangeEditOriginal.split(',').map(x=>x.trim()).filter(Boolean) : []);
+    _rangeEditLastAutoStr = S.playerRanges?.[_rangeEditPid] ? null : _rangeEditOriginal;
   } else if(view==='auto'){
     const seatIdx = typeof activeSeat==='number' ? activeSeat : null;
     const auto = seatIdx!==null ? _getAutoRangeForSeat(seatIdx) : {rangeStr:''};
     _rangeEditSel = new Set(auto.rangeStr ? auto.rangeStr.split(',').filter(Boolean) : []);
+    _rangeEditLastAutoStr = auto.rangeStr || '';
   } else if(view==='limp'){
     const limpTally = _getEmpiricalLimpHands(_rangeEditPid);
     _rangeEditSel = new Set(Object.keys(limpTally));
+    _rangeEditLastAutoStr = null;
   }
   _rangeEditActiveView = view;
   _rangeEditorRefresh(true);
@@ -441,9 +452,27 @@ function _toggleOriginalLimpView(){
   _setRangeEditorView(hasLimpData ? 'limp' : 'original');
 }
 
+// אם העורך פתוח במצב אוטומטי טהור (לא לימפים, לא נערך ידנית) ומצב השולחן
+// השתנה מאז שנטען (למשל: מישהו פתח, או עשה 3bet, בזמן שהעורך כבר היה פתוח)
+// — מרעננים בשקט, בלי לצאת ולהיכנס. לא נוגעים אם המשתמש כבר לחץ על תא בעצמו
+// (או-אז _rangeEditActiveView כבר null, וגם ה-Set לא תואם ל-_rangeEditLastAutoStr
+// כבדיקת ביטחון נוספת) — כך שלעולם לא נמחקת עריכה ידנית באמצע.
+function _maybeRefreshAutoRangeEdit(){
+  if(_rangeEditLastAutoStr===null) return; // טווח ידני שמור, או תצוגת לימפים — קפוא בכוונה
+  if(_rangeEditActiveView!=='original' && _rangeEditActiveView!=='auto') return;
+  if(typeof activeSeat!=='number' || activeSeat===null) return;
+  if(_sortedHandsKey([..._rangeEditSel].join(',')) !== _sortedHandsKey(_rangeEditLastAutoStr)) return; // כבר נערך, לא נוגעים
+  const fresh = _getAutoRangeForSeat(activeSeat).rangeStr || '';
+  if(_sortedHandsKey(fresh) === _sortedHandsKey(_rangeEditLastAutoStr)) return; // לא השתנה בפועל
+  _rangeEditOriginal = fresh;
+  _rangeEditSel = new Set(fresh ? fresh.split(',').map(x=>x.trim()).filter(Boolean) : []);
+  _rangeEditLastAutoStr = fresh;
+}
+
 // מייצר את בלוק ה-HTML המלא של עורך הטווח (גריד+סליידר+כפתורים) — לשימוש בתוך
 // פאנל המושב. _rangeEditPid חייב להיות מוגדר לפני הקריאה.
 function _rangeEditorPanelHtml(){
+  _maybeRefreshAutoRangeEdit();
   const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
   const limpHands = Object.keys(limpTally);
   const limpTotal = limpHands.reduce((n,h)=>n+limpTally[h],0);
@@ -688,9 +717,13 @@ function renderPotOdds(){
   if(holeCards.length!==2 && !heroManualRange && seat){
     const heroPos = swpForEq.find(x=>x.seatIdx===actor)?.pos || '';
     if(heroPos){
-      const {rangeStr: hRangeStr, actionCat: hCat} = _getContextualRangeInfo(seat, heroPos, S.tableSize, _eqDepth, S.raiseRound);
+      // _detectVsPos (ranges.js) — מקור אמת יחיד לזיהוי מי בדיוק עשה 3bet
+      // אחרון (דרך S.lastRaiser), משותף עם _getAutoRangeForSeat כדי לא לחזור
+      // על הבאג שכבר קרה: זוהה כאן אבל נשכח בעורך הטווח.
+      const vsPos = _detectVsPos(swpForEq);
+      const {rangeStr: hRangeStr, actionCat: hCat} = _getContextualRangeInfo(seat, heroPos, S.tableSize, _eqDepth, S.raiseRound, vsPos);
       heroAutoRange = hRangeStr || null;
-      heroAutoTag = 'hauto:'+heroPos+':'+hCat+':'+_eqDepth;
+      heroAutoTag = 'hauto:'+heroPos+':'+hCat+':'+_eqDepth+':'+(vsPos||'-');
     }
   }
   const heroRangeStr = heroManualRange || heroAutoRange;

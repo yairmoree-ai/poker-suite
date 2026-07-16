@@ -1,5 +1,86 @@
 ---
 
+## 2026-07-14 (cont'd 9) — Range editor now refreshes live, no close/reopen needed
+**Files: render.js**
+
+- User's explicit ask after finding the staleness bug: "everything should
+  flow without exiting and re-entering screens, without closing and
+  opening things" — a real fix, not a workaround.
+- Root cause confirmed precisely: `_openRangeEditor` seeds `_rangeEditSel`
+  (the grid's tap-state) exactly once, at open time. The main `render()`
+  loop does NOT call `renderSeatPanel()` — but the actual per-action
+  handlers (e.g. the one at `game.js:730`, called on every Call/Raise/Fold)
+  *do* call `renderSeatPanel()` unconditionally, which does re-render the
+  small "מבוסס על" label (recomputed fresh each time from
+  `_getAutoRangeForSeat`) — but the grid itself, embedded via
+  `_rangeEditorPanelHtml()`, kept reading the frozen `_rangeEditSel` set at
+  the original open time. Hence: label updates live, grid doesn't — exactly
+  the mismatch seen in the screenshots.
+- Fix: added `_rangeEditLastAutoStr` (tracks the last known auto-sourced
+  range string) and `_maybeRefreshAutoRangeEdit()`, called at the top of
+  `_rangeEditorPanelHtml()` on every render. Refreshes the grid live from
+  `_getAutoRangeForSeat` when — and only when — all of: (a) the seed came
+  from auto-detection, not a saved manual range (`_rangeEditLastAutoStr`
+  isn't null), (b) the view is `'original'` or `'auto'` (not `'limp'`,
+  which is a deliberate override), (c) the current selection still exactly
+  matches the last-synced auto value (i.e. the user hasn't tapped anything
+  yet). Condition (c) is the safety net: the moment a user taps a cell,
+  `_rangeEditActiveView` already flips to `null` (pre-existing behavior)
+  and the selection diverges from the tracked auto string, so an in-
+  progress manual edit is never silently overwritten by a table-state
+  change arriving mid-edit.
+- Also updated `_setRangeEditorView` to keep `_rangeEditLastAutoStr` in
+  sync when the user manually switches between the 🎯 אוטומטי / לימפים /
+  original tabs, so the auto-refresh tracking stays correct regardless of
+  which tab is active.
+- Verified two scenarios end-to-end (node simulation, full 8-seat table):
+  (1) editor opened for UTG+1 while round=0 (41-hand RFI selection); UTG
+  then opens *without closing the editor*; next render (simulating the
+  automatic `renderSeatPanel()` call after any action) correctly refreshes
+  to the 8-hand facing-open union — no manual reopen needed, matching the
+  exact bug scenario from the screenshots. (2) Same setup, but the user
+  manually adds a hand (72o) before UTG opens — confirmed the auto-refresh
+  correctly backs off and leaves the manual edit (including the added
+  72o) completely untouched.
+
+
+## 2026-07-14 (cont'd 8) — Range editor never detected the specific 3-bettor
+**Files: ranges.js, render.js**
+
+- Found via live testing: user opened the range editor for UTG+1 before UTG
+  opened, then again for UTG after UTG+1 3-bet — closed and reopened each
+  time (ruling out a separate staleness issue also found in this session,
+  see below). UTG's editor still showed his RFI range (200 combos) instead
+  of the specific vs-UTG+1 continue-range inserted earlier today (116
+  combos) — direct testing showed the actual value returned was 192 combos
+  (union of all 7 known opponents), not 200 or 116.
+- Root cause: `vsPos` (which specific position 3-bet) was wired into the
+  equity-panel's hero-range computation earlier today (via `S.lastRaiser`),
+  but `_getAutoRangeForSeat` — the range *editor*'s seed function, a
+  separate call site — was never updated to detect it. Same shape of bug as
+  everything else this session: one call site fixed, a parallel one missed.
+- Fix: extracted the `S.lastRaiser`-based detection into a new shared
+  `_detectVsPos(swp)` helper in `ranges.js`, and pointed both
+  `_getAutoRangeForSeat` and the render.js hero-range block at it, instead
+  of each keeping its own copy. A fourth instance of this pattern is no
+  longer possible for these two call sites.
+- Verified end-to-end with a full 8-seat simulation (UTG facing an actual
+  3-bet from UTG+1, via `S.lastRaiser`): `_getAutoRangeForSeat` now returns
+  `actionCat:'facing-3bet'` with exactly 116 combos — the precise
+  UTG-vs-UTG+1 data from earlier today, not the union or the RFI fallback.
+- **Separate, still-open issue found during the same testing session, not
+  fixed yet:** if the range editor is left open across a game-state change
+  (rather than closed and reopened), only the small "מבוסס על" label text
+  re-renders live — the grid itself and its combos count were seeded once
+  at open time (`_openRangeEditor`) and don't refresh, so they can show a
+  label and a grid that visibly disagree with each other. Confirmed via the
+  user's own screenshots (UTG+1's editor left open across UTG's open: label
+  correctly flipped to "facing-open" but the grid stayed frozen on the
+  pre-open RFI selection). Not addressed in this pass — needs a bit of care
+  around not clobbering in-progress manual edits if the user already tapped
+  cells before the underlying context changed.
+
+
 ## 2026-07-14 (cont'd 7) — Inserted UTG-vs-3bet data (60bb, per-opponent)
 **Files: ranges.js, tools/validate_ranges.js**
 
