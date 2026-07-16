@@ -1,5 +1,127 @@
 ---
 
+## 2026-07-14 (cont'd 5) — Fixed position labels for 6-max and 8-max: MP → LJ
+**Files: state.js**
+
+- Came up while preparing to import today's "UTG vs 3-bet" data (7 GTOWizard
+  screenshots, one per 3-bettor position at 8-handed/60bb): user noticed the
+  app's own 3rd-position label ("MP") didn't match what solvers/training
+  sites actually call that seat, and wasn't sure which was right. Correctly
+  refused to guess and pushed to verify before touching anything, since this
+  is foundational — wrong here means every future range import is silently
+  mislabeled.
+- Verified two real data points directly (not guessed, not inferred from a
+  single source):
+  - **8-handed**: GTOWizard's own glossary (gtowizard.com/glossary/middle-position)
+    states explicitly that the two seats between CO and UTG+1 are "Lojack
+    (LJ) and Hijack (HJ)" — matches the 7 screenshots exactly (UTG, UTG+1,
+    LJ, HJ, CO, BTN, SB, BB).
+  - **6-handed**: user found independent confirmation from a second tool
+    (PokerCoaching.com's cash-game range tool), whose own position selector
+    for 6-max shows LJ, HJ, CO, BTN, SB, BB — no UTG at all.
+  Both directly contradicted `state.js`'s existing `PBN` table (which had
+  `UTG,MP,CO` for 6-max and `UTG,UTG+1,MP,HJ,CO` for 8-max — an older/
+  alternate naming convention, also real and used elsewhere, just not the
+  one matching the solver data this project is now standardizing on).
+- Tried to independently verify 9-max and 10-max too (searched GTOWizard's
+  own glossary/blog, couldn't find an explicit statement; asked the user to
+  check the product directly, but GTOWizard's free tier caps at 8-handed).
+  Given no reliable source for those two, left `PBN[7]`, `PBN[9]`, `PBN[10]`
+  completely untouched — 7 was a tempting, low-risk interpolation between
+  two now-confirmed endpoints, but per the same standard applied all
+  session, an interpolation is still a guess until it's actually confirmed
+  against a real source, so it stays as-is for now too.
+- Fix: `PBN[6]` → `['BTN','SB','BB','LJ','HJ','CO']` (was `...,'UTG','MP',...`).
+  `PBN[8]` → `['BTN','SB','BB','UTG','UTG+1','LJ','HJ','CO']` (was
+  `...,'MP','HJ',...`). Verified by actually running `assignPos()` (not just
+  reading the array) for real 6- and 8-seated tables — output matches both
+  confirmed screenshots exactly, seat-for-seat.
+- Checked the blast radius before shipping: `S.playerRanges` (manual range
+  saves) key off `playerId`, not position label — unaffected. Historical
+  hand logs keep whatever label they already recorded — unaffected, and
+  correctly so (that's what actually happened at the table at the time).
+  `_RANGES`' existing alias table already had `'LJ':'MP'` mapped (pre-
+  existing, likely added for the 10-max entry that already used LJ) — so
+  6-max's newly-relabeled LJ seat automatically falls back to the existing
+  `MP` theoretical data with zero loss, no extra work needed.
+- Unexpected bonus found while checking 8-max: `_RANGES[8]` already
+  contained *both* an `MP` entry and a separate, wider, more complete `LJ`
+  entry (looked like genuine solver data, e.g. `RFI` at `mid` depth: 18
+  hands under `MP` vs 45 under `LJ`) — the `LJ` entry was already sitting
+  there correctly populated but silently unreachable, because `assignPos()`
+  was never labeling any real seat "LJ" at 8-handed before this fix. So this
+  wasn't purely a naming fix — it also activated better data that already
+  existed but was dead weight. The old `MP` entries at size 8 are now
+  themselves the dead/vestigial ones (same pattern as the `BTN/SB` leftover
+  found earlier this session) — left in place, not deleted, in case they're
+  wanted for reference.
+- Re-ran `validate_ranges.js` after the change — still 0 errors, 0 warnings
+  (the now-vestigial `MP` entries at size 8 don't trigger anything, since
+  `MP` remains genuinely required and in active use at sizes 7/9/10, which
+  weren't touched).
+
+
+## 2026-07-14 (cont'd 4) — New RANGES workflow: "+" notation support + expand/validate tools
+**Files: ranges.js, tools/validate_ranges.js (rewritten), tools/expand_range.js (new)**
+
+- Follow-up to the standing plan (search out and add solver-backed ranges for
+  many more situations/table sizes) — user asked to fix the *working method*
+  itself before starting that at volume, rather than repeating the manual
+  expand-by-hand process each time (which is exactly how the "66+" → 100-
+  combos-instead-of-170 near-miss happened earlier this session).
+- **Root parser now understands "+" notation.** `_parseRangeToSet` (the
+  single function everything else — `_rangeStrToCombos`, `_adjustRangeForType`,
+  etc. — already builds on) now expands standard solver shorthand: `"66+"` →
+  `66,77,88,...,AA`; `"ATs+"`/`"A2s+"` → suited combos up to `AKs`; same for
+  offsuit. Added via a new small `_expandPlusToken` helper. Existing tables
+  (already fully spelled out, no "+") are completely unaffected — this is
+  additive, not a format change. Also rewrote `_countCombos` to build on
+  `_parseRangeToSet` instead of its own separate parsing loop (was the last
+  place in the file still duplicating that logic — same drift risk as every
+  other bug this session, now closed).
+- **Important scope limit, on purpose:** `_RANGES` entries themselves should
+  still be *stored* fully expanded, not with raw "+". The range-editor UI
+  (render.js) seeds its grid selection straight from `.split(',')` on the
+  stored string, without going through `_parseRangeToSet` — a stored `"66+"`
+  would show up as one broken, non-highlighting cell instead of 9 correctly-
+  highlighted ones. The parser fix is a safety net (anything that slips
+  through degrades gracefully into a correct equity number instead of a
+  silently wrong one), not a green light to store raw solver shorthand.
+- **`tools/expand_range.js` (new):** takes solver-style "+" input, returns
+  the fully-expanded, ready-to-paste comma list plus a hand-count/combo-
+  count/percentage summary — using the app's own real `_parseRangeToSet`/
+  `_countCombos` via `require()`, not a reimplementation. Verified against
+  two ranges already confirmed correct earlier this session (the UTG 236-
+  combo/17.8% and 170-combo/12.8% GTOWizard ranges) — both reproduced bit-
+  for-bit.
+- **`tools/validate_ranges.js` (rewritten):** now `require()`s `ranges.js`
+  directly instead of regex-scraping the source text and `eval`-ing the
+  extracted object literal — more robust, and guaranteed to check against
+  the actual live data structure rather than a brittle parse of it. Updated
+  "+" handling to match the new capability: a malformed "+" token (bad
+  rank/shape, `_expandPlusToken` returns it unchanged) is still an error; a
+  *well-formed* "+" token is now only a warning, pointing at the editor-UI
+  caveat above and at `expand_range.js` as the fix. Re-verified against the
+  same injected-mistake tests as before (malformed → error, well-formed →
+  warning, clean file → 0/0).
+- **Enabling change:** added a guarded `module.exports` at the bottom of
+  `ranges.js` (`if(typeof module!=='undefined')...`) exposing `_RANGES` and
+  the parsing functions to Node tooling. Invisible to the browser (`module`
+  doesn't exist there, so the whole block is skipped) — confirmed the file
+  still loads and behaves identically as a plain `<script>` include.
+- **New intake workflow going forward:** paste solver output (any "+"
+  shorthand) → run `expand_range.js` → paste the expanded result into the
+  right `_RANGES[size][depth][pos][category]` slot → run
+  `validate_ranges.js` before shipping. Both tools now read the app's actual
+  logic instead of a parallel copy, so they can't drift from what the app
+  really does the way earlier bugs this session did.
+- Side note, noticed incidentally while testing (not investigated further,
+  not necessarily a problem): table sizes 5 and 6 currently appear to share
+  some underlying BB range data by reference in the source, based on how a
+  test edit to one location showed up as flagged in both. Worth a look if
+  5-max and 6-max are ever meant to diverge and don't.
+
+
 ## 2026-07-14 (cont'd 3) — Unified the three duplicated seat-range resolvers
 **Files: ranges.js, render.js**
 
