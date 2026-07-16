@@ -700,6 +700,14 @@ function _resolveOpponentRangeStr(seat, opts){
   return {rangeStr: adjR, tag:'auto:'+pos+':'+(actCat||'')+':'+depth+':'+(playerType||'none')};
 }
 
+// מזהה, אם אפשר, את עמדת ה-3-בטר האחרון — משמש בכל מקום שצריך vsPos עבור
+// round=2 (מול 3bet). מקור אמת יחיד לצורך הזה, כדי לא לחזור על הבאג שכבר קרה
+// פעם אחת: זוהה נכון בפאנל ה-equity אבל נשכח לגמרי בעורך הטווח (_getAutoRangeForSeat).
+function _detectVsPos(swp){
+  if(S.raiseRound!==2 || S.lastRaiser?.seat==null) return undefined;
+  return swp.find(x=>x.seatIdx===S.lastRaiser.seat)?.pos || undefined;
+}
+
 function _getAutoRangeForSeat(seatIdx){
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat) return {rangeStr:'', pos:'', actionCat:'', depth:''};
@@ -707,7 +715,8 @@ function _getAutoRangeForSeat(seatIdx){
   const pos = swp.find(s=>s.seatIdx===seatIdx)?.pos || '';
   const bb = getBB();
   const depth = _depthFromBB(bb>0 ? (seat.stack||0)/bb : 100);
-  const {rangeStr: baseRangeStr, actionCat} = _getContextualRangeInfo(seat, pos, S.tableSize, depth, S.raiseRound);
+  const vsPos = _detectVsPos(swp);
+  const {rangeStr: baseRangeStr, actionCat} = _getContextualRangeInfo(seat, pos, S.tableSize, depth, S.raiseRound, vsPos);
   const player = (S.playerLib||[]).find(p=>p.id===seat.playerId);
   const playerType = player?.playerType || null;
   const rangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
