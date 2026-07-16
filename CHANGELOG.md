@@ -1,5 +1,64 @@
 ---
 
+## 2026-07-14 (cont'd 7) — Inserted UTG-vs-3bet data (60bb, per-opponent)
+**Files: ranges.js, tools/validate_ranges.js**
+
+- Landed the 7-screenshot GTOWizard dataset built earlier this session:
+  UTG's `call` and `4bet` at `_RANGES[9].mid.UTG` (shared with 7/8 via the
+  existing aliasing — decided to leave that as-is for now, see prior entry)
+  are no longer flat generic strings; each is now an object keyed by the
+  specific 3-bettor's position (`UTG+1`, `LJ`, `HJ`, `CO`, `BTN`, `SB`,
+  `BB`), resolved through `_resolveOpponentRangeStr`'s `vsPos` support
+  (added earlier this session, previously untested against real data).
+  Replaces the old placeholder `call:'JJ,TT'` / `4bet:'AA,KK,AKs'`.
+- Sanity-checked combo counts before shipping (table shared with the user):
+  continue-range vs each opponent ranges 8.7% (vs UTG+1, tightest — most
+  polarized early 3-bettor) up to 13.1% (vs BB, widest) with a smooth
+  monotonic climb in between — no discontinuities.
+- `tools/validate_ranges.js` needed a real fix, not just a re-run: it
+  crashed (`.split is not a function`) the first time, because it assumed
+  every `entry[cat]` was a flat string — the first time that assumption was
+  actually false in this codebase. Updated `checkToken`'s call site and the
+  missing/empty completeness checks to handle both shapes (flat string, or
+  `{vsPos: string}` object, recursing per sub-range). Re-ran clean: 0
+  errors, 0 warnings.
+- Verified the live resolution path end-to-end (not just the data lookup):
+  `_getContextualRangeInfo(seat,'UTG',8,'mid',2,'LJ')` and `...,'BB')` each
+  return the correct distinct per-opponent union; omitting `vsPos` still
+  correctly falls back to the union of all 7 known sub-ranges (36 hands) —
+  confirming the graceful-degradation design (discussed at length before
+  committing to the shared `_RANGES[8]===_RANGES[9]` object) behaves as
+  intended for opponents/table-sizes without a specific data point.
+- This is the first real data to exercise: the `vsPos`-aware `call`/`4bet`
+  schema, the round=2 facing-a-3bet branch of `_getContextualRangeInfo`,
+  and the `S.lastRaiser`-based aggressor detection in the equity panel —
+  all added earlier this session but previously only tested with synthetic
+  placeholder data. Next real-world step: exercise this in the live app
+  with an actual UTG-opens-gets-3bet-from-a-specific-seat hand and confirm
+  the equity panel's numbers match this table.
+
+
+## 2026-07-14 (cont'd 6) — Split the 35-74BB 'mid' depth bucket in two
+**Files: ranges.js**
+
+- User noticed the existing `mid` bucket (35-74BB) was too coarse — a 35bb
+  stack and a 74bb stack got the exact same theoretical range, a 39bb-wide
+  span glossed over as one number. Asked to add another bucket.
+- Split: `mid` now covers **55-74BB**, new `midlow` covers **35-54BB**.
+  60bb (today's active data point) sits solidly inside `mid`, not on an
+  edge. `deep` (75+), `short` (20-34), `push` (<20) unchanged.
+- `midlow` populated for all 8 table sizes (2-9) as an explicit deep-copy of
+  `mid` — a documented placeholder, not fabricated data, same principle as
+  every other "we don't have real numbers for this yet" spot in this file.
+  When real 35-54BB solver data comes in for a given size/position, it
+  overwrites `midlow` directly, same pattern already used for `mid`'s own
+  RFI overrides.
+- Verified: boundaries land exactly as intended (35bb→midlow, 54bb→midlow,
+  55bb→mid, 74bb→mid); `midlow` and `mid` return identical combo counts
+  right now (expected, since one is a copy of the other); full validator
+  pass, 0 errors/0 warnings, across all 8 sizes.
+
+
 ## 2026-07-14 (cont'd 5) — Fixed position labels for 6-max and 8-max: MP → LJ
 **Files: state.js**
 

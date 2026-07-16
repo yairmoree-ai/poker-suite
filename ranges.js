@@ -213,6 +213,13 @@ const _RANGES = {
     },
   },
 };
+// דלי 'midlow' (35-54BB) חדש — פיצול של ה-'mid' הישן (35-74BB, טווח רחב מדי,
+// 60bb ו-40bb קיבלו בעבר בדיוק אותו טווח). כרגע מאוכלס כעותק מפורש של 'mid'
+// (55-74BB) כברירת מחדל — לא ממציאים נתונים ל-35-54 שאין לנו עדיין; ברגע
+// שיגיעו נתוני סולבר אמיתיים לטווח הזה ספציפית, מחליפים כאן בדיוק כמו שנעשה
+// למעלה עם 'mid'. ראו _depthFromBB לגבולות המדויקים.
+_RANGES[6].midlow = JSON.parse(JSON.stringify(_RANGES[6].mid));
+
 // 9-max (deep stack)
 _RANGES[9] = { deep:{
   BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,J9s,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,ATo,KQo,KJo,KTo,QJo,QTo,JTo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s','call':'TT,99,88,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,QQ,AKs,AKo'},
@@ -267,13 +274,51 @@ Object.assign(_RANGES[9].mid, {
     RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,K4s,K3s,K2s,AQo,KQo,QQ,QJs,QTs,Q9s,Q8s,Q7s,Q6s,Q5s,Q4s,Q3s,Q2s,AJo,KJo,QJo,JJ,JTs,J9s,J8s,J7s,J6s,J5s,J4s,J3s,J2s,ATo,KTo,QTo,JTo,TT,T9s,T8s,T7s,T6s,T5s,T4s,T3s,T2s,A9o,K9o,Q9o,J9o,T9o,99,98s,97s,96s,95s,94s,93s,92s,A8o,K8o,Q8o,J8o,T8o,98o,88,87s,86s,85s,84s,83s,82s,A7o,K7o,Q7o,J7o,T7o,97o,87o,77,76s,75s,74s,73s,72s,A6o,K6o,Q6o,J6o,T6o,96o,86o,76o,66,65s,64s,63s,62s,A5o,K5o,Q5o,J5o,T5o,95o,85o,75o,65o,55,54s,53s,52s,A4o,K4o,Q4o,J4o,T4o,64o,54o,44,43s,42s,A3o,K3o,Q3o,J3o,T3o,43o,33,32s,A2o,K2o,Q2o,J2o,22',
   },
 });
+// UTG מול 3bet, לפי-יריב-ספציפי (mid=55-74BB, 60bb נופל כאן) — מ-7 תרשימי
+// GTOWizard (2026-07-14), אחד לכל 3-בטר אפשרי. סף 50%: יד נכנסת לטווח אם
+// התדירות של הפעולה הרלוונטית ≥50% מהקומבינציות שלה (הוחלט מפורשות מול
+// המשתמש; תאים מעורבים הוכרעו ידנית תא-תא, לא בהערכה חזותית). Allin מוזג
+// לתוך 4bet (אין קטגוריית allin נפרדת בסכימה; שתיהן "ממשיך אגרסיבי" לצורך
+// טווח-המשך). מחליף את ה-call/4bet ה"ישנים" הגנריים (JJ,TT / AA,KK,AKs)
+// שהיו כאן קודם — אלה היו קירוב גס לפני שהיה נתון אמיתי לפי-יריב. מוגדר על
+// _RANGES[9] כי _RANGES[7]/[8] מכוונים לאותו אובייקט ממש (הוחלט להשאיר כך
+// בשלב זה — ראו CHANGELOG; יריב בעמדה שלא קיימת ב-8max, למשל MP האמיתי של
+// 9max, נופל אוטומטית לאיחוד-כל-האפשרויות דרך _resolveOpponentRangeStr).
+Object.assign(_RANGES[9].mid, {
+  UTG: { ..._RANGES[9].mid.UTG,
+    call: {
+      'UTG+1': 'AQs,AJs,ATs,A5s,KQs,TT,JTs,99,88,76s,66,44,33,QQ,JJ,T9s',
+      LJ:      'AQs,AJs,ATs,QJs,QTs,JTs,J9s,TT,99,88,76s,66,44,33,KTs,KJs,A9s,55,77,JJ,QQ,AQo,T9s',
+      HJ:      'AQs,AJs,ATs,KQs,QJs,QTs,JTs,J9s,TT,T9s,99,76s,66,55,77,88,44,33,KTs,A5s,A9s,AQo,QQ',
+      CO:      'AQs,AJs,ATs,A5s,KQs,AQo,QJs,QTs,JTs,J9s,TT,76s,66,55,44,33,KJs,A9s,T9s,JJ,77,88,99',
+      BTN:     'AQs,AJs,ATs,A9s,A5s,KQs,KJs,AQo,QJs,QTs,JJ,J9s,TT,99,76s,66,55,44,33,JTs,88,77',
+      SB:      'AKs,AQs,AJs,ATs,A9s,A8s,A5s,A4s,A3s,AKo,KK,KQs,KJs,KTs,AQo,QQ,QJs,QTs,JJ,JTs,TT,T9s,99,88,76s,66,55,44,33,AA,A7s,77',
+      BB:      'AKs,AQs,AJs,ATs,A9s,A8s,A7s,A5s,A4s,A3s,AKo,KK,KQs,KJs,KTs,AQo,QQ,QJs,QTs,JJ,JTs,TT,99,88,76s,66,44,33,T9s,55',
+    },
+    '4bet': {
+      'UTG+1': 'AA,AKs,KK,AKo,KTs,KJs',
+      LJ:      'AA,AKs,KK,AKo,A5s',
+      HJ:      'AA,AKs,KK,AKo,KJs,JJ',
+      CO:      'AA,AKs,AKo,KK,QQ,K8s,A4s,A7s',
+      BTN:     'AA,AKs,AKo,QQ,KK,K9s',
+      SB:      '',
+      BB:      'AA,KJo',
+    },
+  },
+});
+// עותק מפורש של 'mid' (55-74BB, כולל דריסות ה-RFI האמיתיות מלמעלה) כברירת
+// מחדל, לא המצאה. מוגדר על _RANGES[9] אחרי הדריסות, אז 7/8 (שמכוונים לאותו
+// אובייקט ממש — ראו למטה) מקבלים אותו אוטומטית, בלי עבודה נוספת.
+_RANGES[9].midlow = JSON.parse(JSON.stringify(_RANGES[9].mid));
 // 2-5 players
 [2,3].forEach(n=>{
   _RANGES[n]={deep:{BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,JTs,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,ATo,A9o,A8o,KQo,KJo,KTo,QJo,QTo,JTo,T9o','3bet':'AA,KK,QQ,JJ,TT,AKs,AQs,AKo,AQo',call:'99,88,AJs,KQs,AJo','4bet':'AA,KK,AKs,AKo'},SB:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,ATo,KQo,KJo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',call:'TT,99,AJs,KQs,AJo','4bet':'AA,KK,AKs,AKo'},BB:{RFI:'','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s',call:'TT,99,88,77,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,AKs,AKo'}},mid:{},short:{},push:{}};
   ['mid','short','push'].forEach(d=>{ _RANGES[n][d]=_RANGES[n].deep; });
+  _RANGES[n].midlow = _RANGES[n].deep;
 });
 _RANGES[4]={deep:{BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,76s,65s,AKo,AQo,AJo,ATo,KQo,KJo,QJo,JTo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,A4s',call:'TT,99,88,AJs,ATs,KQs,QJs,JTs,AJo','4bet':'AA,KK,AKs,AKo'},CO:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,QJo','3bet':'AA,KK,QQ,AKs,AQs,AKo,A5s',call:'JJ,TT,AJs,KQs,QJs,AJo,KQo','4bet':'AA,KK,AKs,AKo'},SB:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo','3bet':'AA,KK,QQ,AKs,AKo,A5s',call:'JJ,TT,AJs,KQs','4bet':'AA,KK,AKs'},BB:{RFI:'','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,87s',call:'TT,99,88,77,66,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,AKs,AKo'}},mid:{},short:{},push:{}};
 ['mid','short','push'].forEach(d=>{ _RANGES[4][d]=_RANGES[4].deep; });
+_RANGES[4].midlow = _RANGES[4].deep;
 _RANGES[5]=_RANGES[6]; _RANGES[7]=_RANGES[9]; _RANGES[8]=_RANGES[9];
 
 const _POS_BY_SIZE = {
@@ -296,33 +341,67 @@ function _cardsToHandNotation(cards){
   return RANKMAP[hi.rank]+RANKMAP[lo.rank]+(hi.suit===lo.suit?'s':'o');
 }
 
+// דירוג דרגות (0=A החזק ביותר...12=2 החלש ביותר) — עצמאי מ-_MC_RANKS/_MC_RANK_VAL
+// שב-render.js (שם הסדר הפוך, מה-2 ל-A, לצורך בניית חפיסה) כדי לא להתנגש בשם.
+const _RANGE_RANK_ORDER = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const _RANGE_RANK_IDX = Object.fromEntries(_RANGE_RANK_ORDER.map((r,i)=>[r,i]));
+
+// מרחיב טוקן בודד בפורמט "+" הסטנדרטי של כלים חיצוניים (GTOWizard, PokerCruncher,
+// Equilab וכו') לרשימת ידיים קונקרטיות: "66+" → 66,77,88,...,AA. "ATs+"/"A2s+" →
+// כל הסוטד מהיד הנתונה ומעלה לכיוון AKs (לא כולל AA). טוקן בלי "+" בסוף מוחזר
+// כפי שהוא ללא שינוי — כל טבלה קיימת שכבר כתובה במפורש ממשיכה לעבוד בדיוק כמו
+// קודם; זו הרחבה נטו, לא שינוי-שובר. נועד למנוע בדיוק את הבאג שהתגלה באמצע
+// השיחה: הדבקת טווח בפורמט "+" ישירות מסולבר, בלי לפרוש אותו ידנית, הייתה
+// גורמת לידיים "להיעלם" בשקט (ה"66+" היה מתפרש כטוקן לא-מזוהה ומתעלם ממנו).
+// דירוג לא מזוהה, או r1 שאינו "חזק" מ-r2 (סימון לא תקין) — מוחזר כמו שהוא, לא
+// ממציאים תוצאה; validate_ranges.js עדיין יתפוס טוקן כזה כפגום אם הוא לא תקף.
+function _expandPlusToken(token){
+  if(!token.endsWith('+')) return [token];
+  const base = token.slice(0,-1);
+  if(base.length===2 && base[0]===base[1]){
+    const startIdx = _RANGE_RANK_IDX[base[0]];
+    if(startIdx===undefined) return [token];
+    const out=[];
+    for(let i=startIdx;i>=0;i--) out.push(_RANGE_RANK_ORDER[i]+_RANGE_RANK_ORDER[i]);
+    return out;
+  }
+  const suffix = base.slice(-1);
+  if(suffix!=='s' && suffix!=='o') return [token];
+  const r1=base[0], r2=base[1];
+  const i1=_RANGE_RANK_IDX[r1], i2=_RANGE_RANK_IDX[r2];
+  if(i1===undefined || i2===undefined || i1>=i2) return [token];
+  const out=[];
+  for(let j=i2;j>i1;j--) out.push(r1+_RANGE_RANK_ORDER[j]+suffix);
+  return out;
+}
+
 function _parseRangeToSet(str){
   const s=new Set();
   if(!str)return s;
-  str.split(',').map(x=>x.trim()).filter(Boolean).forEach(h=>{
-    if(h.length===2&&h[0]===h[1])s.add(h);
-    else if(h.endsWith('s'))s.add(h);
-    else if(h.endsWith('o'))s.add(h);
-    else{s.add(h+'s');s.add(h+'o');}
+  str.split(',').map(x=>x.trim()).filter(Boolean).forEach(tok=>{
+    _expandPlusToken(tok).forEach(h=>{
+      if(h.length===2&&h[0]===h[1])s.add(h);
+      else if(h.endsWith('s'))s.add(h);
+      else if(h.endsWith('o'))s.add(h);
+      else{s.add(h+'s');s.add(h+'o');}
+    });
   });
   return s;
 }
 
+// נבנה מעל _parseRangeToSet (ולא לוגיקת-פירוש כפולה משלו) בדיוק מהסיבה שכבר
+// עלתה כמה פעמים היום: שתי מימושים מקבילים לאותה שאלה נוטים לסטות זה מזה.
 function _countCombos(str){
-  if(!str)return 0;
+  const set = _parseRangeToSet(str);
   let n=0;
-  str.split(',').map(x=>x.trim()).filter(Boolean).forEach(h=>{
-    if(h.length===2&&h[0]===h[1])n+=6;
-    else if(h.endsWith('s'))n+=4;
-    else if(h.endsWith('o'))n+=12;
-    else{n+=4+12;}
-  });
+  set.forEach(h=>{ n += h.length===2 ? 6 : (h.endsWith('s') ? 4 : 12); });
   return n;
 }
 
 function _depthFromBB(effBB){
   if(effBB >= 75) return 'deep';
-  if(effBB >= 35) return 'mid';
+  if(effBB >= 55) return 'mid';
+  if(effBB >= 35) return 'midlow';
   if(effBB >= 20) return 'short';
   return 'push';
 }
@@ -341,7 +420,7 @@ function _getStackDepth(){
 }
 
 
-function _getRangeStrForDepth(tableSize, pos, action, depth){
+function _getRangeStrForDepth(tableSize, pos, action, depth, vsPos){
   const ts = tableSize||S.tableSize||6;
   const rBySize = _RANGES[ts]||_RANGES[6];
   const rByDepth = rBySize[depth]||rBySize.deep||rBySize;
@@ -351,14 +430,31 @@ function _getRangeStrForDepth(tableSize, pos, action, depth){
   // טווח ריק ⇒ שום יד לא "בטווח" (אפילו KK).
   const six = _RANGES[6][depth]||_RANGES[6].deep;
   const alias = {'BTN/SB':'BTN','UTG+1':'UTG','UTG+2':'MP','LJ':'MP','MP+1':'HJ'}[pos];
-  return (rByDepth[pos]||{})[action]
+  const raw = (rByDepth[pos]||{})[action]
       || (six[pos]||{})[action]
       || (alias ? (((rByDepth[alias]||{})[action]) || ((six[alias]||{})[action]) || '') : '');
+  return _resolveRangeEntry(raw, vsPos);
+}
+
+// 'call'/'4bet' יכולים להיות מחרוזת שטוחה כרגיל (טווח גנרי, לא תלוי-יריב — כל
+// הטבלאות הישנות), *או* אובייקט { עמדת-היריב-הספציפי: מחרוזת } — כשיש נתוני
+// סולבר מפורקים לפי מי בדיוק 3-בט (למשל "UTG מול 3bet של HJ" שונה מ"UTG מול
+// 3bet של BB"). כשיודעים בדיוק מול מי (vsPos) — מחזירים את הטווח הספציפי שלו.
+// כשלא (vsPos לא סופק, או שאין נתון לאותו יריב ספציפי) — מאחדים את *כל* תתי-
+// הטווחים הידועים כברירת מחדל סבירה, במקום להחזיר ריק סתם כי לא ציינו יריב.
+function _resolveRangeEntry(raw, vsPos){
+  if(typeof raw === 'string') return raw;
+  if(raw && typeof raw === 'object'){
+    if(vsPos && raw[vsPos]) return raw[vsPos];
+    return Object.values(raw).reduce((acc,r)=>_unionRangeStr(acc,r), '');
+  }
+  return '';
 }
 
 function _getRangeStr(tableSize, pos, action){
   return _getRangeStrForDepth(tableSize, pos, action, _getStackDepth());
 }
+
 
 // Monte Carlo vs specific range (מחליף את הקודם)
 function monteCarloEquityVsRange(holeCards, boardCards, rangeStr, iterations=8000){
@@ -522,15 +618,19 @@ function _unionRangeStr(a, b){
 //      0   → הוא זה ש"פותח" (RFI, או call ל-BB) — אף אחד עוד לא לחץ עליו
 //      1   → ניצב מול open אחד — טווח-המשך שלו הוא איחוד call∪3bet (עדיין לא
 //            ידוע אם יקרא או יעלה שוב, אז מציגים את כל מה שממשיך ולא מקפל)
-//      2+  → מצב רב-שכבתי (מול 3bet ומעלה) — הטבלאות הבסיסיות (RFI/3bet/call/4bet
-//            לכל עמדה) לא נבנו לתאר במדויק צד שלישי שלא היה הפותח/ה-3bettor
-//            המקורי; אין טבלה טובה, לא ממציאים — טווח ריק, בדיוק כמו לימפ.
-function _getContextualRangeInfo(seat, pos, tableSize, depth, currentRaiseRound){
+//      2   → ניצב מול 3bet (אחרי שהוא עצמו פתח) — טווח-המשך הוא איחוד call∪4bet,
+//            באותו היגיון בדיוק כמו round=1. תומך בנתוני סולבר מפורקים-לפי-יריב
+//            (vsPos — עמדת מי-שעשה-3bet): אם call/4bet בטבלה הם אובייקט
+//            {עמדת-יריב: טווח} (ראו _resolveRangeEntry) והעמדה הספציפית ידועה,
+//            מקבלים את הטווח המדויק מולה; אחרת נופלים לאיחוד-כל-האפשרויות.
+//      3+  → מצב רב-שכבתי (מול 4bet ומעלה) — אין עדיין טבלה טובה לזה; טווח ריק,
+//            בדיוק כמו לימפ. לא ממציאים.
+function _getContextualRangeInfo(seat, pos, tableSize, depth, currentRaiseRound, vsPos){
   if(!pos) return {rangeStr:'', actionCat:''};
   const preflopActs = (seat.actions||[]).filter(a=>a.street==='פרה-פלופ' && a.type!=='SB' && a.type!=='BB');
   if(preflopActs.length){
     const actionCat = _inferPreflopActionCat(seat, pos);
-    return {rangeStr: _getRangeStrForDepth(tableSize, pos, actionCat, depth) || '', actionCat};
+    return {rangeStr: _getRangeStrForDepth(tableSize, pos, actionCat, depth, vsPos) || '', actionCat};
   }
   const round = currentRaiseRound||0;
   if(round===0){
@@ -550,6 +650,12 @@ function _getContextualRangeInfo(seat, pos, tableSize, depth, currentRaiseRound)
     }
     const actionCat = 'RFI';
     return {rangeStr: _getRangeStrForDepth(tableSize, pos, actionCat, depth) || '', actionCat};
+  }
+  if(round===2){
+    const callR = _getRangeStrForDepth(tableSize, pos, 'call', depth, vsPos) || '';
+    const bet4R = _getRangeStrForDepth(tableSize, pos, '4bet', depth, vsPos) || '';
+    if(!callR && !bet4R) return {rangeStr:'', actionCat:'unclear'};
+    return {rangeStr: _unionRangeStr(callR, bet4R), actionCat:'facing-3bet'};
   }
   if(round===1){
     const callR = _getRangeStrForDepth(tableSize, pos, 'call', depth) || '';
@@ -691,3 +797,14 @@ function _rangeStrToCombos(rangeStr, deadKeys){
   });
   return combos;
 }
+
+// ── ייצוא ל-Node בלבד, לצורך כלי-עזר (tools/) — לא משפיע על הדפדפן בכלל ──
+// בדפדפן 'module' לא מוגדר, אז הבלוק הזה פשוט מדולג; שם ranges.js ממשיך לפעול
+// בדיוק כמו קודם, כ-<script> גלובלי רגיל. ב-Node זה נותן ל-tools/ גישה ישירה
+// ואמינה (require, לא regex/eval שביר) לנתונים ולפונקציות הפירוש עצמן — כדי
+// שכלי כמו validate_ranges.js ו-expand_range.js תמיד יבדקו את אותה לוגיקת
+// פירוש בדיוק שהאפליקציה החיה משתמשת בה, לא עותק נפרד שעלול לסטות ממנה.
+if(typeof module!=='undefined' && module.exports){
+  module.exports = { _RANGES, _parseRangeToSet, _countCombos, _expandPlusToken, _getRangeStrForDepth, _unionRangeStr, _HAND_RANKING };
+}
+
