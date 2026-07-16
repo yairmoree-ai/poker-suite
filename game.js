@@ -751,7 +751,8 @@ function clickSeat(i){
   if(!seat?.playerId){
     showQuickPlayerPicker(i);
   } else {
-    activeSeat=i; renderSeatPanel(); openPanel('seat-panel'); renderSeats();
+    activeSeat=i; openPanel('seat-panel'); renderSeats();
+    _openRangeEditor(seat.playerId); // פותח את עורך הטווח מיד — לא צריך לחיצה נוספת; קורא גם ל-renderSeatPanel() בעצמו
   }
 }
 
