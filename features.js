@@ -923,18 +923,25 @@ function showStatistics(){
   }).join('');
   const html = `
     <div style="font-size:10px;color:#5a5870;margin-bottom:10px">${history.length} טורנירים • ${players.length} שחקנים</div>
-    <div style="overflow-x:auto;padding-bottom:4px;margin-bottom:16px">
+    <div style="overflow-x:auto;padding-bottom:4px;margin-bottom:16px;direction:ltr">
       <div style="display:flex;align-items:flex-start;gap:4px;min-width:min-content;padding:0 4px;direction:ltr">${barsHtml}</div>
     </div>
-    <div style="font-size:10px;font-weight:700;color:#5a5870;display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">
-      <span>שחקן</span><span style="text-align:right">השקעה</span><span style="text-align:right">זכיות</span><span style="text-align:right">נטו</span>
-    </div>
-    ${players.map(p=>`
-    <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-items:center">
-      <span style="font-size:12px;font-weight:700;color:#e2ddd4">${p.name}</span>
-      <span style="font-size:11px;color:#5a5870;text-align:right">₪${p.paid.toLocaleString()}</span>
-      <span style="font-size:11px;color:#5b9bd5;text-align:right">₪${p.won.toLocaleString()}</span>
-      <span style="font-size:12px;font-weight:900;color:${p.net>=0?'#5fc47a':'#e07b6a'};text-align:right">${p.net>=0?'+':''}₪${p.net.toLocaleString()}</span>
-    </div>`).join('')}`;
+    <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;">
+      <span style="font-size:10px;font-weight:700;color:#5a5870;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">שחקן</span>
+      <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">השקעה</span>
+      <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">זכיות</span>
+      <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">נטו</span>
+      ${players.map(p=>`
+      <span style="font-size:12px;font-weight:700;color:#e2ddd4;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${p.name}</span>
+      <span style="font-size:11px;color:#5a5870;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${p.paid.toLocaleString()}</span>
+      <span style="font-size:11px;color:#5b9bd5;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${p.won.toLocaleString()}</span>
+      <span style="font-size:12px;font-weight:900;color:${p.net>=0?'#5fc47a':'#e07b6a'};text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${p.net>=0?'+':''}₪${p.net.toLocaleString()}</span>`).join('')}
+    </div>`;
   document.getElementById('stats-modal-content').innerHTML = html;
+  // מוודא שהגלילה נפתחת מההתחלה (scrollLeft=0 = יאיר, המצטבר הכי טוב) —
+  // ליתר ביטחון מעבר ל-direction:ltr שכבר הוגדר למעלה, כי לפעמים דפדפן שכבר
+  // "זוכר" מיקום גלילה קודם (למשל אם הסטטיסטיקה נפתחה כבר פעם בעבר) לא
+  // מתאפס אוטומטית רק מ-CSS.
+  const chartScroller = document.querySelector('#stats-modal-content > div:nth-child(2)');
+  if(chartScroller) chartScroller.scrollLeft = 0;
 }

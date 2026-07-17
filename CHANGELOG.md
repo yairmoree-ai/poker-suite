@@ -1,5 +1,75 @@
 ---
 
+## 2026-07-14 (cont'd 11) — Statistics screen: table alignment + chart scroll position
+**Files: features.js**
+
+- Quick break from the ranges work — two UI bugs on the season-statistics
+  screen (`showStatistics()`), unrelated to everything else today.
+- **Table columns not aligned:** each row (header included) was its own
+  independent CSS Grid (`display:grid` inside a separate `<div>` per row).
+  `auto`-sized columns only synchronize width within a single shared grid
+  container — with N separate grids, each row's "השקעה"/"זכיות"/"נטו"
+  columns sized themselves independently based on that row's own digit
+  count (e.g. "₪4,810" vs "₪0"), so nothing lined up vertically. Fixed by
+  making the whole table (header + every player row) one single grid
+  container with flat children, letting the grid's own column-sizing do
+  its job across all rows at once — the standard/correct way to build an
+  aligned table with CSS Grid.
+- **Chart opens scrolled to the wrong end:** the bars themselves were
+  already generated best-to-worst (players array already sorted
+  `b.net-a.net`), so this wasn't a sort bug — it was the horizontally-
+  scrollable container (`overflow-x:auto`) not having an explicit
+  `direction`, so in the app's RTL context its default/initial scroll
+  position landed at the right edge (the worst performers) instead of
+  `scrollLeft:0` (the best performer, יאיר). Fixed by setting
+  `direction:ltr` on the outer scroll container too (previously only the
+  inner flex row had it), and added an explicit `scrollLeft=0` right after
+  rendering as a second safety net, in case a browser retains a previous
+  scroll position across repeated opens of the same modal.
+
+## 2026-07-14 (cont'd 10) — KQo missing from UTG/UTG+1/LJ RFI; new audit tool
+**Files: ranges.js, tools/audit_monotonicity.js (new)**
+
+- User spotted KQo missing from UTG's RFI by eye (screenshot showing weaker
+  suited hands like T8s/K8s/J9s included while KQo — normally a standard
+  UTG open — was absent). Asked for a systematic scan for the same pattern
+  elsewhere.
+- Built `tools/audit_monotonicity.js`: flags any hand that's objectively
+  stronger (by the app's own `_HAND_RANKING`) than the weakest hand already
+  included in that same RFI range, yet is itself excluded — exactly the
+  KQo shape. Deliberately scoped to `RFI` only; `3bet`/`call`/`4bet` are
+  legitimately polarized (premiums + bluffs, skip the middle) and produce
+  mass false positives if checked the same way (confirmed: first pass
+  across all categories gave 1046 hits, almost all noise from polarized
+  categories; narrowed to RFI only gave 215, still heavily deduplicated by
+  the known 5=6 and 7=8=9 object aliasing).
+- Confirmed via the tool: KQo (and KJo) were missing from UTG, UTG+1, and
+  LJ's RFI specifically, consistently across every table size that shares
+  those objects. Also flagged, as a separate and arguably bigger finding:
+  heads-up (2-handed) BTN's RFI is only 52 hands (~31%) — real heads-up BTN
+  opens are typically 80-100%, suggesting that whole table may still be
+  old placeholder data rather than something that's had a real update pass
+  yet, not just a hole or two.
+- User then stated directly, from the live GTOWizard source, that KQo is a
+  100%-frequency hand at UTG/UTG+1/LJ — contradicting an explanatory
+  comment already sitting in the code (from an earlier RFI-update pass this
+  same session) that says mixed-frequency cells were deliberately excluded
+  as being under the 50% threshold. Rather than resolve the conflict by
+  guesswork, trusted the direct current confirmation against the live
+  source over the older in-code assumption, and fixed accordingly: added
+  `KQo` to `_RANGES[9].mid.UTG`, `['UTG+1']`, and `.LJ`'s `RFI` (shared with
+  sizes 7/8 via the existing aliasing). Verified directly (all three now
+  `includes('KQo') === true`) and re-ran `validate_ranges.js` clean.
+- **Still open, not yet resolved:** the audit also flagged `KJo` as missing
+  in the same three positions — asked the user to confirm whether that's
+  also 100% (same situation as KQo) or a genuine sub-50% mixed cell that
+  was correctly excluded, rather than assuming either answer.
+- Not addressed this round, flagged for later: the heads-up BTN/SB range
+  breadth finding above, and the broader backlog the audit tool surfaces —
+  treat `audit_monotonicity.js` as a prioritization tool for which
+  positions most need a real solver-data pass next, not a to-fix-now list.
+
+
 ## 2026-07-14 (cont'd 9) — Range editor now refreshes live, no close/reopen needed
 **Files: render.js**
 
