@@ -873,10 +873,10 @@ function confirmMergeTournaments(){
   notify(`${toAdd.length} טורנירים יובאו ✓`);
 }
 
-function showStatistics(){
-  document.getElementById('settings-box').style.display='none';
-  const modal = document.getElementById('stats-modal');
-  modal.style.display='flex';
+// מקור אמת יחיד לרשימת השחקנים+נטו מצטבר, ממוין מהטוב לגרוע — משמש גם את
+// showStatistics וגם את showPlayerDetail (שורת המעבר המהיר בין שחקנים),
+// כדי ששני המקומות תמיד יסכימו על אותו מיון/סכומים.
+function _computeAllPlayerStats(){
   const history = S.tournLog || [];
   const stats = {};
   history.forEach(t=>{
@@ -890,10 +890,18 @@ function showStatistics(){
       stats[name].won += prizes[f.place]||0;
     });
   });
-  const players = Object.entries(stats)
+  return Object.entries(stats)
     .map(([name,d])=>({name, paid:d.paid, won:d.won, net:d.won-d.paid}))
     .filter(p=>p.paid>0)
     .sort((a,b)=>b.net-a.net);
+}
+
+function showStatistics(){
+  document.getElementById('settings-box').style.display='none';
+  const modal = document.getElementById('stats-modal');
+  modal.style.display='flex';
+  const history = S.tournLog || [];
+  const players = _computeAllPlayerStats();
   if(!players.length){
     document.getElementById('stats-modal-content').innerHTML='<div style="text-align:center;color:#5a5870;padding:24px;font-size:13px">אין נתוני טורנירים עדיין</div>';
     return;
@@ -1003,6 +1011,34 @@ function showPlayerDetail(encodedName){
     ${statCard('הכי טוב', (best.net>=0?'+':'')+'₪'+best.net.toLocaleString(), '#5fc47a')}
   </div>`;
 
+  // מגמת נטו מצטבר לאורך זמן: rows כרגע מסודרות חדש-לישן (כמו S.tournLog),
+  // הופכים לכרונולוגי (ישן-לחדש) כדי שהגרף ייקרא משמאל לימין בסדר טבעי.
+  const chrono = [...rows].reverse();
+  let cum = 0;
+  const trendPoints = chrono.map(r=>{ cum += r.net; return {cum, date:r.date}; });
+  const maxAbsCum = Math.max(...trendPoints.map(p=>Math.abs(p.cum)), 1);
+  const TREND_BAR_MAX = 60, TREND_ZERO = 62;
+  const trendBarsHtml = trendPoints.map(p=>{
+    const isPos = p.cum>=0;
+    const barH = Math.max(Math.round((Math.abs(p.cum)/maxAbsCum)*TREND_BAR_MAX), 2);
+    const color = isPos?'rgba(95,196,122,0.85)':'rgba(224,123,106,0.85)';
+    return `<div style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0" title="${p.date}: ${isPos?'+':''}₪${p.cum.toLocaleString()}">
+      <div style="width:8px;height:${TREND_ZERO}px;display:flex;flex-direction:column;justify-content:flex-end">
+        ${isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:2px 2px 0 0"></div>`:''}
+      </div>
+      <div style="width:8px;height:1px;background:rgba(255,255,255,0.15)"></div>
+      <div style="width:8px;height:${TREND_BAR_MAX}px;display:flex;flex-direction:column;justify-content:flex-start">
+        ${!isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:0 0 2px 2px"></div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  const trendHtml = trendPoints.length>1 ? `<div style="margin-bottom:12px">
+    <div style="font-size:10px;color:#5a5870;margin-bottom:6px">מגמת נטו מצטבר (${trendPoints[0].date||'?'} ← ${trendPoints[trendPoints.length-1].date||'?'})</div>
+    <div style="overflow-x:auto;padding-bottom:2px;direction:ltr">
+      <div style="display:flex;align-items:flex-start;gap:2px;min-width:min-content;padding:0 2px;direction:ltr">${trendBarsHtml}</div>
+    </div>
+  </div>` : '';
+
   const breakdownHtml = `<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
     ${placeOrder.filter(k=>placeCounts[k]).map(k=>`
       <div style="background:rgba(200,169,110,0.1);border:1px solid rgba(200,169,110,0.3);border-radius:8px;padding:5px 10px;font-size:11px;color:#c8a96e">
@@ -1024,12 +1060,21 @@ function showPlayerDetail(encodedName){
     <span style="font-size:11px;font-weight:900;color:${r.net>=0?'#5fc47a':'#e07b6a'};text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${r.net>=0?'+':''}₪${r.net.toLocaleString()}</span>`).join('')}
   </div>`;
 
+  // שורת מעבר-מהיר בין שחקנים — אותה רשימה/מיון כמו showStatistics, כדי
+  // שאפשר לקפוץ ישירות לשחקן אחר בלי ללחוץ קודם "→ חזרה".
+  const allPlayers = _computeAllPlayerStats();
+  const switcherHtml = allPlayers.length>1 ? `<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px">
+    ${allPlayers.map(p=>`<button onclick="showPlayerDetail('${encodeURIComponent(p.name)}')" style="flex-shrink:0;background:${p.name===name?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.04)'};border:1px solid ${p.name===name?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.08)'};border-radius:14px;padding:4px 11px;font-size:11px;font-weight:700;color:${p.name===name?'#c8a96e':'#8a8799'};cursor:pointer;white-space:nowrap">${p.name}</button>`).join('')}
+  </div>` : '';
+
   const html = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <button onclick="showStatistics()" style="background:none;border:none;color:#c8a96e;font-size:13px;cursor:pointer;padding:2px 4px">→ חזרה</button>
       <div style="font-size:14px;font-weight:800;color:#c8a96e">${name}</div>
     </div>
+    ${switcherHtml}
     ${summaryHtml}
+    ${trendHtml}
     ${breakdownHtml}
     ${listHtml}`;
   document.getElementById('stats-modal-content').innerHTML = html;

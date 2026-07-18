@@ -1,5 +1,45 @@
 ---
 
+## 2026-07-14 (cont'd 13) — Player detail: trend chart + quick player switcher
+**Files: features.js**
+
+- Two follow-ups on the player-detail view from the previous round.
+- **Trend over time:** added a cumulative-net bar chart (same visual
+  language as the existing overall chart — green above zero, red below,
+  height proportional to magnitude) showing how the player's running net
+  total moved tournament-by-tournament, oldest to newest. `rows` is stored
+  newest-first (matches `S.tournLog`'s order) so it's reversed for this
+  chart specifically, so the trend reads left-to-right in natural
+  chronological order. Each bar has a `title` tooltip with the exact
+  date+cumulative value. Skipped entirely (no empty chart) if the player
+  has only one tournament — a trend needs at least two points.
+- **Switch players without going back first:** added a horizontally-
+  scrollable row of player-name chips at the top of the detail view (below
+  the "→ חזרה" button), using the same sorted list `showStatistics` shows.
+  Tapping a different chip calls `showPlayerDetail` directly for that
+  player — no need to back out to the main list first. The currently-
+  viewed player's chip is visually distinguished (gold border/fill vs.
+  default gray) so it's clear who you're looking at.
+- Extracted the players-list computation (name, paid, won, net, sorted by
+  net descending) that `showStatistics` already had inline into a new
+  shared `_computeAllPlayerStats()`, and pointed both `showStatistics` and
+  the new switcher row at it — same reasoning as every other shared-logic
+  extraction this session: two places computing "the same list" independently
+  is exactly the kind of thing that drifts apart later.
+- Mid-edit mistake caught before shipping: an early version of this change
+  left two duplicate, out-of-order copies of the function body (a botched
+  `str_replace` inserted new code before the `summaryHtml`/`breakdownHtml`/
+  `listHtml` definitions it depended on, while the old copies of those same
+  definitions were left dangling afterward). Caught by re-reading the file
+  rather than trusting the edit had applied cleanly — rewrote
+  `showPlayerDetail` wholesale from a clean copy instead of layering another
+  patch on top of a tangled one.
+- Re-ran the same 3-tournament synthetic-data simulation as last round, plus
+  new checks: trend chart section present, switcher chips present for both
+  other players (דן, רון), and — actually invoking a chip's `onclick`
+  target (`showPlayerDetail('דן')`) — confirmed it correctly re-renders the
+  panel for the newly-selected player.
+
 ## 2026-07-14 (cont'd 12) — New: per-player tournament detail view
 **Files: features.js**
 
