@@ -1028,14 +1028,11 @@ function showPlayerDetail(encodedName){
     const tournIsPos = p.tournNet>=0;
     const arrowColor = tournIsPos?'#5fc47a':'#e07b6a';
     const arrow = tournIsPos?'▲':'▼';
-    // 'title' (tooltip ב-hover) כמעט לא עובד במגע/מובייל — הוחלף בלחיצה
-    // רגילה (tap) שמפעילה notify(), שכבר בשימוש באפליקציה בדיוק לזה.
-    const tapMsg = `${p.date}: הטורניר עצמו ${tournIsPos?'+':''}₪${p.tournNet.toLocaleString()} · מצטבר ${isPos?'+':''}₪${p.cum.toLocaleString()}`;
-    // התיקון הנכון: לעצור את מחוות ה-touch של iOS *ברגע שהאצבע נוגעת*
-    // (ontouchstart + preventDefault), לא לנסות לחסום רק דרך CSS אחרי מעשה —
-    // זה מה שגרם ל-CSS-בלבד (הניסיון הקודם) לתפוס גם את ה-tap הרגיל בטעות.
-    // ה-onclick עצמו ממשיך לרוץ כרגיל מיד אחרי ה-touchend.
-    return `<div ontouchstart="event.preventDefault()" onclick="notify('${tapMsg}')" style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0;cursor:pointer;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none">
+    // ויתרנו על אינטראקציית לחיצה/מגע-ארוך על העמודות (התנגשה עם מנגנוני
+    // הבחירה/לופה של iOS ולא הצלחנו לייצב) — הטבלה המפורטת למטה כבר נותנת
+    // בדיוק אותו מידע (מקום/תאריך/השקעה/זכייה/נטו) בצורה אמינה, ללא צורך
+    // בעוד מנגנון. הברים כאן הם ויזואליה בלבד.
+    return `<div style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0">
       <div style="font-size:7px;line-height:1;color:${arrowColor};margin-bottom:2px">${arrow}</div>
       <div style="width:8px;height:${TREND_ZERO}px;display:flex;flex-direction:column;justify-content:flex-end">
         ${isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:2px 2px 0 0"></div>`:''}
@@ -1049,8 +1046,8 @@ function showPlayerDetail(encodedName){
   const trendHtml = trendPoints.length>1 ? `<div style="margin-bottom:12px">
     <div style="font-size:10px;color:#8a8799;margin-bottom:2px">מגמת נטו מצטבר (${trendPoints[0].date||'?'} ← ${trendPoints[trendPoints.length-1].date||'?'})</div>
     <div style="font-size:9px;color:#5a5870;margin-bottom:6px">גובה+צבע העמודה = הסכום המצטבר עד לאותו טורניר &nbsp;·&nbsp; <span style="color:#5fc47a">▲</span>/<span style="color:#e07b6a">▼</span> מעליה = אם הטורניר הבודד הזה עצמו היה רווח או הפסד</div>
-    <div style="overflow-x:auto;padding-bottom:2px;direction:ltr;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none">
-      <div style="display:flex;align-items:flex-start;gap:2px;min-width:min-content;padding:0 2px;direction:ltr;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none">${trendBarsHtml}</div>
+    <div style="overflow-x:auto;padding-bottom:2px;direction:ltr">
+      <div style="display:flex;align-items:flex-start;gap:2px;min-width:min-content;padding:0 2px;direction:ltr">${trendBarsHtml}</div>
     </div>
   </div>` : '';
 

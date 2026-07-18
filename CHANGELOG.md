@@ -1,5 +1,28 @@
 ---
 
+## 2026-07-14 (cont'd 20) — Gave up on trend-bar tap detail; reverted to static bars
+**Files: features.js**
+
+- Three rounds of trying to make a tap/long-press detail popup work
+  reliably on the trend chart bars (title tooltip → onclick+notify →
+  broader user-select:none → touchstart preventDefault) still didn't work
+  for the user, and it's not an important-enough feature to keep chasing.
+  User's call: drop it.
+- Removed all of it — `onclick`, `ontouchstart`, `cursor:pointer`, and the
+  `user-select`/`touch-callout` CSS — from both the individual bars and
+  the container hierarchy. Bars are pure static visuals again: height +
+  color for the cumulative total, ▲/▼ above for the individual
+  tournament's result, exactly as already explained by the legend line
+  under the chart title. No interaction, no iOS gesture conflicts to fight.
+- Nothing lost functionally: the exact same numbers (date, individual
+  tournament net, cumulative-implied via the running list) are already
+  visible in the detailed table directly below the chart — the tap feature
+  would only have saved scrolling down a few rows, not exposed any new
+  information.
+- Verified via render simulation: no `notify(` calls or `user-select`
+  anywhere in the bar markup anymore; arrows and bar heights still render
+  correctly.
+
 ## 2026-07-14 (cont'd 19) — Trend bar: correct fix — stop the gesture at touch start
 **Files: features.js**
 
