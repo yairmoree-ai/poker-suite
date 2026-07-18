@@ -1,5 +1,22 @@
 ---
 
+## 2026-07-14 (cont'd 17) — Trend bar tap: stop iOS from hijacking it as text selection
+**Files: features.js**
+
+- Screenshot from the user showed what actually happened on a long-press:
+  iOS Safari's native "Copy / Find Selection" text-selection callout menu,
+  not our `notify()` popup — confirms the previous fix (switching from
+  `title` to `onclick`) was correct in principle, but a genuine long-press
+  gesture on selectable text gets intercepted by iOS *before* `onclick`
+  fires, since long-press-on-text is Safari's built-in trigger for text
+  selection.
+- Fix: added `-webkit-touch-callout:none; -webkit-user-select:none;
+  user-select:none` to each bar's container div, so iOS no longer treats a
+  long-press there as "select this text" and the tap handler can fire
+  normally regardless of press duration. A normal quick tap already worked
+  before this fix; this specifically protects against the more likely
+  real-world case of a slightly-too-long press.
+
 ## 2026-07-14 (cont'd 16) — Trend chart bar detail: title tooltip → tap
 **Files: features.js**
 
