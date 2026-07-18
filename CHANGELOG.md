@@ -1,5 +1,40 @@
 ---
 
+## 2026-07-14 (cont'd 12) — New: per-player tournament detail view
+**Files: features.js**
+
+- User asked for exactly what's now built: tapping a player in the
+  Statistics list opens `showPlayerDetail()` — a dedicated view (with a
+  "→ חזרה" back button to the main list) showing:
+  - Full list of every tournament that player played, one row each: date
+    (+ custom tournament name if set), finish place (🏆 marked for 1st),
+    buy-in+rebuys paid, prize won, net for that specific tournament.
+  - A place-breakdown strip: "מקום 1: 2", "מקום 2: 1", "מקום 4: 3" etc. —
+    directly answers "all tournaments where they finished 1st/2nd/etc."
+  - Summary cards: tournament count, average finish place, ITM% (finished
+    in a place with prize>0 for that tournament — checked per-tournament
+    since payout structure varies by field size, not hardcoded to
+    places 1-4), **average net per tournament** (was previously only shown
+    as a cumulative total, not a per-tournament average), total net, ROI%
+    (net/paid), win rate (1st-place %), podium rate (top-3 %), and best
+    single-tournament result.
+- Implementation notes: player names are passed through the onclick handler
+  via `encodeURIComponent`/`decodeURIComponent` rather than embedded raw in
+  the HTML attribute, to avoid breaking on names containing quotes or other
+  special characters. Reuses the exact same per-tournament net/paid/won
+  calculation already used by `showStatistics()`'s aggregate view, so the
+  numbers are guaranteed consistent between the two screens.
+- Verified with a 3-tournament synthetic dataset (place 1/2/4 finishes,
+  mixed rebuys, one tournament with a custom name) — place-breakdown counts
+  and total net computed correctly (cross-checked by hand).
+- User also asked for more stat ideas beyond what was requested. Suggested
+  and implemented: ITM%, ROI%, win rate, podium rate, best result. Not yet
+  implemented, mentioned as further options if wanted: worst result display
+  (computed but not currently shown in the UI), current streak (cash/dry
+  streak), head-to-head vs specific opponents, a net-over-time trend line,
+  rebuy-rate tracking. None of these added speculatively — flagged for a
+  future round if the user wants them.
+
 ## 2026-07-14 (cont'd 11) — Statistics screen: table alignment + chart scroll position
 **Files: features.js**
 

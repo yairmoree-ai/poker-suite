@@ -931,11 +931,15 @@ function showStatistics(){
       <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">השקעה</span>
       <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">זכיות</span>
       <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">נטו</span>
-      ${players.map(p=>`
-      <span style="font-size:12px;font-weight:700;color:#e2ddd4;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${p.name}</span>
-      <span style="font-size:11px;color:#5a5870;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${p.paid.toLocaleString()}</span>
-      <span style="font-size:11px;color:#5b9bd5;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${p.won.toLocaleString()}</span>
-      <span style="font-size:12px;font-weight:900;color:${p.net>=0?'#5fc47a':'#e07b6a'};text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${p.net>=0?'+':''}₪${p.net.toLocaleString()}</span>`).join('')}
+      ${players.map(p=>{
+        const enc = encodeURIComponent(p.name);
+        const cell = 'cursor:pointer';
+        return `
+      <span onclick="showPlayerDetail('${enc}')" style="font-size:12px;font-weight:700;color:#e2ddd4;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">${p.name}</span>
+      <span onclick="showPlayerDetail('${enc}')" style="font-size:11px;color:#5a5870;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">₪${p.paid.toLocaleString()}</span>
+      <span onclick="showPlayerDetail('${enc}')" style="font-size:11px;color:#5b9bd5;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">₪${p.won.toLocaleString()}</span>
+      <span onclick="showPlayerDetail('${enc}')" style="font-size:12px;font-weight:900;color:${p.net>=0?'#5fc47a':'#e07b6a'};text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">${p.net>=0?'+':''}₪${p.net.toLocaleString()}</span>`;
+      }).join('')}
     </div>`;
   document.getElementById('stats-modal-content').innerHTML = html;
   // מוודא שהגלילה נפתחת מההתחלה (scrollLeft=0 = יאיר, המצטבר הכי טוב) —
@@ -944,4 +948,89 @@ function showStatistics(){
   // מתאפס אוטומטית רק מ-CSS.
   const chartScroller = document.querySelector('#stats-modal-content > div:nth-child(2)');
   if(chartScroller) chartScroller.scrollLeft = 0;
+}
+
+// פאנל פירוט לשחקן בודד: כל הטורנירים שלו + באיזה מקום סיים בכל אחד, פילוח
+// לפי מקום (כמה פעמים ראשון/שני/וכו'), ומדדים ממוצעים (לא רק נטו מצטבר).
+// נפתח בלחיצה על שורת שחקן בטבלה הראשית (showStatistics); "→ חזרה" חוזר לשם.
+function showPlayerDetail(encodedName){
+  const name = decodeURIComponent(encodedName);
+  const history = S.tournLog || [];
+  const rows = [];
+  history.forEach(t=>{
+    const buyin = t.buyinCost || S.buyinCost || 50;
+    const prizes = {1:t.place1||0, 2:t.place2||0, 3:t.place3||0, 4:t.place4||0};
+    (t.finishOrder||[]).forEach(f=>{
+      const fname = f.name || f.pid;
+      if(fname !== name) return;
+      const paid = (1+(f.rebuy||0)) * buyin;
+      const won = prizes[f.place]||0;
+      rows.push({date:t.date||'', tournName:t.name||'', place:f.place, paid, won, net:won-paid, rebuy:f.rebuy||0, paidPlace:!!prizes[f.place]});
+    });
+  });
+  if(!rows.length){ notify('אין נתונים לשחקן זה'); return; }
+
+  const n = rows.length;
+  const totalNet = rows.reduce((s,r)=>s+r.net,0);
+  const totalPaid = rows.reduce((s,r)=>s+r.paid,0);
+  const avgNet = totalNet/n;
+  const avgPlace = rows.reduce((s,r)=>s+r.place,0)/n;
+  const roi = totalPaid>0 ? (totalNet/totalPaid*100) : 0;
+  const itmCount = rows.filter(r=>r.paidPlace).length;
+  const wins = rows.filter(r=>r.place===1).length;
+  const podium = rows.filter(r=>r.place<=3).length;
+  const best = rows.reduce((b,r)=>r.net>b.net?r:b, rows[0]);
+  const worst = rows.reduce((w,r)=>r.net<w.net?r:w, rows[0]);
+
+  const placeCounts = {};
+  rows.forEach(r=>{ const key = r.place<=4 ? String(r.place) : '5+'; placeCounts[key]=(placeCounts[key]||0)+1; });
+  const placeOrder = ['1','2','3','4','5+'];
+
+  const statCard = (label,val,color)=>`<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:9px 6px;text-align:center">
+    <div style="font-size:9px;color:#5a5870;margin-bottom:3px">${label}</div>
+    <div style="font-size:14px;font-weight:900;color:${color||'#e2ddd4'}">${val}</div>
+  </div>`;
+
+  const summaryHtml = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+    ${statCard('טורנירים', n)}
+    ${statCard('מקום ממוצע', avgPlace.toFixed(1))}
+    ${statCard('ITM%', Math.round(itmCount/n*100)+'%')}
+    ${statCard('רווח ממוצע/טורניר', (avgNet>=0?'+':'')+'₪'+Math.round(avgNet).toLocaleString(), avgNet>=0?'#5fc47a':'#e07b6a')}
+    ${statCard('סה"כ נטו', (totalNet>=0?'+':'')+'₪'+totalNet.toLocaleString(), totalNet>=0?'#5fc47a':'#e07b6a')}
+    ${statCard('ROI', Math.round(roi)+'%', roi>=0?'#5fc47a':'#e07b6a')}
+    ${statCard('זכיות (מקום 1)', wins+' · '+Math.round(wins/n*100)+'%', '#c8a96e')}
+    ${statCard('פודיום (1-3)', podium+' · '+Math.round(podium/n*100)+'%')}
+    ${statCard('הכי טוב', (best.net>=0?'+':'')+'₪'+best.net.toLocaleString(), '#5fc47a')}
+  </div>`;
+
+  const breakdownHtml = `<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    ${placeOrder.filter(k=>placeCounts[k]).map(k=>`
+      <div style="background:rgba(200,169,110,0.1);border:1px solid rgba(200,169,110,0.3);border-radius:8px;padding:5px 10px;font-size:11px;color:#c8a96e">
+        מקום ${k}: <b>${placeCounts[k]}</b>
+      </div>`).join('')}
+  </div>`;
+
+  const listHtml = `<div style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:4px 8px">
+    <span style="font-size:9px;font-weight:700;color:#5a5870;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">מקום</span>
+    <span style="font-size:9px;font-weight:700;color:#5a5870;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">תאריך</span>
+    <span style="font-size:9px;font-weight:700;color:#5a5870;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">השקעה</span>
+    <span style="font-size:9px;font-weight:700;color:#5a5870;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">זכייה</span>
+    <span style="font-size:9px;font-weight:700;color:#5a5870;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">נטו</span>
+    ${rows.map(r=>`
+    <span style="font-size:11px;font-weight:900;color:${r.place===1?'#c8a96e':'#e2ddd4'};padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${r.place}${r.place===1?' 🏆':''}</span>
+    <span style="font-size:11px;color:#e2ddd4;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.date||'—'}${r.tournName?' · '+r.tournName:''}</span>
+    <span style="font-size:10px;color:#5a5870;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${r.paid.toLocaleString()}</span>
+    <span style="font-size:10px;color:#5b9bd5;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${r.won.toLocaleString()}</span>
+    <span style="font-size:11px;font-weight:900;color:${r.net>=0?'#5fc47a':'#e07b6a'};text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${r.net>=0?'+':''}₪${r.net.toLocaleString()}</span>`).join('')}
+  </div>`;
+
+  const html = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <button onclick="showStatistics()" style="background:none;border:none;color:#c8a96e;font-size:13px;cursor:pointer;padding:2px 4px">→ חזרה</button>
+      <div style="font-size:14px;font-weight:800;color:#c8a96e">${name}</div>
+    </div>
+    ${summaryHtml}
+    ${breakdownHtml}
+    ${listHtml}`;
+  document.getElementById('stats-modal-content').innerHTML = html;
 }
