@@ -1028,7 +1028,10 @@ function showPlayerDetail(encodedName){
     const tournIsPos = p.tournNet>=0;
     const arrowColor = tournIsPos?'#5fc47a':'#e07b6a';
     const arrow = tournIsPos?'▲':'▼';
-    return `<div style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0" title="${p.date}: הטורניר עצמו ${tournIsPos?'+':''}₪${p.tournNet.toLocaleString()} · מצטבר ${isPos?'+':''}₪${p.cum.toLocaleString()}">
+    // 'title' (tooltip ב-hover) כמעט לא עובד במגע/מובייל — הוחלף בלחיצה
+    // רגילה (tap) שמפעילה notify(), שכבר בשימוש באפליקציה בדיוק לזה.
+    const tapMsg = `${p.date}: הטורניר עצמו ${tournIsPos?'+':''}₪${p.tournNet.toLocaleString()} · מצטבר ${isPos?'+':''}₪${p.cum.toLocaleString()}`;
+    return `<div onclick="notify('${tapMsg}')" style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0;cursor:pointer">
       <div style="font-size:7px;line-height:1;color:${arrowColor};margin-bottom:2px">${arrow}</div>
       <div style="width:8px;height:${TREND_ZERO}px;display:flex;flex-direction:column;justify-content:flex-end">
         ${isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:2px 2px 0 0"></div>`:''}

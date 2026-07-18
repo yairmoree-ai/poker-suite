@@ -1,5 +1,24 @@
 ---
 
+## 2026-07-14 (cont'd 16) — Trend chart bar detail: title tooltip → tap
+**Files: features.js**
+
+- User reported long-press on a trend bar did nothing. Root cause: the
+  detail text was on the HTML `title` attribute, which is a hover-only
+  mechanism — essentially non-functional on touch devices (no reliable
+  long-press-to-reveal behavior on iOS Safari, which is what this app
+  actually runs on). Not a logic bug, just the wrong mechanism for a touch
+  UI.
+- Fixed by switching to a plain tap: each bar now has `onclick` calling
+  `notify(...)` (the same toast/message function already used elsewhere in
+  this exact file) with the same info the tooltip used to hold — the
+  individual tournament's date, its own net, and the cumulative total.
+  Added `cursor:pointer` as a visual affordance.
+- Verified via render simulation (2-tournament case, needed to actually
+  trigger the trend section, which only renders at 2+ tournaments): the
+  `title` attribute is gone, `onclick="notify(...)"` is wired on each bar,
+  and both arrow directions still render correctly.
+
 ## 2026-07-14 (cont'd 15) — Trend chart: per-tournament win/loss arrows + legend
 **Files: features.js**
 
