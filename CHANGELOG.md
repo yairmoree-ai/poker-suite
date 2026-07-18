@@ -1,5 +1,22 @@
 ---
 
+## 2026-07-14 (cont'd 18) — Trend chart: still selectable in the gaps between bars
+**Files: features.js**
+
+- Previous fix (`user-select:none` on each bar's own div) wasn't enough —
+  screenshot showed a long-press now triggering iOS's magnifying-loupe
+  text-cursor tool and selecting unrelated text elsewhere on the page (the
+  "מקום 1" filter button). Root cause: the 2px gaps *between* bars (part of
+  the flex container's `gap`, not covered by any individual bar's div) and
+  the container edges weren't covered by the earlier fix — a long-press
+  landing there still fell through to the browser's default text-selection
+  behavior.
+- Fix: applied the same `-webkit-touch-callout:none; -webkit-user-select:
+  none; user-select:none` to the *entire* chart container hierarchy — the
+  outer horizontal-scroll wrapper and the inner flex row — not just each
+  individual bar. Between this and the per-bar rule already in place, there's
+  no gap left for a long-press to slip through to native text selection.
+
 ## 2026-07-14 (cont'd 17) — Trend bar tap: stop iOS from hijacking it as text selection
 **Files: features.js**
 

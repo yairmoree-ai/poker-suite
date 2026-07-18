@@ -1048,8 +1048,8 @@ function showPlayerDetail(encodedName){
   const trendHtml = trendPoints.length>1 ? `<div style="margin-bottom:12px">
     <div style="font-size:10px;color:#8a8799;margin-bottom:2px">מגמת נטו מצטבר (${trendPoints[0].date||'?'} ← ${trendPoints[trendPoints.length-1].date||'?'})</div>
     <div style="font-size:9px;color:#5a5870;margin-bottom:6px">גובה+צבע העמודה = הסכום המצטבר עד לאותו טורניר &nbsp;·&nbsp; <span style="color:#5fc47a">▲</span>/<span style="color:#e07b6a">▼</span> מעליה = אם הטורניר הבודד הזה עצמו היה רווח או הפסד</div>
-    <div style="overflow-x:auto;padding-bottom:2px;direction:ltr">
-      <div style="display:flex;align-items:flex-start;gap:2px;min-width:min-content;padding:0 2px;direction:ltr">${trendBarsHtml}</div>
+    <div style="overflow-x:auto;padding-bottom:2px;direction:ltr;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none">
+      <div style="display:flex;align-items:flex-start;gap:2px;min-width:min-content;padding:0 2px;direction:ltr;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none">${trendBarsHtml}</div>
     </div>
   </div>` : '';
 
