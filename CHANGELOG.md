@@ -1,5 +1,67 @@
 ---
 
+## 2026-07-14 (cont'd 22) — "הפתעות" now actually does what it was meant to
+**Files: ui.js, render.js, state.js, index.html**
+
+- Follow-up: user clarified the field they'd asked for last round needed
+  three behaviors that weren't wired yet — subtract from the prize pool,
+  accumulate and display tournament-to-tournament, and show up in each
+  saved tournament's record.
+- **Pool subtraction:** `calcPrizes()` (`ui.js`) now subtracts
+  `S.surprisesAmount` from `rem` the same way `S.houseRake` already does —
+  `rem = pool - house - surprises - p4 - p3`, so it reduces the 70/30 split
+  between 1st/2nd exactly like the house cut does. Verified with a
+  synthetic case (pool 1000, house 200, surprises 100 → rem 700, p1≈490,
+  p2=210 — matches hand-calculated expectation).
+- **Per-tournament display in history:** added a new chip (🎉 הפתעות) to
+  each historical tournament card in the history list, using the
+  `surprisesAmount` already being saved into the record since last round —
+  only rendered when nonzero, matching the existing conditional pattern
+  used for the free-rebuy indicator.
+- **Cumulative total across tournaments:** added a new stat box to the top
+  bar (`index.html`, `#sbox-surprises`/`#stat-surprises`), populated in
+  `renderStats()` (`render.js`) as the sum of `surprisesAmount` across every
+  tournament in `S.tournLog` *plus* the current in-progress tournament's
+  value — not just the single active tournament's number. Box stays hidden
+  (`display:none`) whenever the cumulative total is exactly zero, so it
+  doesn't clutter the bar for anyone not using this field.
+- Verified `node --check` clean on all three JS files and a div-balance
+  check on the edited `index.html`.
+
+## 2026-07-14 (cont'd 21) — Prize section: compacted layout + new "surprises" field
+**Files: ui.js, state.js**
+
+- User asked to shorten the "💰 חישוב וחלוקת פרסים" section: keep מקום
+  1/2 rows as-is (they have the extra %/override logic), but combine
+  מקום 3 with בית into one row (בית to its left) and מקום 4 with a new
+  "הפתעות" field into another row (same positioning) — instead of 5
+  stacked full-width rows, just 2 for the plain-number fields.
+- Implementation: `.prize-row`'s existing CSS (`display:flex;gap:8px`, no
+  `justify-content`) naturally clusters content compactly rather than
+  stretching it — so simply appending a second label+input pair after the
+  first wasn't reliable positioning. Used `justify-content:space-between`
+  on these two specific rows instead, with each field (label+input) wrapped
+  in its own small flex group — first group (מקום 3 / מקום 4) anchors to
+  the row's start edge (right, in this RTL app — unchanged position from
+  before), second group (בית / הפתעות) anchors to the end edge (left).
+  Robust regardless of content width, not dependent on natural flow filling
+  the gap.
+- New field "הפתעות" needed a real state slot to be more than decoration:
+  added `S.surprisesAmount` (default 0) and threaded it through the same
+  four places `S.houseRake` already goes through, for consistency — the
+  default state object, cloud/local-storage restore, restore-from-saved-
+  template, the `persist()` localStorage payload, the cloud-sync payload,
+  and the historical tournament record saved by `saveTournament()`
+  (`ui.js`). Deliberately did **not** wire it into `calcPrizes()` or any
+  prize-pool math — the user asked for a tracked input field, not a
+  calculation change; flagged this explicitly in case they want it factored
+  into the pool total later (that would be a separate, deliberate ask).
+- Verified: `node --check` clean on both files; manually re-read the edited
+  HTML template block line-by-line to confirm every added `<div>` closes
+  correctly (an automated div-balance count on a crude text slice gave a
+  false-positive mismatch — a boundary artifact of the slice, not a real
+  issue, confirmed by reading the actual surrounding code).
+
 ## 2026-07-14 (cont'd 20) — Gave up on trend-bar tap detail; reverted to static bars
 **Files: features.js**
 

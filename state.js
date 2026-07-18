@@ -9,9 +9,9 @@ const PC={BTN:'#5b9bd5','BTN/SB':'#8b7cb8',SB:'#8b7cb8',BB:'#e07b6a',
   HJ:'#7eb8a4',CO:'#5fc4b4',LJ:'#6ab8d4'};
 const PBN={
   2:['BTN/SB','BB'],3:['BTN','SB','BB'],4:['BTN','SB','BB','UTG'],
-  5:['BTN','SB','BB','UTG','CO'],6:['BTN','SB','BB','LJ','HJ','CO'],
+  5:['BTN','SB','BB','UTG','CO'],6:['BTN','SB','BB','UTG','MP','CO'],
   7:['BTN','SB','BB','UTG','UTG+1','MP','CO'],
-  8:['BTN','SB','BB','UTG','UTG+1','LJ','HJ','CO'],
+  8:['BTN','SB','BB','UTG','UTG+1','MP','HJ','CO'],
   9:['BTN','SB','BB','UTG','UTG+1','MP','MP+1','HJ','CO'],
   10:['BTN','SB','BB','UTG','UTG+1','MP','MP+1','HJ','CO','LJ']
 };
@@ -123,6 +123,7 @@ let S={
   handLog:[],
   tournLog:[],
   houseRake:200,
+  surprisesAmount:0,
   place4:0, place3:0,
   place1Override:null, place2Override:null,
   currentActor:null,
@@ -231,6 +232,7 @@ function applySnapshot(v){
     if(v.customBlindLevels) S.customBlindLevels=v.customBlindLevels;
     if(v.tableSize) S.tableSize=v.tableSize;
     if(v.houseRake!==undefined) S.houseRake=v.houseRake;
+    if(v.surprisesAmount!==undefined) S.surprisesAmount=v.surprisesAmount;
     if(v.place4!==undefined) S.place4=v.place4;
     if(v.place3!==undefined) S.place3=v.place3;
     if(v.place1Override!==undefined) S.place1Override=v.place1Override;
@@ -292,7 +294,7 @@ function loadState(){
       buyinCost:tourn.buyinCost||50, buyins:tourn.buyins||{}, koOrder:tourn.koOrder||[],
       blindLevel:tourn.blindLevel||0, customBlinds:tourn.customBlinds||null,
       customBlindLevels:tourn.customBlindLevels||[], tableSize:tourn.tableSize||9,
-      houseRake:tourn.houseRake??200, place4:tourn.place4||0, place3:tourn.place3||0
+      houseRake:tourn.houseRake??200, surprisesAmount:tourn.surprisesAmount??0, place4:tourn.place4||0, place3:tourn.place3||0
     });
     BLIND_LEVELS=[...DEF_BLINDS,...S.customBlindLevels];
   }
@@ -317,7 +319,7 @@ function persist(){
   // Save to both localStorage and sessionStorage
   try{ localStorage.setItem('ps_lib',JSON.stringify(S.playerLib)); }catch(e){}
   try{ localStorage.setItem('ps_seats',JSON.stringify({seats:S.seats,board:S.board,btnSeat:S.btnSeat})); }catch(e){}
-  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,tableOrientation:S.tableOrientation,houseRake:S.houseRake,place4:S.place4,place3:S.place3,place1Override:S.place1Override,place2Override:S.place2Override,btnLocked:S.btnLocked,lastBet:S.lastBet,blindTimer:S.blindTimer,blindStructure:S.blindStructure})); }catch(e){}
+  try{ localStorage.setItem('ps_tourn',JSON.stringify({buyinCost:S.buyinCost,buyins:S.buyins,koOrder:S.koOrder,blindLevel:S.blindLevel,customBlinds:S.customBlinds,customBlindLevels:S.customBlindLevels,tableSize:S.tableSize,tableOrientation:S.tableOrientation,houseRake:S.houseRake,surprisesAmount:S.surprisesAmount,place4:S.place4,place3:S.place3,place1Override:S.place1Override,place2Override:S.place2Override,btnLocked:S.btnLocked,lastBet:S.lastBet,blindTimer:S.blindTimer,blindStructure:S.blindStructure})); }catch(e){}
   try{ localStorage.setItem('ps_log',JSON.stringify(S.handLog)); }catch(e){}
   try{ localStorage.setItem('ps_tlog',JSON.stringify(S.tournLog)); }catch(e){}
   try{ localStorage.setItem('ps_pranges',JSON.stringify(S.playerRanges||{})); }catch(e){}
@@ -337,7 +339,7 @@ function fullSnapshot(){
     buyinCost:S.buyinCost, buyins:S.buyins, koOrder:S.koOrder,
     blindLevel:S.blindLevel, customBlinds:S.customBlinds,
     customBlindLevels:S.customBlindLevels, tableSize:S.tableSize, tableOrientation:S.tableOrientation,
-    houseRake:S.houseRake, place4:S.place4, place3:S.place3,
+    houseRake:S.houseRake, surprisesAmount:S.surprisesAmount, place4:S.place4, place3:S.place3,
     handLog:S.handLog, tournLog:S.tournLog, deleted:S.deleted||{hands:{},players:{},tourns:{}},
     blindTimer:S.blindTimer, blindStructure:S.blindStructure,
     playerRanges:S.playerRanges||{}

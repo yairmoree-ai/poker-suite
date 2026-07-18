@@ -616,13 +616,14 @@ function deleteHand(hi){
 function calcPrizes(){
   const pool=prizePool();
   const house=S.houseRake||0;
+  const surprises=S.surprisesAmount||0;
   const p4=parseFloat(S.place4)||0;
   const p3=parseFloat(S.place3)||0;
-  const rem=Math.max(0,pool-house-p4-p3);
+  const rem=Math.max(0,pool-house-surprises-p4-p3);
   const p1auto=rem*0.7, p2auto=rem*0.3;
   const p1=S.place1Override!=null?S.place1Override:p1auto;
   const p2=S.place2Override!=null?S.place2Override:p2auto;
-  return{pool,house,p4,p3,p2,p1,rem,p1auto,p2auto};
+  return{pool,house,surprises,p4,p3,p2,p1,rem,p1auto,p2auto};
 }
 function confirmSaveTournament(){
   const name = document.getElementById('tourn-name-inp')?.value?.trim()||'';
@@ -657,7 +658,7 @@ function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');re
     id:uid(), date:new Date().toLocaleDateString('he-IL'),
     buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
     totalEntries:totalEntries(), paidEntries:calcPaidEntries(), freeRebuys:calcFreeRebuys(), prizePool:pr.pool,
-    houseRake:pr.house, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
+    houseRake:pr.house, surprisesAmount:S.surprisesAmount||0, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
     koOrder:[...S.koOrder],
     finishOrder:[...activeSorted, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid),rebuy:(S.buyins[pid]||{}).rebuy||0})),
     activePlayers:activePids.map(pid=>({pid,name:pName(pid)})),
@@ -882,17 +883,25 @@ function renderTournList(){
             style="width:80px" title="השאר ריק לחישוב אוטומטי 30%">
         </div>`}
     </div>
-    <div class="prize-row">
-      <span class="prize-lbl">מקום 3</span>
-      ${isViewer()?`<span class="prize-val">${S.place3?'₪'+S.place3.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place3||0}" placeholder="0" onchange="S.place3=+this.value;persist();renderTournList()">`}
+    <div class="prize-row" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="prize-lbl" style="min-width:auto">מקום 3</span>
+        ${isViewer()?`<span class="prize-val">${S.place3?'₪'+S.place3.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place3||0}" placeholder="0" onchange="S.place3=+this.value;persist();renderTournList()">`}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="prize-lbl" style="min-width:auto">בית</span>
+        ${isViewer()?`<span class="prize-val">₪${S.houseRake.toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">`}
+      </div>
     </div>
-    <div class="prize-row">
-      <span class="prize-lbl">מקום 4</span>
-      ${isViewer()?`<span class="prize-val">${S.place4?'₪'+S.place4.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()">`}
-    </div>
-    <div class="prize-row">
-      <span class="prize-lbl">בית</span>
-      ${isViewer()?`<span class="prize-val">₪${S.houseRake.toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">`}
+    <div class="prize-row" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="prize-lbl" style="min-width:auto">מקום 4</span>
+        ${isViewer()?`<span class="prize-val">${S.place4?'₪'+S.place4.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()">`}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="prize-lbl" style="min-width:auto">הפתעות</span>
+        ${isViewer()?`<span class="prize-val">₪${(S.surprisesAmount||0).toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.surprisesAmount||0}" placeholder="0" onchange="S.surprisesAmount=+this.value;persist();renderTournList()">`}
+      </div>
     </div>
     ${isAdmin()?`
     <div style="display:flex;gap:6px;margin-top:12px">
@@ -944,6 +953,11 @@ function renderTournList(){
           <div style="background:rgba(26,58,26,0.3);border:1px solid rgba(74,138,74,0.3);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
             <div style="font-size:10px;color:#4a8a4a;margin-bottom:1px">🃏 צ׳יפים</div>
             <div style="font-size:16px;font-weight:900;color:#7fd47f">${((t.totalEntries||0)*50/1000).toFixed(1)}M</div>
+          </div>`:''}
+          ${t.surprisesAmount?`
+          <div style="background:rgba(224,123,106,0.1);border:1px solid rgba(224,123,106,0.3);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
+            <div style="font-size:10px;color:#e07b6a;margin-bottom:1px">🎉 הפתעות</div>
+            <div style="font-size:16px;font-weight:900;color:#e07b6a">₪${t.surprisesAmount.toLocaleString()}</div>
           </div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">

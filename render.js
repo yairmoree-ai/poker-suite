@@ -2080,6 +2080,14 @@ function renderStats(){
   }
   document.getElementById('stat-active').textContent=`${activeTournPlayers().length}/${totalEntries()}`;
   document.getElementById('stat-prize').textContent=`₪${prizePool().toLocaleString()}`;
+  // "הפתעות" מצטבר: סכום מכל הטורנירים השמורים בהיסטוריה + הטורניר הנוכחי
+  // (עוד לפני שנשמר) — לא רק הערך הבודד של הטורניר הפעיל.
+  const surprisesTotal = (S.tournLog||[]).reduce((s,t)=>s+(t.surprisesAmount||0), 0) + (S.surprisesAmount||0);
+  const sboxSurprises = document.getElementById('sbox-surprises');
+  if(sboxSurprises){
+    sboxSurprises.style.display = surprisesTotal>0 ? '' : 'none';
+    if(surprisesTotal>0) document.getElementById('stat-surprises').textContent=`₪${surprisesTotal.toLocaleString()}`;
+  }
   document.getElementById('inp-buyin-cost').value=S.buyinCost;
   document.querySelectorAll('#sel-table-size,#sel-table-size-stats').forEach(el=>el.value=S.tableSize);
   document.getElementById('sel-table-size').value=S.tableSize;
