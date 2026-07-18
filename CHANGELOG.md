@@ -1,5 +1,25 @@
 ---
 
+## 2026-07-14 (cont'd 23) — Tournament name was silently dropped on save
+**Files: ui.js**
+
+- User reported: naming a tournament when saving, but the history entry
+  showed the empty "+ הוסף שם" placeholder instead of the name given.
+- Root cause, found directly: `saveTournament(tournName)` receives the name
+  as a parameter but never once uses it when building the saved record —
+  no `name:` field in the object literal at all. The parameter was just
+  silently discarded, every time, from both entry points that call this
+  function (the dedicated "💾 שמור" dialog via `confirmSaveTournament()`,
+  and "💾 שמור ואפס" via `doSaveAndReset()` — both correctly read the name
+  from their respective input fields and pass it in; the drop happened
+  entirely inside `saveTournament` itself).
+- Fix: added `name:tournName||''` to the saved record. One-line fix at the
+  root shared by both save paths, rather than patching each entry point
+  separately.
+- Verified via simulation: called `saveTournament('ערב פוקר מיוחד')` against
+  a minimal stubbed environment and confirmed `S.tournLog[0].name` now
+  actually holds the given name (previously would've been `undefined`).
+
 ## 2026-07-14 (cont'd 22) — "הפתעות" now actually does what it was meant to
 **Files: ui.js, render.js, state.js, index.html**
 

@@ -655,7 +655,7 @@ function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');re
     return sb2-sa;
   });
   const t={
-    id:uid(), date:new Date().toLocaleDateString('he-IL'),
+    id:uid(), date:new Date().toLocaleDateString('he-IL'), name:tournName||'',
     buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
     totalEntries:totalEntries(), paidEntries:calcPaidEntries(), freeRebuys:calcFreeRebuys(), prizePool:pr.pool,
     houseRake:pr.house, surprisesAmount:S.surprisesAmount||0, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
