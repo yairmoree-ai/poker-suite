@@ -1,5 +1,29 @@
 ---
 
+## 2026-07-14 (cont'd 19) — Trend bar: correct fix — stop the gesture at touch start
+**Files: features.js**
+
+- User reported the previous round's fix (broader `user-select:none`
+  coverage) went too far — nothing responded at all anymore, not even a
+  plain short tap.
+- The CSS-only approach was fighting the symptom, not the cause: iOS
+  starts its long-press gesture recognizer (leading to the selection menu
+  or magnifier) the moment a touch begins and holds past a short threshold,
+  and trying to suppress the result purely via `user-select`/`touch-callout`
+  CSS is fragile and can end up interfering with normal click delivery too.
+- Correct fix: added `ontouchstart="event.preventDefault()"` directly on
+  each bar's div. Calling `preventDefault()` on `touchstart` tells iOS
+  immediately "don't run your default gesture handling for this touch" —
+  stopping the long-press recognizer before it ever starts, rather than
+  reacting after the fact. The existing `onclick` still fires normally on
+  release for an actual tap, since `preventDefault` on `touchstart` doesn't
+  block the synthetic click Safari generates afterward. Left the CSS
+  `user-select`/`touch-callout` properties in place as a harmless secondary
+  safety net, but the `touchstart` handler is doing the real work now.
+- This is the standard, well-established pattern for "make an element
+  tap-only, no long-press gesture" on iOS Safari — more direct and more
+  reliable than the CSS-only attempts from the last two rounds.
+
 ## 2026-07-14 (cont'd 18) — Trend chart: still selectable in the gaps between bars
 **Files: features.js**
 

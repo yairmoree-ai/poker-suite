@@ -1031,10 +1031,11 @@ function showPlayerDetail(encodedName){
     // 'title' (tooltip ב-hover) כמעט לא עובד במגע/מובייל — הוחלף בלחיצה
     // רגילה (tap) שמפעילה notify(), שכבר בשימוש באפליקציה בדיוק לזה.
     const tapMsg = `${p.date}: הטורניר עצמו ${tournIsPos?'+':''}₪${p.tournNet.toLocaleString()} · מצטבר ${isPos?'+':''}₪${p.cum.toLocaleString()}`;
-    // -webkit-touch-callout/-user-select: מונע מ-iOS Safari לחטוף לחיצה
-    // ארוכה על התוכן הזה לתפריט "Copy / Find Selection" המובנה שלו, שהיה
-    // מסתיר/מבטל את ה-onclick שלנו לפני שהוא בכלל מקבל סיכוי לפעול.
-    return `<div onclick="notify('${tapMsg}')" style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0;cursor:pointer;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none">
+    // התיקון הנכון: לעצור את מחוות ה-touch של iOS *ברגע שהאצבע נוגעת*
+    // (ontouchstart + preventDefault), לא לנסות לחסום רק דרך CSS אחרי מעשה —
+    // זה מה שגרם ל-CSS-בלבד (הניסיון הקודם) לתפוס גם את ה-tap הרגיל בטעות.
+    // ה-onclick עצמו ממשיך לרוץ כרגיל מיד אחרי ה-touchend.
+    return `<div ontouchstart="event.preventDefault()" onclick="notify('${tapMsg}')" style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0;cursor:pointer;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none">
       <div style="font-size:7px;line-height:1;color:${arrowColor};margin-bottom:2px">${arrow}</div>
       <div style="width:8px;height:${TREND_ZERO}px;display:flex;flex-direction:column;justify-content:flex-end">
         ${isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:2px 2px 0 0"></div>`:''}
