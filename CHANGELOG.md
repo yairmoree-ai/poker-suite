@@ -1,5 +1,21 @@
 ---
 
+## 2026-07-14 (cont'd 14) — Statistics headers: bigger, brighter fonts
+**Files: features.js**
+
+- User flagged the small headers as hard to read: the stat-card labels
+  (%ITM, מקום ממוצע, ROI, etc.) and the table column headers (מקום/תאריך/
+  השקעה/זכייה/נטו, both in the player-detail list and the main
+  showStatistics list) were all at 9-10px in a muted gray (#5a5870).
+- Bumped every one of those to 11px, heavier weight (700-800), and a
+  brighter gray (#8a8799) for better contrast against the dark background.
+  Left the small +/-k value labels above the overall bar chart alone
+  (those are bold, colored data labels, not headers — different complaint
+  category than what was raised) and the "מקום 1: N" breakdown chips (were
+  already 11px/gold, already legible).
+- Verified via render simulation that both the stat-card label style and
+  the column-header style actually changed in the output HTML.
+
 ## 2026-07-14 (cont'd 13) — Player detail: trend chart + quick player switcher
 **Files: features.js**
 

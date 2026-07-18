@@ -935,10 +935,10 @@ function showStatistics(){
       <div style="display:flex;align-items:flex-start;gap:4px;min-width:min-content;padding:0 4px;direction:ltr">${barsHtml}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;">
-      <span style="font-size:10px;font-weight:700;color:#5a5870;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">שחקן</span>
-      <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">השקעה</span>
-      <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">זכיות</span>
-      <span style="font-size:10px;font-weight:700;color:#5a5870;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">נטו</span>
+      <span style="font-size:11px;font-weight:800;color:#8a8799;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">שחקן</span>
+      <span style="font-size:11px;font-weight:800;color:#8a8799;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">השקעה</span>
+      <span style="font-size:11px;font-weight:800;color:#8a8799;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">זכיות</span>
+      <span style="font-size:11px;font-weight:800;color:#8a8799;text-align:right;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">נטו</span>
       ${players.map(p=>{
         const enc = encodeURIComponent(p.name);
         const cell = 'cursor:pointer';
@@ -995,7 +995,7 @@ function showPlayerDetail(encodedName){
   const placeOrder = ['1','2','3','4','5+'];
 
   const statCard = (label,val,color)=>`<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:9px 6px;text-align:center">
-    <div style="font-size:9px;color:#5a5870;margin-bottom:3px">${label}</div>
+    <div style="font-size:11px;font-weight:700;color:#8a8799;margin-bottom:4px;letter-spacing:0.2px">${label}</div>
     <div style="font-size:14px;font-weight:900;color:${color||'#e2ddd4'}">${val}</div>
   </div>`;
 
@@ -1047,11 +1047,11 @@ function showPlayerDetail(encodedName){
   </div>`;
 
   const listHtml = `<div style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:4px 8px">
-    <span style="font-size:9px;font-weight:700;color:#5a5870;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">מקום</span>
-    <span style="font-size:9px;font-weight:700;color:#5a5870;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">תאריך</span>
-    <span style="font-size:9px;font-weight:700;color:#5a5870;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">השקעה</span>
-    <span style="font-size:9px;font-weight:700;color:#5a5870;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">זכייה</span>
-    <span style="font-size:9px;font-weight:700;color:#5a5870;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">נטו</span>
+    <span style="font-size:11px;font-weight:800;color:#8a8799;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">מקום</span>
+    <span style="font-size:11px;font-weight:800;color:#8a8799;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">תאריך</span>
+    <span style="font-size:11px;font-weight:800;color:#8a8799;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">השקעה</span>
+    <span style="font-size:11px;font-weight:800;color:#8a8799;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">זכייה</span>
+    <span style="font-size:11px;font-weight:800;color:#8a8799;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.08)">נטו</span>
     ${rows.map(r=>`
     <span style="font-size:11px;font-weight:900;color:${r.place===1?'#c8a96e':'#e2ddd4'};padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${r.place}${r.place===1?' 🏆':''}</span>
     <span style="font-size:11px;color:#e2ddd4;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.date||'—'}${r.tournName?' · '+r.tournName:''}</span>
