@@ -1,5 +1,27 @@
 ---
 
+## 2026-07-14 (cont'd 15) — Trend chart: per-tournament win/loss arrows + legend
+**Files: features.js**
+
+- User asked for clarification on what the trend bars actually represent
+  (cumulative-to-date, not per-tournament result — a real, reasonable
+  point of confusion for a bar chart shaped like this), then asked for the
+  visual fix once the distinction was explained.
+- Added a small ▲/▼ marker above each bar: green ▲ if *that specific
+  tournament's* net was positive, red ▼ if negative — independent of the
+  bar's own height/color, which still represents the running cumulative
+  total. Makes it possible to see e.g. "a genuinely good tournament in the
+  middle of an overall losing stretch" at a glance, which the cumulative
+  bars alone can't show.
+- Added a one-line legend directly under the chart title spelling out
+  which visual element means what, so this doesn't need re-explaining next
+  time: "גובה+צבע העמודה = מצטבר · ▲/▼ מעליה = הטורניר הבודד עצמו".
+  Tooltip (long-press/hover) on each bar now also states both numbers
+  explicitly (the individual tournament's net and the cumulative total)
+  rather than just the cumulative figure.
+- Verified with a 2-tournament synthetic case (one win, one loss) that both
+  arrow directions actually render.
+
 ## 2026-07-14 (cont'd 14) — Statistics headers: bigger, brighter fonts
 **Files: features.js**
 

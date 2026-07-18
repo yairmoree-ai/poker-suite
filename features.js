@@ -1015,14 +1015,21 @@ function showPlayerDetail(encodedName){
   // הופכים לכרונולוגי (ישן-לחדש) כדי שהגרף ייקרא משמאל לימין בסדר טבעי.
   const chrono = [...rows].reverse();
   let cum = 0;
-  const trendPoints = chrono.map(r=>{ cum += r.net; return {cum, date:r.date}; });
+  const trendPoints = chrono.map(r=>{ cum += r.net; return {cum, tournNet:r.net, date:r.date}; });
   const maxAbsCum = Math.max(...trendPoints.map(p=>Math.abs(p.cum)), 1);
   const TREND_BAR_MAX = 60, TREND_ZERO = 62;
   const trendBarsHtml = trendPoints.map(p=>{
     const isPos = p.cum>=0;
     const barH = Math.max(Math.round((Math.abs(p.cum)/maxAbsCum)*TREND_BAR_MAX), 2);
     const color = isPos?'rgba(95,196,122,0.85)':'rgba(224,123,106,0.85)';
-    return `<div style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0" title="${p.date}: ${isPos?'+':''}₪${p.cum.toLocaleString()}">
+    // חץ קטן מעל כל עמודה: תוצאת *הטורניר הבודד הזה* (▲ ירוק=רווח, ▼ אדום=הפסד),
+    // בנפרד לגמרי מצבע/גובה העמודה עצמה שמייצגים את המצטבר עד לאותה נקודה —
+    // כדי שאפשר יהיה להבחין "טורניר טוב באמצע מגמה שלילית כללית" וכדומה.
+    const tournIsPos = p.tournNet>=0;
+    const arrowColor = tournIsPos?'#5fc47a':'#e07b6a';
+    const arrow = tournIsPos?'▲':'▼';
+    return `<div style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0" title="${p.date}: הטורניר עצמו ${tournIsPos?'+':''}₪${p.tournNet.toLocaleString()} · מצטבר ${isPos?'+':''}₪${p.cum.toLocaleString()}">
+      <div style="font-size:7px;line-height:1;color:${arrowColor};margin-bottom:2px">${arrow}</div>
       <div style="width:8px;height:${TREND_ZERO}px;display:flex;flex-direction:column;justify-content:flex-end">
         ${isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:2px 2px 0 0"></div>`:''}
       </div>
@@ -1033,7 +1040,8 @@ function showPlayerDetail(encodedName){
     </div>`;
   }).join('');
   const trendHtml = trendPoints.length>1 ? `<div style="margin-bottom:12px">
-    <div style="font-size:10px;color:#5a5870;margin-bottom:6px">מגמת נטו מצטבר (${trendPoints[0].date||'?'} ← ${trendPoints[trendPoints.length-1].date||'?'})</div>
+    <div style="font-size:10px;color:#8a8799;margin-bottom:2px">מגמת נטו מצטבר (${trendPoints[0].date||'?'} ← ${trendPoints[trendPoints.length-1].date||'?'})</div>
+    <div style="font-size:9px;color:#5a5870;margin-bottom:6px">גובה+צבע העמודה = הסכום המצטבר עד לאותו טורניר &nbsp;·&nbsp; <span style="color:#5fc47a">▲</span>/<span style="color:#e07b6a">▼</span> מעליה = אם הטורניר הבודד הזה עצמו היה רווח או הפסד</div>
     <div style="overflow-x:auto;padding-bottom:2px;direction:ltr">
       <div style="display:flex;align-items:flex-start;gap:2px;min-width:min-content;padding:0 2px;direction:ltr">${trendBarsHtml}</div>
     </div>
