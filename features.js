@@ -44,7 +44,7 @@ function showHelp(topic){
   ov.innerHTML = '<div style="background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px;max-height:70vh;overflow-y:auto">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
     '<span style="font-size:16px;font-weight:800;color:#c8a96e">'+h.title+'</span>'+
-    '<button onclick="closeHelp()" style="background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer">✕</button>'+
+    '<button onclick="closeHelp()" style="background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer">✕</button>'+
     '</div>'+rulesHtml+'</div>';
   document.body.appendChild(ov);
 }
@@ -256,7 +256,7 @@ function updateSyncDot(state){
 
 function setSyncStatus(msg, color){
   const el = document.getElementById('sync-status');
-  if(el){ el.textContent = msg; el.style.color = color||'#5a5870'; }
+  if(el){ el.textContent = msg; el.style.color = color||'#8a8799'; }
 }
 
 
@@ -283,8 +283,8 @@ async function showUsersManager(){
   box.onclick = e=>e.stopPropagation();
   box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
     '<span style="font-size:15px;font-weight:800;color:#c8a96e">👥 ניהול משתמשים</span>'+
-    '<button onclick="closeUsersMgmt()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>'+
-    '<div id="users-list-div" style="margin-bottom:14px"><div style="color:#5a5870;font-size:12px">טוען...</div></div>'+
+    '<button onclick="closeUsersMgmt()" style="background:none;border:none;color:#8a8799;font-size:20px;cursor:pointer">✕</button></div>'+
+    '<div id="users-list-div" style="margin-bottom:14px"><div style="color:#8a8799;font-size:12px">טוען...</div></div>'+
     '<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;margin-top:4px">'+
     '<div style="font-size:12px;font-weight:700;color:#e2ddd4;margin-bottom:8px">+ הוסף משתמש</div>'+
     '<input id="new-uname" type="text" placeholder="שם משתמש" style="width:100%;padding:8px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;margin-bottom:6px;box-sizing:border-box;direction:ltr">'+
@@ -311,7 +311,7 @@ async function showUsersManager(){
     div.innerHTML = data.users.map(u=>
       '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#0d1120;border-radius:8px;margin-bottom:6px">'+
       '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#e2ddd4">'+u.name+'</div>'+
-      '<div style="font-size:10px;color:#5a5870">@'+u.username+' · '+u.role+'</div></div>'+
+      '<div style="font-size:10px;color:#8a8799">@'+u.username+' · '+u.role+'</div></div>'+
       '<button onclick="resetUserPassword(\''+u.username+'\')" style="padding:5px 9px;border-radius:6px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:10px;font-weight:700;cursor:pointer">🔑 סיסמה</button>'+
       '</div>'
     ).join('');
@@ -783,7 +783,7 @@ async function showDriveRestore(){
   document.getElementById('settings-box').style.display='none';
   const box = document.getElementById('drive-restore-box');
   const cont = document.getElementById('drive-restore-content');
-  cont.innerHTML='<div style="text-align:center;color:#5a5870;padding:20px">⏳ טוען גיבויים...</div>';
+  cont.innerHTML='<div style="text-align:center;color:#8a8799;padding:20px">⏳ טוען גיבויים...</div>';
   box.style.display='flex';
   try{
     const username = encodeURIComponent(currentUser?.username||'');
@@ -791,9 +791,9 @@ async function showDriveRestore(){
     const data = await resp.json();
     console.log('[showDriveRestore]', data);
     if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
-    if(!data.backups?.length){ cont.innerHTML='<div style="text-align:center;color:#5a5870;padding:20px;font-size:13px">לא נמצאו גיבויים</div>'; return; }
+    if(!data.backups?.length){ cont.innerHTML='<div style="text-align:center;color:#8a8799;padding:20px;font-size:13px">לא נמצאו גיבויים</div>'; return; }
     cont.innerHTML=`
-      <div style="font-size:11px;color:#5a5870;margin-bottom:10px">נמצאו ${data.backups.length} גיבויים — בחר תאריך:</div>
+      <div style="font-size:11px;color:#8a8799;margin-bottom:10px">נמצאו ${data.backups.length} גיבויים — בחר תאריך:</div>
       ${data.backups.map(b=>`
         <button onclick="loadDriveBackup('${b}')" style="width:100%;text-align:right;padding:10px 12px;border-radius:10px;border:1px solid rgba(95,196,122,0.2);background:rgba(95,196,122,0.06);color:#e2ddd4;font-size:13px;cursor:pointer;margin-bottom:6px;display:block">
           📅 ${b}
@@ -806,7 +806,7 @@ let _driveSnap = null;
 async function loadDriveBackup(sheetName){
   const gsUrl = getGsUrl();
   const cont = document.getElementById('drive-restore-content');
-  cont.innerHTML=`<div style="text-align:center;color:#5a5870;padding:20px">⏳ טוען גיבוי מ-${sheetName}...</div>`;
+  cont.innerHTML=`<div style="text-align:center;color:#8a8799;padding:20px">⏳ טוען גיבוי מ-${sheetName}...</div>`;
   try{
     const username = encodeURIComponent(currentUser?.username||'');
     const resp = await fetch(gsUrl+'?action=get_backup_data&username='+username+'&sheetName='+encodeURIComponent(sheetName)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
@@ -824,12 +824,12 @@ function previewMergeFromSnap(snap, label){
   const newT = sourceTournaments.filter(t=>!existingIds.has(t.id));
   const existT = sourceTournaments.filter(t=>existingIds.has(t.id));
   const list = document.getElementById('merge-list');
-  let html=`<div style="font-size:11px;color:#5a5870;margin-bottom:10px">גיבוי: <span style="color:#e2ddd4">${label}</span><br>${sourceTournaments.length} טורנירים • <span style="color:#5fc47a">${newT.length} חדשים</span> • <span style="color:#5a5870">${existT.length} קיימים</span></div>`;
+  let html=`<div style="font-size:11px;color:#8a8799;margin-bottom:10px">גיבוי: <span style="color:#e2ddd4">${label}</span><br>${sourceTournaments.length} טורנירים • <span style="color:#5fc47a">${newT.length} חדשים</span> • <span style="color:#8a8799">${existT.length} קיימים</span></div>`;
   if(!newT.length){
-    html+=`<div style="text-align:center;color:#5a5870;padding:16px;font-size:13px">כל הטורנירים כבר קיימים</div>`;
+    html+=`<div style="text-align:center;color:#8a8799;padding:16px;font-size:13px">כל הטורנירים כבר קיימים</div>`;
   } else {
     html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:11px;color:#5a5870">בחר טורנירים לייבוא:</span>
+      <span style="font-size:11px;color:#8a8799">בחר טורנירים לייבוא:</span>
       <button onclick="document.querySelectorAll('.merge-cb').forEach(c=>c.checked=true)" style="font-size:10px;color:#5b9bd5;background:none;border:none;cursor:pointer;padding:0">בחר הכל</button>
     </div>`;
     html+=newT.map(t=>{
@@ -838,7 +838,7 @@ function previewMergeFromSnap(snap, label){
         <input type="checkbox" class="merge-cb" data-id="${t.id}" checked style="margin-top:3px;accent-color:#5b9bd5;flex-shrink:0">
         <div style="flex:1">
           <div style="font-size:12px;font-weight:700;color:#e2ddd4">${t.name||t.date||t.id}</div>
-          <div style="font-size:10px;color:#5a5870;margin-top:2px">${t.date||''} • ${t.totalEntries||0} כניסות • ₪${(t.prizePool||0).toLocaleString()}</div>
+          <div style="font-size:10px;color:#8a8799;margin-top:2px">${t.date||''} • ${t.totalEntries||0} כניסות • ₪${(t.prizePool||0).toLocaleString()}</div>
           ${winners?`<div style="font-size:10px;color:#c8a96e;margin-top:2px">🏆 ${winners}</div>`:''}
         </div>
       </label>`;
@@ -903,7 +903,7 @@ function showStatistics(){
   const history = S.tournLog || [];
   const players = _computeAllPlayerStats();
   if(!players.length){
-    document.getElementById('stats-modal-content').innerHTML='<div style="text-align:center;color:#5a5870;padding:24px;font-size:13px">אין נתוני טורנירים עדיין</div>';
+    document.getElementById('stats-modal-content').innerHTML='<div style="text-align:center;color:#8a8799;padding:24px;font-size:13px">אין נתוני טורנירים עדיין</div>';
     return;
   }
   const maxAbs = Math.max(...players.map(p=>Math.abs(p.net)), 1);
@@ -930,7 +930,7 @@ function showStatistics(){
     </div>`;
   }).join('');
   const html = `
-    <div style="font-size:10px;color:#5a5870;margin-bottom:10px">${history.length} טורנירים • ${players.length} שחקנים</div>
+    <div style="font-size:10px;color:#8a8799;margin-bottom:10px">${history.length} טורנירים • ${players.length} שחקנים</div>
     <div style="overflow-x:auto;padding-bottom:4px;margin-bottom:16px;direction:ltr">
       <div style="display:flex;align-items:flex-start;gap:4px;min-width:min-content;padding:0 4px;direction:ltr">${barsHtml}</div>
     </div>
@@ -944,7 +944,7 @@ function showStatistics(){
         const cell = 'cursor:pointer';
         return `
       <span onclick="showPlayerDetail('${enc}')" style="font-size:12px;font-weight:700;color:#e2ddd4;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">${p.name}</span>
-      <span onclick="showPlayerDetail('${enc}')" style="font-size:11px;color:#5a5870;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">₪${p.paid.toLocaleString()}</span>
+      <span onclick="showPlayerDetail('${enc}')" style="font-size:11px;color:#8a8799;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">₪${p.paid.toLocaleString()}</span>
       <span onclick="showPlayerDetail('${enc}')" style="font-size:11px;color:#5b9bd5;text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">₪${p.won.toLocaleString()}</span>
       <span onclick="showPlayerDetail('${enc}')" style="font-size:12px;font-weight:900;color:${p.net>=0?'#5fc47a':'#e07b6a'};text-align:right;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;${cell}">${p.net>=0?'+':''}₪${p.net.toLocaleString()}</span>`;
       }).join('')}
@@ -1033,7 +1033,7 @@ function showPlayerDetail(encodedName){
     // בדיוק אותו מידע (מקום/תאריך/השקעה/זכייה/נטו) בצורה אמינה, ללא צורך
     // בעוד מנגנון. הברים כאן הם ויזואליה בלבד.
     return `<div style="display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0">
-      <div style="font-size:7px;line-height:1;color:${arrowColor};margin-bottom:2px">${arrow}</div>
+      <div style="font-size:9px;line-height:1;color:${arrowColor};margin-bottom:2px">${arrow}</div>
       <div style="width:8px;height:${TREND_ZERO}px;display:flex;flex-direction:column;justify-content:flex-end">
         ${isPos?`<div style="width:100%;height:${barH}px;background:${color};border-radius:2px 2px 0 0"></div>`:''}
       </div>
@@ -1045,7 +1045,7 @@ function showPlayerDetail(encodedName){
   }).join('');
   const trendHtml = trendPoints.length>1 ? `<div style="margin-bottom:12px">
     <div style="font-size:10px;color:#8a8799;margin-bottom:2px">מגמת נטו מצטבר (${trendPoints[0].date||'?'} ← ${trendPoints[trendPoints.length-1].date||'?'})</div>
-    <div style="font-size:9px;color:#5a5870;margin-bottom:6px">גובה+צבע העמודה = הסכום המצטבר עד לאותו טורניר &nbsp;·&nbsp; <span style="color:#5fc47a">▲</span>/<span style="color:#e07b6a">▼</span> מעליה = אם הטורניר הבודד הזה עצמו היה רווח או הפסד</div>
+    <div style="font-size:9px;color:#8a8799;margin-bottom:6px">גובה+צבע העמודה = הסכום המצטבר עד לאותו טורניר &nbsp;·&nbsp; <span style="color:#5fc47a">▲</span>/<span style="color:#e07b6a">▼</span> מעליה = אם הטורניר הבודד הזה עצמו היה רווח או הפסד</div>
     <div style="overflow-x:auto;padding-bottom:2px;direction:ltr">
       <div style="display:flex;align-items:flex-start;gap:2px;min-width:min-content;padding:0 2px;direction:ltr">${trendBarsHtml}</div>
     </div>
@@ -1067,7 +1067,7 @@ function showPlayerDetail(encodedName){
     ${rows.map(r=>`
     <span style="font-size:11px;font-weight:900;color:${r.place===1?'#c8a96e':'#e2ddd4'};padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${r.place}${r.place===1?' 🏆':''}</span>
     <span style="font-size:11px;color:#e2ddd4;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.date||'—'}${r.tournName?' · '+r.tournName:''}</span>
-    <span style="font-size:10px;color:#5a5870;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${r.paid.toLocaleString()}</span>
+    <span style="font-size:10px;color:#8a8799;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${r.paid.toLocaleString()}</span>
     <span style="font-size:10px;color:#5b9bd5;text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">₪${r.won.toLocaleString()}</span>
     <span style="font-size:11px;font-weight:900;color:${r.net>=0?'#5fc47a':'#e07b6a'};text-align:right;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.05);align-self:center">${r.net>=0?'+':''}₪${r.net.toLocaleString()}</span>`).join('')}
   </div>`;
@@ -1075,8 +1075,8 @@ function showPlayerDetail(encodedName){
   // שורת מעבר-מהיר בין שחקנים — אותה רשימה/מיון כמו showStatistics, כדי
   // שאפשר לקפוץ ישירות לשחקן אחר בלי ללחוץ קודם "→ חזרה".
   const allPlayers = _computeAllPlayerStats();
-  const switcherHtml = allPlayers.length>1 ? `<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px">
-    ${allPlayers.map(p=>`<button onclick="showPlayerDetail('${encodeURIComponent(p.name)}')" style="flex-shrink:0;background:${p.name===name?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.04)'};border:1px solid ${p.name===name?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.08)'};border-radius:14px;padding:4px 11px;font-size:11px;font-weight:700;color:${p.name===name?'#c8a96e':'#8a8799'};cursor:pointer;white-space:nowrap">${p.name}</button>`).join('')}
+  const switcherHtml = allPlayers.length>1 ? `<div id="player-switcher-row" style="display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px">
+    ${allPlayers.map(p=>`<button ${p.name===name?'id="player-switcher-selected"':''} onclick="showPlayerDetail('${encodeURIComponent(p.name)}')" style="flex-shrink:0;background:${p.name===name?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.04)'};border:1px solid ${p.name===name?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.08)'};border-radius:14px;padding:4px 11px;font-size:11px;font-weight:700;color:${p.name===name?'#c8a96e':'#8a8799'};cursor:pointer;white-space:nowrap">${p.name}</button>`).join('')}
   </div>` : '';
 
   const html = `
@@ -1090,4 +1090,10 @@ function showPlayerDetail(encodedName){
     ${breakdownHtml}
     ${listHtml}`;
   document.getElementById('stats-modal-content').innerHTML = html;
+  // בלי זה, כל מעבר בין שחקנים (בונה HTML חדש מאפס) איפס את גלילת שורת
+  // הצ'יפים בחזרה להתחלה — הצ'יפ הנבחר (למשל איתן, אם הוא לא בין הראשונים)
+  // היה נעלם מחוץ לתצוגה למרות שהנתונים מתחתיו כן שלו. מגלגלים במפורש כדי
+  // שהצ'יפ הנבחר יישאר גלוי בכל מעבר.
+  const selectedChip = document.getElementById('player-switcher-selected');
+  if(selectedChip) selectedChip.scrollIntoView({inline:'center', block:'nearest'});
 }

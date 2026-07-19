@@ -402,7 +402,7 @@ function _rangeEditorGridHtml(){
       const on = _rangeEditSel.has(hand);
       const isPair = i===j;
       const bg = on ? (isPair?'#c8a96e':'#5b9bd5') : 'rgba(255,255,255,0.04)';
-      const fg = on ? '#0a0d14' : (isPair?'#8a8799':'#5a5870');
+      const fg = on ? '#0a0d14' : (isPair?'#8a8799':'#8a8799');
       const limpCount = limpTally[hand]||0;
       const border = limpCount ? '2px solid #b47eea' : '1px solid transparent';
       cells += `<div onclick="_toggleRangeCell('${hand}')" title="${limpCount?limpCount+' לימפ/ים ידועים':''}" style="flex:1;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${bg};color:${fg};font-size:6.5px;font-weight:800;border-radius:2px;border:${border};box-sizing:border-box;cursor:pointer;user-select:none;min-width:0;overflow:hidden">${hand}</div>`;
@@ -476,7 +476,7 @@ function _rangeEditorPanelHtml(){
   const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
   const limpHands = Object.keys(limpTally);
   const limpTotal = limpHands.reduce((n,h)=>n+limpTally[h],0);
-  const tabBtn = (onclick,label,active)=>`<button onclick="${onclick}" style="flex:1;padding:6px 4px;border-radius:7px;border:1px solid ${active?'#c8a96e':'rgba(255,255,255,0.12)'};background:${active?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.03)'};color:${active?'#c8a96e':'#5a5870'};font-weight:800;font-size:9px;cursor:pointer;white-space:nowrap">${label}</button>`;
+  const tabBtn = (onclick,label,active)=>`<button onclick="${onclick}" style="flex:1;padding:6px 4px;border-radius:7px;border:1px solid ${active?'#c8a96e':'rgba(255,255,255,0.12)'};background:${active?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.03)'};color:${active?'#c8a96e':'#8a8799'};font-weight:800;font-size:9px;cursor:pointer;white-space:nowrap">${label}</button>`;
   const toggleLabel = _rangeEditActiveView==='limp' ? '↩️ המקורי' : (limpHands.length ? `🃏 לימפים (${limpTotal})` : '↩️ המקורי');
   const toggleActive = _rangeEditActiveView==='original' || _rangeEditActiveView==='limp';
   return `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px;margin-top:8px">
@@ -489,20 +489,20 @@ function _rangeEditorPanelHtml(){
     </div>
     ${limpHands.length ? `
     <div style="background:rgba(180,126,234,0.08);border:1px solid rgba(180,126,234,0.3);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:5px">
-      <div style="font-size:8px;color:#b47eea;font-weight:800">🃏 ${limpTotal} לימפ/ים ידועים (מסומן במסגרת סגולה בגריד) · ${limpHands.map(h=>h+(limpTally[h]>1?'×'+limpTally[h]:'')).join(', ')}</div>
-      <div style="font-size:7px;color:#5a5870">מבוסס רק על ידיים שבהן הוזנו קלפים (בד"כ showdown) — ייתכן הטיה כלפי ידיים חזקות</div>
+      <div style="font-size:10px;color:#b47eea;font-weight:800">🃏 ${limpTotal} לימפ/ים ידועים (מסומן במסגרת סגולה בגריד) · ${limpHands.map(h=>h+(limpTally[h]>1?'×'+limpTally[h]:'')).join(', ')}</div>
+      <div style="font-size:9px;color:#8a8799">מבוסס רק על ידיים שבהן הוזנו קלפים (בד"כ showdown) — ייתכן הטיה כלפי ידיים חזקות</div>
     </div>` : ''}
     <div id="range-editor-grid">${_rangeEditorGridHtml()}</div>
     <div style="display:flex;align-items:center;gap:7px;direction:ltr">
-      <span style="font-size:8px;color:#5a5870;white-space:nowrap">Top %</span>
+      <span style="font-size:10px;color:#8a8799;white-space:nowrap">Top %</span>
       <input id="range-editor-slider" type="range" min="0" max="100" step="1" value="${Math.round(_rangeEditorSelCombos()/1326*100)}"
         style="flex:1;accent-color:#c8a96e;direction:ltr" oninput="_rangeEditorApplyTopPct(this.value)">
     </div>
     <div style="display:flex;gap:6px">
       <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>
-      <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:11px;cursor:pointer">ביטול</button>
+      <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:11px;cursor:pointer">ביטול</button>
     </div>
-    <div style="font-size:7px;color:#3a3850;text-align:center">שינויים כאן זמניים עד ✕/ביטול — שום דבר לא נשמר עד 💾</div>
+    <div style="font-size:9px;color:#3a3850;text-align:center">שינויים כאן זמניים עד ✕/ביטול — שום דבר לא נשמר עד 💾</div>
   </div>`;
 }
 
@@ -531,11 +531,11 @@ function renderPotOdds(){
         bar.innerHTML=`<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:7px 12px;direction:rtl;display:flex;align-items:center;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
           <span style="font-size:11px;font-weight:800;color:#e2ddd4;white-space:nowrap;flex-shrink:0">${pName(seat.playerId)||'?'}</span>
           <span style="color:rgba(255,255,255,0.15);flex-shrink:0">|</span>
-          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">VPIP <span style="color:#c8a96e;font-weight:800">${hud.vpip}%</span></span>
-          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">PFR <span style="color:#5b9bd5;font-weight:800">${hud.pfr}%</span></span>
-          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">3B <span style="color:#7eb8a4;font-weight:800">${hud.bet3}%</span></span>
-          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">AF <span style="color:#e07b6a;font-weight:800">${afStr}</span></span>
-          <span style="font-size:9px;color:#5a5870;white-space:nowrap;flex-shrink:0">W <span style="color:#5fc47a;font-weight:800">${hud.won}%</span></span>
+          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">VPIP <span style="color:#c8a96e;font-weight:800">${hud.vpip}%</span></span>
+          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">PFR <span style="color:#5b9bd5;font-weight:800">${hud.pfr}%</span></span>
+          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">3B <span style="color:#7eb8a4;font-weight:800">${hud.bet3}%</span></span>
+          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">AF <span style="color:#e07b6a;font-weight:800">${afStr}</span></span>
+          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">W <span style="color:#5fc47a;font-weight:800">${hud.won}%</span></span>
           <span style="color:rgba(255,255,255,0.1);flex-shrink:0">·</span>
           <span style="font-size:9px;color:#3a3850;white-space:nowrap;flex-shrink:0">${hud.n} ידיים</span>
         </div>`;
@@ -789,7 +789,7 @@ function renderPotOdds(){
 
   const chipStyle = (active,color='#c8a96e') => active
     ? `padding:4px 9px;border-radius:14px;border:1px solid ${color}88;background:${color}22;color:${color};font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap`
-    : `padding:4px 9px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#5a5870;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap`;
+    : `padding:4px 9px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#8a8799;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap`;
 
   bar.style.display = 'block';
   bar.innerHTML = `
@@ -798,41 +798,41 @@ function renderPotOdds(){
     <!-- שורה ראשית -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">POT ODDS</span>
+        <span style="font-size:10px;color:#8a8799;font-weight:700;letter-spacing:.4px">POT ODDS</span>
         <span style="font-size:16px;font-weight:900;color:#5b9bd5;line-height:1">${ratioStr}</span>
-        <span style="font-size:9px;color:#5a5870">Call ${fmt(callAmt)}</span>
+        <span style="font-size:9px;color:#8a8799">Call ${fmt(callAmt)}</span>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">BREAK-EVEN</span>
+        <span style="font-size:10px;color:#8a8799;font-weight:700;letter-spacing:.4px">BREAK-EVEN</span>
         <span style="font-size:16px;font-weight:900;color:#c8a96e;line-height:1">${breakEven}%</span>
-        <span style="font-size:9px;color:#5a5870">נדרש</span>
+        <span style="font-size:9px;color:#8a8799">נדרש</span>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">${openRangeInfo?(openRangeInfo.isRangeMode?'טווח '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':' (אוטומטי)'):'RFI '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':'')):'EQUITY'}</span>
+        <span style="font-size:10px;color:#8a8799;font-weight:700;letter-spacing:.4px">${openRangeInfo?(openRangeInfo.isRangeMode?'טווח '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':' (אוטומטי)'):'RFI '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':'')):'EQUITY'}</span>
         ${openRangeInfo
           ? (openRangeInfo.isRangeMode
-              ? `<span style="font-size:13px;font-weight:900;color:#7eb8a4;line-height:1.2;margin-top:2px">${openRangeInfo.combosCount} combos</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${(openRangeInfo.combosCount/1326*100).toFixed(1)}%</span>`
-              : `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.2;margin-top:2px">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ לטווח'}</span><span style="font-size:8px;color:#5a5870;margin-top:1px">${openRangeInfo.hand}</span>`)
+              ? `<span style="font-size:13px;font-weight:900;color:#7eb8a4;line-height:1.2;margin-top:2px">${openRangeInfo.combosCount} combos</span><span style="font-size:10px;color:#8a8799;margin-top:1px">${(openRangeInfo.combosCount/1326*100).toFixed(1)}%</span>`
+              : `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.2;margin-top:2px">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ לטווח'}</span><span style="font-size:10px;color:#8a8799;margin-top:1px">${openRangeInfo.hand}</span>`)
           : equityPct!==null
-            ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:7px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}${heroRangeMode?`<span style="font-size:7px;color:#5b9bd5;font-weight:800;margin-top:1px">טווח ${heroRangeIsAuto?'(אוטו׳) ':''}מול טווח</span>`:''}`
+            ? `<span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${equityPct.toFixed(1)}%</span>${evHtml}${hasKnownOpp?`<span style="font-size:9px;color:#e0a030;font-weight:800;margin-top:1px">vs יד ידועה</span>`:''}${heroRangeMode?`<span style="font-size:9px;color:#5b9bd5;font-weight:800;margin-top:1px">טווח ${heroRangeIsAuto?'(אוטו׳) ':''}מול טווח</span>`:''}`
             : equityComputing
-              ? `<span style="font-size:10px;color:#5a5870;margin-top:2px">מחשב…</span>`
+              ? `<span style="font-size:10px;color:#8a8799;margin-top:2px">מחשב…</span>`
               : `<span style="font-size:10px;color:#3a3850;margin-top:2px">${(_curStreetName==='פרה-פלופ' && oppSeats.length===0 && holeCards.length<2)?'פתיחה — הזן קלפים':!_hasOppInCalc?'ממתין ליריב':holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
       </div>
       ${openRangeInfo && openRangeInfo.fieldEquity!==undefined ? `
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:50px">
-        <span style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.4px">EQUITY מול ${openRangeInfo.focusName?openRangeInfo.focusName:'השדה'}</span>
+        <span style="font-size:10px;color:#8a8799;font-weight:700;letter-spacing:.4px">EQUITY מול ${openRangeInfo.focusName?openRangeInfo.focusName:'השדה'}</span>
         <span style="font-size:16px;font-weight:900;color:#7eb8a4;line-height:1">${openRangeInfo.fieldEquity.toFixed(1)}%</span>
-        <span style="font-size:7px;color:#5a5870;margin-top:1px">${openRangeInfo.focusName?'הטווח שלו בלבד (היפותטי)':'אם כולם ממשיכים (היפותטי)'}</span>
+        <span style="font-size:9px;color:#8a8799;margin-top:1px">${openRangeInfo.focusName?'הטווח שלו בלבד (היפותטי)':'אם כולם ממשיכים (היפותטי)'}</span>
       </div>` : ''}
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>
         <div style="display:flex;align-items:center;gap:3px">
           <button onclick="S._showRangeSelector=!S._showRangeSelector;renderPotOdds()"
-            style="background:${showRange?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};border:1px solid ${showRange?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};border-radius:7px;color:${showRange?'#c8a96e':'#5a5870'};font-size:10px;font-weight:800;cursor:pointer;padding:3px 7px;white-space:nowrap">
+            style="background:${showRange?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};border:1px solid ${showRange?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};border-radius:7px;color:${showRange?'#c8a96e':'#8a8799'};font-size:10px;font-weight:800;cursor:pointer;padding:3px 7px;white-space:nowrap">
             🎯 Range${rs?' ✓':''}
           </button>
           ${rs ? `<button onclick="S._rangeSelection=null;renderPotOdds()" title="נקה בחירת טווח גלובלית (חוסמת את מצב הפתיחה)" style="background:rgba(224,123,106,0.12);border:1px solid rgba(224,123,106,0.4);border-radius:7px;color:#e07b6a;font-size:10px;font-weight:800;cursor:pointer;padding:3px 6px;line-height:1">✕</button>` : ''}
@@ -853,12 +853,12 @@ function renderPotOdds(){
     <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
       ${openRangeInfo.fieldEquityCall!==undefined ? `
       <div style="flex:1;max-width:130px;background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.3);border-radius:8px;padding:5px 8px;text-align:center">
-        <div style="font-size:7px;color:#5a5870;font-weight:700">CALL בלבד</div>
+        <div style="font-size:9px;color:#8a8799;font-weight:700">CALL בלבד</div>
         <div style="font-size:13px;font-weight:900;color:#5b9bd5">${openRangeInfo.fieldEquityCall.toFixed(1)}%</div>
       </div>` : ''}
       ${openRangeInfo.fieldEquity3bet!==undefined ? `
       <div style="flex:1;max-width:130px;background:rgba(224,123,106,0.08);border:1px solid rgba(224,123,106,0.3);border-radius:8px;padding:5px 8px;text-align:center">
-        <div style="font-size:7px;color:#5a5870;font-weight:700">3BET בלבד</div>
+        <div style="font-size:9px;color:#8a8799;font-weight:700">3BET בלבד</div>
         <div style="font-size:13px;font-weight:900;color:#e07b6a">${openRangeInfo.fieldEquity3bet.toFixed(1)}%</div>
       </div>` : ''}
     </div>` : ''}
@@ -867,24 +867,24 @@ function renderPotOdds(){
     ${showRange ? `
     <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:8px">
 
-      <div style="font-size:9px;color:#5a5870;text-align:center;padding:2px 0">
+      <div style="font-size:9px;color:#8a8799;text-align:center;padding:2px 0">
         💡 לעריכת טווח ידני לשחקן — לחץ על המושב שלו בשולחן
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:9px;color:#5a5870;font-weight:700;letter-spacing:.4px">EFFECTIVE STACK</span>
+        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.4px">EFFECTIVE STACK</span>
         <span style="font-size:10px;color:#c8a96e;font-weight:800">${({deep:'75BB+ עמוק',mid:'35-74BB בינוני',short:'20-34BB קצר',push:'<20BB Push/Fold'})[_eqDepth]||_eqDepth}</span>
       </div>
 
       <div>
-        <div style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.5px;margin-bottom:5px">עמדת היריב</div>
+        <div style="font-size:10px;color:#8a8799;font-weight:700;letter-spacing:.5px;margin-bottom:5px">עמדת היריב</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px">
           ${positions.map(p=>`<button style="${chipStyle(p===selPos,'#5b9bd5')}" onclick="S._rangeSelection={pos:'${p}',action:'${selAction}'};renderPotOdds()">${p}</button>`).join('')}
         </div>
       </div>
 
       <div>
-        <div style="font-size:8px;color:#5a5870;font-weight:700;letter-spacing:.5px;margin-bottom:5px">פעולתו</div>
+        <div style="font-size:10px;color:#8a8799;font-weight:700;letter-spacing:.5px;margin-bottom:5px">פעולתו</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px">
           ${Object.entries(_ACTIONS_LABELS).map(([a,lbl])=>`<button style="${chipStyle(a===selAction,'#7eb8a4')}" onclick="S._rangeSelection={pos:'${selPos}',action:'${a}'};renderPotOdds()">${lbl}</button>`).join('')}
         </div>
@@ -895,13 +895,13 @@ function renderPotOdds(){
         <span style="font-size:10px;color:#8a8799">${selPos} ${_ACTIONS_LABELS[selAction]||selAction}</span>
         <span style="font-size:10px;color:#c8a96e;font-weight:800">${combos} combos · ${pct}%</span>
         ${holeCards.length===2
-          ? `<span style="font-size:10px;font-weight:800;color:${equityPct!==null?(ev>=0?'#5fc47a':'#e07b6a'):'#5a5870'}">${equityPct!==null?equityPct.toFixed(1)+'%':'...'}</span>`
+          ? `<span style="font-size:10px;font-weight:800;color:${equityPct!==null?(ev>=0?'#5fc47a':'#e07b6a'):'#8a8799'}">${equityPct!==null?equityPct.toFixed(1)+'%':'...'}</span>`
           : `<span style="font-size:9px;color:#3a3850">הזן קלפים</span>`}
       </div>` : `
       <div style="font-size:10px;color:#3a3850;text-align:center;padding:4px">אין range לבחירה זו</div>`}
 
       <button onclick="S._rangeSelection=null;S._showRangeSelector=false;renderPotOdds()"
-        style="font-size:10px;color:#5a5870;background:none;border:none;cursor:pointer;text-align:right;padding:0">
+        style="font-size:10px;color:#8a8799;background:none;border:none;cursor:pointer;text-align:right;padding:0">
         ✕ נקה range
       </button>
     </div>` : ''}
@@ -972,7 +972,7 @@ function renderLiveActions(){
       const typeShort=typeShortFn(item.type,item);
       const posCol=posColFn(item.pos);
       html+=`<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);border-right:1px solid rgba(255,255,255,0.06);padding:3px 8px;flex-shrink:0;min-width:46px;border-top:2px solid ${col}">
-        <span style="font-size:8px;font-weight:800;color:${posCol};white-space:nowrap">${item.pos||''}</span>
+        <span style="font-size:10px;font-weight:800;color:${posCol};white-space:nowrap">${item.pos||''}</span>
         <span style="font-size:10px;font-weight:700;color:#e2ddd4;white-space:nowrap">${item.name}</span>
         <span style="font-size:10px;font-weight:900;color:${col};white-space:nowrap">${typeShort}${amt?' '+amt:''}</span>
       </div>`;
@@ -1196,7 +1196,7 @@ function showTimerSettings(){
   grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px';
   grid.innerHTML = opts;
   const closeBtn2 = document.createElement('button');
-  closeBtn2.style.cssText = 'width:100%;padding:10px;border-radius:9px;border:none;background:rgba(255,255,255,0.08);color:#5a5870;cursor:pointer';
+  closeBtn2.style.cssText = 'width:100%;padding:10px;border-radius:9px;border:none;background:rgba(255,255,255,0.08);color:#8a8799;cursor:pointer';
   closeBtn2.textContent = 'סגור';
   closeBtn2.onclick = ()=>overlay.remove();
   box.appendChild(title2); box.appendChild(grid); box.appendChild(closeBtn2);
@@ -1236,7 +1236,7 @@ function showStructureEditor(){
   title.style.cssText = 'font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center';
   title.textContent = '📋 מבנה בליינדים';
   const closeX = document.createElement('button');
-  closeX.style.cssText = 'background:none;border:none;color:#5a5870;font-size:18px;cursor:pointer';
+  closeX.style.cssText = 'background:none;border:none;color:#8a8799;font-size:18px;cursor:pointer';
   closeX.textContent = '✕';
   closeX.onclick = ()=>overlay.remove();
   title.appendChild(closeX);
@@ -1252,7 +1252,7 @@ function showStructureEditor(){
       row.style.cssText = 'display:grid;grid-template-columns:24px 1fr 1fr 1fr 80px 28px;gap:4px;align-items:center;margin-bottom:6px';
       const durMins = Math.round((lvl.duration||S.blindTimer.levelDuration)/60);
       row.innerHTML = 
-        '<span style="font-size:11px;color:#5a5870;text-align:center">'+(idx+1)+'</span>'+
+        '<span style="font-size:11px;color:#8a8799;text-align:center">'+(idx+1)+'</span>'+
         '<input type="number" value="'+lvl.sb+'" placeholder="SB" data-field="sb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
         '<input type="number" value="'+lvl.bb+'" placeholder="BB" data-field="bb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
         '<input type="number" value="'+(lvl.ante||0)+'" placeholder="Ante" data-field="ante" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
@@ -1276,11 +1276,11 @@ function showStructureEditor(){
   // Header
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:grid;grid-template-columns:24px 1fr 1fr 1fr 80px 28px;gap:4px;margin-bottom:4px';
-  hdr.innerHTML = '<span></span><span style="font-size:10px;color:#5a5870;text-align:center">SB</span><span style="font-size:10px;color:#5a5870;text-align:center">BB</span><span style="font-size:10px;color:#5a5870;text-align:center">Ante</span><span style="font-size:10px;color:#c8a96e;text-align:center">דק׳</span><span></span>';
+  hdr.innerHTML = '<span></span><span style="font-size:10px;color:#8a8799;text-align:center">SB</span><span style="font-size:10px;color:#8a8799;text-align:center">BB</span><span style="font-size:10px;color:#8a8799;text-align:center">Ante</span><span style="font-size:10px;color:#c8a96e;text-align:center">דק׳</span><span></span>';
   
   // Add level button
   const addBtn = document.createElement('button');
-  addBtn.style.cssText = 'width:100%;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:#5a5870;font-size:13px;cursor:pointer;margin-top:6px';
+  addBtn.style.cssText = 'width:100%;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:#8a8799;font-size:13px;cursor:pointer;margin-top:6px';
   addBtn.textContent = '+ הוסף רמה';
   addBtn.onclick = ()=>{ const last=struct[struct.length-1]||{sb:500,bb:1000,ante:0}; struct.push({sb:last.sb*2,bb:last.bb*2,ante:last.ante,duration:S.blindTimer.levelDuration}); buildRows(); };
   
@@ -1340,7 +1340,7 @@ function showStructureEditor(){
   
   // Reset button
   const resetBtn = document.createElement('button');
-  resetBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer;margin-top:6px';
+  resetBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:13px;cursor:pointer;margin-top:6px';
   resetBtn.textContent = 'איפוס למבנה ברירת מחדל';
   resetBtn.onclick = ()=>{ S.blindStructure=null; BLIND_LEVELS=[...DEF_BLINDS]; persist(); overlay.remove(); notify('מבנה אופס'); };
   
@@ -1489,7 +1489,7 @@ async function analyzeHand(h){
   
   const aHdr = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
     '<span style="font-size:15px;font-weight:800;color:#c8a96e">🔍 ניתוח יד</span>'+
-    '<button onclick="closeAnalyze()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>';
+    '<button onclick="closeAnalyze()" style="background:none;border:none;color:#8a8799;font-size:20px;cursor:pointer">✕</button></div>';
   
   const aContent = document.createElement('div');
   aContent.id = 'analyze-content';
@@ -1613,8 +1613,8 @@ function _renderHUDOverlay(name, hud){
   box.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
     '<div><div style="font-size:15px;font-weight:800;color:#c8a96e">📊 '+name+'</div>'+
-    '<div style="font-size:10px;color:#5a5870">'+hud.n+' ידיים · Trend '+hud.trend+'</div></div>'+
-    '<button onclick="closeHUD()" style="background:none;border:none;color:#5a5870;font-size:20px;cursor:pointer">✕</button></div>'+
+    '<div style="font-size:10px;color:#8a8799">'+hud.n+' ידיים · Trend '+hud.trend+'</div></div>'+
+    '<button onclick="closeHUD()" style="background:none;border:none;color:#8a8799;font-size:20px;cursor:pointer">✕</button></div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
     hudStat('VPIP', hud.vpip+'%', statColor(hud.vpip,20,40), 'נכנס לקופה')+
     hudStat('PFR', hud.pfr+'%', statColor(hud.pfr,15,30), 'Raise פרה-פלופ')+
@@ -1642,7 +1642,7 @@ function showPlayerHUD(seatIdx){
     const box=document.createElement('div');
     box.style.cssText='background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:340px';
     box.onclick=e=>e.stopPropagation();
-    box.innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:8px">📊 '+name+'</div><div style="color:#5a5870;font-size:12px">נדרשות לפחות 3 ידיים לחישוב HUD</div></div>';
+    box.innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:8px">📊 '+name+'</div><div style="color:#8a8799;font-size:12px">נדרשות לפחות 3 ידיים לחישוב HUD</div></div>';
     overlay.appendChild(box); document.body.appendChild(overlay); return;
   }
   _renderHUDOverlay(name, hud);
@@ -1650,9 +1650,9 @@ function showPlayerHUD(seatIdx){
 
 function hudStat(label, value, color, desc){
   return '<div style="background:#0d1120;border-radius:10px;padding:10px;text-align:center">'+
-    '<div style="font-size:10px;color:#5a5870;margin-bottom:4px">'+label+'</div>'+
+    '<div style="font-size:10px;color:#8a8799;margin-bottom:4px">'+label+'</div>'+
     '<div style="font-size:20px;font-weight:900;color:'+color+'">'+value+'</div>'+
-    '<div style="font-size:9px;color:#5a5870;margin-top:2px">'+desc+'</div>'+
+    '<div style="font-size:9px;color:#8a8799;margin-top:2px">'+desc+'</div>'+
     '</div>';
 }
 
@@ -1776,7 +1776,7 @@ function showICMStackForm(activePids){
   hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:14px';
   hdr.innerHTML = '<span style="font-size:15px;font-weight:800;color:#c8a96e">ICM – הזן ערימות</span>';
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer';
+  closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer';
   closeBtn.textContent = '✕';
   closeBtn.onclick = ()=>overlay.remove();
   hdr.appendChild(closeBtn);
@@ -1791,7 +1791,7 @@ function showICMStackForm(activePids){
   // Show total chips
   const totalDiv = document.createElement('div');
   totalDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#0d1120;border-radius:8px;margin-bottom:10px';
-  const tl = document.createElement('span'); tl.style.cssText='font-size:11px;color:#5a5870'; tl.textContent='ציפים בטורניר:';
+  const tl = document.createElement('span'); tl.style.cssText='font-size:11px;color:#8a8799'; tl.textContent='ציפים בטורניר:';
   const tv = document.createElement('span'); tv.style.cssText='font-size:14px;font-weight:800;color:#c8a96e'; tv.textContent=icmTotalChips.toLocaleString();
   totalDiv.appendChild(tl); totalDiv.appendChild(tv);
   box.appendChild(totalDiv);
@@ -1866,15 +1866,15 @@ function showICMResult(active){
   // Header
   box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
     '<div><div style="font-size:15px;font-weight:800;color:#c8a96e">ICM</div>'+
-    '<div style="font-size:11px;color:#5a5870">קופה: ₪'+pp.toLocaleString()+'</div></div>'+
-    '<button onclick="closeICM()" style="background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer">✕</button></div>';
+    '<div style="font-size:11px;color:#8a8799">קופה: ₪'+pp.toLocaleString()+'</div></div>'+
+    '<button onclick="closeICM()" style="background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer">✕</button></div>';
   
   // Prizes row
   const prizesRow = document.createElement('div');
   prizesRow.style.cssText = 'display:flex;gap:6px;margin-bottom:14px';
   prizes.forEach((p,i)=>{
     prizesRow.innerHTML += '<div style="flex:1;background:#0d1120;border-radius:8px;padding:6px;text-align:center">'+
-      '<div style="font-size:10px;color:#5a5870">מקום '+(i+1)+'</div>'+
+      '<div style="font-size:10px;color:#8a8799">מקום '+(i+1)+'</div>'+
       '<div style="font-size:13px;font-weight:700;color:#c8a96e">₪'+p.toLocaleString()+'</div></div>';
   });
   box.appendChild(prizesRow);
@@ -1883,11 +1883,11 @@ function showICMResult(active){
   const table = document.createElement('table');
   table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px';
   table.innerHTML = '<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08)">'+
-    '<th style="padding:6px 8px;text-align:right;color:#5a5870;font-weight:600">שחקן</th>'+
-    '<th style="padding:6px 8px;text-align:center;color:#5a5870;font-weight:600">ערימה</th>'+
-    '<th style="padding:6px 8px;text-align:center;color:#5a5870;font-weight:600">% צ יפים</th>'+
-    '<th style="padding:6px 8px;text-align:center;color:#5a5870;font-weight:600">שווי ICM</th>'+
-    '<th style="padding:6px 8px;text-align:center;color:#5a5870;font-weight:600">% פרסים</th>'+
+    '<th style="padding:6px 8px;text-align:right;color:#8a8799;font-weight:600">שחקן</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">ערימה</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">% צ יפים</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">שווי ICM</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">% פרסים</th>'+
     '</tr></thead><tbody id="icm-tbody"></tbody>';
   box.appendChild(table);
   
@@ -1900,7 +1900,7 @@ function showICMResult(active){
     const icmVal = Math.round(icmEV[i]);
     const icmPct = pp>0?Math.round(icmEV[i]/pp*1000)/10:0;
     const diff = icmPct - chipPct;
-    const diffColor = diff>0?'#5fc47a':diff<0?'#e07b6a':'#5a5870';
+    const diffColor = diff>0?'#5fc47a':diff<0?'#e07b6a':'#8a8799';
     const row = document.createElement('tr');
     row.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.04)';
     row.innerHTML = '<td style="padding:8px;font-weight:700;color:#e2ddd4">'+pName(seat.playerId)+'</td>'+
@@ -2148,17 +2148,17 @@ function renderSeats(){
           ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
-        ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a6a54;font-size:8px">(${sbb}) </span>`:''}<span style="font-size:9px">${seat.stack.toLocaleString()}</span></div>`:''}
+        ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a6a54;font-size:10px">(${sbb}) </span>`:''}<span style="font-size:9px">${seat.stack.toLocaleString()}</span></div>`:''}
         ${seat.playerId&&(S.btnLocked||S._showdownMode)&&!seat.folded?`<div class="seat-cards-mini" style="display:flex;gap:3px;margin-top:3px;justify-content:center">${[0,1].map(i2=>{const c=(seat.cards||[])[i2];return c?`<button onclick="openSeatCardPicker(${seat.seatIdx},${i2})" style="width:20px;height:28px;border-radius:3px;background:#fff;border:1px solid #ddd;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;cursor:pointer;box-sizing:border-box"><span style="font-size:15px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:12px;color:${SC[c.suit]};line-height:1">${c.suit}</span></button>`:`<button onclick="openSeatCardPicker(${seat.seatIdx},${i2})" style="width:20px;height:28px;border-radius:3px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="font-size:10px;color:rgba(255,255,255,0.25)">+</span></button>`;}).join('')}</div>`:''}
         ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טרן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טרן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
     const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&(seat.folded||seat.sittingOut||!S.btnLocked);
     const isSittingOut = seat.sittingOut||false;
-    return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(200,169,110,0.5);background:rgba(200,169,110,0.15);color:#c8a96e;font-size:8px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')
+    return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(200,169,110,0.5);background:rgba(200,169,110,0.15);color:#c8a96e;font-size:10px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')
     +(showRebuy?`
       <button onclick="event.stopPropagation();doSeatRebuy(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(95,196,122,0.6);background:rgba(95,196,122,0.2);color:#5fc47a;font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">+ Rebuy</button>
       <button onclick="event.stopPropagation();setSittingOut(${seat.seatIdx},${!isSittingOut})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid ${isSittingOut?'rgba(91,155,213,0.6)':'rgba(255,200,50,0.5)'};background:${isSittingOut?'rgba(91,155,213,0.2)':'rgba(255,200,50,0.1)'};color:${isSittingOut?'#5b9bd5':'#FFB347'};font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">${isSittingOut?'▶ חזור':'⏸ Sit Out'}</button>
       <button onclick="event.stopPropagation();rmSeat(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(224,123,106,0.5);background:rgba(224,123,106,0.15);color:#e07b6a;font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">✕ יציאה</button>
-    `:'')+(showUndo?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid #e07b6a;background:#7a2020;color:#ffaaaa;font-size:8px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:5">↩ בטל</button>`:'');})()}
+    `:'')+(showUndo?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid #e07b6a;background:#7a2020;color:#ffaaaa;font-size:10px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:5">↩ בטל</button>`:'');})()}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
     // Add action buttons arc above occupied seats

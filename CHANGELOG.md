@@ -1,5 +1,59 @@
 ---
 
+## 2026-07-14 (cont'd 25) — Muted text color made consistent app-wide
+**Files: render.js, game.js, ui.js, features.js, styles.css**
+
+- Follow-up to the font-size sweep: user asked whether color/contrast had
+  also been updated, and it hadn't — only the Statistics screen (features.js)
+  got the `#5a5870`→`#8a8799` brightening from an earlier round; the rest of
+  the app (the live table, equity panel, etc.) kept the size bump but stayed
+  on the same dim `#5a5870` gray. User asked for consistency.
+- Checked first whether `#5a5870` was centralized behind a CSS variable
+  (`--muted`) before touching anything broadly — it partially is (a handful
+  of CSS-class rules in `styles.css` reference `var(--muted)`), but the
+  large majority (110 of ~114 occurrences across the JS files) hardcode the
+  literal hex directly in inline `style="color:#5a5870"` attributes, not
+  through the variable — so editing the variable alone wouldn't have reached
+  the actual problem areas. Also checked it's never used as a background or
+  border color anywhere (would need different handling) — confirmed it's
+  used exclusively as muted/secondary text color throughout.
+- Given that, did a straightforward literal replace of `#5a5870` →
+  `#8a8799` across all five files (55 in `render.js`, 24 in `ui.js`, 19 in
+  `features.js`, 15 in `game.js`, 4 in `styles.css`) — same color already
+  validated to look right in the Statistics screen, now applied everywhere
+  that color was used. `node --check` clean on all four JS files afterward;
+  confirmed zero remaining `#5a5870` references anywhere.
+
+## 2026-07-14 (cont'd 24) — App-wide small header fonts + switcher scroll bug
+**Files: render.js, game.js, ui.js, styles.css, features.js**
+
+- **Small fonts, this time app-wide, not just the Statistics screen:** user's
+  screenshot was the live poker table — position badges (UTG/BB/MP/HJ/SB/
+  BTN/CO/UTG+1 on each seat), and the equity panel's POT ODDS/BREAK-EVEN/
+  EQUITY/UTG-range labels, all at 7-8px. Did a mechanical sweep: every
+  `font-size:7px` → `9px` and `font-size:8px` → `10px` across `render.js`
+  (20 instances), `ui.js` (8), `game.js` (1), `styles.css` (2, including
+  `.seat-pos` — the position-badge class directly visible in the
+  screenshot), `features.js` (1 remaining instance missed by the earlier
+  Statistics-only pass). Left existing 9px+ text alone this round rather
+  than cascading into a second bump — some of it (the VPIP/PFR/3B/AF/W HUD
+  line, packed five-wide) risks overflow if pushed larger; flagged as
+  something to revisit specifically if still hard to read after this pass,
+  rather than risking a layout break on an untested squeeze.
+- **Player-switcher chip row losing scroll position:** user's screenshot
+  showed איתן's data correctly displayed, but the switcher row scrolled
+  back to show only the first several players — איתן's own chip wasn't
+  visible at all, even though he was the one selected. Root cause: every
+  `showPlayerDetail()` call rebuilds the entire panel's HTML from scratch
+  (`innerHTML = html`), which resets any scroll position on the switcher
+  row back to 0 — there was nothing telling the browser to scroll to the
+  newly-selected chip specifically. Fixed by tagging the currently-selected
+  chip with `id="player-switcher-selected"` and calling
+  `scrollIntoView({inline:'center', block:'nearest'})` on it right after
+  the HTML is set. Verified via simulation (selecting the 3rd of 3 players)
+  that the id lands on the correct chip and `scrollIntoView` actually gets
+  invoked.
+
 ## 2026-07-14 (cont'd 23) — Tournament name was silently dropped on save
 **Files: ui.js**
 

@@ -152,9 +152,9 @@ function showHandDetail(hid){
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
   const winnerNames = (h.winners||[]).map(w=>w.name).join(' + ');
-  hdr.innerHTML = '<div><div style="font-size:14px;font-weight:800;color:#c8a96e">'+h.date+'</div><div style="font-size:11px;color:#5a5870">'+h.blinds+(h.anteStr?' · '+h.anteStr:'')+(h.label?' · '+h.label:'')+'</div>'+(winnerNames?'<div style="font-size:12px;font-weight:700;color:#5fc47a;margin-top:3px">🏆 '+winnerNames+'</div>':'')+'</div>';
+  hdr.innerHTML = '<div><div style="font-size:14px;font-weight:800;color:#c8a96e">'+h.date+'</div><div style="font-size:11px;color:#8a8799">'+h.blinds+(h.anteStr?' · '+h.anteStr:'')+(h.label?' · '+h.label:'')+'</div>'+(winnerNames?'<div style="font-size:12px;font-weight:700;color:#5fc47a;margin-top:3px">🏆 '+winnerNames+'</div>':'')+'</div>';
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:none;border:none;color:#5a5870;font-size:22px;cursor:pointer;padding:4px';
+  closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
   closeBtn.onclick = ()=>overlay.remove();
   
@@ -231,7 +231,7 @@ function showHandDetail(hid){
 
     // Position tag
     const posEl=document.createElement('div');
-    posEl.style.cssText='font-size:8px;font-weight:800;color:'+posColor+';line-height:1;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:5px';
+    posEl.style.cssText='font-size:10px;font-weight:800;color:'+posColor+';line-height:1;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:5px';
     posEl.textContent=s.pos||'';
     seatEl.appendChild(posEl);
 
@@ -267,7 +267,7 @@ function showHandDetail(hid){
     // Win chip
     if(hasWon && h.finalPot){
       const chip=document.createElement('div');
-      chip.style.cssText='background:#5fc47a;color:#0a0d14;font-size:8px;font-weight:900;padding:1px 5px;border-radius:5px;white-space:nowrap';
+      chip.style.cssText='background:#5fc47a;color:#0a0d14;font-size:10px;font-weight:900;padding:1px 5px;border-radius:5px;white-space:nowrap';
       chip.textContent='+'+h.finalPot.toLocaleString();
       seatEl.appendChild(chip);
     }
@@ -325,7 +325,7 @@ function showHandDetail(hid){
         row.style.cssText = 'padding:5px 6px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center';
         const c = a.type==='SB'?'#8b7cb8':'#e07b6a';
         row.innerHTML =
-          '<div style="font-size:9px;color:#5a5870">'+(a.pos||a.type)+'</div>'+
+          '<div style="font-size:9px;color:#8a8799">'+(a.pos||a.type)+'</div>'+
           '<div style="font-size:10px;font-weight:700;color:#e2ddd4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+a.playerName+'</div>'+
           '<div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:5px;background:'+c+'22;color:'+c+';font-size:9px;font-weight:800">'+a.type+'</div>'+
           (a.amount?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">'+Number(a.amount).toLocaleString()+'</div>':'');
@@ -391,16 +391,16 @@ function showHandDetail(hid){
         if(isMyOddsRow) _usedOddsKeys.add(oddsKey);
         const ev = isMyOddsRow && myOdds.equityPct!==null ? (myOdds.equityPct - myOdds.breakEven) : null;
         row.innerHTML =
-          '<div style="font-size:9px;color:#5a5870;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+
+          '<div style="font-size:9px;color:#8a8799;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+
           '<div style="font-size:10px;font-weight:700;color:'+(isFold?'#555':'#e2ddd4')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.playerName+'</div>'+
           '<div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:5px;background:'+c+'22;color:'+c+';font-size:9px;font-weight:800">'+a.type+'</div>'+
           (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'')+
           (isMyOddsRow?
             '<div style="margin-top:3px;padding-top:3px;border-top:1px dashed rgba(255,255,255,0.08)">'+
-            '<div style="font-size:8px;color:#5a5870">BE '+myOdds.breakEven.toFixed(0)+'%</div>'+
+            '<div style="font-size:10px;color:#8a8799">BE '+myOdds.breakEven.toFixed(0)+'%</div>'+
             (myOdds.equityPct!==null
               ? '<div style="font-size:12px;font-weight:900;color:#7eb8a4">'+myOdds.equityPct.toFixed(1)+'%</div>'+
-                '<div style="font-size:8px;font-weight:800;color:'+(ev>=0?'#5fc47a':'#e07b6a')+'">'+(ev>=0?'✅ +EV':'❌ -EV')+'</div>'
+                '<div style="font-size:10px;font-weight:800;color:'+(ev>=0?'#5fc47a':'#e07b6a')+'">'+(ev>=0?'✅ +EV':'❌ -EV')+'</div>'
               : '<div style="font-size:9px;color:#3a3850">אין נתונים</div>')+
             '</div>'
             :'');
@@ -533,9 +533,9 @@ function renderHandList(){
 
     const statCell = (label,val,color='#e2ddd4',sub='')=>
       `<div style="flex:1;padding:6px 8px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)">
-        <div style="font-size:9px;color:#5a5870;margin-bottom:2px">${label}</div>
+        <div style="font-size:9px;color:#8a8799;margin-bottom:2px">${label}</div>
         <div style="font-size:15px;font-weight:800;color:${color}">${val}</div>
-        ${sub?`<div style="font-size:9px;color:#5a5870">${sub}</div>`:''}
+        ${sub?`<div style="font-size:9px;color:#8a8799">${sub}</div>`:''}
       </div>`;
 
     statsBar.innerHTML =
@@ -550,7 +550,7 @@ function renderHandList(){
     streetBar.style.cssText = 'display:flex;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.06)';
     streetBar.innerHTML = streets.map((st,i)=>
       `<div style="flex:1;padding:5px 8px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)">
-        <div style="font-size:9px;color:#5a5870">${st.slice(0,2)} רייז</div>
+        <div style="font-size:9px;color:#8a8799">${st.slice(0,2)} רייז</div>
         <div style="font-size:13px;font-weight:700;color:#e2ddd4">${raisesByStreet[i]}</div>
       </div>`
     ).join('');
@@ -591,8 +591,8 @@ function renderHandList(){
         <button class="btn btn-red btn-xs" onclick="event.stopPropagation();deleteHand(${hi})">✕</button>
       </div>
       ${(winnerGroupsHtml||myCardsHtml)?`<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
-        ${winnerGroupsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#5a5870">🏆</span>${winnerGroupsHtml}</div>`:''}
-        ${myCardsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#5a5870">שלי</span><div style="display:flex;direction:ltr">${myCardsHtml}</div></div>`:''}
+        ${winnerGroupsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#8a8799">🏆</span>${winnerGroupsHtml}</div>`:''}
+        ${myCardsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#8a8799">שלי</span><div style="display:flex;direction:ltr">${myCardsHtml}</div></div>`:''}
       </div>`:''}
       ${boardCards.length?`<div style="display:flex;gap:3px;direction:ltr">${boardCards.map(c=>_hlCard(c,false)).join('')}</div>`:``}
     </div>`;
@@ -789,7 +789,7 @@ function renderTournList(){
               const name = pName(pid)||'?';
               const isKO = S.koOrder.includes(pid);
               return `<div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;opacity:${isKO?0.45:1}">
-                <div style="font-size:11px;font-weight:900;color:${b.rebuy>0?rebuyColor:'transparent'};margin-bottom:3px;white-space:nowrap;min-height:14px">${b.rebuy>0?b.rebuy+(badge?`<span style='font-size:8px'>${badge}</span>`:''):''}</div>
+                <div style="font-size:11px;font-weight:900;color:${b.rebuy>0?rebuyColor:'transparent'};margin-bottom:3px;white-space:nowrap;min-height:14px">${b.rebuy>0?b.rebuy+(badge?`<span style='font-size:10px'>${badge}</span>`:''):''}</div>
                 <div style="width:26px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
                   ${rebuyH>0?`<div style="width:100%;height:${rebuyH}px;background:${rebuyColor};border-radius:3px 3px 0 0;margin-bottom:1px"></div>`:''}
                   <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'3px 3px 0 0'}"></div>
@@ -915,8 +915,8 @@ function renderTournList(){
     html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:12px;font-weight:700;color:var(--gold)">היסטוריה (${S.tournLog.length})</div>
       ${isAdmin()?`<div style="display:flex;gap:6px">
-        <button onclick="exportToExcel()" style="font-size:10px;color:#5a5870;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>
-        <button onclick="fixTournFinishOrders()" style="font-size:10px;color:#5a5870;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">🔧 תקן סדר</button>
+        <button onclick="exportToExcel()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>
+        <button onclick="fixTournFinishOrders()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">🔧 תקן סדר</button>
       </div>`:''}
     </div>`;
     html += S.tournLog.map((t,ti)=>{
@@ -990,7 +990,7 @@ function renderTournList(){
                   const rebuyColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
                   const badge=hasFree16?'16✓':hasFree10?'10✓':'';
                   return `<div style="display:flex;flex-direction:column;align-items:center;width:22px;flex-shrink:0">
-                    <div style="font-size:9px;font-weight:900;color:${f.rebuy>0?rebuyColor:'transparent'};margin-bottom:2px;white-space:nowrap;min-height:12px">${f.rebuy>0?f.rebuy+(badge?`<span style='font-size:7px'>${badge}</span>`:''):''}</div>
+                    <div style="font-size:9px;font-weight:900;color:${f.rebuy>0?rebuyColor:'transparent'};margin-bottom:2px;white-space:nowrap;min-height:12px">${f.rebuy>0?f.rebuy+(badge?`<span style='font-size:9px'>${badge}</span>`:''):''}</div>
                     <div style="width:16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
                       ${rebuyH>0?`<div style="width:100%;height:${rebuyH}px;background:${rebuyColor};border-radius:2px 2px 0 0;margin-bottom:1px"></div>`:''}
                       <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'2px 2px 0 0'}"></div>
@@ -1003,8 +1003,8 @@ function renderTournList(){
               })()}
             </div>
             <div style="display:flex;gap:8px;margin-top:3px">
-              <span style="font-size:8px;color:rgba(95,196,122,0.8)">■ כניסה</span>
-              ${(t.finishOrder||[]).some(f=>f.rebuy>0)?`<span style="font-size:8px;color:rgba(200,169,110,0.8)">■ Rebuy</span>`:''}
+              <span style="font-size:10px;color:rgba(95,196,122,0.8)">■ כניסה</span>
+              ${(t.finishOrder||[]).some(f=>f.rebuy>0)?`<span style="font-size:10px;color:rgba(200,169,110,0.8)">■ Rebuy</span>`:''}
             </div>
           </div>`:''}
         </div>
@@ -1061,7 +1061,7 @@ function setPlayerType(pid, type){
     if(t){
       el.style.background = el.dataset.ptypeVal===type ? t.color+'33' : 'rgba(255,255,255,0.04)';
       el.style.borderColor = el.dataset.ptypeVal===type ? t.color+'88' : 'rgba(255,255,255,0.1)';
-      el.style.color = el.dataset.ptypeVal===type ? t.color : '#5a5870';
+      el.style.color = el.dataset.ptypeVal===type ? t.color : '#8a8799';
     }
   });
 }
@@ -1111,11 +1111,11 @@ function renderPlayerList(){
         const afNum=parseFloat(hud.af)||0;
         const afStr=!isFinite(afNum)||afNum>9?'∞':afNum.toFixed(1);
         hudHtml=`<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-          <span style="font-size:9px;color:#5a5870">VPIP <b style="color:#c8a96e">${hud.vpip}%</b></span>
-          <span style="font-size:9px;color:#5a5870">PFR <b style="color:#5b9bd5">${hud.pfr}%</b></span>
-          <span style="font-size:9px;color:#5a5870">3B <b style="color:#7eb8a4">${hud.bet3}%</b></span>
-          <span style="font-size:9px;color:#5a5870">AF <b style="color:#e07b6a">${afStr}</b></span>
-          <span style="font-size:9px;color:#5a5870">W <b style="color:#5fc47a">${hud.won}%</b></span>
+          <span style="font-size:9px;color:#8a8799">VPIP <b style="color:#c8a96e">${hud.vpip}%</b></span>
+          <span style="font-size:9px;color:#8a8799">PFR <b style="color:#5b9bd5">${hud.pfr}%</b></span>
+          <span style="font-size:9px;color:#8a8799">3B <b style="color:#7eb8a4">${hud.bet3}%</b></span>
+          <span style="font-size:9px;color:#8a8799">AF <b style="color:#e07b6a">${afStr}</b></span>
+          <span style="font-size:9px;color:#8a8799">W <b style="color:#5fc47a">${hud.won}%</b></span>
           <span style="font-size:9px;color:#3a3850">${hud.n} ידיים</span>
         </div>`;
       }
@@ -1125,30 +1125,30 @@ function renderPlayerList(){
     const profileHtml = isExpanded ? `
     <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:10px">
       <div>
-        <div style="font-size:9px;color:#5a5870;font-weight:700;margin-bottom:4px">שם</div>
+        <div style="font-size:9px;color:#8a8799;font-weight:700;margin-bottom:4px">שם</div>
         <input id="edit-name-${p.id}" value="${p.name}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2ddd4;font-size:13px;direction:rtl">
       </div>
       <div>
-        <div style="font-size:9px;color:#5a5870;font-weight:700;margin-bottom:4px">סוג שחקן</div>
+        <div style="font-size:9px;color:#8a8799;font-weight:700;margin-bottom:4px">סוג שחקן</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
           ${Object.entries(PLAYER_TYPES).map(([key,t])=>{
             const isActive=p.playerType===key;
             return`<button data-ptype="${p.id}" data-ptype-val="${key}"
               class="ptype-btn${isActive?' ptype-active':''}"
               onclick="setPlayerType('${p.id}','${key}')"
-              style="padding:4px 10px;border-radius:14px;border:1px solid ${isActive?t.color+'88':'rgba(255,255,255,0.1)'};background:${isActive?t.color+'33':'rgba(255,255,255,0.04)'};color:${isActive?t.color:'#5a5870'};font-size:10px;font-weight:700;cursor:pointer"
+              style="padding:4px 10px;border-radius:14px;border:1px solid ${isActive?t.color+'88':'rgba(255,255,255,0.1)'};background:${isActive?t.color+'33':'rgba(255,255,255,0.04)'};color:${isActive?t.color:'#8a8799'};font-size:10px;font-weight:700;cursor:pointer"
               title="${t.desc}">${t.label}</button>`;
           }).join('')}
         </div>
       </div>
       <div>
-        <div style="font-size:9px;color:#5a5870;font-weight:700;margin-bottom:4px">הערות</div>
+        <div style="font-size:9px;color:#8a8799;font-weight:700;margin-bottom:4px">הערות</div>
         <textarea id="edit-notes-${p.id}" rows="2" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2ddd4;font-size:12px;direction:rtl;resize:none">${(S.playerNotes||{})[p.id]||''}</textarea>
       </div>
       ${hudHtml}
       <div style="display:flex;gap:6px">
         <button onclick="savePlayerProfile('${p.id}')" style="flex:1;padding:8px;border-radius:8px;border:none;background:rgba(95,196,122,0.2);color:#5fc47a;font-size:12px;font-weight:800;cursor:pointer">✓ שמור</button>
-        <button onclick="togglePlayerProfile('${p.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:12px;cursor:pointer">סגור</button>
+        <button onclick="togglePlayerProfile('${p.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:12px;cursor:pointer">סגור</button>
       </div>
     </div>` : '';
 
@@ -1166,7 +1166,7 @@ function renderPlayerList(){
             ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:1px">
-            ${(()=>{ const n=(S.playerNotes||{})[p.id]||''; return n?`<span style="color:#5a5870">${n.slice(0,30)}${n.length>30?'...':''}</span>`:b.buyin?'BuyIn':'לא נרשם'; })()}
+            ${(()=>{ const n=(S.playerNotes||{})[p.id]||''; return n?`<span style="color:#8a8799">${n.slice(0,30)}${n.length>30?'...':''}</span>`:b.buyin?'BuyIn':'לא נרשם'; })()}
           </div>
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end" onclick="event.stopPropagation()">

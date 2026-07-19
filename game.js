@@ -149,7 +149,7 @@ function renderSeatPanel(){
       <div style="display:flex;flex-wrap:wrap;gap:5px">
         ${Object.entries(PLAYER_TYPES).map(([key,t])=>{
           const active = player.playerType===key;
-          return `<button onclick="setSeatPlayerType('${player.id}','${key}')" style="padding:5px 10px;border-radius:8px;border:1px solid ${active?t.color+'88':'rgba(255,255,255,0.1)'};background:${active?t.color+'22':'rgba(255,255,255,0.04)'};color:${active?t.color:'#5a5870'};font-size:11px;font-weight:800;cursor:pointer">${t.label}</button>`;
+          return `<button onclick="setSeatPlayerType('${player.id}','${key}')" style="padding:5px 10px;border-radius:8px;border:1px solid ${active?t.color+'88':'rgba(255,255,255,0.1)'};background:${active?t.color+'22':'rgba(255,255,255,0.04)'};color:${active?t.color:'#8a8799'};font-size:11px;font-weight:800;cursor:pointer">${t.label}</button>`;
         }).join('')}
         ${player.playerType?`<button onclick="setSeatPlayerType('${player.id}',null)" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#3a3850;font-size:10px;cursor:pointer">✕ נקה</button>`:''}
       </div>
@@ -167,11 +167,11 @@ function renderSeatPanel(){
     html+=`<div style="margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
         <span class="sec-lbl">🎯 טווח</span>
-        <span style="font-size:9px;color:${rangeVal?'#5fc47a':'#5a5870'}">${rangeVal
+        <span style="font-size:9px;color:${rangeVal?'#5fc47a':'#8a8799'}">${rangeVal
           ? combosCount+' combos · '+(combosCount/1326*100).toFixed(1)+'% (ידני)'
           : (auto?.rangeStr ? autoCombos+' combos · '+(autoCombos/1326*100).toFixed(1)+'% (אוטומטי)' : 'אין נתונים מספיקים')}</span>
       </div>
-      ${!rangeVal && auto?.pos ? `<div style="font-size:8px;color:#3a3850;margin-bottom:5px">מבוסס על: ${auto.pos} · ${_ACTIONS_LABELS[auto.actionCat]||auto.actionCat} · ${depthLabel[auto.depth]||auto.depth}${auto.playerType?' · '+auto.playerType:''}</div>` : ''}
+      ${!rangeVal && auto?.pos ? `<div style="font-size:10px;color:#3a3850;margin-bottom:5px">מבוסס על: ${auto.pos} · ${_ACTIONS_LABELS[auto.actionCat]||auto.actionCat} · ${depthLabel[auto.depth]||auto.depth}${auto.playerType?' · '+auto.playerType:''}</div>` : ''}
       <div style="display:flex;gap:6px">
         <button onclick="${editing?'_closeRangeEditor()':`_openRangeEditor('${seat.playerId}')`}" style="flex:1;padding:6px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-weight:800;font-size:11px;cursor:pointer">${editing?'✕ סגור עריכה':(rangeVal?'✏️ ערוך טווח':'✏️ ערוך את הטווח האוטומטי')}</button>
         ${rangeVal?`<button onclick="_clearPlayerRange('${seat.playerId}')" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(126,184,164,0.4);background:rgba(126,184,164,0.08);color:#7eb8a4;font-size:10px;cursor:pointer;white-space:nowrap">🤖 אוטומטי</button>`:''}
@@ -319,7 +319,7 @@ function editStack(seatIdx){
   ok.textContent = '✓';
   ok.onclick = ()=>applyStackEdit(seatIdx);
   const cancel = document.createElement('button');
-  cancel.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:14px;cursor:pointer';
+  cancel.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:14px;cursor:pointer';
   cancel.textContent = '✕';
   cancel.onclick = ()=>overlay.remove();
   btns.appendChild(ok); btns.appendChild(cancel);
@@ -513,7 +513,7 @@ function doSeatRebuy(seatIdx){
   };
   inp.onkeydown = e=>{ if(e.key==='Enter') ok.click(); };
   const cancel = document.createElement('button');
-  cancel.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:14px;cursor:pointer';
+  cancel.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:14px;cursor:pointer';
   cancel.textContent = '✕';
   cancel.onclick = ()=>overlay.remove();
   btns.appendChild(ok); btns.appendChild(cancel);
@@ -621,7 +621,7 @@ function showQuickInput(seatIdx, type){
     ? '<input id="quick-amt-slider" type="range" min="'+minRaise+'" max="'+allinTotal+'" step="1" value="'+defaultAmt+'"'
       + ' style="width:100%;margin-bottom:6px;accent-color:#c8a96e;direction:ltr"'
       + ' oninput="document.getElementById(\'quick-amt-inp\').value=this.value">'
-      + '<div style="display:flex;justify-content:space-between;font-size:10px;color:#5a5870;margin-bottom:8px;direction:ltr">'
+      + '<div style="display:flex;justify-content:space-between;font-size:10px;color:#8a8799;margin-bottom:8px;direction:ltr">'
       + '<span>'+minRaise.toLocaleString()+'</span><span>All-in '+allinTotal.toLocaleString()+'</span></div>'
     : '';
   box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#c8a96e;margin-bottom:10px">'+type+'</div>' +
@@ -634,7 +634,7 @@ function showQuickInput(seatIdx, type){
     '<button onclick="doAction('+seatIdx+',\''+type+'\',document.getElementById(\'quick-amt-inp\').value);document.getElementById(\'quick-input-overlay\')?.remove()"' +
     ' style="flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer">✓</button>' +
     '<button onclick="document.getElementById(\'quick-input-overlay\')?.remove()"' +
-    ' style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:14px;cursor:pointer">✕</button>' +
+    ' style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:14px;cursor:pointer">✕</button>' +
     '</div>';
   overlay.appendChild(box);
   document.body.appendChild(overlay);
@@ -935,7 +935,7 @@ function autoSaveAndPromptReset(winnerSeatIdxs){
     title.textContent = '🃏 האם לאפס את היד?';
     
     const sub = document.createElement('div');
-    sub.style.cssText = 'font-size:12px;color:#5a5870;margin-bottom:16px';
+    sub.style.cssText = 'font-size:12px;color:#8a8799;margin-bottom:16px';
     sub.textContent = 'היד נשמרה – '+label;
     
     const btnRow = document.createElement('div');
@@ -1270,7 +1270,7 @@ function showShowdownPanel(){
     if(sp.length > 1){
       pot.innerHTML = sp.map((p,i)=>
         '<div>'+( i===0?'Main pot':'Side pot '+(i))+': ₪'+p.amount.toLocaleString()+
-        ' <span style="font-size:10px;color:#5a5870">('+p.eligible.map(e=>pName(S.seats.find(s=>s.seatIdx===e)?.playerId)||'?').join(', ')+')</span></div>'
+        ' <span style="font-size:10px;color:#8a8799">('+p.eligible.map(e=>pName(S.seats.find(s=>s.seatIdx===e)?.playerId)||'?').join(', ')+')</span></div>'
       ).join('');
     } else {
       pot.textContent = 'Pot: ₪'+calcPot().toLocaleString();
@@ -1313,7 +1313,7 @@ function showShowdownPanel(){
     box.appendChild(autoLbl);
   } else if(eligible.some(s=>(s.cards||[]).filter(Boolean).length<2)){
     const noCardsLbl = document.createElement('div');
-    noCardsLbl.style.cssText = 'font-size:11px;text-align:center;margin-bottom:10px;color:#5a5870';
+    noCardsLbl.style.cssText = 'font-size:11px;text-align:center;margin-bottom:10px;color:#8a8799';
     noCardsLbl.textContent = '💡 סמן קלפים לזיהוי מנצח אוטומטי';
     box.appendChild(noCardsLbl);
   }
@@ -1331,7 +1331,7 @@ function showShowdownPanel(){
       '<div style="width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0" id="sd-check-'+seat.seatIdx+'"></div>'+
       '<div style="flex:1">'+
         '<div style="font-size:13px;font-weight:700;color:#e2ddd4">'+pName(seat.playerId)+'</div>'+
-        '<div style="font-size:10px;color:#5a5870">'+pos+' · ₪'+seat.stack.toLocaleString()+'</div>'+
+        '<div style="font-size:10px;color:#8a8799">'+pos+' · ₪'+seat.stack.toLocaleString()+'</div>'+
         (cardsStr?'<div style="font-size:10px;color:#c8a96e;font-weight:700;direction:ltr;text-align:right">'+cardsStr+(handScore?' · <span style="color:#5fc47a">'+handScore.name+'</span>':'')+'</div>':'')+
       '</div>';
     row.onclick = ()=>{
@@ -1351,7 +1351,7 @@ function showShowdownPanel(){
   winBtn.onclick = ()=>{ if(!selected.length){notify('בחר לפחות שחקן אחד');return;} awardPot(selected); overlay.remove(); };
 
   const cancelBtn = document.createElement('button');
-  cancelBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer;margin-top:6px';
+  cancelBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:13px;cursor:pointer;margin-top:6px';
   cancelBtn.textContent = 'ביטול';
   cancelBtn.onclick = ()=>overlay.remove();
 
@@ -1439,7 +1439,7 @@ function confirmResetHand(){
   title.style.cssText = 'font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:6px';
   title.textContent = '↺ אפס יד';
   const sub = document.createElement('div');
-  sub.style.cssText = 'font-size:11px;color:#5a5870;margin-bottom:12px';
+  sub.style.cssText = 'font-size:11px;color:#8a8799;margin-bottom:12px';
   sub.textContent = 'אפשר לתת שם ליד לפני האיפוס (אופציונלי)';
 
   const inp = document.createElement('input');
@@ -1454,7 +1454,7 @@ function confirmResetHand(){
   saveBtn.style.cssText = 'flex:1;padding:11px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer';
   saveBtn.textContent = '💾 שמור ואפס';
   const skipBtn = document.createElement('button');
-  skipBtn.style.cssText = 'width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer;margin-top:6px';
+  skipBtn.style.cssText = 'width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:13px;cursor:pointer;margin-top:6px';
   skipBtn.textContent = '↺ אפס בלי לשמור';
   skipBtn.onclick = ()=>{ overlay.remove(); resetHand(); };
   saveBtn.onclick = ()=>{
@@ -1482,7 +1482,7 @@ function confirmResetHand(){
   };
 
   const cancelBtn = document.createElement('button');
-  cancelBtn.style.cssText = 'padding:11px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer';
+  cancelBtn.style.cssText = 'padding:11px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:13px;cursor:pointer';
   cancelBtn.textContent = 'ביטול';
   cancelBtn.onclick = ()=>overlay.remove();
 
@@ -1552,7 +1552,7 @@ function showSaveHandPanel(){
   div.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:60;background:#0a0e18;border-top:1px solid rgba(200,169,110,0.3);padding:14px;display:flex;gap:8px;align-items:center';
   div.innerHTML = `<input id="hand-label-inp" placeholder="לייבל (אופציונלי)..." style="flex:1;padding:9px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:13px;outline:none;direction:rtl">
     <button onclick="saveHandWithLabel()" style="padding:9px 16px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer">💾 שמור</button>
-    <button onclick="document.getElementById('save-hand-panel')?.remove()" style="padding:9px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">✕</button>`;
+    <button onclick="document.getElementById('save-hand-panel')?.remove()" style="padding:9px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:13px;cursor:pointer">✕</button>`;
   document.body.appendChild(div);
   document.getElementById('hand-label-inp')?.focus();
 }
