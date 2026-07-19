@@ -1,5 +1,41 @@
 ---
 
+## 2026-07-14 (cont'd 31) — New: 3bet-portion hands colored differently in the range grid
+**Files: ranges.js, render.js**
+
+- User asked whether hands from the "3bet" side of a call∪3bet (or
+  call∪4bet) union could be shown in a different color in the range editor
+  grid than the plain "call" hands — right now everything selected looks
+  identical regardless of which category it actually came from.
+- The information genuinely didn't exist at the point the grid renders —
+  once `_getContextualRangeInfo`'s union branches merge `call` and `3bet`/
+  `4bet` into one flat `rangeStr`, provenance is lost. Extended those three
+  branches (`round===0`-BB, `round===1`, `round===2`) to also return
+  `aggressiveHands` — the raw, un-merged 3bet/4bet sub-range — alongside the
+  existing merged `rangeStr`. Purely additive: every existing caller that
+  only reads `.rangeStr`/`.actionCat` is completely unaffected.
+- Propagated `aggressiveHands` through `_getAutoRangeForSeat`, then into a
+  new `_rangeEdit3betHands` Set (with an `_rangeEditOriginal3bet` backup so
+  switching between the editor's 'original'/'auto'/'limp' tabs restores the
+  right set each time, not stale data from whichever tab was visited last).
+  Also wired into the live-refresh mechanism (`_maybeRefreshAutoRangeEdit`,
+  from earlier this session) so it stays correct if the table state changes
+  while the editor is open.
+- Grid coloring: a selected hand that's specifically in the 3bet/4bet
+  portion now renders in `#e07b6a` (the same reddish tone already used for
+  "3BET בלבד" in the equity panel) instead of the plain blue used for
+  call/suited-offsuit hands. Known trade-off, flagged for the user rather
+  than silently decided: pairs normally get their own gold color
+  (`#c8a96e`) to distinguish them from suited/offsuit — a pair that's also
+  a 3bet hand (e.g. AA) now shows the 3bet color instead, since a hand
+  can't visually be both right now. Could switch to a border-based overlay
+  instead (like the existing purple limp-border) if preserving both cues
+  simultaneously matters more than the color itself.
+- Verified end-to-end (8-handed table, BB's editor, round=0): 11 hands
+  correctly populated `_rangeEdit3betHands` from BB's real 3bet table
+  (AA, KK, QQ, JJ, AKs, AQs, AKo, A5s, ...), and confirmed AA's grid cell
+  actually renders with the `#e07b6a` background.
+
 ## 2026-07-14 (cont'd 30) — New: focused opponent's real VPIP/LIMP/PFR/3B
 **Files: render.js**
 

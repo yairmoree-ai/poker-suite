@@ -253,13 +253,16 @@ _RANGES[9] = { deep:{
 // עליה במהלך כל השיחה, לא טעות).
 Object.assign(_RANGES[9].mid, {
   UTG: { ..._RANGES[9].mid.UTG,
-    RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,T9s,T8s,AKo,AQo,AJo,ATo',
+    // KQo נוסף 2026-07-14: המשתמש אישר ישירות מול המקור החי (GTOWizard) שזו
+    // תדירות 100%, לא תא מעורב — סותר את מה שההערה למעלה מניחה שנבדק בעבר.
+    // סומכים על הבדיקה העדכנית, לא על ההנחה הישנה.
+    RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,T9s,T8s,AKo,AQo,AJo,ATo,KQo',
   },
   'UTG+1': { ..._RANGES[9].mid['UTG+1'],
-    RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,J8s,T9s,T8s,98s,87s,AKo,AQo,AJo,ATo',
+    RFI: 'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,K8s,QJs,QTs,Q9s,JTs,J9s,J8s,T9s,T8s,98s,87s,AKo,AQo,AJo,ATo,KQo',
   },
   LJ: { ..._RANGES[9].mid.LJ,
-    RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,AQo,QQ,QJs,QTs,Q9s,AJo,JJ,JTs,J9s,J8s,ATo,TT,T9s,T8s,A9o,99,98s,88,87s,77,76s,66,65s,55,44,33',
+    RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,AQo,KQo,QQ,QJs,QTs,Q9s,AJo,JJ,JTs,J9s,J8s,ATo,TT,T9s,T8s,A9o,99,98s,88,87s,77,76s,66,65s,55,44,33',
   },
   HJ: { ..._RANGES[9].mid.HJ,
     RFI: 'AA,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,AKo,KK,KQs,KJs,KTs,K9s,K8s,K7s,K6s,K5s,AQo,KQo,QQ,QJs,QTs,Q9s,Q8s,AJo,KJo,QJo,JJ,JTs,J9s,J8s,ATo,KTo,QTo,JTo,TT,T9s,T8s,T7s,99,98s,97s,A8o,88,87s,77,76s,66,65s,55,44,33,22',
@@ -646,7 +649,7 @@ function _getContextualRangeInfo(seat, pos, tableSize, depth, currentRaiseRound,
     if(pos==='BB'){
       const callR = _getRangeStrForDepth(tableSize, pos, 'call', depth) || '';
       const bet3R = _getRangeStrForDepth(tableSize, pos, '3bet', depth) || '';
-      return {rangeStr: _unionRangeStr(callR, bet3R), actionCat:'call'};
+      return {rangeStr: _unionRangeStr(callR, bet3R), actionCat:'call', aggressiveHands: bet3R};
     }
     const actionCat = 'RFI';
     return {rangeStr: _getRangeStrForDepth(tableSize, pos, actionCat, depth) || '', actionCat};
@@ -655,12 +658,12 @@ function _getContextualRangeInfo(seat, pos, tableSize, depth, currentRaiseRound,
     const callR = _getRangeStrForDepth(tableSize, pos, 'call', depth, vsPos) || '';
     const bet4R = _getRangeStrForDepth(tableSize, pos, '4bet', depth, vsPos) || '';
     if(!callR && !bet4R) return {rangeStr:'', actionCat:'unclear'};
-    return {rangeStr: _unionRangeStr(callR, bet4R), actionCat:'facing-3bet'};
+    return {rangeStr: _unionRangeStr(callR, bet4R), actionCat:'facing-3bet', aggressiveHands: bet4R};
   }
   if(round===1){
     const callR = _getRangeStrForDepth(tableSize, pos, 'call', depth) || '';
     const bet3R = _getRangeStrForDepth(tableSize, pos, '3bet', depth) || '';
-    return {rangeStr: _unionRangeStr(callR, bet3R), actionCat:'facing-open'};
+    return {rangeStr: _unionRangeStr(callR, bet3R), actionCat:'facing-open', aggressiveHands: bet3R};
   }
   return {rangeStr:'', actionCat:'unclear'};
 }
@@ -716,11 +719,15 @@ function _getAutoRangeForSeat(seatIdx){
   const bb = getBB();
   const depth = _depthFromBB(bb>0 ? (seat.stack||0)/bb : 100);
   const vsPos = _detectVsPos(swp);
-  const {rangeStr: baseRangeStr, actionCat} = _getContextualRangeInfo(seat, pos, S.tableSize, depth, S.raiseRound, vsPos);
+  const {rangeStr: baseRangeStr, actionCat, aggressiveHands} = _getContextualRangeInfo(seat, pos, S.tableSize, depth, S.raiseRound, vsPos);
   const player = (S.playerLib||[]).find(p=>p.id===seat.playerId);
   const playerType = player?.playerType || null;
   const rangeStr = _adjustRangeForType(baseRangeStr, playerType, actionCat);
-  return {rangeStr, pos, actionCat, depth, playerType};
+  // aggressiveHands: תת-הטווח הגולמי של 3bet/4bet (לפני התאמת סוג-שחקן) — לצורך
+  // צביעה שונה בעורך הטווח בלבד (הבחנה חזותית "מה כאן 3bet" לעומת "מה כאן call"),
+  // לא שינוי בהתנהגות/בבחירה עצמה. לא תמיד משקף במדויק 100% אחרי הרחבת Station/Fish
+  // (התוספות שם לא מסווגות פר-קטגוריה) — קירוב סביר, לא חישוב מדויק לכל מקרה.
+  return {rangeStr, pos, actionCat, depth, playerType, aggressiveHands: aggressiveHands||''};
 }
 
 // לימפים אמפיריים ידועים לשחקן: סורק את S.handLog (היסטוריית ידיים אמיתית, לא
