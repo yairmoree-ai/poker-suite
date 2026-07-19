@@ -1,5 +1,33 @@
 ---
 
+## 2026-07-14 (cont'd 29) — Equity row: smaller numbers, stronger dividers, scroll safety net
+**Files: render.js**
+
+- User's follow-up screenshot showed the previous round's label-shortening
+  fix helped but didn't fully solve it — 4 columns of numbers were still
+  visually crowded together with weak separation. Asked for smaller numbers
+  and stronger visual separation between columns.
+- Shrunk the big value numbers from 14px/13px down to a uniform 12px across
+  every card and mode (POT ODDS, BREAK-EVEN, RFI/range combos, plain
+  equity, "מול X"), and the small inline suffixes from 9px to 8px.
+  Tightened `letter-spacing` on labels slightly (.3px→.2px) and reduced
+  the gap between columns (6px→2px) since the stronger dividers now do the
+  separation work instead of whitespace.
+  - This is a deliberate exception to the "make small text bigger"
+    direction from earlier — this specific row is unusually dense (up to 4
+    stat cards side by side on a narrow screen), so it gets a size
+    reduction here specifically to fix crowding, while the app-wide
+    brightening/legibility work from earlier rounds stays in place.
+- **Real separation, not just a hairline:** dividers went from a 1px line
+  at 7% white opacity (barely visible against the panel background) to a
+  2px rounded bar at 16% opacity, plus 4px horizontal padding added around
+  each column's content so text doesn't run right up against the divider.
+- **Safety net:** added `overflow-x:auto` to the row's container. If four
+  columns still don't comfortably fit on some narrower device even after
+  the size reduction, it now scrolls instead of wrapping/overlapping —
+  making a repeat of this exact bug structurally harder regardless of
+  screen width or a future 5th column being added.
+
 ## 2026-07-14 (cont'd 28) — Fixing the overlap the compact redesign caused
 **Files: render.js**
 
