@@ -1,5 +1,31 @@
 ---
 
+## 2026-07-14 (cont'd 26) — Focus-seat row: single scrollable line + scroll-position fix
+**Files: render.js**
+
+- User asked to change the opponent-focus button row (🌐 כולם / player names,
+  under the equity panel) from wrapping onto 2 lines to a single
+  horizontally-scrollable line, and — having just seen the exact same
+  problem fixed on the Statistics player-switcher — asked upfront to make
+  sure the scroll position doesn't reset on selection here either.
+- Changed the row's CSS from `flex-wrap:wrap;justify-content:center` to
+  `flex-wrap:nowrap;overflow-x:auto` with `flex-shrink:0` on each button,
+  so it scrolls instead of wrapping.
+- Applied the identical fix already proven for the Statistics screen: the
+  currently-selected chip (either "🌐 כולם" or the focused opponent's
+  button) gets `id="focus-seat-selected"`, and right after
+  `renderPotOdds()` sets the panel's `innerHTML`, calls
+  `scrollIntoView({inline:'center', block:'nearest'})` on it. Same root
+  cause as before — every click rebuilds the HTML from scratch, which
+  resets scroll position unless something explicitly restores it.
+- Also raised proactively, unprompted: font-size/color question — checked
+  the actual delivered `render.js` directly and confirmed the equity-panel
+  labels (POT ODDS, BREAK-EVEN, etc.) already have `color:#8a8799` in the
+  file as given. If it's still showing the old color after this round's
+  update too, that points at a deployment/cache issue rather than a code
+  gap — same pattern as a couple of earlier "still not working" reports
+  this session that turned out to be stale files, not new bugs.
+
 ## 2026-07-14 (cont'd 25) — Muted text color made consistent app-wide
 **Files: render.js, game.js, ui.js, features.js, styles.css**
 

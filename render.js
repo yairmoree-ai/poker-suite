@@ -840,11 +840,14 @@ function renderPotOdds(){
       </div>
     </div>
 
-    <!-- בחירת יריב ממוקד ל"EQUITY מול השדה" — לחיצה על שם = מולו בלבד, "כולם" = ברירת מחדל -->
+    <!-- בחירת יריב ממוקד ל"EQUITY מול השדה" — לחיצה על שם = מולו בלבד, "כולם" = ברירת מחדל.
+         שורה אחת עם גלילה אופקית (לא flex-wrap) — ראו renderPotOdds להמשך: שומר את
+         מיקום הגלילה על הצ'יפ הנבחר בכל רינדור, בדיוק כמו שתוקן קודם ברשימת השחקנים
+         בסטטיסטיקה, כדי שלא תתאפס בחזרה להתחלה בכל לחיצה. -->
     ${openRangeInfo && openRangeInfo.fieldSeats && openRangeInfo.fieldSeats.length ? `
-    <div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
-      <button onclick="S._openingFocusSeat=null;renderPotOdds()" style="${chipStyle(!openRangeInfo.focusName,'#7eb8a4')}">🌐 כולם</button>
-      ${openRangeInfo.fieldSeats.map(fs=>`<button onclick="S._openingFocusSeat=${fs.seatIdx};renderPotOdds()" style="${chipStyle(openRangeInfo.focusName===fs.name,'#5b9bd5')}">${fs.name}</button>`).join('')}
+    <div id="focus-seat-row" style="display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:5px;margin-top:8px;padding-top:8px;padding-bottom:2px;border-top:1px solid rgba(255,255,255,0.06)">
+      <button ${!openRangeInfo.focusName?'id="focus-seat-selected"':''} onclick="S._openingFocusSeat=null;renderPotOdds()" style="${chipStyle(!openRangeInfo.focusName,'#7eb8a4')};flex-shrink:0">🌐 כולם</button>
+      ${openRangeInfo.fieldSeats.map(fs=>`<button ${openRangeInfo.focusName===fs.name?'id="focus-seat-selected"':''} onclick="S._openingFocusSeat=${fs.seatIdx};renderPotOdds()" style="${chipStyle(openRangeInfo.focusName===fs.name,'#5b9bd5')};flex-shrink:0">${fs.name}</button>`).join('')}
     </div>` : ''}
 
     <!-- פיצול equity מול טווח ה-call בלבד / טווח ה-3bet בלבד של היריב הממוקד —
@@ -906,6 +909,11 @@ function renderPotOdds(){
       </button>
     </div>` : ''}
   </div>`;
+  // בלי זה, כל לחיצה על יריב ממוקד (בונה מחדש את כל ה-HTML) הייתה מאפסת את
+  // גלילת שורת הצ'יפים בחזרה להתחלה — בדיוק אותו דפוס באג שתוקן קודם היום
+  // במעבר בין שחקנים במסך הסטטיסטיקה.
+  const focusSeatSelected = document.getElementById('focus-seat-selected');
+  if(focusSeatSelected) focusSeatSelected.scrollIntoView({inline:'center', block:'nearest'});
 }
 
 function renderLiveActions(){
