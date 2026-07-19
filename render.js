@@ -298,6 +298,13 @@ let _rangeEditLastAutoStr = null;
 // לפי-קטגוריה כזה בכלל — טווח ידני הוא רשימה שטוחה).
 let _rangeEdit3betHands = new Set();
 let _rangeEditOriginal3bet = new Set(); // גיבוי של _rangeEdit3betHands מרגע פתיחת העורך — כדי ש-'original' ישחזר נכון אחרי ביקור ב-'auto'/'limp'
+// true כשהטווח הנוכחי הגיע מאיחוד call∪3bet/4bet ידוע (ולכן יודעים בוודאות שכל
+// יד נבחרת שאינה ב-_rangeEdit3betHands היא ספציפית call, לא רק "לא ידוע") —
+// UTG/RFI רגיל, טווח ידני, ותצוגת לימפים לא נחשבים "הקשר איחוד" ונופלים לצביעה
+// לפי סוג-יד (זוג/סוטד) כברירת מחדל, כי שם אין בכלל הבחנה call-מול-3bet.
+const _UNION_ACTION_CATS = new Set(['call','facing-open','facing-3bet']);
+let _rangeEditUnionContext = false;
+let _rangeEditOriginalUnionContext = false;
 const _sortedHandsKey = str => (str? str.split(',').map(x=>x.trim()).filter(Boolean):[]).sort().join(',');
 
 const _GRID_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
@@ -316,6 +323,8 @@ function _openRangeEditor(pid){
   _rangeEditSel = new Set(seed ? seed.split(',').map(x=>x.trim()).filter(Boolean) : []);
   _rangeEdit3betHands = existing ? new Set() : _parseRangeToSet(auto.aggressiveHands||'');
   _rangeEditOriginal3bet = new Set(_rangeEdit3betHands);
+  _rangeEditUnionContext = !existing && _UNION_ACTION_CATS.has(auto.actionCat);
+  _rangeEditOriginalUnionContext = _rangeEditUnionContext;
   _rangeEditActiveView = 'original';
   // טווח ידני קיים → קפוא לגמרי בכוונה, לא עוקבים אחרי שינויי מצב-שולחן.
   _rangeEditLastAutoStr = existing ? null : seed;
@@ -332,6 +341,7 @@ function _openRangeEditorShowLimps(pid){
   const limpTally = _getEmpiricalLimpHands(pid);
   _rangeEditSel = new Set(Object.keys(limpTally));
   _rangeEdit3betHands = new Set(); // תצוגת לימפים לא רלוונטית ל-3bet מעצם ההגדרה
+  _rangeEditUnionContext = false;
   _rangeEditActiveView = 'limp';
   _rangeEditLastAutoStr = null; // תצוגת לימפים = דריסה מפורשת, לא עוקבים אחרי מצב-שולחן
   renderSeatPanel();
@@ -340,6 +350,7 @@ function _closeRangeEditor(){
   _rangeEditPid = null;
   _rangeEditSel = new Set();
   _rangeEdit3betHands = new Set();
+  _rangeEditUnionContext = false;
   _rangeEditActiveView = null;
   _rangeEditOriginal = '';
   renderSeatPanel();
@@ -413,10 +424,14 @@ function _rangeEditorGridHtml(){
       const on = _rangeEditSel.has(hand);
       const isPair = i===j;
       const is3bet = on && _rangeEdit3betHands.has(hand);
-      // ידיים שהגיעו מחלק ה-3bet/4bet של האיחוד מקבלות צבע נפרד (אדמדם, אותו
-      // צבע כבר בשימוש בפאנל ה-equity ל"3BET בלבד") — הבחנה חזותית בין "כאן
-      // הייתי קורא" לבין "כאן הייתי מעלה שוב", לא רק "בטווח / לא בטווח".
-      const bg = on ? (is3bet ? '#e07b6a' : (isPair?'#c8a96e':'#5b9bd5')) : 'rgba(255,255,255,0.04)';
+      // כשידוע שהטווח בא מאיחוד call∪3bet/4bet (_rangeEditUnionContext), הצבע
+      // לפי קטגוריה (call=כחול / 3bet=אדום) גובר תמיד על ההבחנה זוג-מול-סוטד —
+      // גם AA שהוא ספציפית call יראה כחול, לא זהב, כי עכשיו יודעים בוודאות
+      // מאיזה חלק של הטווח הוא הגיע. זהב לזוגות נשאר רק כברירת מחדל כשאין בכלל
+      // מידע קטגוריה (RFI רגיל, טווח ידני, תצוגת לימפים).
+      const bg = on
+        ? (is3bet ? '#e07b6a' : (_rangeEditUnionContext ? '#5b9bd5' : (isPair?'#c8a96e':'#5b9bd5')))
+        : 'rgba(255,255,255,0.04)';
       const fg = on ? '#0a0d14' : (isPair?'#8a8799':'#8a8799');
       const limpCount = limpTally[hand]||0;
       const border = limpCount ? '2px solid #b47eea' : '1px solid transparent';
@@ -443,17 +458,20 @@ function _setRangeEditorView(view){
   if(view==='original'){
     _rangeEditSel = new Set(_rangeEditOriginal ? _rangeEditOriginal.split(',').map(x=>x.trim()).filter(Boolean) : []);
     _rangeEdit3betHands = new Set(_rangeEditOriginal3bet);
+    _rangeEditUnionContext = _rangeEditOriginalUnionContext;
     _rangeEditLastAutoStr = S.playerRanges?.[_rangeEditPid] ? null : _rangeEditOriginal;
   } else if(view==='auto'){
     const seatIdx = typeof activeSeat==='number' ? activeSeat : null;
-    const auto = seatIdx!==null ? _getAutoRangeForSeat(seatIdx) : {rangeStr:'', aggressiveHands:''};
+    const auto = seatIdx!==null ? _getAutoRangeForSeat(seatIdx) : {rangeStr:'', aggressiveHands:'', actionCat:''};
     _rangeEditSel = new Set(auto.rangeStr ? auto.rangeStr.split(',').filter(Boolean) : []);
     _rangeEdit3betHands = _parseRangeToSet(auto.aggressiveHands||'');
+    _rangeEditUnionContext = _UNION_ACTION_CATS.has(auto.actionCat);
     _rangeEditLastAutoStr = auto.rangeStr || '';
   } else if(view==='limp'){
     const limpTally = _getEmpiricalLimpHands(_rangeEditPid);
     _rangeEditSel = new Set(Object.keys(limpTally));
     _rangeEdit3betHands = new Set();
+    _rangeEditUnionContext = false;
     _rangeEditLastAutoStr = null;
   }
   _rangeEditActiveView = view;
@@ -486,6 +504,8 @@ function _maybeRefreshAutoRangeEdit(){
   _rangeEditSel = new Set(fresh.rangeStr ? fresh.rangeStr.split(',').map(x=>x.trim()).filter(Boolean) : []);
   _rangeEdit3betHands = _parseRangeToSet(fresh.aggressiveHands||'');
   _rangeEditOriginal3bet = new Set(_rangeEdit3betHands);
+  _rangeEditUnionContext = _UNION_ACTION_CATS.has(fresh.actionCat);
+  _rangeEditOriginalUnionContext = _rangeEditUnionContext;
   _rangeEditLastAutoStr = fresh.rangeStr||'';
 }
 

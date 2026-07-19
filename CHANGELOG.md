@@ -1,5 +1,33 @@
 ---
 
+## 2026-07-14 (cont'd 32) — Call-category pairs also drop the gold default
+**Files: render.js**
+
+- Direct follow-up: user liked the 3bet coloring, asked for the same
+  treatment on the call side — a pair that's specifically a call-category
+  hand (not 3bet) should show the call-blue color too, not fall back to
+  the generic pair-gold.
+- Added `_rangeEditUnionContext` (with `_rangeEditOriginalUnionContext` as
+  its backup, mirroring the existing `_rangeEdit3betHands`/
+  `_rangeEditOriginal3bet` pattern) — true whenever the current seed came
+  from a known call∪3bet/4bet union (`actionCat` is `'call'`,
+  `'facing-open'`, or `'facing-3bet'`), false for RFI-only ranges, manual
+  ranges, and the limp view, where there's no call-vs-3bet distinction to
+  speak of at all. Threaded through the same five call sites as
+  `_rangeEdit3betHands` was in the previous round (open, show-limps, close,
+  both `_setRangeEditorView` branches, and the live-refresh function) so
+  they can't drift out of sync with each other.
+- Grid color priority is now: 3bet/4bet → red, *known* call → blue
+  (regardless of pair or not), *unknown category* → falls back to the
+  original pair-gold/suited-blue split. This only changes pairs in a
+  known-union context — non-pair hands were already blue by default, so
+  they're visually unaffected either way.
+- Verified end-to-end on BB (round=0, a real call∪3bet union): TT (a
+  call-only pair) renders blue, AA (a 3bet pair) renders red, and — to make
+  sure the RFI-only fallback still works unchanged — checked UTG's plain
+  RFI range separately and confirmed AA still renders gold there, since
+  RFI has no call/3bet distinction to draw from.
+
 ## 2026-07-14 (cont'd 31) — New: 3bet-portion hands colored differently in the range grid
 **Files: ranges.js, render.js**
 
