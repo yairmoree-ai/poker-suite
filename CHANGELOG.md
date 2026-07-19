@@ -1,5 +1,28 @@
 ---
 
+## 2026-07-14 (cont'd 27) — Equity panel: shorter, same information
+**Files: render.js**
+
+- User asked to reduce the bottom equity bar's height while keeping text
+  readable, open-ended on approach ("be creative").
+- Core idea: each stat card (POT ODDS, BREAK-EVEN, EQUITY/RFI/etc., "מול
+  X") was 3 stacked lines — label, big value, small subtext below it. Folded
+  the subtext into the value line itself as a smaller inline suffix
+  separated by `·` (e.g. "3:1 · ₪2,000" instead of "3:1" then "Call ₪2,000"
+  on its own line below) — same information, 2 lines per card instead of 3.
+  Applied consistently across every branch (auto-range mode, manual-range
+  mode, plain equity mode, the "vs ידועה"/"אוטו׳" tags, and the focused-
+  opponent "מול X" card).
+- Trimmed supporting whitespace too: outer container padding 8px 12px→6px
+  10px, the focus-seat row's top margin/padding 8px→6px, the call/3bet
+  split boxes' padding 5px→4px and top margin 6px→5px. Small individually,
+  compounds with the line-count reduction.
+- Kept every single piece of information that was there before — nothing
+  removed, just laid out more efficiently. Shortened a couple of labels
+  slightly for the tighter inline format ("EQUITY מול X" → "מול X" since
+  "EQUITY" is already implied by context; "מחוץ לטווח"→"מחוץ";
+  "vs יד ידועה"→"vs ידועה") — still unambiguous at a glance, not lossy.
+
 ## 2026-07-14 (cont'd 26) — Focus-seat row: single scrollable line + scroll-position fix
 **Files: render.js**
 
