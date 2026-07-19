@@ -602,7 +602,8 @@ function renderPotOdds(){
     // בלי שום מצב-תקוע אפשרי (בניגוד לבאג שתוקן עכשיו ברכיב הישן).
     const focusSeatIdx = (typeof S._openingFocusSeat==='number' && allRemainingSeats.some(s=>s.seatIdx===S._openingFocusSeat)) ? S._openingFocusSeat : null;
     const remainingSeats = focusSeatIdx!==null ? allRemainingSeats.filter(s=>s.seatIdx===focusSeatIdx) : allRemainingSeats;
-    const focusName = focusSeatIdx!==null ? (pName(S.seats.find(s=>s.seatIdx===focusSeatIdx)?.playerId)||'יריב') : null;
+    const focusPlayerId = focusSeatIdx!==null ? S.seats.find(s=>s.seatIdx===focusSeatIdx)?.playerId : null;
+    const focusName = focusSeatIdx!==null ? (pName(focusPlayerId)||'יריב') : null;
     // actionCatOverride: משמש רק במצב פוקוס-על-יריב-בודד, כדי לחשב equity מול
     // חלק ה-call או חלק ה-3bet בנפרד (במקום האיחוד call∪3bet הרגיל) — ההפרדה
     // בין הטבלאות עצמן לא משתנה, רק בוחרים כאן איזו מהן לקחת לחישוב הזה.
@@ -679,6 +680,7 @@ function renderPotOdds(){
     }
     if(openRangeInfo){
       openRangeInfo.focusName = focusName;
+      openRangeInfo.focusPlayerId = focusPlayerId;
       openRangeInfo.fieldSeats = allRemainingSeats.map(s=>({seatIdx:s.seatIdx, name: pName(s.playerId)||('מושב '+(s.seatIdx+1))}));
     }
   }
@@ -865,6 +867,23 @@ function renderPotOdds(){
         <div style="font-size:13px;font-weight:900;color:#e07b6a">${openRangeInfo.fieldEquity3bet.toFixed(1)}%</div>
       </div>` : ''}
     </div>` : ''}
+
+    <!-- סטטיסטיקות אמיתיות (VPIP/LIMP/PFR/3B) של היריב הממוקד — נגזר מ-S.handLog
+         דרך calcPlayerHUD הקיים, לא חישוב נפרד. אותו שומר-סף (n>=3 ידיים) כמו כל
+         שימוש אחר ב-HUD הזה באפליקציה, כדי לא להציג סטטיסטיקה לא-אמינה ממדגם זעיר. -->
+    ${(() => {
+      if(!openRangeInfo || !openRangeInfo.focusName || !openRangeInfo.focusPlayerId) return '';
+      const hud = calcPlayerHUD(openRangeInfo.focusPlayerId);
+      if(!hud) return '';
+      return `
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">
+      <span style="font-size:9px;color:#8a8799;white-space:nowrap">VPIP <span style="color:#c8a96e;font-weight:800">${hud.vpip}%</span></span>
+      <span style="font-size:9px;color:#8a8799;white-space:nowrap">LIMP <span style="color:#b47eea;font-weight:800">${hud.limp}%</span></span>
+      <span style="font-size:9px;color:#8a8799;white-space:nowrap">PFR <span style="color:#5b9bd5;font-weight:800">${hud.pfr}%</span></span>
+      <span style="font-size:9px;color:#8a8799;white-space:nowrap">3B <span style="color:#7eb8a4;font-weight:800">${hud.bet3}%</span></span>
+      <span style="font-size:9px;color:#3a3850;white-space:nowrap">(${hud.n} ידיים)</span>
+    </div>`;
+    })()}
 
     <!-- Range selector (מתרחב) -->
     ${showRange ? `
@@ -1367,7 +1386,7 @@ function calcPlayerHUD(playerId){
   const playerHands = hands.filter(h=>(h.seats||[]).some(s=>s.playerId===playerId));
   if(playerHands.length < 3) return null;
   
-  let vpip=0, pfr=0, raises=0, calls=0, checks=0, bet3=0, wtsd=0, won=0;
+  let vpip=0, pfr=0, limp=0, raises=0, calls=0, checks=0, bet3=0, wtsd=0, won=0;
   
   playerHands.forEach(h=>{
     const seat = (h.seats||[]).find(s=>s.playerId===playerId);
@@ -1380,6 +1399,12 @@ function calcPlayerHUD(playerId){
     
     // PFR: raised preflop
     if(preflopActs.some(a=>['Raise','Open','3bet','4bet','All-in'].includes(a.type))) pfr++;
+    
+    // LIMP: הפעולה הראשונה בפרה-פלופ היא Call כש-raiseRound===0 (אף אחד עוד לא
+    // העלה) — אותה הגדרה בדיוק כמו _getEmpiricalLimpHands (ranges.js), לא
+    // המצאה נפרדת, כדי ששני המקומות תמיד יסכימו על מה נחשב "לימפ".
+    const firstPF = preflopActs[0];
+    if(firstPF && firstPF.type==='Call' && (firstPF.raiseRound||0)===0) limp++;
     
     // 3bet: re-raised preflop
     if(preflopActs.some(a=>['3bet','4bet'].includes(a.type)||a.displayType==='3b'||a.displayType==='4b')) bet3++;
@@ -1419,6 +1444,7 @@ function calcPlayerHUD(playerId){
     n,
     vpip: Math.round(vpip/n*100),
     pfr: Math.round(pfr/n*100),
+    limp: Math.round(limp/n*100),
     bet3: Math.round(bet3/n*100),
     af: calls>0 ? (raises/calls).toFixed(1) : raises>0?'∞':'0',
     wtsd: Math.round(wtsd/n*100),

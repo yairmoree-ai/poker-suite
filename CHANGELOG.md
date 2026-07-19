@@ -1,5 +1,32 @@
 ---
 
+## 2026-07-14 (cont'd 30) — New: focused opponent's real VPIP/LIMP/PFR/3B
+**Files: render.js**
+
+- User asked: when a specific opponent is focused in the equity panel, also
+  show their real historical stats (VPIP/LIMP/PFR/3B), not just the
+  theoretical range comparison.
+- Reused the existing `calcPlayerHUD(playerId)` (already computes exactly
+  this from `S.handLog`, already used elsewhere for the seat-tap HUD) rather
+  than writing a second calculation — added `openRangeInfo.focusPlayerId`
+  (captured alongside the existing `focusName`, from the same seat lookup)
+  so the panel can call `calcPlayerHUD` for whichever opponent is focused.
+- **LIMP wasn't tracked at all before** — `calcPlayerHUD` only had
+  vpip/pfr/bet3/af/wtsd/won. Added it using the *exact* definition already
+  established elsewhere in the codebase (`_getEmpiricalLimpHands` in
+  `ranges.js`): first preflop action is a `Call` with `raiseRound===0` (no
+  one has raised yet). Deliberately reused that definition instead of
+  inventing a second one, so the two places can't disagree about what
+  counts as a limp.
+- Displayed as a compact row (VPIP · LIMP · PFR · 3B · hand count) under
+  the existing CALL/3BET-split boxes, only when an opponent is actually
+  focused and `calcPlayerHUD` returns real data — it already has its own
+  n≥3-hands guard (returns `null` below that), reused as-is rather than
+  adding a second, possibly-inconsistent threshold.
+- Verified `calcPlayerHUD`'s new `limp` field directly with synthetic hand
+  data (one limp, one raise, one fold, one 3-bet): got vpip=75%, limp=25%,
+  pfr=50%, bet3=25% — matches hand-calculated expectations exactly.
+
 ## 2026-07-14 (cont'd 29) — Equity row: smaller numbers, stronger dividers, scroll safety net
 **Files: render.js**
 
