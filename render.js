@@ -795,26 +795,27 @@ function renderPotOdds(){
   bar.innerHTML = `
   <div style="background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.22);border-radius:12px;padding:6px 10px;direction:rtl">
 
-    <!-- שורה ראשית — כווץ מ-3 שורות לכרטיס ל-2: התווית למעלה, והערך + כל התוספת
-         (Call X / "נדרש" / % / תגית "vs יד ידועה" וכו') על שורה אחת, מופרדים ב-· ,
-         במקום כל תוספת כשורה נפרדת משלה. אותו מידע בדיוק, בפחות גובה. -->
+    <!-- שורה ראשית — כווץ מ-3 שורות לכרטיס ל-2. גם: תוויות קוצרו כדי שלא יתעגלו
+         לשורה שנייה ויתנגשו עם שורת הערך מתחתן (זה מה שקרה עם "UTG טווח (אוטומטי)" —
+         ארוך מדי לרוחב העמודה) — אינדיקטור ידני/אוטומטי עבר לשורת הערך במקום
+         להיות חלק מהתווית. -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;min-width:50px">
-        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.3px">POT ODDS</span>
+        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.3px;white-space:nowrap">POT ODDS</span>
         <span style="font-size:14px;font-weight:900;color:#5b9bd5;line-height:1.3;white-space:nowrap">${ratioStr} <span style="font-size:9px;font-weight:700;color:#8a8799">· ${fmt(callAmt)}</span></span>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;min-width:50px">
-        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.3px">BREAK-EVEN</span>
-        <span style="font-size:14px;font-weight:900;color:#c8a96e;line-height:1.3;white-space:nowrap">${breakEven}% <span style="font-size:9px;font-weight:700;color:#8a8799">נדרש</span></span>
+        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.3px;white-space:nowrap">BREAK-EVEN</span>
+        <span style="font-size:14px;font-weight:900;color:#c8a96e;line-height:1.3;white-space:nowrap">${breakEven}%</span>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;min-width:50px">
-        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.3px">${openRangeInfo?(openRangeInfo.isRangeMode?'טווח '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':' (אוטומטי)'):'RFI '+openRangeInfo.pos+(openRangeInfo.isManual?' (ידני)':'')):'EQUITY'}</span>
+        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.3px;white-space:nowrap">${openRangeInfo?(openRangeInfo.isRangeMode?'טווח '+openRangeInfo.pos:'RFI '+openRangeInfo.pos):'EQUITY'}</span>
         ${openRangeInfo
           ? (openRangeInfo.isRangeMode
-              ? `<span style="font-size:13px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${openRangeInfo.combosCount} <span style="font-size:9px;font-weight:700;color:#8a8799">combos · ${(openRangeInfo.combosCount/1326*100).toFixed(1)}%</span></span>`
-              : `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.3;white-space:nowrap">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ'} <span style="font-size:9px;font-weight:700;color:#8a8799">${openRangeInfo.hand}</span></span>`)
+              ? `<span style="font-size:13px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${openRangeInfo.combosCount} <span style="font-size:9px;font-weight:700;color:#8a8799">combos · ${(openRangeInfo.combosCount/1326*100).toFixed(1)}%${openRangeInfo.isManual?' · ידני':''}</span></span>`
+              : `<span style="font-size:13px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.3;white-space:nowrap">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ'} <span style="font-size:9px;font-weight:700;color:#8a8799">${openRangeInfo.hand}${openRangeInfo.isManual?' · ידני':''}</span></span>`)
           : equityPct!==null
             ? `<span style="font-size:14px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${equityPct.toFixed(1)}%${evHtml}${hasKnownOpp?` <span style="font-size:9px;color:#e0a030;font-weight:800">vs ידועה</span>`:''}${heroRangeMode?` <span style="font-size:9px;color:#5b9bd5;font-weight:800">${heroRangeIsAuto?'אוטו׳':'טווח'}</span>`:''}</span>`
             : equityComputing
@@ -824,7 +825,7 @@ function renderPotOdds(){
       ${openRangeInfo && openRangeInfo.fieldEquity!==undefined ? `
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;min-width:50px">
-        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.3px">מול ${openRangeInfo.focusName?openRangeInfo.focusName:'השדה'}</span>
+        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.3px;white-space:nowrap">מול ${openRangeInfo.focusName?openRangeInfo.focusName:'השדה'}</span>
         <span style="font-size:14px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${openRangeInfo.fieldEquity.toFixed(1)}% <span style="font-size:9px;font-weight:700;color:#8a8799">${openRangeInfo.focusName?'(היפותטי)':'(כולם, היפותטי)'}</span></span>
       </div>` : ''}
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
@@ -832,7 +833,7 @@ function renderPotOdds(){
         <div style="display:flex;align-items:center;gap:3px">
           <button onclick="S._showRangeSelector=!S._showRangeSelector;renderPotOdds()"
             style="background:${showRange?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};border:1px solid ${showRange?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};border-radius:7px;color:${showRange?'#c8a96e':'#8a8799'};font-size:10px;font-weight:800;cursor:pointer;padding:3px 7px;white-space:nowrap">
-            🎯 Range${rs?' ✓':''}
+            Range${rs?' ✓':''}
           </button>
           ${rs ? `<button onclick="S._rangeSelection=null;renderPotOdds()" title="נקה בחירת טווח גלובלית (חוסמת את מצב הפתיחה)" style="background:rgba(224,123,106,0.12);border:1px solid rgba(224,123,106,0.4);border-radius:7px;color:#e07b6a;font-size:10px;font-weight:800;cursor:pointer;padding:3px 6px;line-height:1">✕</button>` : ''}
         </div>
@@ -2371,7 +2372,7 @@ function renderSeats(){
     const col = lastNonPass?.type==='SB'?'#7b5cb8':lastNonPass?.type==='BB'?'#c05a4a':'#a07830';
     const chip = document.createElement('div');
     chip.style.cssText = 'position:absolute;left:'+bx+'%;top:'+by+'%;transform:translate(-50%,-50%);background:'+col+';border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:1px 5px;font-size:7.5px;font-weight:900;color:#fff;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.6)';
-    chip.textContent = totalInvested.toLocaleString();
+    chip.textContent = totalInvested>=1000 ? (totalInvested/1000).toFixed(totalInvested%1000===0?0:1)+'K' : totalInvested.toLocaleString();
     betsContainer.appendChild(chip);
   });
 }

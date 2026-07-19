@@ -1,5 +1,32 @@
 ---
 
+## 2026-07-14 (cont'd 28) — Fixing the overlap the compact redesign caused
+**Files: render.js**
+
+- Previous round's height-reduction redesign actually broke on-device: text
+  overlapped because the "טווח UTG (אוטומטי)"-style labels were too long
+  for their column width and wrapped to a second line, colliding with the
+  value line underneath (which had `white-space:nowrap` but the label above
+  it didn't — and even with nowrap, the label was simply too long to fit).
+  User caught it with a screenshot and gave four concrete fixes.
+- **Bet-amount chips on the felt → K-format:** `chip.textContent` was using
+  raw `.toLocaleString()` ("2,000"); changed to the same K-shorthand pattern
+  used elsewhere in this file (2000→"2K", 1500→"1.5K", under 1000 unchanged).
+- **Removed "נדרש"** from the BREAK-EVEN card entirely (was on its own
+  inline suffix after the percentage).
+- **Removed the 🎯 icon** from the "Range" button — text-only now.
+- **Fixed the actual overlap, not just cosmetics:** the real fix wasn't
+  just removing "נדרש" — it was that "UTG טווח (אוטומטי)"/"RFI UTG (ידני)"
+  as a *label* was structurally too long. Moved the manual/auto indicator
+  out of the label and into the value line instead (e.g. "200 combos ·
+  15.1% · ידני"), where the compact-value pattern already had room for an
+  extra small suffix. Label is now just "טווח UTG" / "RFI UTG" — short
+  enough to fit on one line reliably. Added `white-space:nowrap` to every
+  label span too, as a second line of defense even if a future addition
+  makes a label longer again.
+- Verified the K-format helper directly (2000→"2K", 1000→"1K", 1500→"1.5K",
+  500→"500", 12500→"12.5K") and re-ran `node --check` clean.
+
 ## 2026-07-14 (cont'd 27) — Equity panel: shorter, same information
 **Files: render.js**
 
