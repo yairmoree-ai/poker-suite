@@ -1,5 +1,40 @@
 ---
 
+## 2026-07-14 (cont'd 33) — Regression: position-label fix got silently reverted
+**Files: state.js**
+
+- User reported MP showing up for an 8-handed table (דורון at position "MP"),
+  which shouldn't happen — an earlier fix in this session (documented in
+  the original summary, before what's visible in this transcript) already
+  corrected `PBN[8]` from `[...,'UTG+1','MP','HJ','CO']` to
+  `[...,'UTG+1','LJ','HJ','CO']`, and `PBN[6]` similarly.
+- **Root cause, found directly and owned clearly:** later in *this*
+  session, when `state.js` needed to be touched for the first time (for
+  the prize-section/"הפתעות" work), it was copied fresh via
+  `cp /mnt/project/state.js ...` — but `/mnt/project/state.js` is the
+  original uploaded snapshot from before this whole conversation, which
+  does *not* reflect the earlier position-label fix (that fix was only
+  ever delivered to the user as an output file, never written back into
+  the project source). Copying from the stale source silently reverted it
+  without any indication anything had changed — the file still looked
+  complete and valid, just with the old `PBN` values.
+- Reapplied the fix: `PBN[6]` → `['BTN','SB','BB','LJ','HJ','CO']`,
+  `PBN[8]` → `['BTN','SB','BB','UTG','UTG+1','LJ','HJ','CO']`. `PBN[7]`/`[9]`/
+  `[10]` were originally left unconfirmed/unchanged (no GTOWizard access at
+  the time to verify LJ naming for those sizes) — untouched here too, not
+  a new gap.
+- Verified directly via `assignPos()` simulation for both 6-max and 8-max:
+  8-max now yields `BTN, SB, BB, UTG, UTG+1, LJ, HJ, CO` (LJ present, MP
+  absent); 6-max yields `BTN, SB, BB, LJ, HJ, CO`.
+- **Flagging proactively, not just fixing quietly:** `ui.js` and
+  `styles.css` were copied from `/mnt/project` in that exact same command,
+  at the exact same moment — if either of those had an earlier undocumented
+  fix from before this visible transcript, it may have been silently
+  reverted the same way and I have no record of what that might have been.
+  If anything in the tournament-list screen or general styling looks like
+  it regressed to older behavior, flag it and I'll dig into that specific
+  file the same way.
+
 ## 2026-07-14 (cont'd 32) — Call-category pairs also drop the gold default
 **Files: render.js**
 
