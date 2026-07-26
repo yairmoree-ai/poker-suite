@@ -1118,6 +1118,242 @@ function openSaveTournBox(){ showSaveTournDialog(); }
 
 function exportToExcel(){ exportTournsToCSV(); }
 
+// ===== ייצוא ידיים לפורמט PokerStars (לייבוא ל-PokerTracker 4/5) =====
+// שני הפורמטים (PT4/PT5) קוראים בדיוק את אותו טקסט hand-history של PokerStars —
+// אין צורך בשני יצואים נפרדים.
+//
+// הגבלות ידועות, לא מוסתרות: אין תיאור-יד בשלב showdown ("a pair of Kings" וכו') —
+// רק קלפים+זכייה, וזה מספיק ל-PT כדי לחשב סטטיסטיקות (VPIP/PFR/עמדות/תוצאות),
+// זה רק לא יראה יפה ב-replayer. גם side-pots במצבי all-in מרובי-שחקנים לא מטופלים
+// בדיוק לפי הספירה המדויקת של PokerStars (פשוט pot אחד). מומלץ לבדוק ייבוא עם
+// 2-3 ידיים לפני ייצוא גדול.
+function _cardToPS(c){
+  if(!c || !c.rank) return '';
+  const suitMap = {'♠':'s','♥':'h','♦':'d','♣':'c'};
+  const rank = c.rank==='10' ? 'T' : c.rank;
+  return rank + (suitMap[c.suit]||'');
+}
+
+function _handToPSFormat(hand, handNumber){
+  const seats = (hand.seats||[]).filter(s=>s.playerName);
+  if(!seats.length) return '';
+  const [sbAmt,bbAmt] = (hand.blinds||'0/0').split('/').map(s=>(s||'0').trim());
+  const dateObj = new Date(hand.ts || Date.now());
+  const pad = n=>String(n).padStart(2,'0');
+  const dateStr = `${dateObj.getFullYear()}/${pad(dateObj.getMonth()+1)}/${pad(dateObj.getDate())} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
+  const lines = [];
+
+  // מספור מושבים: 1..N לפי סדר הופעה ב-hand.seats (כבר מסודר לפי עמדה בדרך כלל)
+  const seatNum = new Map();
+  seats.forEach((s,i)=>seatNum.set(s.seatIdx, i+1));
+  const btnSeat = seats.find(s=>s.pos==='BTN');
+  const btnNum = btnSeat ? seatNum.get(btnSeat.seatIdx) : 1;
+
+  lines.push(`PokerStars Hand #HG${handNumber}: Tournament #1, Home Game Hold'em No Limit - Level I (${sbAmt}/${bbAmt}) - ${dateStr} ET`);
+  lines.push(`Table 'HomeGame' ${seats.length}-max Seat #${btnNum} is the button`);
+  seats.forEach(s=>{
+    lines.push(`Seat ${seatNum.get(s.seatIdx)}: ${s.playerName} (${s.stack||0} in chips)`);
+  });
+
+  // הימורי חובה
+  seats.forEach(s=>{
+    (s.actions||[]).forEach(a=>{
+      if(a.type==='SB') lines.push(`${s.playerName}: posts small blind ${a.amount||0}`);
+      if(a.type==='BB') lines.push(`${s.playerName}: posts big blind ${a.amount||0}`);
+    });
+  });
+
+  lines.push('*** HOLE CARDS ***');
+  seats.forEach(s=>{
+    const c0 = s.cards?.[0], c1 = s.cards?.[1];
+    if(c0 && c1) lines.push(`Dealt to ${s.playerName} [${_cardToPS(c0)} ${_cardToPS(c1)}]`);
+  });
+
+  const board = (hand.board||[]).filter(Boolean);
+  const streetOrder = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const streetHeader = {'פלופ':'FLOP','טורן':'TURN','ריבר':'RIVER'};
+  const streetBoardCount = {'פלופ':3,'טורן':4,'ריבר':5};
+
+  streetOrder.forEach(street=>{
+    let acts = [];
+    seats.forEach(s=>{
+      (s.actions||[]).forEach(a=>{
+        if(a.street===street && a.type!=='SB' && a.type!=='BB') acts.push({...a, playerName:s.playerName});
+      });
+    });
+    acts.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    if(!acts.length && street!=='פרה-פלופ') return; // רחוב שלא הגיעו אליו כלל — לא מדפיסים כותרת ריקה
+
+    if(street!=='פרה-פלופ'){
+      const need = streetBoardCount[street];
+      if(board.length < need) return; // היד הסתיימה לפני שהגיעו לרחוב הזה
+      if(street==='פלופ'){
+        lines.push(`*** FLOP *** [${board.slice(0,3).map(_cardToPS).join(' ')}]`);
+      } else {
+        const prevCount = need-1;
+        lines.push(`*** ${streetHeader[street]} *** [${board.slice(0,prevCount).map(_cardToPS).join(' ')}] [${_cardToPS(board[prevCount])}]`);
+      }
+    }
+
+    // עוקבים אחרי (א) הסכום המצטבר שכל שחקן כבר הכניס ברחוב הזה (streetTotal,
+    // ל-"to Y"), ו-(ב) ההימור הגבוה ביותר על השולחן כרגע ברחוב הזה (highBet,
+    // ל-"raises X" — X הוא כמה מעל ההימור הקיים, לא הדלתא האישית של השחקן.
+    // לדוגמה: BB=2000, שחקן מעלה ל-4000 → a.amount (הדלתא שלו) הוא 4000 כי הוא
+    // עוד לא הכניס כלום ברחוב הזה — אבל הראייז ב-PokerStars הוא "raises 2000 to
+    // 4000", לא "raises 4000 to 4000". highBet מתחיל מה-BB בפרה-פלופ, 0 בכל
+    // רחוב אחר.
+    const streetTotal = {};
+    let highBet = 0;
+    if(street==='פרה-פלופ'){
+      seats.forEach(s=>{
+        (s.actions||[]).forEach(a=>{
+          if(a.type==='SB'||a.type==='BB'){
+            const amt = parseFloat(a.amount)||0;
+            streetTotal[s.playerName] = (streetTotal[s.playerName]||0) + amt;
+            highBet = Math.max(highBet, streetTotal[s.playerName]);
+          }
+        });
+      });
+    }
+    acts.forEach(a=>{
+      const delta = parseFloat(a.amount)||0;
+      const prevTotal = streetTotal[a.playerName]||0;
+      const newTotal = prevTotal + (a.type==='Call'||a.type==='Check'||a.type==='Fold' ? 0 : delta);
+      const raiseBy = newTotal - highBet; // כמה מעל ההימור הגבוה הקיים
+      switch(a.type){
+        case 'Fold': lines.push(`${a.playerName}: folds`); break;
+        case 'Check': lines.push(`${a.playerName}: checks`); break;
+        case 'Call': lines.push(`${a.playerName}: calls ${delta||0}`); streetTotal[a.playerName]=prevTotal+delta; break;
+        case 'All-in':
+          lines.push(`${a.playerName}: ${highBet>0?'raises '+raiseBy+' to '+newTotal:'bets '+delta} and is all-in`);
+          streetTotal[a.playerName]=newTotal; highBet=Math.max(highBet,newTotal); break;
+        default: // Raise, Open, 3bet, 4bet
+          if(highBet>0){
+            lines.push(`${a.playerName}: raises ${raiseBy} to ${newTotal}`);
+          } else {
+            lines.push(`${a.playerName}: bets ${delta}`);
+          }
+          streetTotal[a.playerName]=newTotal;
+          highBet=Math.max(highBet,newTotal);
+      }
+    });
+  });
+
+  // Showdown / תוצאה — פשוט: מי אסף כמה, בלי תיאור-יד מילולי (ראו הגבלה למעלה)
+  const winners = hand.winners||[];
+  if(winners.length){
+    lines.push('*** SUMMARY ***');
+    lines.push(`Total pot ${hand.finalPot||0} | Rake 0`);
+    if(board.length) lines.push(`Board [${board.map(_cardToPS).join(' ')}]`);
+    winners.forEach(w=>{
+      lines.push(`${w.name||w.playerName||'?'} collected ${w.amount||hand.finalPot||0} from pot`);
+    });
+  }
+
+  return lines.join('\n');
+}
+
+function exportHandsToPokerTracker(handIds){
+  const all = S.handLog||[];
+  const selected = handIds && handIds.length ? all.filter(h=>handIds.includes(h.id)) : all;
+  if(!selected.length){ notify('לא נבחרו ידיים לייצוא'); return; }
+  const sorted = [...selected].sort((a,b)=>handTs(a)-handTs(b));
+  const text = sorted.map((h,i)=>_handToPSFormat(h, i+1)).filter(Boolean).join('\n\n\n');
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fname = 'poker-hands-'+new Date().toISOString().slice(0,10)+'.txt';
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  notify(`יוצאו ${sorted.length} ידיים 📥 (${fname})`);
+}
+
+// מצב הבחירה הנוכחי בדיאלוג הייצוא: 'manual' (בחירת ידיים ספציפיות בצ'קבוקס) או
+// 'daterange' (טווח תאריכים) — נבחר מחדש בכל פתיחה, ברירת מחדל 'manual'.
+let _ptExportMode = 'manual';
+let _ptExportSelectedIds = new Set();
+
+function showPTExportModal(){
+  _ptExportMode = 'manual';
+  _ptExportSelectedIds = new Set();
+  document.getElementById('pt-export-modal').style.display = 'flex';
+  _renderPTExportModal();
+}
+
+function _renderPTExportModal(){
+  const hands = [...(S.handLog||[])].sort((a,b)=>handTs(b)-handTs(a));
+  const tabBtn = (mode, label) => `<button onclick="_ptExportMode='${mode}';_renderPTExportModal()" style="flex:1;padding:7px;border-radius:8px;border:1px solid ${_ptExportMode===mode?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};background:${_ptExportMode===mode?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};color:${_ptExportMode===mode?'#c8a96e':'#8a8799'};font-size:12px;font-weight:700;cursor:pointer">${label}</button>`;
+
+  let bodyHtml = '';
+  if(_ptExportMode==='manual'){
+    bodyHtml = `
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button onclick="_ptExportSelectedIds=new Set(${JSON.stringify(hands.map(h=>h.id))});_renderPTExportModal()" style="font-size:10px;color:#5b9bd5;background:none;border:1px solid rgba(91,155,213,0.3);border-radius:6px;padding:3px 8px;cursor:pointer">בחר הכל</button>
+        <button onclick="_ptExportSelectedIds=new Set();_renderPTExportModal()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 8px;cursor:pointer">נקה הכל</button>
+      </div>
+      <div style="max-height:320px;overflow-y:auto;border:1px solid rgba(255,255,255,0.06);border-radius:8px">
+        ${hands.length ? hands.map(h=>{
+          const checked = _ptExportSelectedIds.has(h.id);
+          return `<div onclick="_ptToggleHand('${h.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;background:${checked?'rgba(200,169,110,0.08)':'transparent'}">
+            <span style="font-size:14px">${checked?'☑️':'⬜'}</span>
+            <span style="font-size:11px;color:#8a8799;flex-shrink:0">${h.date||''}</span>
+            <span style="font-size:12px;color:#e2ddd4;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.label||'יד'}</span>
+            <span style="font-size:11px;color:#c8a96e;flex-shrink:0">₪${(h.finalPot||0).toLocaleString()}</span>
+          </div>`;
+        }).join('') : '<div style="padding:20px;text-align:center;color:#5a5870;font-size:12px">אין ידיים בהיסטוריה</div>'}
+      </div>
+      <div style="font-size:11px;color:#8a8799;margin-top:8px;text-align:center">${_ptExportSelectedIds.size} ידיים נבחרו</div>`;
+  } else {
+    bodyHtml = `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label style="font-size:11px;color:#8a8799;display:block;margin-bottom:4px">מתאריך</label>
+          <input type="date" id="pt-export-date-from" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;color:#8a8799;display:block;margin-bottom:4px">עד תאריך</label>
+          <input type="date" id="pt-export-date-to" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('pt-export-modal-content').innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      ${tabBtn('manual','בחירת ידיים')}
+      ${tabBtn('daterange','טווח תאריכים')}
+    </div>
+    ${bodyHtml}
+    <div style="font-size:10px;color:#5a5870;margin-top:10px;line-height:1.5">
+      פורמט טקסט של PokerStars (תואם ייבוא ל-PT4/PT5). מומלץ לבדוק עם כמה ידיים לפני ייצוא גדול —
+      אין תיאור-יד מילולי ב-showdown, ופיצול pot במצבי all-in מרובים מפושט.
+    </div>
+    <button onclick="_confirmPTExport()" style="width:100%;margin-top:12px;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#c8a96e,#a68a50);color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer">📥 ייצא</button>`;
+}
+
+function _ptToggleHand(id){
+  if(_ptExportSelectedIds.has(id)) _ptExportSelectedIds.delete(id);
+  else _ptExportSelectedIds.add(id);
+  _renderPTExportModal();
+}
+
+function _confirmPTExport(){
+  if(_ptExportMode==='manual'){
+    if(!_ptExportSelectedIds.size){ notify('בחר לפחות יד אחת'); return; }
+    exportHandsToPokerTracker([..._ptExportSelectedIds]);
+  } else {
+    const fromStr = document.getElementById('pt-export-date-from')?.value;
+    const toStr = document.getElementById('pt-export-date-to')?.value;
+    if(!fromStr || !toStr){ notify('בחר טווח תאריכים מלא'); return; }
+    const from = new Date(fromStr).getTime();
+    const to = new Date(toStr).getTime() + 24*60*60*1000 - 1; // כולל את כל יום ה"עד"
+    const ids = (S.handLog||[]).filter(h=>{ const ts = handTs(h); return ts>=from && ts<=to; }).map(h=>h.id);
+    if(!ids.length){ notify('אין ידיים בטווח התאריכים שנבחר'); return; }
+    exportHandsToPokerTracker(ids);
+  }
+  document.getElementById('pt-export-modal').style.display = 'none';
+}
+
 function fixTournFinishOrders(){
   // מתקן finishOrder לפי koOrder לכל הטורנירים
   let fixed=0;

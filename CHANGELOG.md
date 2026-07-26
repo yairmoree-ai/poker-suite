@@ -1,5 +1,60 @@
 ---
 
+## 2026-07-14 (cont'd 35) — New: export hands to PokerStars format for PokerTracker
+**Files: ui.js, index.html**
+
+- User asked to export hand data to a PokerTracker-compatible format. There's
+  no generic/universal HH format PT4/PT5 accept — they parse specific site
+  formats, and PokerStars' plain-text hand-history format is the most
+  broadly documented and supported one to generate. Confirmed with the user
+  this is fine for both PT4 and PT5 (same underlying parser format for
+  both, no need to build two variants).
+- **Hebrew names:** flagged honestly rather than promised — PT parses by
+  fixed text position (`Seat N: <name> (...)`), not by understanding the
+  content, so Hebrew names should come through as opaque tokens correctly,
+  but recommended testing a small batch first since older/stricter parsers
+  can have non-ASCII edge cases. This lines up with what the user asked
+  for anyway (choosing specific hands per export, not a fixed dump).
+- **Export flow, per the user's request:** a new 🎯 PT button on the hands
+  screen opens a modal (`#pt-export-modal`) with two selectable modes —
+  manual hand-picking (checkbox list, select-all/clear-all, live selected
+  count) or a date-range picker — chosen fresh every time, not a fixed
+  scope. Confirm button builds the combined `.txt` and downloads it via
+  Blob+anchor (same fallback pattern as the existing share functions).
+- **Core converter (`_handToPSFormat`):** builds one PokerStars-format hand
+  per record — header, seat listing, blinds posted, hole cards, then
+  street-by-street action lines (fold/check/call/bet/raise/all-in) with a
+  board-reveal header per street, ending in a summary with the pot and
+  winner(s).
+- **Two real bugs caught and fixed during testing, not left in:**
+  1. `'10'` vs `'T'` — this app stores ten as `'10'` (confirmed against the
+     actual card-generation code), but PokerStars notation requires `'T'`.
+     Added the conversion in `_cardToPS`.
+  2. Raise sizing was wrong on the first pass: PokerStars' "raises X to Y"
+     needs X = the raise size *over the table's current highest bet*, not
+     the acting player's own delta (which only equals that in the simplest
+     case). Caught via a direct test: BB=2000, first raise to 4000 was
+     coming out as "raises 4000 to 4000" instead of the correct
+     "raises 2000 to 4000". Fixed by tracking a separate `highBet` (the
+     table's current bet level for the street) alongside each player's own
+     `streetTotal`, seeded from the posted blinds specifically for the
+     preflop street (otherwise a preflop raise over the BB was misdetected
+     as a fresh "bet" rather than a "raise", since nothing in the
+     player-indexed tracking accounted for the blind already being "live"
+     money on the table). Re-verified with a 3-bet scenario afterward
+     (raises 2000 to 4000, then 5000 to 9000) — both raise-by amounts now
+     mathematically correct.
+- **Known, disclosed simplifications** (stated directly in the export
+  modal's UI, not hidden): no showdown hand-description text ("a pair of
+  Kings") — just cards and pot collection, which is what PT needs for
+  stats even though it won't look as rich in the replayer; multi-way
+  all-in side-pots aren't split with PokerStars' exact precision, treated
+  as one pot.
+- Verified end-to-end: a synthetic hand with a raise/3bet/fold/board/
+  showdown round-tripped through `_handToPSFormat` produced correctly
+  ordered, correctly worded PokerStars-format text; the selection modal
+  correctly toggles hands and reflects the live count.
+
 ## 2026-07-14 (cont'd 34) — New: share tournament results as an image
 **Files: ui.js**
 
