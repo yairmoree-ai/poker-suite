@@ -491,6 +491,56 @@ async function shareHandImage(h, box){
   }
 }
 
+async function shareTournamentImage(ti){
+  const t = S.tournLog[ti];
+  if(!t){ notify('טורניר לא נמצא'); return; }
+  const box = document.getElementById('tourn-card-'+ti);
+  if(!box){ notify('שגיאה — הכרטיס לא נמצא'); return; }
+  if(typeof html2canvas === 'undefined'){
+    notify('טעינת כלי השיתוף נכשלה — בדוק חיבור לאינטרנט');
+    return;
+  }
+  const hideEls = box.querySelectorAll('.share-hide');
+  hideEls.forEach(el=>el.style.visibility = 'hidden');
+  try{
+    const canvas = await html2canvas(box, {
+      backgroundColor: '#0a0d14',
+      scale: 2,
+      useCORS: true
+    });
+    hideEls.forEach(el=>el.style.visibility = '');
+
+    canvas.toBlob(async (blob)=>{
+      if(!blob){ notify('שגיאה ביצירת התמונה'); return; }
+      const fileName = 'poker-tourn-'+(t.id||Date.now())+'.png';
+      const file = new File([blob], fileName, {type:'image/png'});
+
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({
+            files: [file],
+            title: t.name || 'תוצאות טורניר',
+            text: (t.date||'')+(t.name?' · '+t.name:'')
+          });
+        }catch(shareErr){
+          if(shareErr?.name !== 'AbortError') console.error('share error:', shareErr);
+        }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        notify('התמונה הורדה 📥');
+      }
+    }, 'image/png');
+  }catch(err){
+    hideEls.forEach(el=>el.style.visibility = '');
+    console.error('shareTournamentImage error:', err);
+    notify('שגיאה בשיתוף הטורניר');
+  }
+}
+
 function renderHandList(){
   const cont=document.getElementById('hand-list');
   
@@ -923,7 +973,7 @@ function renderTournList(){
       const prizeByPlaceT = {1:Math.round(t.place1||0),2:Math.round(t.place2||0),3:t.place3||0,4:t.place4||0};
       const finishT = (t.finishOrder||[]).slice().sort((a,b)=>a.place-b.place);
       const rebuyT = pid => finishT.find(f=>f.pid===pid)?.rebuy||0;
-      return `<div class="card-item">
+      return `<div class="card-item" id="tourn-card-${ti}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
           <div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
@@ -934,7 +984,10 @@ function renderTournList(){
             </div>
             <div style="font-size:20px;font-weight:900;color:var(--gold)">₪${(t.prizePool||0).toLocaleString()}</div>
           </div>
-          <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
+          <div class="share-hide" style="display:flex;gap:6px">
+            <button class="btn btn-xs" style="background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.4);color:#5b9bd5" onclick="shareTournamentImage(${ti})" title="שתף כתמונה">📤</button>
+            <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
+          </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">
           <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
@@ -949,11 +1002,6 @@ function renderTournList(){
             <div style="font-size:10px;color:#c8a96e;margin-bottom:1px">כניסות${t.freeRebuys?` <span style="color:#5b9bd5">(${t.freeRebuys}🎁)</span>`:''}</div>
             <div style="font-size:18px;font-weight:900;color:#f0ece4">${t.paidEntries||t.totalEntries}</div>
           </div>
-          ${isAdmin()?`
-          <div style="background:rgba(26,58,26,0.3);border:1px solid rgba(74,138,74,0.3);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
-            <div style="font-size:10px;color:#4a8a4a;margin-bottom:1px">🃏 צ׳יפים</div>
-            <div style="font-size:16px;font-weight:900;color:#7fd47f">${((t.totalEntries||0)*50/1000).toFixed(1)}M</div>
-          </div>`:''}
           ${t.surprisesAmount?`
           <div style="background:rgba(224,123,106,0.1);border:1px solid rgba(224,123,106,0.3);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
             <div style="font-size:10px;color:#e07b6a;margin-bottom:1px">🎉 הפתעות</div>

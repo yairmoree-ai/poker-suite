@@ -1,5 +1,29 @@
 ---
 
+## 2026-07-14 (cont'd 34) — New: share tournament results as an image
+**Files: ui.js**
+
+- User asked for a share-as-image option on tournament history cards,
+  modeled on the existing hand-sharing feature (`shareHandImage`), and to
+  use the opportunity to drop the "🃏 צ'יפים" (total chips) summary from
+  the generated image specifically.
+- Added `shareTournamentImage(ti)`, a direct adaptation of the existing
+  `shareHandImage(h, box)` — same `html2canvas` capture → `navigator.share`
+  (with a download-link fallback for browsers without the Web Share API)
+  pattern, just pointed at a tournament record instead of a hand. Reused
+  the pattern rather than writing something new, so behavior (share sheet,
+  fallback, error handling) stays consistent between hands and tournaments.
+- Gave each tournament history card a stable `id="tourn-card-${ti}"` so the
+  share function can locate the right DOM node to capture.
+- Added a 📤 share button next to the existing ✕ delete button on each
+  card, both wrapped in a `.share-hide` container — the same class
+  `shareHandImage` already uses to hide UI chrome from the captured image,
+  so neither button appears in the shared picture, only the actual results.
+- Chip-summary: **removed entirely** from the history card, not just hidden
+  from the shared image — user clarified after the fact that they don't
+  want it on-screen at all, not just excluded from the picture. Deleted
+  the whole "🃏 צ'יפים" stat block; confirmed no remaining references.
+
 ## 2026-07-14 (cont'd 33) — Regression: position-label fix got silently reverted
 **Files: state.js**
 
