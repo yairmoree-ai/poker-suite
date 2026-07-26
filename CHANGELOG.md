@@ -1,5 +1,38 @@
 ---
 
+## 2026-07-14 (cont'd 39) — Bug #3 in the same chain: state wasn't reset before autoOpenNextCard
+**Files: game.js**
+
+- Third bug found in the same preflop-all-in flow, same root cause pattern
+  as the last two: an earlier fix exposed a further step that was never
+  properly reached before. User reported nothing happened automatically
+  after picking a card in the picker.
+- **Root cause:** `autoOpenNextCard()` has its own internal guard —
+  `if(S.btnLocked && !S.bettingClosed && S.currentActor!==null){ notify(...
+  'סיים את סיבוב ההימורים קודם'); return; }` — that silently blocks it (with
+  a notification, not a crash) unless betting has already been marked
+  closed and the current actor cleared. My previous round's fix called
+  `autoOpenNextCard()` without first setting `S.currentActor=null` /
+  `S.bettingClosed=true` / `S.lastBet=0` — so at the exact moment it fired,
+  those were still whatever they'd been mid-action, and the guard quietly
+  blocked the call every time.
+- The *other* correct all-in branch elsewhere in the file (line ~1375,
+  someone calling an all-in mid-street) already resets exactly these three
+  fields before its own `autoOpenNextCard()` call — this fix just needed
+  to do the same thing in `checkAutoWin()`'s branch, which was missing it
+  entirely.
+- Verified with a test that actually exercises the *real*
+  `autoOpenNextCard()` (not stubbed out, unlike the previous round's
+  verification which bypassed this exact guard) and realistic pre-fix
+  state (`bettingClosed:false`, `currentActor:1`, matching what it actually
+  looks like right after an all-in action completes): confirmed
+  `openCP('board0')` now fires with no blocking notification, and
+  `S.bettingClosed`/`S.currentActor` are correctly reset first.
+- Three bugs found and fixed in this one flow across three rounds, each
+  only reachable once the previous one was fixed — a good illustration of
+  why "verify against a real run" beats "looks right on read" for chains
+  like this.
+
 ## 2026-07-14 (cont'd 38) — Bug #2 in the same chain: enterShowdownMode was never defined
 **Files: ui.js**
 

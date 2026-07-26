@@ -1051,6 +1051,14 @@ function checkAutoWin(){
   const canAct = active.filter(s=>!s.allin);
   if(canAct.length===0 && active.length>1){
     const boardCount = S.board.filter(Boolean).length;
+    // חייבים לסגור את סבב ההימורים *לפני* הקריאה ל-autoOpenNextCard — אחרת
+    // ה-guard הפנימי שלה (בודק S.bettingClosed/S.currentActor) חוסם אותה בשקט
+    // עם "סיים את סיבוב ההימורים קודם" ולא פותח את בורר הקלפים בכלל. זה בדיוק
+    // מה שגרם ל"לא קופץ אוטומטית" — התיקון הקודם קרא ל-autoOpenNextCard בלי
+    // לאפס קודם את המצב, כמו שהענף המקביל (שורה ~1375) כן עושה נכון.
+    S.currentActor = null;
+    S.bettingClosed = true;
+    S.lastBet = 0;
     setTimeout(()=>{
       if(boardCount<5) autoOpenNextCard();
       else enterShowdown();
