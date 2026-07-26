@@ -1543,7 +1543,7 @@ function pickCard(s){
         setTimeout(()=>{
           const bCnt = S.board.filter(Boolean).length;
           console.log('[ui.js pickCard allin] bCnt='+bCnt+' _showdownMode='+S._showdownMode);
-          if(bCnt===5) enterShowdownMode();
+          if(bCnt===5) enterShowdown();
           else autoOpenNextCard();
         }, 150);
       } else {

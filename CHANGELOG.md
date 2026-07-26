@@ -1,5 +1,33 @@
 ---
 
+## 2026-07-14 (cont'd 38) — Bug #2 in the same chain: enterShowdownMode was never defined
+**Files: ui.js**
+
+- Immediate follow-up: fixing the previous bug (preflop all-in skipping
+  straight to showdown) exposed a *second*, previously-hidden bug in the
+  same chain — now that dealing correctly reaches the river, the flow
+  stopped there instead of reaching the prize window.
+- **Root cause:** the code that completes each board-card pick calls
+  `enterShowdownMode()` once the board hits 5 cards during an all-in
+  situation — but no function by that name exists anywhere in the
+  codebase. It's a typo; the real function is `enterShowdown()` (defined
+  in `game.js`). This call would throw `ReferenceError: enterShowdownMode
+  is not defined` right after the river card is picked, breaking the flow
+  before it could reach the prize/reset screen.
+- This bug already existed before today — it just was never reachable for
+  a *preflop* all-in specifically, since that path never got far enough to
+  hit this line (it was short-circuited earlier by the previous bug). Any
+  all-in that started postflop and ran the board out this way would have
+  hit this exact same crash too, it just hadn't been reported yet.
+- Fixed: renamed the call from `enterShowdownMode()` to the actual
+  function, `enterShowdown()`. Confirmed via search this was the only
+  occurrence of the typo in the codebase.
+- Verified directly: calling `enterShowdown()` with two players holding
+  full hole cards correctly reaches into `showShowdownPanel()` (got deep
+  into its real DOM-building logic before hitting an unrelated stub
+  limitation in the test harness) — confirms the function is now found and
+  executes, unlike the typo'd name which failed immediately.
+
 ## 2026-07-14 (cont'd 37) — Bug: preflop all-in skipped straight to showdown/prizes
 **Files: game.js**
 
