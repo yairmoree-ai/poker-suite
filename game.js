@@ -1043,11 +1043,18 @@ function checkAutoWin(){
     awardPot([active[0].seatIdx], false);
     return true;
   }
-  // All remaining players are all-in (no one can act) → showdown
+  // All remaining players are all-in (no one can act) → צריך קודם לחלק את
+  // שאר קלפי הקהילה (אם עוד לא הושלמו) ורק אז showdown. בלי הבדיקה הזו, אול-אין
+  // בפרה-פלופ (0 קלפים בבורד) קפץ ישר ל-showdown/חלוקת-פרסים בלי לפתוח בכלל
+  // פלופ/טרן/ריבר — בדיוק אותו דפוס-תיקון שכבר קיים למטה (שורה ~1389) למקרה של
+  // "קורא אול-אין", רק שכאן היה חסר לגמרי.
   const canAct = active.filter(s=>!s.allin);
   if(canAct.length===0 && active.length>1){
-    // Auto-deal remaining streets and enter showdown mode (הזנת קלפים לפני בחירת מנצח)
-    setTimeout(()=>{ enterShowdown(); },300);
+    const boardCount = S.board.filter(Boolean).length;
+    setTimeout(()=>{
+      if(boardCount<5) autoOpenNextCard();
+      else enterShowdown();
+    },300);
     return true;
   }
   return false;

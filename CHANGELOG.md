@@ -1,5 +1,31 @@
 ---
 
+## 2026-07-14 (cont'd 37) — Bug: preflop all-in skipped straight to showdown/prizes
+**Files: game.js**
+
+- User reported: an all-in preflop jumps straight to the prize-distribution
+  screen instead of opening flop/turn/river.
+- **Root cause:** `checkAutoWin()`'s "everyone remaining is all-in, no one
+  can act" branch called `enterShowdown()` directly, with no check on
+  whether the board even had any cards dealt yet. For a preflop all-in
+  (board completely empty), this jumped straight into showdown/winner
+  logic — skipping flop, turn, and river entirely, straight through to
+  whatever comes after a determined winner (the prize/reset flow the user
+  saw). The *other* all-in branch elsewhere in the file (the "someone calls
+  an all-in" case) already had this exact check correct — this one just
+  never had it.
+- Fixed by checking the board card count first: if under 5, calls
+  `autoOpenNextCard()` to start dealing instead of `enterShowdown()`.
+  Verified this alone is sufficient — the card-picker completion logic
+  (`ui.js`, wherever a board card gets picked) already correctly detects
+  an ongoing all-in situation and self-chains through the rest of the
+  streets (flop → turn → river) automatically once dealing starts, only
+  calling showdown once the board actually reaches 5 cards. This fix just
+  needed to *start* that existing chain instead of bypassing it.
+- Verified via simulation: with two all-in players and an empty board,
+  `checkAutoWin()` now calls `openCP('board0')` (opening the flop) instead
+  of jumping straight to the showdown panel.
+
 ## 2026-07-14 (cont'd 36) — Bug: Call amount could exceed the caller's actual stack
 **Files: game.js**
 
