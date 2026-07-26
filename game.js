@@ -587,9 +587,14 @@ function setBTN(seatIdx){
 }
 
 function getCallAmount(seatIdx){
-  // How much more does this player need to call
+  // How much more does this player need to call — אבל לעולם לא יותר ממה שיש
+  // לו בפועל בערימה. בלי ה-cap הזה, שחקן עם ערימה קטנה שקורא all-in של יריב
+  // גדול ממנו היה "קורא" סכום שאין לו בכלל (למשל: יש לו 17,000, אבל הקריאה
+  // התיאורטית היא 183,000) — יוצר צ'יפים מדומים בקופה שבפועל אף אחד לא שילם.
+  const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   const invested = getStreetInvested(seatIdx);
-  return Math.max(0, (S.lastBet||0) - invested);
+  const theoretical = Math.max(0, (S.lastBet||0) - invested);
+  return Math.min(theoretical, seat?.stack||0);
 }
 
 function quickAction(seatIdx, type){
@@ -651,7 +656,11 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   // Cancel any pending long-press HUD timer
   if(_longPressTimer){ clearTimeout(_longPressTimer); _longPressTimer=null; }
   const seat=S.seats.find(s=>s.seatIdx===seatIdx); if(!seat)return;
-  const amt=parseFloat(amount)||0;
+  let amt=parseFloat(amount)||0;
+  // בטחון כפול: גם אם amount הגיע משדה קלט ידני (לא מ-getCallAmount), Call
+  // לעולם לא יכול לעלות על מה שיש בפועל בערימה של השחקן — אחרת נוצרים צ'יפים
+  // מדומים בקופה (בדיוק הבאג שנתפס: קריאה שנרשמה כ-183,000 כששלערמה היו רק 17,000).
+  if(type==='Call') amt = Math.min(amt, seat.stack||0);
   if(!seat.actions)seat.actions=[];
   // Determine current street from board
   const boardCards = S.board.filter(Boolean).length;

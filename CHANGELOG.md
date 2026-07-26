@@ -1,5 +1,48 @@
 ---
 
+## 2026-07-14 (cont'd 36) — Bug: Call amount could exceed the caller's actual stack
+**Files: game.js**
+
+- User's screenshots: איתן had 34,000 → bet 17,000 on the river (17,000
+  left) → איציק went all-in for 200,000 → the app recorded איתן's call as
+  183,000 (the theoretical amount needed to fully match איציק's bet), even
+  though he only had 17,000 left. Chip-impossible — he doesn't have that
+  many chips to call with.
+- **Root cause:** `getCallAmount(seatIdx)` computed only the theoretical
+  amount needed (`S.lastBet - alreadyInvested`) and never checked it
+  against the calling player's actual remaining `stack`. Downstream in
+  `doAction`, the stack deduction was `Math.max(0, stack - amount)` — that
+  floors the *stack* at zero correctly, but the *recorded action amount*
+  itself stayed at the full uncapped theoretical figure, meaning the pot
+  math and the action-history label both carried a call the player never
+  actually had the chips to make.
+- Fixed in two places, matching the codebase's own "don't guess, verify
+  against the source" habit for defense in depth rather than trusting a
+  single choke point:
+  1. `getCallAmount` now returns `Math.min(theoretical, seat.stack)` — the
+     value used by the quick "Call" button and as the pre-filled default in
+     the manual amount-entry overlay.
+  2. `doAction` itself now also caps `amt` at the seat's stack whenever
+     `type==='Call'`, regardless of what value was passed in — this matters
+     because the manual amount-entry overlay pre-fills correctly but the
+     number is still editable by the user before submitting, so the first
+     fix alone wouldn't have covered that path.
+  A capped call that uses the player's entire remaining stack already
+  correctly flows into the existing auto-allin logic (`stack===0` →
+  `allin=true`), no separate change needed there.
+- **Side effect worth knowing:** since the call amount feeds directly into
+  the pot total, this bug also inflated the final pot by the phantom
+  difference (166,000 in this hand: 183,000 recorded vs. 17,000 actually
+  paid) — the ₪433,000 pot shown in the screenshot was too high by exactly
+  that amount. This wasn't a separate pot-calculation bug; fixing the
+  recorded call amount at the source fixes the pot total automatically,
+  since pot totals are derived from the same action amounts.
+- Verified end-to-end via simulation, reconstructing the exact scenario
+  from the screenshots (17,000 stack facing a 200,000 all-in after already
+  betting 17,000): `getCallAmount` now correctly returns 17,000 (not
+  183,000), the recorded action shows `amount:"17000"`, and the calling
+  player correctly ends at 0 stack with `allin:true`.
+
 ## 2026-07-14 (cont'd 35) — New: export hands to PokerStars format for PokerTracker
 **Files: ui.js, index.html**
 
