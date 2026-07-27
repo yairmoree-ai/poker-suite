@@ -272,6 +272,7 @@ async function shareReplayerAsLink(){
     }
   }catch(err){
     console.error('shareReplayerAsLink error:', err);
+    alert('שגיאה ביצירת הלינק: '+(err?.message||err));
     notify('שגיאה ביצירת הלינק — נסה שוב');
   }finally{
     if(btn){ btn.disabled=false; btn.textContent=origText; }
@@ -282,6 +283,7 @@ let _gifWorkerBlobUrl = null;
 async function shareReplayerAsGif(){
   if(!_replayerHand || !_replayerSteps.length){ notify('אין יד לשיתוף'); return; }
   if(typeof GIF === 'undefined' || typeof html2canvas === 'undefined'){
+    alert('טעינת כלי יצירת הסרטון נכשלה — בדוק חיבור לאינטרנט ונסה שוב');
     notify('טעינת כלי היצירה נכשלה — בדוק חיבור לאינטרנט');
     return;
   }
@@ -342,6 +344,7 @@ async function shareReplayerAsGif(){
     }
   }catch(err){
     console.error('shareReplayerAsGif error:', err);
+    alert('שגיאה ביצירת הסרטון: '+(err?.message||err));
     notify('שגיאה ביצירת הסרטון — נסה שוב');
   }finally{
     _replayerIdx = savedIdx;

@@ -1,5 +1,31 @@
 ---
 
+## 2026-07-14 (cont'd 45) — Bug: notify() invisible behind the replayer overlay
+**Files: styles.css, ui.js**
+
+- User reported both new share buttons appearing to do nothing — GIF
+  totally unresponsive, link stuck on "יוצר לינק…" with no follow-up.
+- **Root cause, found directly:** `#notif` (the toast used by `notify()`
+  for every success/error message app-wide) has `z-index:400` — but the
+  replayer overlay added this session sits at `z-index:450`. Any
+  `notify()` call while the replayer is open — which is exactly when these
+  buttons are used — renders completely hidden behind the replayer's
+  opaque background. Both buttons' error handling was very likely firing
+  correctly the whole time; the messages were just invisible. Checked
+  every z-index in the app first to confirm 700 sits safely above every
+  regular modal (highest existing was 600) without competing with a couple
+  of special always-on-top elements at 99997+.
+- Fixed by raising `#notif` to `z-index:700`.
+- **Added a second, independent safety net** on top of the z-index fix,
+  since I can't personally verify the underlying GIF/Firebase operations
+  succeed (no way to test either from my sandbox): both functions' error
+  paths and the "GIF library failed to load" check now also fire a native
+  `alert()` with the actual caught error message, not just `notify()`.
+  `alert()` is a blocking browser dialog that cannot be hidden behind any
+  z-index issue, so whatever the real underlying problem turns out to be —
+  if the z-index fix alone doesn't fully resolve this — will be visible
+  and reportable on the next attempt, rather than another silent failure.
+
 ## 2026-07-14 (cont'd 44) — New: share replayer as an interactive link, not just GIF
 **Files: ui.js, auth.js**
 
