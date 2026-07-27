@@ -1,5 +1,23 @@
 ---
 
+## 2026-07-14 (cont'd 47) — Hide share buttons when viewing via a shared link
+**Files: ui.js, auth.js**
+
+- User's screenshot confirmed the link-sharing feature actually works
+  end-to-end (opened a shared link in WhatsApp's in-app browser, correctly
+  landed on the interactive replayer with the right hand data) — but the
+  share buttons were still showing, which doesn't make sense for someone
+  already viewing a shared link.
+- Added `window._isSharedReplayView = true`, set in `auth.js`'s
+  `checkReplayParam()` right before opening the replayer for an incoming
+  shared link. `showHandReplayer()` (`ui.js`) now skips creating the
+  share-buttons row entirely when this flag is set — not just hiding it
+  with CSS, the elements are never created at all, so there's nothing to
+  accidentally interact with either.
+- Verified directly: with the flag set, `showHandReplayer()` never calls
+  `getElementById('replayer-share-vid-btn')` at all, confirming the button
+  is genuinely never constructed for a shared-link visitor.
+
 ## 2026-07-14 (cont'd 46) — Both real errors now visible, both fixed
 **Files: ui.js, auth.js**
 

@@ -341,6 +341,7 @@ async function checkReplayParam(){
       if(el) el.style.display='none';
     });
     S.handLog = [data.hand];
+    window._isSharedReplayView = true; // מוצג ל-showHandReplayer כדי להסתיר את כפתורי השיתוף — אין טעם לשתף-מחדש מתוך תצוגת-שיתוף
     setTimeout(()=>{ if(typeof showHandReplayer==='function') showHandReplayer(data.hand.id); }, 50);
     return true;
   }catch(e){

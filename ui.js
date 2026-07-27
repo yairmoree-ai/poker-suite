@@ -414,21 +414,26 @@ function showHandReplayer(hid){
   hdrTop.appendChild(closeBtn);
   box.appendChild(hdrTop);
 
-  const hdrRow2 = document.createElement('div');
-  hdrRow2.style.cssText = 'display:flex;gap:8px;margin-bottom:10px';
-  const shareVidBtn = document.createElement('button');
-  shareVidBtn.id = 'replayer-share-vid-btn';
-  shareVidBtn.style.cssText = 'flex:1;background:rgba(91,155,213,0.12);border:1px solid rgba(91,155,213,0.4);color:#5b9bd5;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
-  shareVidBtn.textContent = '🎬 שתף כ-GIF';
-  shareVidBtn.onclick = shareReplayerAsGif;
-  const shareLinkBtn = document.createElement('button');
-  shareLinkBtn.id = 'replayer-share-link-btn';
-  shareLinkBtn.style.cssText = 'flex:1;background:rgba(200,169,110,0.12);border:1px solid rgba(200,169,110,0.4);color:#c8a96e;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
-  shareLinkBtn.textContent = '🔗 שתף כלינק';
-  shareLinkBtn.onclick = shareReplayerAsLink;
-  hdrRow2.appendChild(shareVidBtn);
-  hdrRow2.appendChild(shareLinkBtn);
-  box.appendChild(hdrRow2);
+  // כפתורי השיתוף לא מוצגים כלל בתצוגת-שיתוף (מישהו שפתח לינק ששותף אליו) —
+  // אין טעם לשתף-מחדש מתוך תצוגה ששותפה, וגם לא הגיוני שלצופה כזה יהיה בכלל
+  // גישה לפעולת כתיבה ל-Firebase.
+  if(!window._isSharedReplayView){
+    const hdrRow2 = document.createElement('div');
+    hdrRow2.style.cssText = 'display:flex;gap:8px;margin-bottom:10px';
+    const shareVidBtn = document.createElement('button');
+    shareVidBtn.id = 'replayer-share-vid-btn';
+    shareVidBtn.style.cssText = 'flex:1;background:rgba(91,155,213,0.12);border:1px solid rgba(91,155,213,0.4);color:#5b9bd5;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
+    shareVidBtn.textContent = '🎬 שתף כ-GIF';
+    shareVidBtn.onclick = shareReplayerAsGif;
+    const shareLinkBtn = document.createElement('button');
+    shareLinkBtn.id = 'replayer-share-link-btn';
+    shareLinkBtn.style.cssText = 'flex:1;background:rgba(200,169,110,0.12);border:1px solid rgba(200,169,110,0.4);color:#c8a96e;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
+    shareLinkBtn.textContent = '🔗 שתף כלינק';
+    shareLinkBtn.onclick = shareReplayerAsLink;
+    hdrRow2.appendChild(shareVidBtn);
+    hdrRow2.appendChild(shareLinkBtn);
+    box.appendChild(hdrRow2);
+  }
 
   const frameDiv = document.createElement('div');
   frameDiv.id = 'replayer-frame';
