@@ -169,7 +169,7 @@ function _handToSteps(h){
   const steps = [];
   const curStack = {...startStack};
   let pot = 0;
-  steps.push({boardCount:0, pot:0, stacks:{...curStack}, text:'תחילת היד', actorSeat:null});
+  steps.push({boardCount:0, pot:0, stacks:{...curStack}, text:'תחילת היד', actorSeat:null, streetChips:{}});
 
   const board = (h.board||[]).filter(Boolean);
   const streetOrder = ['פרה-פלופ','פלופ','טורן','ריבר'];
@@ -184,10 +184,13 @@ function _handToSteps(h){
     acts.sort((a,b)=>(a.idx||0)-(b.idx||0));
     if(!acts.length) return;
 
+    // צ'יפים "על השולחן" ליד כל מושב ברחוב הנוכחי — מתאפס בתחילת כל רחוב חדש,
+    // בדיוק כמו בשולחן החי (הפעולה עצמה עדיין נשארת גם כטקסט למטה).
+    const streetChips = {};
     if(street!=='פרה-פלופ'){
       const need = streetBoardCount[street];
       if(board.length<need) return;
-      steps.push({boardCount:need, pot, stacks:{...curStack}, text:`*** ${streetLabel[street]} ***`, actorSeat:null});
+      steps.push({boardCount:need, pot, stacks:{...curStack}, text:`*** ${streetLabel[street]} ***`, actorSeat:null, streetChips:{}});
     }
 
     acts.forEach(a=>{
@@ -205,8 +208,9 @@ function _handToSteps(h){
       if(a.type!=='Fold' && a.type!=='Check'){
         curStack[a.playerName] = Math.max(0,(curStack[a.playerName]||0)-amt);
         pot += amt;
+        streetChips[a.playerName] = (streetChips[a.playerName]||0) + amt;
       }
-      steps.push({boardCount:streetBoardCount[street], pot, stacks:{...curStack}, text, actorSeat:a.seatIdx});
+      steps.push({boardCount:streetBoardCount[street], pot, stacks:{...curStack}, text, actorSeat:a.seatIdx, streetChips:{...streetChips}});
     });
   });
 
@@ -219,7 +223,7 @@ function _handToSteps(h){
         finalStacks[wName] += (w.amount!=null ? w.amount : (h.finalPot||pot));
       }
     });
-    steps.push({boardCount:board.length, pot:h.finalPot||pot, stacks:finalStacks, text:`🏆 ${names} זוכה ב-${(h.finalPot||pot).toLocaleString()}`, actorSeat:null, isWin:true});
+    steps.push({boardCount:board.length, pot:h.finalPot||pot, stacks:finalStacks, text:`🏆 ${names} זוכה ב-${(h.finalPot||pot).toLocaleString()}`, actorSeat:null, isWin:true, streetChips:{}, showCards:true});
   }
   return steps;
 }
@@ -228,6 +232,123 @@ let _replayerHand = null;
 let _replayerSteps = [];
 let _replayerIdx = 0;
 let _replayerTimer = null;
+
+// שיתוף ה-replayer כ"סרטון" (בפועל: GIF מונפש) — לא MediaRecorder+captureStream
+// למרות שזה יותר "וידאו אמיתי", כי יש לזה תקלות תיעודיות וידועות ב-Safari
+// ל-iOS ספציפית עם קנבס (לא מצלמה) — לפעמים נתקע לגמרי ב-stop(). GIF הוא
+// המסלול הבטוח והמוכח לפלטפורמה הזו. ה-worker script של gif.js נטען דרך fetch
+// והופך ל-blob URL (לא מצביע ישירות ל-CDN) — כי חלק מהדפדפנים חוסמים בניית
+// Worker מ-script שמקורו cross-origin.
+// שיתוף ה-replayer כ**לינק** לגרסה האינטראקטיבית האמיתית (עם כל כפתורי השליטה),
+// לא כמדיה סטטית — משתמש באותו Firebase שכבר משמש לסנכרון ידיים (FIREBASE_URL,
+// אותו דפוס קריאה פתוחה בלי auth header שכבר מוכח עובד), רק בנתיב ציבורי חדש
+// ונפרד (/shared_replays/) כדי לא לערבב עם נתוני המשתמשים הפרטיים.
+// "זמני": אין מחיקה אוטומטית אמיתית בצד השרת (Realtime Database לא תומך TTL
+// מובנה בלי Cloud Functions, שאין לי דרך להגדיר כאן) — אבל מיישמים תפוגה
+// "רכה" בצד הלקוח: לינק ישן מ-30 יום מוצג כ"פג תוקף" גם אם הרשומה עדיין קיימת
+// בפועל בענן. מוזכר בבירור למשתמש, לא מוסתר כאילו זו תפוגה אמיתית.
+async function shareReplayerAsLink(){
+  if(!_replayerHand){ notify('אין יד לשיתוף'); return; }
+  const btn = document.getElementById('replayer-share-link-btn');
+  const origText = btn?.textContent;
+  try{
+    if(btn){ btn.disabled=true; btn.textContent='יוצר לינק…'; }
+    const id = 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    const payload = { hand: _replayerHand, createdAt: Date.now() };
+    const resp = await fetch(FIREBASE_URL+'/shared_replays/'+id+'.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+
+    const link = location.origin + location.pathname + '?replay=' + id;
+    if(navigator.share){
+      try{ await navigator.share({ title:'יד פוקר', text:_replayerHand.date||'', url: link }); }
+      catch(shareErr){ if(shareErr?.name!=='AbortError') console.error('share error:', shareErr); }
+    } else if(navigator.clipboard){
+      await navigator.clipboard.writeText(link);
+      notify('הלינק הועתק ללוח 📋');
+    } else {
+      prompt('העתק את הלינק:', link);
+    }
+  }catch(err){
+    console.error('shareReplayerAsLink error:', err);
+    notify('שגיאה ביצירת הלינק — נסה שוב');
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent=origText; }
+  }
+}
+
+let _gifWorkerBlobUrl = null;
+async function shareReplayerAsGif(){
+  if(!_replayerHand || !_replayerSteps.length){ notify('אין יד לשיתוף'); return; }
+  if(typeof GIF === 'undefined' || typeof html2canvas === 'undefined'){
+    notify('טעינת כלי היצירה נכשלה — בדוק חיבור לאינטרנט');
+    return;
+  }
+  const btn = document.getElementById('replayer-share-vid-btn');
+  const origBtnText = btn?.textContent;
+  const wasPlaying = !!_replayerTimer;
+  if(_replayerTimer){ clearInterval(_replayerTimer); _replayerTimer=null; _updatePlayBtn(); }
+  const savedIdx = _replayerIdx;
+
+  try{
+    if(btn){ btn.disabled=true; btn.textContent = 'טוען…'; }
+    if(!_gifWorkerBlobUrl){
+      const resp = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+      if(!resp.ok) throw new Error('worker fetch failed');
+      const blob = await resp.blob();
+      _gifWorkerBlobUrl = URL.createObjectURL(blob);
+    }
+
+    const frameEl = document.getElementById('replayer-frame');
+    if(!frameEl) throw new Error('no frame element');
+    const firstCanvas = await html2canvas(frameEl, {backgroundColor:'#0a0d14', scale:1.5, useCORS:true});
+
+    const gif = new GIF({ workers:2, quality:10, workerScript:_gifWorkerBlobUrl, width:firstCanvas.width, height:firstCanvas.height, background:'#0a0d14' });
+
+    for(let i=0;i<_replayerSteps.length;i++){
+      _replayerIdx = i;
+      _renderReplayerFrame();
+      if(btn) btn.textContent = `מייצר… ${i+1}/${_replayerSteps.length}`;
+      // עיכוב קצר כדי לתת ל-DOM לצייר את הפריים החדש לפני הצילום
+      await new Promise(r=>setTimeout(r,30));
+      const canvas = await html2canvas(frameEl, {backgroundColor:'#0a0d14', scale:1.5, useCORS:true});
+      const delay = i===_replayerSteps.length-1 ? 2000 : 900; // עצירה ארוכה יותר על הפריים האחרון
+      gif.addFrame(canvas, {delay, copy:true});
+    }
+
+    if(btn) btn.textContent = 'מקודד GIF…';
+    const blob = await new Promise((resolve,reject)=>{
+      gif.on('finished', b=>resolve(b));
+      gif.on('abort', ()=>reject(new Error('gif aborted')));
+      gif.render();
+    });
+
+    const fileName = 'poker-hand-'+(_replayerHand.id||Date.now())+'.gif';
+    const file = new File([blob], fileName, {type:'image/gif'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({ files:[file], title:'יד פוקר', text:_replayerHand.date||'' });
+      }catch(shareErr){
+        if(shareErr?.name!=='AbortError') console.error('share error:', shareErr);
+      }
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href=url; a.download=fileName;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      notify('הסרטון הורד 📥');
+    }
+  }catch(err){
+    console.error('shareReplayerAsGif error:', err);
+    notify('שגיאה ביצירת הסרטון — נסה שוב');
+  }finally{
+    _replayerIdx = savedIdx;
+    _renderReplayerFrame();
+    if(btn){ btn.disabled=false; btn.textContent = origBtnText; }
+  }
+}
 
 function showHandReplayer(hid){
   const h = (S.handLog||[]).find(x=>x.id===hid);
@@ -247,15 +368,31 @@ function showHandReplayer(hid){
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
-  const hdr = document.createElement('div');
-  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
-  hdr.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c8a96e">▶️ Replayer — ${h.date}</div>`;
+  const hdrTop = document.createElement('div');
+  hdrTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
+  hdrTop.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c8a96e">▶️ Replayer — ${h.date}</div>`;
   const closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
   closeBtn.onclick = ()=>{ if(_replayerTimer) clearInterval(_replayerTimer); overlay.remove(); };
-  hdr.appendChild(closeBtn);
-  box.appendChild(hdr);
+  hdrTop.appendChild(closeBtn);
+  box.appendChild(hdrTop);
+
+  const hdrRow2 = document.createElement('div');
+  hdrRow2.style.cssText = 'display:flex;gap:8px;margin-bottom:10px';
+  const shareVidBtn = document.createElement('button');
+  shareVidBtn.id = 'replayer-share-vid-btn';
+  shareVidBtn.style.cssText = 'flex:1;background:rgba(91,155,213,0.12);border:1px solid rgba(91,155,213,0.4);color:#5b9bd5;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
+  shareVidBtn.textContent = '🎬 שתף כ-GIF';
+  shareVidBtn.onclick = shareReplayerAsGif;
+  const shareLinkBtn = document.createElement('button');
+  shareLinkBtn.id = 'replayer-share-link-btn';
+  shareLinkBtn.style.cssText = 'flex:1;background:rgba(200,169,110,0.12);border:1px solid rgba(200,169,110,0.4);color:#c8a96e;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
+  shareLinkBtn.textContent = '🔗 שתף כלינק';
+  shareLinkBtn.onclick = shareReplayerAsLink;
+  hdrRow2.appendChild(shareVidBtn);
+  hdrRow2.appendChild(shareLinkBtn);
+  box.appendChild(hdrRow2);
 
   const frameDiv = document.createElement('div');
   frameDiv.id = 'replayer-frame';
@@ -348,6 +485,22 @@ function _renderReplayerFrame(){
     const seatEl = document.createElement('div');
     seatEl.style.cssText = `position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;left:${px}%;top:${py}%;z-index:5`;
 
+    // קלפי השחקן — מוצגים רק בסיום היד (showCards), לא לאורך כל ה-replay,
+    // כמו showdown אמיתי. רק למי שבאמת יש 2 קלפים רשומים.
+    const cards = (s.cards||[]).filter(Boolean);
+    if(step.showCards && cards.length===2){
+      const cardsRow = document.createElement('div');
+      cardsRow.style.cssText = `display:flex;gap:2px;direction:ltr;opacity:${s.folded?0.4:1}`;
+      cards.forEach(c=>{
+        const isRed = c.suit==='♥'||c.suit==='♦';
+        const cd = document.createElement('div');
+        cd.style.cssText = 'width:20px;height:28px;border-radius:3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 2px 4px rgba(0,0,0,0.5)';
+        cd.innerHTML = `<span style="font-size:12px;color:${isRed?'#d42020':'#111'}">${c.rank}</span><span style="font-size:9px;color:${isRed?'#d42020':'#111'}">${c.suit}</span>`;
+        cardsRow.appendChild(cd);
+      });
+      seatEl.appendChild(cardsRow);
+    }
+
     const box2 = document.createElement('div');
     box2.style.cssText = `background:#121824;border:1.5px solid ${isWinner?'#5fc47a':isActing?'#c8a96e':'rgba(255,255,255,0.12)'};border-radius:8px;padding:4px 7px;text-align:center;min-width:58px;${isWinner?'box-shadow:0 0 8px rgba(95,196,122,0.5)':isActing?'box-shadow:0 0 8px rgba(200,169,110,0.5)':''}`;
     const stackVal = step.stacks[s.playerName]!==undefined ? step.stacks[s.playerName] : (s.stack||0);
@@ -356,6 +509,18 @@ function _renderReplayerFrame(){
       <div style="font-size:9px;color:#8a8799">${stackVal.toLocaleString()}${isWinner?' 🏆':''}</div>`;
     seatEl.appendChild(box2);
     wrap.appendChild(seatEl);
+
+    // צ'יפי ההימור — badge קטן בין המושב למרכז השולחן (לכיוון הקופה), רק כשיש
+    // סכום בפועל "על השולחן" ליד המושב הזה ברחוב הנוכחי (streetChips).
+    const chipAmt = (step.streetChips||{})[s.playerName];
+    if(chipAmt>0){
+      const chipPx = cx + (px-cx)*0.55;
+      const chipPy = cy + (py-cy)*0.55;
+      const chipEl = document.createElement('div');
+      chipEl.style.cssText = `position:absolute;left:${chipPx}%;top:${chipPy}%;transform:translate(-50%,-50%);background:rgba(200,169,110,0.9);color:#0a0d14;font-size:10px;font-weight:900;padding:3px 8px;border-radius:11px;box-shadow:0 2px 5px rgba(0,0,0,0.5);white-space:nowrap;z-index:6`;
+      chipEl.textContent = chipAmt.toLocaleString();
+      wrap.appendChild(chipEl);
+    }
   });
 
   const frame = document.getElementById('replayer-frame');

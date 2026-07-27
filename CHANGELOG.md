@@ -1,5 +1,97 @@
 ---
 
+## 2026-07-14 (cont'd 44) — New: share replayer as an interactive link, not just GIF
+**Files: ui.js, auth.js**
+
+- User's pushback on the GIF approach was right — a GIF can't be controlled
+  (no pause, no scrubbing back and forth) once shared. Asked for a
+  temporary link to the real interactive replayer instead. Kept the GIF
+  option too rather than replacing it — different tradeoffs (GIF: works
+  everywhere, no dependency on the recipient's connection to this app's
+  backend; link: fully interactive, much smaller/faster to generate since
+  there's no frame-by-frame canvas capture involved).
+- **Found the right foundation before building anything:** this app already
+  has an unauthenticated Firebase Realtime Database backend (`FIREBASE_URL`)
+  used for hand/state sync — confirmed all existing calls to it are plain
+  REST with no auth header, meaning writing to a *new*, separate path
+  should work the same way. Also found an existing, exact pattern to copy:
+  `checkAdminParam()` in `auth.js` already checks a URL query param on load
+  and auto-enters a no-login "viewer" mode — reused that same shape instead
+  of inventing a new bootstrap mechanism.
+- **Write side (`shareReplayerAsLink`, ui.js):** generates a random id,
+  `PUT`s `{hand, createdAt}` to `/shared_replays/{id}.json` — a dedicated
+  path, separate from any user's private synced data — builds a link
+  (`?replay={id}`), and shares it via `navigator.share` (falls back to
+  clipboard copy, then a manual `prompt()` as a last resort).
+- **Read side (`checkReplayParam`, auth.js):** new check added to the
+  existing startup sequence, checked *before* `checkAdminParam`. Fetches
+  the shared hand, sets a minimal `currentUser = {role:'viewer'}` (so
+  `isViewer()` correctly locks out any edit actions for this visitor same
+  as everywhere else in the app), hides the lock screen and the normal
+  tabs, and opens `showHandReplayer()` directly on the fetched hand — the
+  visitor never sees a login screen or needs an account at all.
+- **"Temporary" — implemented honestly, not oversold:** Realtime Database
+  has no built-in TTL/expiry without Cloud Functions, which isn't something
+  buildable in this setup — so there's no actual server-side deletion.
+  Instead, a soft client-side check: `checkReplayParam` refuses to open
+  (shows "expired" instead) if the link is over 30 days old, even though
+  the underlying data technically still exists in the cloud. Said this
+  plainly in the code comments rather than implying real expiry.
+- **What I could and couldn't verify:** confirmed both files parse cleanly,
+  and traced the write→read round trip logically against the exact
+  existing patterns already proven to work elsewhere in this app (same
+  Firebase call shape, same URL-param-bootstrap shape). What I could *not*
+  verify: whether Firebase's actual security rules permit writes to this
+  new path (my sandbox can't reach `firebasedatabase.app` — it's not on the
+  allowed network list — so I couldn't make a real test call), and the full
+  live round trip (generate a link on one device, open it fresh on another)
+  needs a real end-to-end test on your side, same as the GIF feature.
+
+## 2026-07-14 (cont'd 43) — Replayer: bet chips on table, hole cards at showdown, video sharing
+**Files: ui.js, index.html**
+
+- Three follow-up requests on the replayer.
+- **Bet amounts near the acting seat:** added `streetChips` tracking to
+  `_handToSteps` — a running total per player of chips currently "in
+  front" of their seat for the *current street only*, resetting to `{}` at
+  every street boundary (matching how the live table itself displays
+  street-total chip pills, not per-action amounts). Rendered as a small
+  gold badge positioned 55% of the way from each seat toward the table
+  center — a natural "chips pushed toward the pot" look. Verified the reset
+  behavior directly: a player's preflop BB+call correctly accumulates to
+  4,000, then drops back to empty the moment the flop step begins.
+- **Hole cards at showdown:** added a `showCards` flag, true only on the
+  final win step. Seats with two recorded hole cards now show them above
+  the seat box at that step (and only that step) — folded players' cards,
+  if recorded, render at reduced opacity. Not shown at any earlier step,
+  matching how a real showdown reveals hands only once the hand concludes.
+- **Video sharing ("🎬 שתף כסרטון"):** checked the actual technical
+  constraints before building this rather than assuming — `MediaRecorder`
+  + `canvas.captureStream()` (the "real video" approach) has long-standing,
+  still-unresolved WebKit bugs specifically on iOS Safari for *canvas*
+  streams (as opposed to camera streams), including a freeze on `stop()`
+  (WebKit bug 181663) and invalid stream metadata — and this app runs on
+  iOS. Found that other developers hitting this exact issue ended up
+  switching to animated GIF generation as the reliable fallback for iOS,
+  so built that instead of the riskier "real video" route. Added `gif.js`
+  (already available on the same cdnjs CDN this app already uses for
+  html2canvas) to `index.html`. The share function steps through every
+  replay frame, captures each with `html2canvas` (reusing the same capture
+  approach already used for hand/tournament image sharing), feeds them
+  into the GIF encoder with the last frame held longer (2s vs 900ms) so
+  the final result doesn't feel cut off, then shares the resulting file via
+  the same `navigator.share`-with-download-fallback pattern used
+  elsewhere. One CDN-loading detail handled carefully: `gif.js`'s web
+  worker script is fetched and converted to a same-origin blob URL rather
+  than pointed directly at the CDN URL, since some browsers block
+  constructing a `Worker` from a cross-origin script directly.
+- **Known limitation, disclosed rather than hidden:** this GIF-generation
+  path depends on live browser APIs (Web Workers, canvas capture, an
+  external CDN fetch) that can't be exercised in a server-side test the
+  way the rest of today's pure-logic fixes were — this one genuinely needs
+  a real on-device test to confirm it behaves as intended, flagged to the
+  user directly rather than claimed as verified.
+
 ## 2026-07-14 (cont'd 42) — Replayer auto-play: slower pacing
 **Files: ui.js**
 

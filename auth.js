@@ -309,6 +309,45 @@ function enterAsViewer(adminUsername, sheetsUrl){
   }catch(e){}
 }
 
+// בדוק אם יש פרמטר ?replay= ב-URL — פתיחת replayer אינטראקטיבי ישירות, בלי צורך
+// בהתחברות בכלל. משתמש באותו FIREBASE_URL הכללי (מוגדר ב-features.js, שנטען
+// לפני הקובץ הזה) ובנתיב הציבורי הנפרד /shared_replays/ (ראו shareReplayerAsLink
+// ב-ui.js). תפוגה "רכה" בצד לקוח בלבד — 30 יום; אחרי זה מציגים הודעה במקום
+// לפתוח, גם אם הרשומה עדיין קיימת בפועל בענן (אין מחיקה שרתית אמיתית).
+async function checkReplayParam(){
+  const params = new URLSearchParams(window.location.search);
+  const replayId = params.get('replay');
+  if(!replayId) return false;
+
+  try{
+    const resp = await fetch(FIREBASE_URL+'/shared_replays/'+encodeURIComponent(replayId)+'.json');
+    const data = await resp.json();
+    if(!data || !data.hand){
+      alert('הלינק לא נמצא — ייתכן שהוא שגוי או שהיד נמחקה');
+      return false;
+    }
+    const THIRTY_DAYS = 30*24*60*60*1000;
+    if(data.createdAt && (Date.now()-data.createdAt) > THIRTY_DAYS){
+      alert('הלינק הזה פג תוקף (מעל 30 יום)');
+      return false;
+    }
+
+    currentUser = {name:'צופה', role:'viewer'};
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    ['tab-table','tab-hands','tab-players','tab-tournaments'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.style.display='none';
+    });
+    S.handLog = [data.hand];
+    setTimeout(()=>{ if(typeof showHandReplayer==='function') showHandReplayer(data.hand.id); }, 50);
+    return true;
+  }catch(e){
+    console.error('checkReplayParam error:', e);
+    return false;
+  }
+}
+
 // בדוק אם יש פרמטר ?admin= ב-URL — כניסת צופה אוטומטית
 async function checkAdminParam(){
   const params = new URLSearchParams(window.location.search);
@@ -328,6 +367,8 @@ async function checkAdminParam(){
 
 // Auto-focus password input or auto-enter viewer mode
 setTimeout(async ()=>{
+  const handledReplay = await checkReplayParam();
+  if(handledReplay) return;
   const handled = await checkAdminParam();
   if(!handled) document.getElementById('pass-inp')?.focus();
 }, 100);
