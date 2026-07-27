@@ -1,5 +1,38 @@
 ---
 
+## 2026-07-14 (cont'd 42) — Replayer auto-play: slower pacing
+**Files: ui.js**
+
+- User found the auto-play too fast to follow. Bumped the interval from
+  1.2s to 2.2s per step. Manual step (◀/▶) and jump-to-start/end controls
+  are unaffected — this only changes the automatic ▶️ playback pace.
+
+## 2026-07-14 (cont'd 41) — Bug: replayer table seats scattered, not in position order
+**Files: ui.js**
+
+- User's screenshot: seats placed around the replayer's table ellipse
+  looked scrambled relative to their actual positions (BB appearing
+  between LJ and BTN instead of following the natural SB→BB→...→CO→BTN
+  sequence).
+- **Root cause:** `h.seats` is saved in physical `seatIdx` order (whichever
+  physical seat each player happened to occupy at the table), not logical
+  turn order — the replayer's layout code (`seats.forEach((s,si)=>{...
+  angle based on si...})`) placed seats around the ellipse in that raw
+  array order, with no relationship to their actual position labels.
+- Found the *exact same* bug already present in the original hand-detail
+  mini-table (`showHandDetail`) that the replayer's table was adapted
+  from — not something newly introduced, just newly noticed since the
+  replayer draws attention to seat arrangement more than a static detail
+  view does.
+- Fixed both: added a shared `_sortSeatsByPos()` helper (canonical
+  clockwise position order: BTN, SB, BB, UTG, UTG+1, LJ, MP, MP+1, HJ, CO)
+  and applied it at both table-layout sites, so any saved hand — regardless
+  of which physical seats people happened to sit in — always renders in
+  correct, natural table order.
+- Verified directly with the exact players/positions from the screenshot
+  (HJ/SB/CO/LJ/BB/BTN in scrambled input order): sorted output correctly
+  comes out `BTN → SB → BB → LJ → HJ → CO`.
+
 ## 2026-07-14 (cont'd 40) — New: step-by-step hand replayer
 **Files: ui.js**
 

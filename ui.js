@@ -136,6 +136,18 @@ function resetTableBlindLevels(){
 // ═══════════════════════════════════════════════════════
 // HAND LIST
 // ═══════════════════════════════════════════════════════
+// סדר קנוני של עמדות סביב השולחן (עם כיוון השעון, החל מ-BTN) — לשימוש בכל
+// מקום שמצייר מיני-שולחן ממידע יד שמור. h.seats שמור בסדר seatIdx הפיזי (איזה
+// מושב פיזי כל שחקן תפס), לא בסדר התורות ההגיוני — בלי המיון הזה, השולחן
+// המצויר נראה "מפוזר" ולא עוקב אחרי סדר העמדות האמיתי (SB→BB→...→CO→BTN).
+const _POS_ORDER = ['BTN','SB','BB','UTG','UTG+1','LJ','MP','MP+1','HJ','CO'];
+function _sortSeatsByPos(seats){
+  return [...seats].sort((a,b)=>{
+    const ia = _POS_ORDER.indexOf(a.pos), ib = _POS_ORDER.indexOf(b.pos);
+    return (ia===-1?99:ia) - (ib===-1?99:ib);
+  });
+}
+
 // ===== Replayer ליד: צעד-אחר-צעד עם שליטה בהפעלה =====
 // בונה רשימת "צעדים" כרונולוגית (הימורי חובה → כל פעולה → כל קלף בורד נחשף)
 // מהנתונים הגולמיים של היד, ואז מרנדר "פריים" (מצב שולחן) לכל צעד — בלי לגעת
@@ -283,7 +295,7 @@ function _replayerTogglePlay(){
     _replayerIdx++;
     if(_replayerIdx>=_replayerSteps.length-1){ _replayerIdx=_replayerSteps.length-1; clearInterval(_replayerTimer); _replayerTimer=null; _updatePlayBtn(); }
     _renderReplayerFrame();
-  }, 1200);
+  }, 2200);
   _updatePlayBtn();
 }
 function _updatePlayBtn(){
@@ -324,7 +336,7 @@ function _renderReplayerFrame(){
   center.appendChild(potLbl);
   wrap.appendChild(center);
 
-  const seats = (h.seats||[]).filter(s=>s.playerName);
+  const seats = _sortSeatsByPos((h.seats||[]).filter(s=>s.playerName));
   const cx=50, cy=50, rx=48, ry=46;
   seats.forEach((s,si)=>{
     const angle = (2*Math.PI*si/seats.length) - Math.PI/2;
@@ -444,7 +456,7 @@ function showHandDetail(hid){
   // Position seats on ellipse orbit
   // cx=50%, cy=50% of wrapper, rx=48%, ry=46%
   const cx=50, cy=50, rx=48, ry=46;
-  (h.seats||[]).forEach((s,si)=>{
+  _sortSeatsByPos(h.seats||[]).forEach((s,si)=>{
     const angle = (2*Math.PI*si/seatCount) - Math.PI/2; // start from top
     const px = cx + rx*Math.cos(angle);
     const py = cy + ry*Math.sin(angle);
