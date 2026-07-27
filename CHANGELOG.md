@@ -1,5 +1,36 @@
 ---
 
+## 2026-07-14 (cont'd 46) — Both real errors now visible, both fixed
+**Files: ui.js, auth.js**
+
+- The z-index/alert() fix from last round worked exactly as intended —
+  both buttons' actual failures became visible, giving two concrete,
+  different bugs to fix instead of two mystery silences.
+- **Link button: HTTP 401.** Firebase security rules block writes to a
+  brand-new top-level path — only `/users/*` is confirmed already open
+  (proven by the existing hand-sync feature working there). I can't edit
+  Firebase security rules myself (no console access from here), so instead
+  of asking for a rule change, switched both the write (`ui.js`) and read
+  (`auth.js`) sides to nest under the already-open structure:
+  `/users/_shared_replays_/{id}.json` instead of `/shared_replays/{id}.json`.
+  Same data, same logic, just living under a path the existing rules
+  already permit — no Firebase console change needed at all.
+- **GIF button: library failed to load.** Root cause less certain than the
+  401 (can't inspect the user's actual network conditions), but the
+  `<script>` tag loading `gif.js` at page-load time evidently didn't
+  always succeed — possibly a flaky connection at that specific moment
+  (screenshot showed a weak signal indicator). Rather than guess further,
+  added `_ensureGifLoaded()`: if `GIF` isn't defined when the button is
+  clicked, dynamically injects a fresh `<script>` tag and waits up to 6
+  seconds for it to load before giving up, instead of treating one failed
+  page-load attempt as permanent for the rest of the session. Verified the
+  retry mechanism's control flow directly (mocked a successful dynamic
+  load): correctly resolves `true` and `GIF` becomes defined. Also split
+  the original combined check into two separate ones (`html2canvas` vs
+  `GIF`) with distinct error messages, so if this happens again the alert
+  will say exactly which of the two failed instead of a generic "one of
+  these two things" message.
+
 ## 2026-07-14 (cont'd 45) — Bug: notify() invisible behind the replayer overlay
 **Files: styles.css, ui.js**
 

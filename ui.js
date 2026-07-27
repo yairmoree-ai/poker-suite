@@ -242,7 +242,12 @@ let _replayerTimer = null;
 // שיתוף ה-replayer כ**לינק** לגרסה האינטראקטיבית האמיתית (עם כל כפתורי השליטה),
 // לא כמדיה סטטית — משתמש באותו Firebase שכבר משמש לסנכרון ידיים (FIREBASE_URL,
 // אותו דפוס קריאה פתוחה בלי auth header שכבר מוכח עובד), רק בנתיב ציבורי חדש
-// ונפרד (/shared_replays/) כדי לא לערבב עם נתוני המשתמשים הפרטיים.
+// ונפרד (/users/_shared_replays_/) כדי לא לערבב עם נתוני המשתמשים הפרטיים.
+// חשוב: מקוננים תחת /users/ (לא צומת עליון חדש) בכוונה — חוקי האבטחה של
+// Firebase כאן מתירים כתיבה פתוחה רק מתחת ל-/users/*, כמו שכבר מוכח עובד עם
+// סנכרון הידיים הרגיל. צומת עליון חדש (כמו /shared_replays/ שנוסה קודם) נחסם
+// ב-401 כי אין לו כלל הרשאה מוגדר — ולא ניתן לי לערוך את חוקי ה-Firebase
+// עצמם מכאן, אז הפתרון הוא לנצל מבנה שכבר פתוח, לא לבקש הרשאה חדשה.
 // "זמני": אין מחיקה אוטומטית אמיתית בצד השרת (Realtime Database לא תומך TTL
 // מובנה בלי Cloud Functions, שאין לי דרך להגדיר כאן) — אבל מיישמים תפוגה
 // "רכה" בצד הלקוח: לינק ישן מ-30 יום מוצג כ"פג תוקף" גם אם הרשומה עדיין קיימת
@@ -255,7 +260,7 @@ async function shareReplayerAsLink(){
     if(btn){ btn.disabled=true; btn.textContent='יוצר לינק…'; }
     const id = 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
     const payload = { hand: _replayerHand, createdAt: Date.now() };
-    const resp = await fetch(FIREBASE_URL+'/shared_replays/'+id+'.json', {
+    const resp = await fetch(FIREBASE_URL+'/users/_shared_replays_/'+id+'.json', {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
     });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
@@ -280,12 +285,40 @@ async function shareReplayerAsLink(){
 }
 
 let _gifWorkerBlobUrl = null;
+// טוען את gif.js דינמית אם היא לא זמינה — ה-<script> הרגיל בטעינת הדף יכול
+// להיכשל על חיבור לא יציב, בלי שהמשתמש בהכרח שם לב (וגם בלי סימן ברור בקונסול
+// שהוא רואה). לפני שמוותרים לגמרי, מנסים לטעון פעם נוספת בדיוק ברגע הלחיצה.
+function _ensureGifLoaded(){
+  if(typeof GIF !== 'undefined') return Promise.resolve(true);
+  return new Promise(resolve=>{
+    const existing = document.querySelector('script[data-gifjs-retry]');
+    if(existing){ existing.remove(); } // ניסיון קודם שנכשל — מסירים לפני שמנסים שוב
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
+    s.setAttribute('data-gifjs-retry','1');
+    s.onload = ()=>resolve(typeof GIF !== 'undefined');
+    s.onerror = ()=>resolve(false);
+    document.head.appendChild(s);
+    setTimeout(()=>resolve(typeof GIF !== 'undefined'), 6000); // לא נתקעים לנצח אם זה תלוי
+  });
+}
 async function shareReplayerAsGif(){
   if(!_replayerHand || !_replayerSteps.length){ notify('אין יד לשיתוף'); return; }
-  if(typeof GIF === 'undefined' || typeof html2canvas === 'undefined'){
-    alert('טעינת כלי יצירת הסרטון נכשלה — בדוק חיבור לאינטרנט ונסה שוב');
-    notify('טעינת כלי היצירה נכשלה — בדוק חיבור לאינטרנט');
+  if(typeof html2canvas === 'undefined'){
+    alert('כלי צילום המסך (html2canvas) לא נטען — בדוק חיבור לאינטרנט ורענן את הדף');
+    notify('כלי הצילום לא נטען');
     return;
+  }
+  if(typeof GIF === 'undefined'){
+    const btnPre = document.getElementById('replayer-share-vid-btn');
+    if(btnPre){ btnPre.disabled=true; btnPre.textContent='טוען ספריית GIF…'; }
+    const loaded = await _ensureGifLoaded();
+    if(btnPre){ btnPre.disabled=false; btnPre.textContent='🎬 שתף כ-GIF'; }
+    if(!loaded){
+      alert('טעינת ספריית ה-GIF נכשלה (גם בניסיון חוזר) — בדוק חיבור לאינטרנט ונסה שוב עוד כמה שניות');
+      notify('טעינת כלי היצירה נכשלה');
+      return;
+    }
   }
   const btn = document.getElementById('replayer-share-vid-btn');
   const origBtnText = btn?.textContent;

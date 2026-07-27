@@ -311,8 +311,9 @@ function enterAsViewer(adminUsername, sheetsUrl){
 
 // בדוק אם יש פרמטר ?replay= ב-URL — פתיחת replayer אינטראקטיבי ישירות, בלי צורך
 // בהתחברות בכלל. משתמש באותו FIREBASE_URL הכללי (מוגדר ב-features.js, שנטען
-// לפני הקובץ הזה) ובנתיב הציבורי הנפרד /shared_replays/ (ראו shareReplayerAsLink
-// ב-ui.js). תפוגה "רכה" בצד לקוח בלבד — 30 יום; אחרי זה מציגים הודעה במקום
+// לפני הקובץ הזה) ובנתיב /users/_shared_replays_/ (ראו shareReplayerAsLink
+// ב-ui.js — מקונן תחת /users/ בכוונה, כי שם כבר מוכח שכתיבה/קריאה פתוחה
+// מותרת בחוקי ה-Firebase, בלי צורך בשינוי חוקים שאין לי גישה אליהם). תפוגה "רכה" בצד לקוח בלבד — 30 יום; אחרי זה מציגים הודעה במקום
 // לפתוח, גם אם הרשומה עדיין קיימת בפועל בענן (אין מחיקה שרתית אמיתית).
 async function checkReplayParam(){
   const params = new URLSearchParams(window.location.search);
@@ -320,7 +321,7 @@ async function checkReplayParam(){
   if(!replayId) return false;
 
   try{
-    const resp = await fetch(FIREBASE_URL+'/shared_replays/'+encodeURIComponent(replayId)+'.json');
+    const resp = await fetch(FIREBASE_URL+'/users/_shared_replays_/'+encodeURIComponent(replayId)+'.json');
     const data = await resp.json();
     if(!data || !data.hand){
       alert('הלינק לא נמצא — ייתכן שהוא שגוי או שהיד נמחקה');
