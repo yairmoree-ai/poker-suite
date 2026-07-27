@@ -1,5 +1,43 @@
 ---
 
+## 2026-07-14 (cont'd 40) — New: step-by-step hand replayer
+**Files: ui.js**
+
+- User asked for a hand replayer. Added a "▶️ Replay" button to the
+  existing hand-detail view (`showHandDetail`), alongside the existing
+  analyze/share buttons.
+- **`_handToSteps(h)`:** converts a hand into a chronological array of
+  snapshots — blinds posted, each action in order, a street-header step
+  whenever the board advances, and a final win step. Reuses the same
+  street/action-ordering approach already proven correct in the PokerStars
+  exporter (sort by `idx` within each street) rather than writing new
+  ordering logic from scratch.
+- **Stack reconstruction:** the saved `seat.stack` reflects the player's
+  stack *after* all of that hand's betting (deductions happen live during
+  play, not just at save time) — so starting stack is reconstructed by
+  adding back the sum of all their action amounts, then rebuilt forward
+  step by step from there. This works regardless of whether the saved
+  value happens to already include post-hand winnings, since winnings
+  aren't an "action" and never enter that reconstruction. Verified with a
+  synthetic hand: correct starting stacks (120K/118K/116K) and correct
+  progressive deductions through blinds, a raise, a fold (no deduction), a
+  call, and a check, ending with the winner's final stack correctly
+  including their winnings (128K = 120K start − 4K raised + 12K won).
+- **Table rendering:** adapted the existing mini-table visualization
+  already used in `showHandDetail` (seats positioned on an ellipse, board
+  cards in the center, pot label) into a new step-aware renderer that
+  takes a snapshot instead of the hand's final state — highlighting
+  whoever's acting at the current step (gold border) and the winner at the
+  final step (green border + 🏆), with each seat's stack updating live as
+  you move through steps.
+- **Playback controls:** ⏮ jump to start, ◀/▶ single-step, ⏭ jump to end,
+  ▶️/⏸ auto-play (1.2s per step, stops automatically at the last step), and
+  a step counter (e.g. "4 / 9"). Auto-play correctly restarts from the
+  beginning if replayed after reaching the end.
+- Isolated from live game state entirely — everything works off a
+  snapshot object built once when the replayer opens, never touches `S`
+  (the live table state) at any point.
+
 ## 2026-07-14 (cont'd 39) — Bug #3 in the same chain: state wasn't reset before autoOpenNextCard
 **Files: game.js**
 

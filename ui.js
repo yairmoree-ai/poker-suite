@@ -136,6 +136,227 @@ function resetTableBlindLevels(){
 // ═══════════════════════════════════════════════════════
 // HAND LIST
 // ═══════════════════════════════════════════════════════
+// ===== Replayer ליד: צעד-אחר-צעד עם שליטה בהפעלה =====
+// בונה רשימת "צעדים" כרונולוגית (הימורי חובה → כל פעולה → כל קלף בורד נחשף)
+// מהנתונים הגולמיים של היד, ואז מרנדר "פריים" (מצב שולחן) לכל צעד — בלי לגעת
+// ב-S החי בשום שלב, הכל מבודד לתוך אובייקט snapshot נפרד.
+function _handToSteps(h){
+  const seats = (h.seats||[]).filter(s=>s.playerName);
+  if(!seats.length) return [];
+
+  // שחזור הערימה ההתחלתית: seat.stack השמור הוא הערימה *אחרי* כל ההימורים של
+  // היד הזו (persist קורה תוך כדי משחק, לא רק בסוף) — אז מוסיפים בחזרה את סכום
+  // כל הפעולות כדי לקבל את נקודת ההתחלה האמיתית, ובונים קדימה משם. ככה זה נכון
+  // בלי תלות בשאלה אם הערימה השמורה כן/לא כוללת כבר את חלוקת הזכייה.
+  const startStack = {};
+  seats.forEach(s=>{
+    const totalActed = (s.actions||[]).reduce((sum,a)=>sum+(parseFloat(a.amount)||0), 0);
+    startStack[s.playerName] = (s.stack||0) + totalActed;
+  });
+
+  const steps = [];
+  const curStack = {...startStack};
+  let pot = 0;
+  steps.push({boardCount:0, pot:0, stacks:{...curStack}, text:'תחילת היד', actorSeat:null});
+
+  const board = (h.board||[]).filter(Boolean);
+  const streetOrder = ['פרה-פלופ','פלופ','טורן','ריבר'];
+  const streetLabel = {'פרה-פלופ':'פרה-פלופ','פלופ':'FLOP','טורן':'TURN','ריבר':'RIVER'};
+  const streetBoardCount = {'פרה-פלופ':0,'פלופ':3,'טורן':4,'ריבר':5};
+
+  streetOrder.forEach(street=>{
+    let acts = [];
+    seats.forEach(s=>{
+      (s.actions||[]).forEach(a=>{ if(a.street===street) acts.push({...a, playerName:s.playerName, seatIdx:s.seatIdx}); });
+    });
+    acts.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    if(!acts.length) return;
+
+    if(street!=='פרה-פלופ'){
+      const need = streetBoardCount[street];
+      if(board.length<need) return;
+      steps.push({boardCount:need, pot, stacks:{...curStack}, text:`*** ${streetLabel[street]} ***`, actorSeat:null});
+    }
+
+    acts.forEach(a=>{
+      const amt = parseFloat(a.amount)||0;
+      let text = '';
+      switch(a.type){
+        case 'SB': text = `${a.playerName} מניח SB ${amt.toLocaleString()}`; break;
+        case 'BB': text = `${a.playerName} מניח BB ${amt.toLocaleString()}`; break;
+        case 'Fold': text = `${a.playerName}: Fold`; break;
+        case 'Check': text = `${a.playerName}: Check`; break;
+        case 'Call': text = `${a.playerName}: Call ${amt.toLocaleString()}`; break;
+        case 'All-in': text = `${a.playerName}: All-in ${amt.toLocaleString()}`; break;
+        default: text = `${a.playerName}: ${a.displayType||a.type} ${amt.toLocaleString()}`;
+      }
+      if(a.type!=='Fold' && a.type!=='Check'){
+        curStack[a.playerName] = Math.max(0,(curStack[a.playerName]||0)-amt);
+        pot += amt;
+      }
+      steps.push({boardCount:streetBoardCount[street], pot, stacks:{...curStack}, text, actorSeat:a.seatIdx});
+    });
+  });
+
+  if((h.winners||[]).length){
+    const names = h.winners.map(w=>w.name||w.playerName).join(' + ');
+    const finalStacks = {...curStack};
+    h.winners.forEach(w=>{
+      const wName = w.name||w.playerName;
+      if(wName && finalStacks[wName]!==undefined){
+        finalStacks[wName] += (w.amount!=null ? w.amount : (h.finalPot||pot));
+      }
+    });
+    steps.push({boardCount:board.length, pot:h.finalPot||pot, stacks:finalStacks, text:`🏆 ${names} זוכה ב-${(h.finalPot||pot).toLocaleString()}`, actorSeat:null, isWin:true});
+  }
+  return steps;
+}
+
+let _replayerHand = null;
+let _replayerSteps = [];
+let _replayerIdx = 0;
+let _replayerTimer = null;
+
+function showHandReplayer(hid){
+  const h = (S.handLog||[]).find(x=>x.id===hid);
+  if(!h) return;
+  _replayerHand = h;
+  _replayerSteps = _handToSteps(h);
+  _replayerIdx = 0;
+  if(_replayerTimer){ clearInterval(_replayerTimer); _replayerTimer=null; }
+  document.getElementById('replayer-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'replayer-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.94);overflow-y:auto;direction:rtl';
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:480px;margin:0 auto;padding:12px';
+  box.id = 'replayer-box';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
+  hdr.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c8a96e">▶️ Replayer — ${h.date}</div>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = ()=>{ if(_replayerTimer) clearInterval(_replayerTimer); overlay.remove(); };
+  hdr.appendChild(closeBtn);
+  box.appendChild(hdr);
+
+  const frameDiv = document.createElement('div');
+  frameDiv.id = 'replayer-frame';
+  box.appendChild(frameDiv);
+
+  const controls = document.createElement('div');
+  controls.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px';
+  controls.innerHTML = `
+    <button onclick="_replayerGo(0)" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">⏮</button>
+    <button onclick="_replayerStep(-1)" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">◀</button>
+    <button id="replayer-play-btn" onclick="_replayerTogglePlay()" style="background:rgba(200,169,110,0.15);border:1px solid rgba(200,169,110,0.4);color:#c8a96e;font-size:16px;border-radius:8px;padding:8px 16px;cursor:pointer;min-width:52px">▶️</button>
+    <button onclick="_replayerStep(1)" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">▶</button>
+    <button onclick="_replayerGo(${_replayerSteps.length-1})" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">⏭</button>
+  `;
+  box.appendChild(controls);
+
+  const stepLbl = document.createElement('div');
+  stepLbl.id = 'replayer-step-lbl';
+  stepLbl.style.cssText = 'text-align:center;font-size:10px;color:#5a5870;margin-top:6px';
+  box.appendChild(stepLbl);
+
+  _renderReplayerFrame();
+}
+
+function _replayerStep(delta){
+  _replayerGo(_replayerIdx + delta);
+}
+function _replayerGo(idx){
+  _replayerIdx = Math.max(0, Math.min(_replayerSteps.length-1, idx));
+  _renderReplayerFrame();
+  if(_replayerIdx===_replayerSteps.length-1 && _replayerTimer){ clearInterval(_replayerTimer); _replayerTimer=null; _updatePlayBtn(); }
+}
+function _replayerTogglePlay(){
+  if(_replayerTimer){ clearInterval(_replayerTimer); _replayerTimer=null; _updatePlayBtn(); return; }
+  if(_replayerIdx>=_replayerSteps.length-1) _replayerIdx=0;
+  _replayerTimer = setInterval(()=>{
+    _replayerIdx++;
+    if(_replayerIdx>=_replayerSteps.length-1){ _replayerIdx=_replayerSteps.length-1; clearInterval(_replayerTimer); _replayerTimer=null; _updatePlayBtn(); }
+    _renderReplayerFrame();
+  }, 1200);
+  _updatePlayBtn();
+}
+function _updatePlayBtn(){
+  const btn = document.getElementById('replayer-play-btn');
+  if(btn) btn.textContent = _replayerTimer ? '⏸' : '▶️';
+}
+
+function _renderReplayerFrame(){
+  const h = _replayerHand;
+  const step = _replayerSteps[_replayerIdx];
+  if(!h || !step) return;
+  _updatePlayBtn();
+  const lbl = document.getElementById('replayer-step-lbl');
+  if(lbl) lbl.textContent = `${_replayerIdx+1} / ${_replayerSteps.length}`;
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:relative;width:100%;padding-bottom:75%;margin-bottom:6px';
+  const felt = document.createElement('div');
+  felt.style.cssText = 'position:absolute;inset:8% 4%;border-radius:50%;background:radial-gradient(ellipse at 40% 35%,#1a4a2a 0%,#0d2e18 60%,#091f10 100%);border:4px solid #2a1a08;box-shadow:inset 0 0 20px rgba(0,0,0,0.6),0 0 0 2px #1a0f05';
+  wrap.appendChild(felt);
+
+  const board = (h.board||[]).filter(Boolean).slice(0, step.boardCount);
+  const center = document.createElement('div');
+  center.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px';
+  const brow = document.createElement('div');
+  brow.style.cssText = 'display:flex;gap:5px;direction:ltr;min-height:48px';
+  board.forEach(c=>{
+    const isRed = c.suit==='♥'||c.suit==='♦';
+    const cd = document.createElement('div');
+    cd.style.cssText = 'width:34px;height:48px;border-radius:5px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,0.6)';
+    cd.innerHTML = `<span style="font-size:20px;color:${isRed?'#d42020':'#111'}">${c.rank}</span><span style="font-size:15px;color:${isRed?'#e05555':'#111'}">${c.suit}</span>`;
+    brow.appendChild(cd);
+  });
+  center.appendChild(brow);
+  const potLbl = document.createElement('div');
+  potLbl.style.cssText = 'font-size:11px;font-weight:800;color:#c8a96e;background:rgba(0,0,0,0.55);padding:3px 9px;border-radius:7px';
+  potLbl.textContent = 'Pot: '+step.pot.toLocaleString();
+  center.appendChild(potLbl);
+  wrap.appendChild(center);
+
+  const seats = (h.seats||[]).filter(s=>s.playerName);
+  const cx=50, cy=50, rx=48, ry=46;
+  seats.forEach((s,si)=>{
+    const angle = (2*Math.PI*si/seats.length) - Math.PI/2;
+    const px = cx + rx*Math.cos(angle);
+    const py = cy + ry*Math.sin(angle);
+    const isActing = step.actorSeat===s.seatIdx;
+    const isWinner = step.isWin && (h.winners||[]).some(w=>(w.seatIdx===s.seatIdx)||(w.name===s.playerName)||(w.playerName===s.playerName));
+
+    const seatEl = document.createElement('div');
+    seatEl.style.cssText = `position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;left:${px}%;top:${py}%;z-index:5`;
+
+    const box2 = document.createElement('div');
+    box2.style.cssText = `background:#121824;border:1.5px solid ${isWinner?'#5fc47a':isActing?'#c8a96e':'rgba(255,255,255,0.12)'};border-radius:8px;padding:4px 7px;text-align:center;min-width:58px;${isWinner?'box-shadow:0 0 8px rgba(95,196,122,0.5)':isActing?'box-shadow:0 0 8px rgba(200,169,110,0.5)':''}`;
+    const stackVal = step.stacks[s.playerName]!==undefined ? step.stacks[s.playerName] : (s.stack||0);
+    box2.innerHTML = `<div style="font-size:9px;font-weight:800;color:${s.pos==='BTN'?'#c8a96e':s.pos==='SB'?'#8b7cb8':s.pos==='BB'?'#e07b6a':'#6a8090'}">${s.pos||''}</div>
+      <div style="font-size:10px;font-weight:700;color:#e2ddd4;white-space:nowrap">${(s.playerName||'').slice(0,9)}</div>
+      <div style="font-size:9px;color:#8a8799">${stackVal.toLocaleString()}${isWinner?' 🏆':''}</div>`;
+    seatEl.appendChild(box2);
+    wrap.appendChild(seatEl);
+  });
+
+  const frame = document.getElementById('replayer-frame');
+  if(frame){
+    frame.innerHTML = '';
+    frame.appendChild(wrap);
+    const actionBox = document.createElement('div');
+    actionBox.style.cssText = 'text-align:center;font-size:13px;font-weight:700;color:'+(step.isWin?'#5fc47a':'#e2ddd4')+';background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-top:4px';
+    actionBox.textContent = step.text;
+    frame.appendChild(actionBox);
+  }
+}
+
 function showHandDetail(hid){
   const h = (S.handLog||[]).find(x=>x.id===hid);
   if(!h) return;
@@ -172,8 +393,16 @@ function showHandDetail(hid){
   shareBtn.textContent = '📤 שתף יד';
   shareBtn.onclick = ()=>shareHandImage(h, box);
 
+  // Replay button
+  const replayBtn = document.createElement('button');
+  replayBtn.className = 'share-hide';
+  replayBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+  replayBtn.textContent = '▶️ Replay';
+  replayBtn.onclick = ()=>showHandReplayer(h.id);
+
   closeBtn.className = 'share-hide';
   hdr.appendChild(analyzeBtn);
+  hdr.appendChild(replayBtn);
   hdr.appendChild(shareBtn);
   hdr.appendChild(closeBtn);
   box.appendChild(hdr);
