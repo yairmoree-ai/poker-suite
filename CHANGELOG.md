@@ -1,5 +1,18 @@
 ---
 
+## 2026-07-14 (cont'd 50) — Delay window.close() so the message is actually visible
+**Files: ui.js**
+
+- Turns out `window.close()` *does* work in the user's actual browser
+  context (my assumption that it's reliably blocked for non-script-opened
+  tabs wasn't universally true) — but that meant the tab was closing
+  almost instantly, before there was any chance to see the "thank you"
+  message. Reordered: show the message first, *then* delay `window.close()`
+  by 2 seconds. Where close does work, the message is now visible before
+  the tab disappears; where it's still blocked (the more common case per
+  what I found earlier), the message just stays up permanently as the
+  dead-end screen — same safe fallback as before, no regression either way.
+
 ## 2026-07-14 (cont'd 49) — Dead-end screen text
 **Files: ui.js**
 
