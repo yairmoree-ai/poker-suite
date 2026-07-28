@@ -410,7 +410,19 @@ function showHandReplayer(hid){
   const closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
-  closeBtn.onclick = ()=>{ if(_replayerTimer) clearInterval(_replayerTimer); overlay.remove(); };
+  closeBtn.onclick = ()=>{
+    if(_replayerTimer) clearInterval(_replayerTimer);
+    if(window._isSharedReplayView){
+      // סוגר לגמרי, לא רק את ה-overlay — מי שפתח לינק ששותף אליו לא אמור
+      // "לנחות" אחרי זה על השולחן החי המלא עם גישה להגדרות ופעולות. window.close()
+      // כמעט תמיד ייכשל בשקט על טאב שלא נפתח דרך סקריפט (הגבלת דפדפן), אז זה
+      // רק ניסיון-בונוס — המסך הריק/סגור למטה הוא ההגנה האמיתית, לא תלוי בזה.
+      window.close();
+      document.body.innerHTML = '<div style="position:fixed;inset:0;background:#0a0d14;display:flex;align-items:center;justify-content:center;color:#8a8799;font-size:14px;direction:rtl">✓ אפשר לסגור את הדף</div>';
+      return;
+    }
+    overlay.remove();
+  };
   hdrTop.appendChild(closeBtn);
   box.appendChild(hdrTop);
 

@@ -336,7 +336,10 @@ async function checkReplayParam(){
     currentUser = {name:'צופה', role:'viewer'};
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='flex';
-    ['tab-table','tab-hands','tab-players','tab-tournaments'].forEach(id=>{
+    // מסתירים לא רק את שורת הטאבים העליונה אלא גם את השולחן החי עצמו (מושבים,
+    // DEAL, וכו') ואת כפתור ההגדרות — לצופה שנכנס דרך לינק ששותף אליו אין שום
+    // סיבה לגשת לאף אחד מאלה, גם לא כ"מסך שנשאר ברקע" אחרי שסוגרים את ה-replayer.
+    ['tab-table','tab-hands','tab-players','tab-tournaments','table-view','btn-settings'].forEach(id=>{
       const el = document.getElementById(id);
       if(el) el.style.display='none';
     });

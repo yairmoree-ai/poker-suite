@@ -1,5 +1,34 @@
 ---
 
+## 2026-07-14 (cont'd 48) — Bug: closing a shared replay revealed the live app shell
+**Files: ui.js, auth.js**
+
+- User caught a real problem: closing the replayer (✕) after opening it via
+  a shared link dropped them onto the full live game table underneath —
+  empty seats, DEAL button, and a working settings gear — not a dead end.
+  Root cause: the shared-link bootstrap only ever hid the four top
+  navigation tabs; the actual table view (`#table-view`) and settings
+  button (`#btn-settings`) were still fully rendered and interactive
+  underneath the replayer overlay the whole time. Closing the overlay just
+  revealed what had been sitting there all along.
+- Two-layer fix:
+  1. **`checkReplayParam` (auth.js):** now also hides `#table-view` and
+     `#btn-settings` at bootstrap, not just the four tab buttons — the
+     underlying shell is meaningfully more inert now even before the
+     replayer's own close button does anything.
+  2. **The close button itself (ui.js):** when `_isSharedReplayView` is
+     set, ✕ no longer just removes the replayer overlay (which would still
+     reveal whatever's underneath). It replaces the entire page content
+     with a static, non-interactive "you can close this page" message, and
+     attempts `window.close()` as a bonus. Deliberately didn't rely on
+     `window.close()` alone — browsers reliably block it for tabs that
+     weren't opened via script (which is exactly this case: a link opened
+     directly, e.g. from WhatsApp), so it's a best-effort extra, not the
+     actual protection. The inert dead-end screen is what actually matters,
+     since it doesn't depend on browser cooperation.
+  Normal (non-shared) replayer usage is unaffected — the close behavior
+  only changes when `_isSharedReplayView` is set.
+
 ## 2026-07-14 (cont'd 47) — Hide share buttons when viewing via a shared link
 **Files: ui.js, auth.js**
 
