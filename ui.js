@@ -448,6 +448,12 @@ function showHandReplayer(hid){
 
   const frameDiv = document.createElement('div');
   frameDiv.id = 'replayer-frame';
+  // padding-top (לא margin-top על wrap!) — margin על ילד ראשון של קונטיינר בלי
+  // padding/border משלו יכול "להתמוטט" (CSS margin collapsing) לתוך גבול ההורה
+  // במקום להרחיב אותו בפועל, מה שהיה בדיוק הסיבה שהניסיון הקודם (margin-top על
+  // wrap) לא פתר את זה לגמרי. padding לעולם לא מתמוטט ככה — זה מבטיח שהמרחב
+  // באמת בתוך התיבה ש-html2canvas תופס.
+  frameDiv.style.cssText = 'padding-top:40px';
   box.appendChild(frameDiv);
 
   const controls = document.createElement('div');
@@ -501,11 +507,7 @@ function _renderReplayerFrame(){
   if(lbl) lbl.textContent = `${_replayerIdx+1} / ${_replayerSteps.length}`;
 
   const wrap = document.createElement('div');
-  // margin-top נותן מרחב אמיתי (לא רק ויזואלי) לקלפי היד שמוצגים *מעל* תיבת
-  // המושב העליון ביותר (BTN בדרך כלל) — בלי זה הם נחתכים בצילום ה-GIF/תמונה,
-  // כי html2canvas תופס לפי גבולות התיבה בפועל, לא לפי מה שנראה טוב על המסך
-  // בזכות overflow:visible גרידא.
-  wrap.style.cssText = 'position:relative;width:100%;padding-bottom:75%;margin-top:26px;margin-bottom:6px';
+  wrap.style.cssText = 'position:relative;width:100%;padding-bottom:75%;margin-bottom:6px';
   const felt = document.createElement('div');
   felt.style.cssText = 'position:absolute;inset:8% 4%;border-radius:50%;background:radial-gradient(ellipse at 40% 35%,#1a4a2a 0%,#0d2e18 60%,#091f10 100%);border:4px solid #2a1a08;box-shadow:inset 0 0 20px rgba(0,0,0,0.6),0 0 0 2px #1a0f05';
   wrap.appendChild(felt);

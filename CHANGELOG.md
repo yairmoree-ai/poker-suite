@@ -1,5 +1,30 @@
 ---
 
+## 2026-07-14 (cont'd 52) — Cards still clipped: the previous fix used the wrong CSS mechanism
+**Files: ui.js**
+
+- User reported the clipping was better but still present after the last
+  round's fix. Re-examined the actual mechanism rather than just tuning
+  the same numbers further, and found the real problem: the previous fix
+  added `margin-top` to `wrap`, but `wrap`'s parent (`frameDiv`) has no
+  padding, border, or established block-formatting-context of its own —
+  which means `wrap`'s `margin-top`, as its first child, is a textbook case
+  for **CSS margin collapsing**: the margin can collapse *through*
+  `frameDiv` rather than genuinely expanding `frameDiv`'s own rendered
+  box. Since `html2canvas` captures based on the target element's actual
+  bounding box, that "buffer space" likely never actually counted as part
+  of what got captured — explaining why the fix helped (the `ry` reduction
+  did do something) without fully solving it.
+- Corrected by moving the buffer from `wrap`'s `margin-top` to `frameDiv`'s
+  own `padding-top` (40px) instead. Padding never collapses the way margin
+  does — this guarantees the space is genuinely inside `frameDiv`'s own box,
+  immune to the collapsing behavior that undermined the previous attempt.
+  Removed the now-incorrect margin-top and its stale explanatory comment
+  from `wrap` accordingly.
+- Kept the `ry` reduction (46→40) from last round in place too, as
+  additional headroom on top of the now-correctly-implemented padding
+  buffer, rather than reverting it.
+
 ## 2026-07-14 (cont'd 51) — 🎉 Full share-link + GIF chain confirmed working end-to-end; card-clipping fix
 **Files: ui.js**
 
