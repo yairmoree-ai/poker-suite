@@ -1,5 +1,36 @@
 ---
 
+## 2026-07-14 (cont'd 51) — 🎉 Full share-link + GIF chain confirmed working end-to-end; card-clipping fix
+**Files: ui.js**
+
+- User's screenshot confirmed the *entire* chain built over the last several
+  rounds actually works in real use: generate a link → open it fresh
+  (WhatsApp in-app browser) → correct interactive replayer with no login →
+  close it → message shows → tab actually closes. Every piece — the
+  Firebase path fix, the z-index fix, the alert() diagnostics, the dead-end
+  screen, the delayed close — held together on a real device. Worth noting
+  explicitly since so much of this couldn't be verified from the sandbox
+  directly; genuinely good to have it confirmed.
+- **New bug surfaced by the GIF specifically:** the topmost seat's (BTN,
+  positioned right at the ellipse's upper edge) hole cards — rendered
+  *above* the seat's name/stack box — were getting cut off at the top of
+  the captured image. Root cause: `html2canvas` captures based on the
+  target element's actual bounding box, not "whatever's visually present
+  thanks to CSS `overflow:visible`" — the hole cards' overflow extended
+  above `wrap`'s own top edge into space that wasn't really part of the
+  captured box, even though it looked fine live on screen (where ancestor
+  overflow rules are more forgiving).
+- Fixed two ways together: reduced the ellipse's vertical radius
+  (`ry`: 46→40, `rx`: 48→46 to keep proportions reasonable) so seats sit
+  further from the top/bottom edges in the first place, and added a real
+  `margin-top:26px` to the `wrap` container — genuine box-model space
+  (not just visual overflow) that expands the actual parent box
+  `html2canvas` captures, giving deliberately generous headroom above a
+  rough estimate of what the topmost seat's card overflow actually needs.
+- This only affects the replayer's table (`_renderReplayerFrame`) — the
+  original hand-detail table (`showHandDetail`) doesn't show hole cards
+  above seats, so it was never exposed to this specific issue.
+
 ## 2026-07-14 (cont'd 50) — Delay window.close() so the message is actually visible
 **Files: ui.js**
 

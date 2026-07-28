@@ -501,7 +501,11 @@ function _renderReplayerFrame(){
   if(lbl) lbl.textContent = `${_replayerIdx+1} / ${_replayerSteps.length}`;
 
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:relative;width:100%;padding-bottom:75%;margin-bottom:6px';
+  // margin-top נותן מרחב אמיתי (לא רק ויזואלי) לקלפי היד שמוצגים *מעל* תיבת
+  // המושב העליון ביותר (BTN בדרך כלל) — בלי זה הם נחתכים בצילום ה-GIF/תמונה,
+  // כי html2canvas תופס לפי גבולות התיבה בפועל, לא לפי מה שנראה טוב על המסך
+  // בזכות overflow:visible גרידא.
+  wrap.style.cssText = 'position:relative;width:100%;padding-bottom:75%;margin-top:26px;margin-bottom:6px';
   const felt = document.createElement('div');
   felt.style.cssText = 'position:absolute;inset:8% 4%;border-radius:50%;background:radial-gradient(ellipse at 40% 35%,#1a4a2a 0%,#0d2e18 60%,#091f10 100%);border:4px solid #2a1a08;box-shadow:inset 0 0 20px rgba(0,0,0,0.6),0 0 0 2px #1a0f05';
   wrap.appendChild(felt);
@@ -526,7 +530,7 @@ function _renderReplayerFrame(){
   wrap.appendChild(center);
 
   const seats = _sortSeatsByPos((h.seats||[]).filter(s=>s.playerName));
-  const cx=50, cy=50, rx=48, ry=46;
+  const cx=50, cy=50, rx=46, ry=40; // ry הוקטן מ-46 ל-40 — יותר מרווח מהקצה העליון/תחתון, כדי שהקלפים לא ייחתכו
   seats.forEach((s,si)=>{
     const angle = (2*Math.PI*si/seats.length) - Math.PI/2;
     const px = cx + rx*Math.cos(angle);
