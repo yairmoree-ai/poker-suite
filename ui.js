@@ -212,6 +212,7 @@ function _handToSteps(h){
       switch(a.type){
         case 'SB': text = `${a.playerName} מניח SB ${amt.toLocaleString()}`; break;
         case 'BB': text = `${a.playerName} מניח BB ${amt.toLocaleString()}`; break;
+        case 'Ante': text = `${a.playerName} מניח Ante ${amt.toLocaleString()}`; break;
         case 'Fold': text = `${a.playerName}: Fold`; break;
         case 'Check': text = `${a.playerName}: Check`; break;
         case 'Call': text = `${a.playerName}: Call ${amt.toLocaleString()}`; break;
@@ -1637,6 +1638,7 @@ function _handToPSFormat(hand, handNumber){
     (s.actions||[]).forEach(a=>{
       if(a.type==='SB') lines.push(`${s.playerName}: posts small blind ${a.amount||0}`);
       if(a.type==='BB') lines.push(`${s.playerName}: posts big blind ${a.amount||0}`);
+      if(a.type==='Ante') lines.push(`${s.playerName}: posts the ante ${a.amount||0}`);
     });
   });
 

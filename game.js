@@ -1432,6 +1432,16 @@ function postBlinds(btnSeatIdx){
     const seat = S.seats.find(s=>s.seatIdx===bb.seatIdx);
     if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.bb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'BB',amount:String(b.bb),raiseRound:0,idx:1}); S.lastBet=b.bb; }
   }
+  // Ante: עד עכשיו הוגדר ותויג רק לתצוגה (בלייבל של הבליינד) — לא נוכה בפועל
+  // משום שחקן ולא נכנס לקופה בכלל. מיישם לפי המוסכמה המודרנית והנפוצה כיום
+  // ברוב הטורנירים החיים (WSOP/WPT ודומיהם עברו לזה כבר לפני כמה שנים):
+  // "BB ante" — שחקן ה-BB בלבד משלם את סכום ה-ante *בנוסף* לבליינד שלו, לא כל
+  // שחקן בנפרד. אם בפועל התכוונת למוסכמה המסורתית (ante מכל שחקן על השולחן) —
+  // תגיד ואשנה את זה, זו הנחה ולא משהו שהוגדר לי במפורש.
+  if(b.ante>0 && bb && bb.playerId){
+    const seat = S.seats.find(s=>s.seatIdx===bb.seatIdx);
+    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.ante); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'Ante',amount:String(b.ante),raiseRound:0,idx:2}); }
+  }
   S.btnLocked = true;
   S.bettingClosed = false;
   S.lastRaiser = null;

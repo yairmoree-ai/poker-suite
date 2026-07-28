@@ -1,5 +1,52 @@
 ---
 
+## 2026-07-14 (cont'd 55) — Missing feature found: ante was never actually collected
+**Files: game.js, ui.js**
+
+- User configured blinds with an ante ("800/1.6K ante 1.6K" shown correctly
+  on the blinds button) but the pot only ever reflected SB+BB — the ante
+  itself was never taken from anyone.
+- **Confirmed by an exhaustive search, not a subtle bug — a genuine gap:**
+  `ante` was referenced *only* for display purposes (the blinds-button
+  label, the hand-save label) across the entire codebase. Nothing anywhere
+  ever deducted it from a player's stack or added it to the pot.
+- **Implemented using the modern "BB ante" convention** (single ante
+  posted by the BB player alone, on top of their blind — the standard in
+  virtually all major live tournaments today; WSOP/WPT and similar moved
+  away from traditional per-player antes years ago). Flagged this
+  explicitly as an assumption in the code comment, not something
+  confirmed — the app's config UI doesn't currently distinguish ante
+  styles, so if traditional-every-player ante was actually intended,
+  that's a different (bigger) change and worth saying so.
+- Implementation: `postBlinds()` (`game.js`) now deducts `b.ante` from the
+  BB player's stack immediately after their blind post, records it as a
+  distinct `{type:'Ante', amount, idx:2}` action. Verified this correctly
+  flows through the two generic functions that already sum all recorded
+  actions without needing type-specific handling — `calcPot()` and
+  `getStreetInvested()` — no separate wiring needed for pot totals or
+  call-amount math to pick it up correctly.
+- Added matching display support: the replayer now shows "X מניח Ante
+  1,600" as its own line (previously would've fallen through to a generic
+  fallback format), and the PokerStars exporter emits the real standard
+  line PokerStars itself uses (`PlayerName: posts the ante 1600`).
+  Confirmed the ante is correctly excluded from the exporter's `highBet`/
+  raise-sizing calculation — an ante isn't part of the amount a raise
+  needs to exceed, only the blind is, so this exclusion is intentional
+  and correct, not an oversight.
+- Verified end-to-end via simulation with a real `postBlinds()` call
+  (sb:800, bb:1600, ante:1600): SB stack correctly down 800, BB stack
+  correctly down 3200 (blind + ante together), BB's action list shows both
+  as distinct entries, and `calcPot()` correctly totals 4,000 — matches
+  hand-calculated expectations exactly.
+- **Separately, on the "no turn documented" observation:** that's most
+  likely not a new bug — if a specific saved hand's own `board` array only
+  has 3 cards recorded (because the hand was documented that way, or ended
+  on the flop), the fix from last round won't invent a 4th card that was
+  never entered; it'll correctly just not show a turn step. Distinct from
+  the earlier bug (which was about streets that *had* board data getting
+  skipped anyway) — didn't want to conflate the two without more specifics
+  on this hand in particular.
+
 ## 2026-07-14 (cont'd 54) — Bug: entire streets with zero actions vanished, including their board card(s)
 **Files: ui.js**
 
