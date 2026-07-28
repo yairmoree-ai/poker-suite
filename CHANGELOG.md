@@ -1,5 +1,39 @@
 ---
 
+## 2026-07-14 (cont'd 53) — Bug: SB sometimes displayed after BB (replayer + PokerStars export)
+**Files: game.js, ui.js**
+
+- User reported action ordering glitches in the replayer and in shared
+  GIFs/links — specifically BB sometimes showing before SB.
+- **Root cause, confirmed directly:** every regular action (Fold/Check/
+  Call/Raise/All-in) gets a global sequence number (`idx`) when recorded,
+  used by both the replayer and the PokerStars exporter to sort actions
+  within a street — but the SB/BB blind-posting code never set `idx` at
+  all. Both sort calls (`(a.idx||0)-(b.idx||0)`) treat missing `idx` as 0,
+  so SB and BB tied, and their displayed order fell back to whatever order
+  they happened to appear in the raw `seats` array — which follows
+  physical seat index, not turn order, so it could go either way depending
+  on who sat where.
+- **Fixed at the source (`game.js`):** SB now gets `idx:0`, BB gets
+  `idx:1` when posted, matching their real chronological order — fixes it
+  for every hand recorded from now on.
+- **Backward-compatible fix for already-saved hands (`ui.js`):** added a
+  shared `_actionSortKey()` comparator, used by both the replayer's and the
+  exporter's sort calls — falls back to explicit SB-before-BB ordering
+  whenever `idx` is missing on either, rather than silently treating them
+  as tied. This matters because hands already saved before today's fix
+  will never retroactively gain an `idx` field, so the display-side fix is
+  what actually matters for anything recorded up to now.
+- Verified directly: fed in old-format data (no `idx` on either blind, and
+  BB physically listed *first* in the seats array — the worst case for
+  triggering the bug) — SB now correctly sorts before BB regardless.
+- **Second bug (river check-then-call sequence) not yet fixed** — asked
+  the user for a screenshot or more specific detail before attempting a
+  fix, since I don't yet have concrete evidence of what's actually wrong
+  there and don't want to guess at a mechanism without seeing it directly,
+  especially after a couple of rounds already on replayer-related bugs
+  this session.
+
 ## 2026-07-14 (cont'd 52) — Cards still clipped: the previous fix used the wrong CSS mechanism
 **Files: ui.js**
 

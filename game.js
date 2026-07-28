@@ -1426,11 +1426,11 @@ function postBlinds(btnSeatIdx){
   const bb = swp.find(s=>s.pos==='BB');
   if(sb && sb.playerId){
     const seat = S.seats.find(s=>s.seatIdx===sb.seatIdx);
-    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.sb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'SB',amount:String(b.sb),raiseRound:0}); }
+    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.sb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'SB',amount:String(b.sb),raiseRound:0,idx:0}); }
   }
   if(bb && bb.playerId){
     const seat = S.seats.find(s=>s.seatIdx===bb.seatIdx);
-    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.bb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'BB',amount:String(b.bb),raiseRound:0}); S.lastBet=b.bb; }
+    if(seat){ seat.stack=Math.max(0,(seat.stack||0)-b.bb); if(!seat.actions)seat.actions=[]; seat.actions.push({street:'פרה-פלופ',type:'BB',amount:String(b.bb),raiseRound:0,idx:1}); S.lastBet=b.bb; }
   }
   S.btnLocked = true;
   S.bettingClosed = false;

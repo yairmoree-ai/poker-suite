@@ -141,6 +141,17 @@ function resetTableBlindLevels(){
 // מושב פיזי כל שחקן תפס), לא בסדר התורות ההגיוני — בלי המיון הזה, השולחן
 // המצויר נראה "מפוזר" ולא עוקב אחרי סדר העמדות האמיתי (SB→BB→...→CO→BTN).
 const _POS_ORDER = ['BTN','SB','BB','UTG','UTG+1','LJ','MP','MP+1','HJ','CO'];
+
+// מיון פעולות בתוך רחוב: idx (מספר סידורי גלובלי, קיים בכל פעולה חדשה שנרשמת)
+// הוא מקור האמת העיקרי — אבל ידיים ישנות שנשמרו *לפני* התיקון הזה עדיין חסרות
+// idx ל-SB/BB ספציפית (הבאג שגרם ל"BB לפני SB" ברנדום). fallback מפורש: אם
+// אין idx לאף אחת מהשתיים, SB תמיד לפני BB, לא משנה סדר המערך המקורי.
+function _actionSortKey(a){
+  if(typeof a.idx === 'number') return a.idx;
+  if(a.type==='SB') return -2;
+  if(a.type==='BB') return -1;
+  return 0;
+}
 function _sortSeatsByPos(seats){
   return [...seats].sort((a,b)=>{
     const ia = _POS_ORDER.indexOf(a.pos), ib = _POS_ORDER.indexOf(b.pos);
@@ -181,7 +192,7 @@ function _handToSteps(h){
     seats.forEach(s=>{
       (s.actions||[]).forEach(a=>{ if(a.street===street) acts.push({...a, playerName:s.playerName, seatIdx:s.seatIdx}); });
     });
-    acts.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    acts.sort((a,b)=>_actionSortKey(a)-_actionSortKey(b));
     if(!acts.length) return;
 
     // צ'יפים "על השולחן" ליד כל מושב ברחוב הנוכחי — מתאפס בתחילת כל רחוב חדש,
@@ -1645,7 +1656,7 @@ function _handToPSFormat(hand, handNumber){
         if(a.street===street && a.type!=='SB' && a.type!=='BB') acts.push({...a, playerName:s.playerName});
       });
     });
-    acts.sort((a,b)=>(a.idx||0)-(b.idx||0));
+    acts.sort((a,b)=>_actionSortKey(a)-_actionSortKey(b));
     if(!acts.length && street!=='פרה-פלופ') return; // רחוב שלא הגיעו אליו כלל — לא מדפיסים כותרת ריקה
 
     if(street!=='פרה-פלופ'){
