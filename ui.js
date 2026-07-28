@@ -193,16 +193,18 @@ function _handToSteps(h){
       (s.actions||[]).forEach(a=>{ if(a.street===street) acts.push({...a, playerName:s.playerName, seatIdx:s.seatIdx}); });
     });
     acts.sort((a,b)=>_actionSortKey(a)-_actionSortKey(b));
-    if(!acts.length) return;
 
-    // צ'יפים "על השולחן" ליד כל מושב ברחוב הנוכחי — מתאפס בתחילת כל רחוב חדש,
-    // בדיוק כמו בשולחן החי (הפעולה עצמה עדיין נשארת גם כטקסט למטה).
+    // חשוב: קודם מציגים את כותרת/חשיפת הרחוב (אם הבורד תומך בזה), *לפני*
+    // שבודקים אם יש בכלל פעולות רשומות. אם רחוב שלם (למשל טורן, כשכולם צ'קו)
+    // חסר פעולות רשומות מכל סיבה, אסור שזה "יבלע" גם את קלף הרחוב עצמו —
+    // בדיוק זה מה שגרם לדילוג "פלופ→ריבר" שדולג על הטורן לגמרי.
     const streetChips = {};
     if(street!=='פרה-פלופ'){
       const need = streetBoardCount[street];
       if(board.length<need) return;
       steps.push({boardCount:need, pot, stacks:{...curStack}, text:`*** ${streetLabel[street]} ***`, actorSeat:null, streetChips:{}});
     }
+    if(!acts.length) return; // אין פעולות רשומות ברחוב הזה — הכותרת כבר הוצגה למעלה, פשוט אין מה להוסיף אחריה
 
     acts.forEach(a=>{
       const amt = parseFloat(a.amount)||0;
@@ -1657,8 +1659,10 @@ function _handToPSFormat(hand, handNumber){
       });
     });
     acts.sort((a,b)=>_actionSortKey(a)-_actionSortKey(b));
-    if(!acts.length && street!=='פרה-פלופ') return; // רחוב שלא הגיעו אליו כלל — לא מדפיסים כותרת ריקה
 
+    // כמו ב-_handToSteps: מציגים קודם את חשיפת קלפי הרחוב (אם הבורד תומך בזה),
+    // *לפני* שבודקים אם יש פעולות רשומות — אחרת רחוב עם 0 פעולות (למשל כולם
+    // צ'קו והפעולות מכל סיבה לא נרשמו כמצופה) היה "בולע" גם את קלף הרחוב עצמו.
     if(street!=='פרה-פלופ'){
       const need = streetBoardCount[street];
       if(board.length < need) return; // היד הסתיימה לפני שהגיעו לרחוב הזה
@@ -1669,6 +1673,7 @@ function _handToPSFormat(hand, handNumber){
         lines.push(`*** ${streetHeader[street]} *** [${board.slice(0,prevCount).map(_cardToPS).join(' ')}] [${_cardToPS(board[prevCount])}]`);
       }
     }
+    if(!acts.length) return; // אין פעולות רשומות ברחוב הזה — הכותרת כבר הודפסה למעלה
 
     // עוקבים אחרי (א) הסכום המצטבר שכל שחקן כבר הכניס ברחוב הזה (streetTotal,
     // ל-"to Y"), ו-(ב) ההימור הגבוה ביותר על השולחן כרגע ברחוב הזה (highBet,

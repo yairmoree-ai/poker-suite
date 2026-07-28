@@ -1,5 +1,32 @@
 ---
 
+## 2026-07-14 (cont'd 54) — Bug: entire streets with zero actions vanished, including their board card(s)
+**Files: ui.js**
+
+- User's screenshots pinpointed it exactly: step 16/11 showed the flop
+  (3 cards) with "אויל: Check", and the very next step (16/12) jumped
+  straight to "*** RIVER ***" with all 5 cards already showing — the turn
+  card and its own step disappeared entirely.
+- **Root cause:** both `_handToSteps` (replayer) and `_handToPSFormat`
+  (PokerStars exporter) had the same structural bug — `if(!acts.length)
+  return;` sat *before* the code that prints the street's board-reveal
+  header, so a street with zero recorded actions (e.g. a check that for
+  whatever reason isn't in the data, or genuinely nobody needed to act)
+  caused the *entire* street to be skipped, silently taking its board
+  card(s) down with it. This is a distinct bug from the SB/BB ordering fix
+  earlier — same file, same general "trusting recorded actions too much"
+  category, but a different mechanism entirely.
+- Fixed in both functions by reordering: the board-reveal/street-header
+  step now always gets shown whenever the board data actually supports it
+  (`board.length >= need`), completely independent of whether that street
+  has any recorded actions. The "no actions" check now only skips the
+  *action-line* portion, never the board reveal itself.
+- Verified by reconstructing the exact reported scenario: a hand with a
+  flop check but zero recorded turn actions at all. Before the fix this
+  would've silently skipped straight from flop to river; now `*** TURN
+  ***` (with the correct 4th board card) correctly appears as its own step
+  in between.
+
 ## 2026-07-14 (cont'd 53) — Bug: SB sometimes displayed after BB (replayer + PokerStars export)
 **Files: game.js, ui.js**
 
