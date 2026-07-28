@@ -418,7 +418,7 @@ function showHandReplayer(hid){
       // כמעט תמיד ייכשל בשקט על טאב שלא נפתח דרך סקריפט (הגבלת דפדפן), אז זה
       // רק ניסיון-בונוס — המסך הריק/סגור למטה הוא ההגנה האמיתית, לא תלוי בזה.
       window.close();
-      document.body.innerHTML = '<div style="position:fixed;inset:0;background:#0a0d14;display:flex;align-items:center;justify-content:center;color:#8a8799;font-size:14px;direction:rtl">✓ אפשר לסגור את הדף</div>';
+      document.body.innerHTML = '<div style="position:fixed;inset:0;background:#0a0d14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#e2ddd4;font-size:15px;font-weight:700;direction:rtl;text-align:center;padding:20px"><div>היד תועדה באמצעות <span style="color:#c8a96e">Poker-Suite</span></div><div style="color:#8a8799;font-size:13px;font-weight:400">תודה שצפית</div></div>';
       return;
     }
     overlay.remove();

@@ -1,5 +1,14 @@
 ---
 
+## 2026-07-14 (cont'd 49) — Dead-end screen text
+**Files: ui.js**
+
+- Updated the shared-replay close screen's text per user's wording:
+  "היד תועדה באמצעות Poker-Suite" (gold-highlighted brand name) with
+  "תודה שצפית" underneath — gives context for what just happened plus
+  light branding, instead of the plain "you can close this page" text
+  from the previous round.
+
 ## 2026-07-14 (cont'd 48) — Bug: closing a shared replay revealed the live app shell
 **Files: ui.js, auth.js**
 
