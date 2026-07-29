@@ -1,5 +1,38 @@
 ---
 
+## 2026-07-14 (cont'd 57) — Four replayer UX fixes: BTN position, button order, action badges, speed
+**Files: ui.js**
+
+- **BTN moved to the bottom of the table:** changed the seat-angle offset
+  from `-Math.PI/2` (top/12 o'clock) to `+Math.PI/2` (bottom/6 o'clock).
+  The rest of the positions still follow in the same clockwise order
+  (`_sortSeatsByPos`'s canonical BTN→SB→BB→...→CO order) relative to that
+  new starting point — no separate reordering needed, just the starting
+  angle. Verified directly: BTN now lands at the bottom of the ellipse.
+- **Playback button order fixed:** the buttons were written in standard
+  media-player order (⏮ ◀ ▶️ ▶ ⏭) but the page's overall RTL direction was
+  visually reversing them — skip-to-end appeared on the left,
+  skip-to-start on the right. Added `direction:ltr` to the controls
+  container specifically, so the already-correct source order actually
+  renders as intended: back-controls on the left, forward/end on the
+  right.
+- **Action type shown on the table, not just bet amounts:** added an
+  `actionLabel` field to each step (Check/Fold/Call/Raise/All-in/SB/BB/
+  Ante) and a small colored badge attached directly to whichever seat is
+  currently acting — red for Fold, green for Check/Call, gold for
+  everything else (bets/raises/all-in/blinds). Previously the action type
+  only appeared in the text banner below the table; money-moving actions
+  already got a chip badge, but check/fold had no on-table indicator at
+  all.
+- **Speed:** auto-play interval reduced from 2.2s to 1.8s per step, per
+  user's request to try a faster pace.
+- Note: this session's sandbox filesystem reset between conversation
+  turns (expected/known behavior, not an error) — restored the full
+  working directory from `/mnt/user-data/outputs/` (which had been kept
+  continuously in sync all session) before making these changes, verified
+  the most recent prior fixes (`_currentStreetName`, the ante work) were
+  intact before proceeding.
+
 ## 2026-07-14 (cont'd 56) — Audited action-recording; consolidated 5 duplicate copies of street detection
 **Files: game.js**
 

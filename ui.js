@@ -208,15 +208,15 @@ function _handToSteps(h){
 
     acts.forEach(a=>{
       const amt = parseFloat(a.amount)||0;
-      let text = '';
+      let text = '', actionLabel = a.displayType||a.type;
       switch(a.type){
-        case 'SB': text = `${a.playerName} מניח SB ${amt.toLocaleString()}`; break;
-        case 'BB': text = `${a.playerName} מניח BB ${amt.toLocaleString()}`; break;
-        case 'Ante': text = `${a.playerName} מניח Ante ${amt.toLocaleString()}`; break;
-        case 'Fold': text = `${a.playerName}: Fold`; break;
-        case 'Check': text = `${a.playerName}: Check`; break;
-        case 'Call': text = `${a.playerName}: Call ${amt.toLocaleString()}`; break;
-        case 'All-in': text = `${a.playerName}: All-in ${amt.toLocaleString()}`; break;
+        case 'SB': text = `${a.playerName} מניח SB ${amt.toLocaleString()}`; actionLabel='SB'; break;
+        case 'BB': text = `${a.playerName} מניח BB ${amt.toLocaleString()}`; actionLabel='BB'; break;
+        case 'Ante': text = `${a.playerName} מניח Ante ${amt.toLocaleString()}`; actionLabel='Ante'; break;
+        case 'Fold': text = `${a.playerName}: Fold`; actionLabel='Fold'; break;
+        case 'Check': text = `${a.playerName}: Check`; actionLabel='Check'; break;
+        case 'Call': text = `${a.playerName}: Call ${amt.toLocaleString()}`; actionLabel='Call'; break;
+        case 'All-in': text = `${a.playerName}: All-in ${amt.toLocaleString()}`; actionLabel='All-in'; break;
         default: text = `${a.playerName}: ${a.displayType||a.type} ${amt.toLocaleString()}`;
       }
       if(a.type!=='Fold' && a.type!=='Check'){
@@ -224,7 +224,7 @@ function _handToSteps(h){
         pot += amt;
         streetChips[a.playerName] = (streetChips[a.playerName]||0) + amt;
       }
-      steps.push({boardCount:streetBoardCount[street], pot, stacks:{...curStack}, text, actorSeat:a.seatIdx, streetChips:{...streetChips}});
+      steps.push({boardCount:streetBoardCount[street], pot, stacks:{...curStack}, text, actorSeat:a.seatIdx, streetChips:{...streetChips}, actionLabel});
     });
   });
 
@@ -471,7 +471,7 @@ function showHandReplayer(hid){
   box.appendChild(frameDiv);
 
   const controls = document.createElement('div');
-  controls.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px';
+  controls.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;direction:ltr';
   controls.innerHTML = `
     <button onclick="_replayerGo(0)" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">⏮</button>
     <button onclick="_replayerStep(-1)" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">◀</button>
@@ -504,7 +504,7 @@ function _replayerTogglePlay(){
     _replayerIdx++;
     if(_replayerIdx>=_replayerSteps.length-1){ _replayerIdx=_replayerSteps.length-1; clearInterval(_replayerTimer); _replayerTimer=null; _updatePlayBtn(); }
     _renderReplayerFrame();
-  }, 2200);
+  }, 1800);
   _updatePlayBtn();
 }
 function _updatePlayBtn(){
@@ -548,7 +548,7 @@ function _renderReplayerFrame(){
   const seats = _sortSeatsByPos((h.seats||[]).filter(s=>s.playerName));
   const cx=50, cy=50, rx=46, ry=40; // ry הוקטן מ-46 ל-40 — יותר מרווח מהקצה העליון/תחתון, כדי שהקלפים לא ייחתכו
   seats.forEach((s,si)=>{
-    const angle = (2*Math.PI*si/seats.length) - Math.PI/2;
+    const angle = (2*Math.PI*si/seats.length) + Math.PI/2;
     const px = cx + rx*Math.cos(angle);
     const py = cy + ry*Math.sin(angle);
     const isActing = step.actorSeat===s.seatIdx;
@@ -580,6 +580,18 @@ function _renderReplayerFrame(){
       <div style="font-size:10px;font-weight:700;color:#e2ddd4;white-space:nowrap">${(s.playerName||'').slice(0,9)}</div>
       <div style="font-size:9px;color:#8a8799">${stackVal.toLocaleString()}${isWinner?' 🏆':''}</div>`;
     seatEl.appendChild(box2);
+
+    // תג הפעולה עצמה (לא רק הסכום) — Check/Fold/Call/Raise וכו', צמוד למושב
+    // שפועל כרגע, לא רק בבאנר הטקסט למטה. צבע לפי סוג: אדום=Fold, ירוק=
+    // Check/Call (פסיבי), זהב=הכל השאר (הימור/ריי/all-in/בליינד).
+    if(isActing && step.actionLabel){
+      const actColor = step.actionLabel==='Fold' ? '#e07b6a' : (step.actionLabel==='Check'||step.actionLabel==='Call') ? '#5fc47a' : '#c8a96e';
+      const actBadge = document.createElement('div');
+      actBadge.style.cssText = `background:${actColor};color:#0a0d14;font-size:9px;font-weight:900;padding:2px 7px;border-radius:8px;margin-top:2px;white-space:nowrap`;
+      actBadge.textContent = step.actionLabel;
+      seatEl.appendChild(actBadge);
+    }
+
     wrap.appendChild(seatEl);
 
     // צ'יפי ההימור — badge קטן בין המושב למרכז השולחן (לכיוון הקופה), רק כשיש
