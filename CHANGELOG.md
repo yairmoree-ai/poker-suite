@@ -1,5 +1,32 @@
 ---
 
+## 2026-07-14 (cont'd 56) — Audited action-recording; consolidated 5 duplicate copies of street detection
+**Files: game.js**
+
+- User asked me to verify hand recording actually works correctly (their
+  "missing turn" hand was old, possibly from before other fixes) rather
+  than just assume it's fine going forward.
+- **Full audit result: found no active bug.** Every place in the file that
+  determines "what street are we currently in" — including the main
+  action-recording path in `doAction()` — computes it via the identical
+  formula, correctly reading the live board card count. Checked all 5
+  occurrences individually; all consistent, all correct.
+- **But 5 duplicated copies of identical logic is itself a real risk**,
+  exactly the kind of thing that stays fine for a long time and then
+  silently breaks the moment only one of the 5 gets edited without the
+  others — consolidated them into a single shared `_currentStreetName()`
+  helper and replaced every call site with it, rather than leaving 5
+  copies that happened to agree today. One is now the actual source of
+  truth; there's nothing left to drift out of sync.
+- Verified the consolidated helper directly against all four possible
+  street states (0/3/4/5 board cards → פרה-פלופ/פלופ/טורן/ריבר) — all
+  correct.
+- On the specific "missing turn" hand itself: given this audit found no
+  current recording bug, that hand's incomplete data most likely reflects
+  how it was actually entered/saved at the time (possibly before some of
+  today's other fixes), not something ongoing. Nothing further to chase
+  on that specific hand unless new evidence suggests otherwise.
+
 ## 2026-07-14 (cont'd 55) — Missing feature found: ante was never actually collected
 **Files: game.js, ui.js**
 

@@ -196,8 +196,7 @@ function undoLastAction(seatIdx){
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   if(!seat||!seat.actions?.length) return;
 
-  const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const street = _currentStreetName();
   const streetActs = seat.actions.filter(a=>a.street===street);
   if(!streetActs.length) return;
 
@@ -349,8 +348,7 @@ function autoOpenNextCard(){
 
 function getStreetInvested(seatIdx){
   // How much has this player already put in during current street
-  const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const street = _currentStreetName();
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   return (seat?.actions||[])
     .filter(a=>a.street===street)
@@ -586,6 +584,14 @@ function setBTN(seatIdx){
   setTimeout(()=>{ S._suppressAutoCard = false; }, 500);
 }
 
+// שם הרחוב הנוכחי לפי מספר קלפי הבורד הגלויים כרגע — מקור אמת יחיד, במקום
+// אותו ביטוי inline שהיה משוכפל בזהות ב-5 מקומות שונים בקובץ (סיכון ל"דריפט"
+// עתידי: מישהו מתקן עותק אחד ולא את השאר, וזה בדיוק סוג הבאג שקשה לתפוס).
+function _currentStreetName(){
+  const boardCount = S.board.filter(Boolean).length;
+  return boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+}
+
 function getCallAmount(seatIdx){
   // How much more does this player need to call — אבל לעולם לא יותר ממה שיש
   // לו בפועל בערימה. בלי ה-cap הזה, שחקן עם ערימה קטנה שקורא all-in של יריב
@@ -663,8 +669,7 @@ function doAction(seatIdx, type, amount){if(isViewer()){notify('צופה בלב�
   if(type==='Call') amt = Math.min(amt, seat.stack||0);
   if(!seat.actions)seat.actions=[];
   // Determine current street from board
-  const boardCards = S.board.filter(Boolean).length;
-  const street = boardCards===0?'פרה-פלופ':boardCards<=3?'פלופ':boardCards===4?'טורן':'ריבר';
+  const street = _currentStreetName();
   const isRaise = ['Open','Raise','3bet','4bet','All-in'].includes(type);
   if(isRaise) S.raiseRound = (S.raiseRound||0)+1;
   const currentRound = S.raiseRound||0;
@@ -831,8 +836,7 @@ function getActingOrder(street){
 function canPlayerRaise(seatIdx){
   // If last all-in was not a full raise, only players who haven't voluntarily acted can raise
   if(S.lastRaiseWasFull!==false) return true; // full raise or no raise = everyone can raise
-  const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const street = _currentStreetName();
   const seat = S.seats.find(s=>s.seatIdx===seatIdx);
   const volActs = (seat?.actions||[]).filter(a=>a.street===street&&a.type!=='SB'&&a.type!=='BB');
   // If player has already acted voluntarily this street before the all-in, they cannot raise
@@ -840,8 +844,7 @@ function canPlayerRaise(seatIdx){
 }
 
 function getNextActor(afterSeatIdx){
-  const boardCount = S.board.filter(Boolean).length;
-  const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
+  const street = _currentStreetName();
   const order = getActingOrder(street);
   if(!order.length) return null;
 
