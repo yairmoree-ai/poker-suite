@@ -1,5 +1,29 @@
 ---
 
+## 2026-07-14 (cont'd 59) — Bug: couldn't fix a wrong board card mid-hand
+**Files: render.js**
+
+- User reported: if a flop card was entered wrong, there's no way to fix
+  it — clicking it just shows "סיים את סיבוב ההימורים קודם" (finish the
+  betting round first). Confirmed they hadn't accidentally clicked the
+  turn slot instead.
+- **Root cause:** every board slot's click handler — `renderBoard()` — ran
+  the same "betting round must be closed" guard regardless of whether the
+  slot was empty (about to deal a *new* card, where the guard makes sense —
+  don't deal the turn before flop betting finishes) or already had a card
+  (just correcting an existing one, which doesn't skip or advance any
+  betting round at all). The guard was blocking a case it was never meant
+  to cover.
+- Fixed by only running the guard when `!card` (the slot is actually
+  empty). Clicking an already-dealt card to fix a mistake now bypasses the
+  betting-round check entirely, while dealing a genuinely new card early
+  is still correctly blocked.
+- Verified the corrected condition logic directly: with betting actively
+  in progress (`bettingClosed:false`, a live `currentActor`, active
+  non-all-in players), clicking an already-filled flop slot is now
+  allowed, while clicking the empty turn slot in the same state is still
+  correctly blocked.
+
 ## 2026-07-14 (cont'd 58) — New: actual UI for setting blinds manually (the gap was real)
 **Files: ui.js, render.js**
 
