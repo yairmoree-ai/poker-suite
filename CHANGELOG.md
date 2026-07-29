@@ -1,5 +1,48 @@
 ---
 
+## 2026-07-14 (cont'd 58) — New: actual UI for setting blinds manually (the gap was real)
+**Files: ui.js, render.js**
+
+- User's specific question: how do I lock in blinds I add manually? Checked
+  every place `S.customBlinds` — the field `getBlinds()` already treats as
+  the top-priority override — ever gets *set* to a real value anywhere in
+  the app. Answer: nowhere. It only ever gets cleared (`=null`) by the
+  level-table's "activate" button, or restored from synced/loaded data.
+  The data model has supported "just set exact blinds" for a while; there
+  was simply never a UI for it. That's the actual gap, not a discoverability
+  issue with existing UI.
+- Also found a real trap in the level-table editor while investigating:
+  typing new SB/BB/Ante values into a row only updates a local working
+  copy — nothing takes effect until a separate "💾 שמור רמות" click, and a
+  brand-new row needs a *third* click ("▶ הפעל") after that. Three
+  sequential steps with no strong visual cue connecting them.
+- **Fix:** added a real "✏️ קביעה ידנית מיידית" section at the top of the
+  blinds panel — three inputs (SB/BB/Ante) pre-filled with the current
+  values, one button ("✓ קבע בליינדים אלו עכשיו") that sets
+  `S.customBlinds` directly via the new `setManualBlinds()`. One step,
+  immediate effect, no separate save/activate dance. Kept the existing
+  level-table below it for anyone who does want predefined levels — this
+  doesn't replace that, just adds the direct path that was actually
+  missing. Also shows "(נקבע ידנית)" next to the current-blinds display
+  whenever a manual override is active, so it's visually clear which mode
+  is in effect.
+- **Related interaction bug fixed while in there:** `nextBlindLevel()` and
+  `resetBlindTimer()` didn't clear `S.customBlinds` — meaning if a manual
+  override was active and the timer advanced or got reset, the level
+  counter would visibly change while `getBlinds()` kept silently returning
+  the stale manual value (since `customBlinds` always wins). Same class of
+  "two systems, one doesn't know about the other" problem flagged in the
+  previous round — fixed both functions to clear the override when they
+  run, so the timer correctly "takes over" instead of being silently
+  blocked by a leftover manual setting.
+- Verified `setManualBlinds()` end-to-end: typed values (750/1500/1500)
+  correctly become `S.customBlinds`, and `getBlinds()` immediately reflects
+  them.
+- Consolidating the two separate blinds systems entirely is still an open
+  question from last round — this round just fixes the specific "how do I
+  set blinds manually" gap and the timer-interaction bug, doesn't attempt
+  the bigger unification yet.
+
 ## 2026-07-14 (cont'd 57) — Four replayer UX fixes: BTN position, button order, action badges, speed
 **Files: ui.js**
 

@@ -1177,6 +1177,7 @@ function nextBlindLevel(auto=false){
   const next = S.blindLevel + 1;
   if(next >= BLIND_LEVELS.length){ notify('הגעת לרמה האחרונה'); return; }
   S.blindLevel = next;
+  S.customBlinds = null; // אחרת הרמה מתקדמת ויזואלית אבל הבליינד שמוצג בפועל נשאר תקוע על הערך הידני הישן (customBlinds גובר תמיד ב-getBlinds())
   S.blindTimer.secondsLeft = getLevelDuration(next);
   // Update timestamp for new level
   if(S.blindTimer.running){ S.blindTimer.startedAt=Date.now(); S.blindTimer.pausedAt=getLevelDuration(next); }
@@ -1988,6 +1989,7 @@ function showICMResult(active){
 
 function resetBlindTimer(){
   S.blindLevel = 0;
+  S.customBlinds = null; // אותה סיבה כמו ב-nextBlindLevel — אחרת האיפוס נראה כאילו קרה אבל הבליינד בפועל נשאר תקוע
   S.blindTimer.running = false;
   S.blindTimer.secondsLeft = getLevelDuration(0);
   const btn = document.getElementById('btn-timer-toggle');

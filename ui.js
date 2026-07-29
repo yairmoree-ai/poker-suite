@@ -82,7 +82,21 @@ function renderBlindsBody(){
   }).join('');
 
   document.getElementById('blinds-body').innerHTML=`
-    <div style="margin-bottom:10px"><span style="font-size:12px;font-weight:700;color:var(--gold)">בליינדים כרגע: ${fmt(b.sb)}/${fmt(b.bb)}${b.ante?` ante ${fmt(b.ante)}`:''}</span></div>
+    <div style="margin-bottom:10px"><span style="font-size:12px;font-weight:700;color:var(--gold)">בליינדים כרגע: ${fmt(b.sb)}/${fmt(b.bb)}${b.ante?` ante ${fmt(b.ante)}`:''}</span>${S.customBlinds?'<span style="font-size:10px;color:#5b9bd5;margin-right:8px">(נקבע ידנית)</span>':''}</div>
+
+    <!-- קביעה ידנית ומיידית — לא קשורה לרשימת הרמות למטה בכלל. מקלידים,
+         לוחצים, זהו: לא צריך לשמור רמה, לא צריך להפעיל אותה בנפרד. -->
+    <div style="background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.25);border-radius:10px;padding:8px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:#5b9bd5;margin-bottom:6px">✏️ קביעה ידנית מיידית</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">
+        <input type="number" id="manual-bl-sb" value="${b.sb}" placeholder="SB" style="${_blInputStyle(false)}">
+        <input type="number" id="manual-bl-bb" value="${b.bb}" placeholder="BB" style="${_blInputStyle(false)}">
+        <input type="number" id="manual-bl-ante" value="${b.ante||0}" placeholder="Ante" style="${_blInputStyle(true)}">
+      </div>
+      <button onclick="setManualBlinds()" style="width:100%;padding:8px;border-radius:8px;border:none;background:#5b9bd5;color:#0a0d14;font-weight:800;font-size:12px;cursor:pointer">✓ קבע בליינדים אלו עכשיו</button>
+    </div>
+
+    <div style="font-size:10px;color:var(--muted);margin-bottom:6px">— או בחר/ערוך רמה מוגדרת מראש: —</div>
     <div style="display:grid;grid-template-columns:20px 1fr 1fr 1fr 52px 24px;gap:4px;margin-bottom:4px">
       <span></span><span style="font-size:9px;color:var(--muted);text-align:center">SB</span><span style="font-size:9px;color:var(--muted);text-align:center">BB</span><span style="font-size:9px;color:var(--muted);text-align:center">Ante</span><span></span><span></span>
     </div>
@@ -94,6 +108,18 @@ function renderBlindsBody(){
   document.querySelectorAll('#table-bl-rows input').forEach(inp=>{
     inp.oninput = ()=>{ const i=+inp.dataset.idx, f=inp.dataset.field; working[i][f]=+inp.value||0; };
   });
+}
+function setManualBlinds(){
+  if(isViewer()){notify('צופה בלבד');return;}
+  const sb = +document.getElementById('manual-bl-sb').value||0;
+  const bb = +document.getElementById('manual-bl-bb').value||0;
+  const ante = +document.getElementById('manual-bl-ante').value||0;
+  if(bb<=0){ notify('BB חייב להיות גדול מ-0'); return; }
+  // customBlinds הוא כבר עדיפות-על ב-getBlinds() (קיים במודל הנתונים מזמן) —
+  // פשוט לא היה לזה בעבר שום ממשק שקובע אותו בפועל. זו בדיוק הנקודה.
+  S.customBlinds = {sb, bb, ante};
+  persist(); renderBlindsBtn(); renderBlindsBody();
+  notify('✓ בליינדים נקבעו: '+sb+'/'+bb+(ante?' ante '+ante:''));
 }
 function addTableBlindRow(){
   if(isViewer()){notify('צופה בלבד');return;}
