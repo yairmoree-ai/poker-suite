@@ -1,5 +1,31 @@
 ---
 
+## 2026-07-14 (cont'd 60) — LIMP% added to the long-press HUD popup and the players tab
+**Files: render.js, ui.js**
+
+- User asked to add LIMP% to two existing stat displays. Both already had
+  the underlying data available — `calcPlayerHUD()` already computes
+  `limp` (added earlier this session, using the same definition as
+  `_getEmpiricalLimpHands`) — just wasn't surfaced in these two specific
+  UI spots yet.
+- **Long-press seat popup** (`render.js`, `showPlayerHUD`'s box): added a
+  LIMP stat card right after VPIP (same thematic grouping — both about
+  entering the pot preflop), using the same color-coded `hudStat()` helper
+  as the other five stats there. Color logic inverted relative to VPIP/PFR
+  (`100-hud.limp` instead of `hud.limp` as the input to `statColor`) since
+  a *lower* limp rate is generally considered the stronger habit, unlike
+  VPIP/PFR where higher is highlighted as green — this is a judgment call
+  on my part, not an objective rule, so flagging it in case a different
+  color treatment is preferred.
+- **Players tab** (`ui.js`, the quick per-player HUD row): added LIMP right
+  after VPIP in the same flex-wrap stat row, matching the existing compact
+  style used for VPIP/PFR/3B/AF/W there.
+- Left the third VPIP/PFR-only spot found while searching (`render.js`,
+  the hand-analysis AI-prompt text generator) untouched — that's a
+  different context (a text prompt fed to an external analysis, not a
+  visual stat display) and wasn't part of what was asked; mentioned as an
+  option if the user wants it included there too.
+
 ## 2026-07-14 (cont'd 59) — Bug: couldn't fix a wrong board card mid-hand
 **Files: render.js**
 

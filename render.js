@@ -1692,6 +1692,7 @@ function _renderHUDOverlay(name, hud){
     '<button onclick="closeHUD()" style="background:none;border:none;color:#8a8799;font-size:20px;cursor:pointer">✕</button></div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
     hudStat('VPIP', hud.vpip+'%', statColor(hud.vpip,20,40), 'נכנס לקופה')+
+    hudStat('LIMP', hud.limp+'%', statColor(100-hud.limp,60,80), 'נכנס בקריאה')+
     hudStat('PFR', hud.pfr+'%', statColor(hud.pfr,15,30), 'Raise פרה-פלופ')+
     hudStat('3bet', hud.bet3+'%', statColor(hud.bet3,5,10), '3bet%')+
     hudStat('AF', hud.af, statColor(parseFloat(hud.af),1,3), 'אגרסיביות')+

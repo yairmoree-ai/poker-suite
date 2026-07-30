@@ -1916,6 +1916,7 @@ function renderPlayerList(){
         const afStr=!isFinite(afNum)||afNum>9?'∞':afNum.toFixed(1);
         hudHtml=`<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
           <span style="font-size:9px;color:#8a8799">VPIP <b style="color:#c8a96e">${hud.vpip}%</b></span>
+          <span style="font-size:9px;color:#8a8799">LIMP <b style="color:#b47eea">${hud.limp}%</b></span>
           <span style="font-size:9px;color:#8a8799">PFR <b style="color:#5b9bd5">${hud.pfr}%</b></span>
           <span style="font-size:9px;color:#8a8799">3B <b style="color:#7eb8a4">${hud.bet3}%</b></span>
           <span style="font-size:9px;color:#8a8799">AF <b style="color:#e07b6a">${afStr}</b></span>
