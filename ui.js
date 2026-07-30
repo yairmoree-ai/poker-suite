@@ -732,7 +732,7 @@ function showHandDetail(hid){
   // cx=50%, cy=50% of wrapper, rx=48%, ry=46%
   const cx=50, cy=50, rx=48, ry=46;
   _sortSeatsByPos(h.seats||[]).forEach((s,si)=>{
-    const angle = (2*Math.PI*si/seatCount) - Math.PI/2; // start from top
+    const angle = (2*Math.PI*si/seatCount) + Math.PI/2; // start from bottom (BTN) — matches the replayer's layout
     const px = cx + rx*Math.cos(angle);
     const py = cy + ry*Math.sin(angle);
     

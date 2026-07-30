@@ -1,5 +1,16 @@
 ---
 
+## 2026-07-14 (cont'd 61) — BTN-at-bottom applied to the hand-detail view too
+**Files: ui.js**
+
+- User asked for the same BTN-at-bottom layout (done for the replayer a
+  few rounds ago) to be applied to the hand-detail view's table in
+  history — the other of the two table renderers found earlier this
+  session (`showHandDetail`, separate from the replayer's
+  `_renderReplayerFrame`). Same one-line fix: angle offset changed from
+  `-Math.PI/2` (top) to `+Math.PI/2` (bottom). Verified directly — BTN now
+  lands at the bottom of the ellipse here too, matching the replayer.
+
 ## 2026-07-14 (cont'd 60) — LIMP% added to the long-press HUD popup and the players tab
 **Files: render.js, ui.js**
 
