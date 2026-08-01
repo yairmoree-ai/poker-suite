@@ -222,13 +222,13 @@ _RANGES[6].midlow = JSON.parse(JSON.stringify(_RANGES[6].mid));
 
 // 9-max (deep stack)
 _RANGES[9] = { deep:{
-  BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,K9s,QJs,QTs,JTs,J9s,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,ATo,KQo,KJo,KTo,QJo,QTo,JTo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s','call':'TT,99,88,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,QQ,AKs,AKo'},
-  CO:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,QJo','3bet':'AA,KK,QQ,AKs,AQs,AKo,A5s','call':'JJ,TT,AJs,ATs,KQs,QJs,JTs,AJo','4bet':'AA,KK,AKs,AKo'},
-  HJ:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,AKs,AQs,AJs,ATs,A9s,A5s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo,KJo','3bet':'AA,KK,QQ,AKs,AKo,A5s','call':'JJ,TT,AQs,AJs,KQs,QJs,AQo','4bet':'AA,KK,AKs,AKo'},
-  LJ:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,ATs,KQs,KJs,QJs,JTs,T9s,AKo,AQo,AJo,KQo','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT,AQs,KQs,AQo','4bet':'AA,KK,AKs,AKo'},
+  BTN:{RFI:'AA,AKs,AKo,AQs,AQo,AJs,AJo,ATs,ATo,A9s,A9o,A8s,A8o,A7s,A7o,A6s,A6o,A5s,A5o,A4s,A4o,A3s,A3o,A2s,A2o,KK,KQs,KQo,KJs,KJo,KTs,KTo,K9s,K9o,K8s,K8o,K7s,K7o,K6s,K6o,K5s,K5o,K4s,K3s,K2s,QQ,QJs,QJo,QTs,QTo,Q9s,Q9o,Q8s,Q8o,Q7s,Q7o,Q6s,Q5s,Q4s,Q3s,Q2s,JJ,JTs,JTo,J9s,J9o,J8s,J8o,J7s,J6s,J5s,J4s,J3s,J2s,TT,T9s,T9o,T8s,T8o,T7s,T7o,T6s,T5s,T4s,T3s,99,98s,98o,97s,96s,95s,88,87s,87o,86s,85s,77,76s,75s,74s,66,65s,64s,55,54s,53s,44,33,22','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s,A4s','call':'TT,99,88,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,QQ,AKs,AKo'},
+  CO:{RFI:'AA,AKs,AKo,AQs,AQo,AJs,AJo,ATs,ATo,A9s,A9o,A8s,A8o,A7s,A7o,A6s,A5s,A5o,A4s,A3s,A2s,KK,KQs,KQo,KJs,KJo,KTs,KTo,K9s,K9o,K8s,K7s,K6s,K5s,K4s,K3s,K2s,QQ,QJs,QJo,QTs,QTo,Q9s,Q8s,Q7s,Q6s,Q5s,Q4s,JJ,JTs,JTo,J9s,J8s,J7s,J6s,J5s,TT,T9s,T9o,T8s,T7s,T6s,99,98s,97s,96s,88,87s,86s,77,76s,75s,66,65s,55,54s,44,33,22','3bet':'AA,KK,QQ,AKs,AQs,AKo,A5s','call':'JJ,TT,AJs,ATs,KQs,QJs,JTs,AJo','4bet':'AA,KK,AKs,AKo'},
+  HJ:{RFI:'AA,AKs,AKo,AQs,AQo,AJs,AJo,ATs,ATo,A9s,A9o,A8s,A8o,A7s,A6s,A5s,A4s,A3s,A2s,KK,KQs,KQo,KJs,KJo,KTs,KTo,K9s,K8s,K7s,K6s,K5s,K4s,QQ,QJs,QJo,QTs,QTo,Q9s,Q8s,Q7s,JJ,JTs,JTo,J9s,J8s,TT,T9s,T8s,T7s,99,98s,97s,88,87s,77,76s,66,65s,55,54s,44,33,22','3bet':'AA,KK,QQ,AKs,AKo,A5s','call':'JJ,TT,AQs,AJs,KQs,QJs,AQo','4bet':'AA,KK,AKs,AKo'},
+  LJ:{RFI:'AA,AKs,AKo,AQs,AQo,AJs,AJo,ATs,ATo,A9s,A9o,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KK,KQs,KQo,KJs,KJo,KTs,KTo,K9s,K8s,K7s,K6s,K5s,QQ,QJs,QJo,QTs,Q9s,Q8s,JJ,JTs,JTo,J9s,J8s,TT,T9s,T8s,99,98s,88,77,76s,66,65s,55,44,33','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT,AQs,KQs,AQo','4bet':'AA,KK,AKs,AKo'},
   MP:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,AKs,AQs,AJs,KQs,KJs,QJs,JTs,AKo,AQo,KQo','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT,AQs,KQs','4bet':'AA,KK,AKs'},
-  'UTG+1':{RFI:'AA,KK,QQ,JJ,TT,99,88,AKs,AQs,AJs,KQs,JTs,AKo,AQo,KQo','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT,AQs','4bet':'AA,KK,AKs'},
-  UTG:{RFI:'AA,KK,QQ,JJ,TT,99,88,AKs,AQs,AJs,KQs,AKo,AQo','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT','4bet':'AA,KK,AKs'},
+  'UTG+1':{RFI:'AA,AKs,AKo,AQs,AQo,AJs,AJo,ATs,ATo,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KK,KQs,KQo,KJs,KJo,KTs,K9s,K8s,K7s,K6s,QQ,QJs,QJo,QTs,Q9s,JJ,JTs,J9s,TT,T9s,T8s,99,98s,88,77,76s,66,65s,55,44','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT,AQs','4bet':'AA,KK,AKs'},
+  UTG:{RFI:'AA,AKs,AKo,AQs,AQo,AJs,AJo,ATs,ATo,A9s,A8s,A7s,A6s,A5s,A4s,A3s,KK,KQs,KQo,KJs,KTs,K9s,K8s,K7s,QQ,QJs,QTs,Q9s,JJ,JTs,J9s,TT,T9s,99,88,77,76s,66,65s,55,44','3bet':'AA,KK,QQ,AKs,AKo','call':'JJ,TT','4bet':'AA,KK,AKs'},
   SB:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,ATo,KQo,KJo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,AQo,A5s','call':'TT,99,AJs,KQs,QJs,AJo,KQo','4bet':'AA,KK,AKs,AKo'},
   BB:{RFI:'','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,A4s,87s,76s','call':'TT,99,88,77,66,AJs,ATs,A9s,KQs,KJs,QJs,JTs,T9s,AJo,KQo','4bet':'AA,KK,QQ,AKs,AKo'},
 }, mid:{}, short:{}, push:{} };

@@ -1,5 +1,68 @@
 ---
 
+## 2026-07-14 (cont'd 63) — Real 80bb RFI data inserted into 'deep' bucket (9-max), 6 positions
+**Files: ranges.js**
+
+- Culmination of a multi-turn effort: user provided "The Ultimate Tournament
+  Preflop Guide" PDF (507 GTO charts across 5 depths: 80/50/30/20/12bb).
+  Built a proper extraction pipeline rather than trusting visual reading —
+  the first attempt on the earlier, simpler PDF had failed its own
+  verification check by 61%, so this time every step was built to be
+  independently checkable:
+  1. Extract each chart as its own image (`pdfimages`), not a full page.
+  2. OCR with a whitelisted character set to find high-confidence hand
+     labels and their pixel positions (avoids garbage matches from
+     unrestricted OCR).
+  3. Fit a coordinate-calibration model (row/col grid index → pixel
+     position) from those confident matches, with iterative outlier
+     rejection — this lets *every* cell's position be computed precisely,
+     not just the ones OCR happened to read correctly.
+  4. Sample the dominant (mode) color at each computed cell center,
+     classify against reference colors sampled from the chart's own
+     legend/header (not assumed).
+  5. Cross-check the resulting range's combo count against the chart's own
+     stated percentage — the built-in verification step that caught real
+     problems rather than silently trusting the pipeline.
+- **Real bug caught and fixed mid-process:** initial row/col mapping had
+  offsuit hands' grid position swapped (row/col reversed) — caused by an
+  error in my own coordinate-convention code, not the image. Caught via
+  the verification step immediately (calibration error of 669px, obviously
+  wrong), fixed, re-verified (error dropped to ~1px).
+- **Genuine discovery, not just calibration tuning:** LJ, and to a lesser
+  extent the other 5 positions, showed small combo-count mismatches
+  against their stated headers even after the pipeline was solid. Traced
+  this to **mixed-frequency cells** — hands where the underlying solver
+  output isn't a clean 100%-or-0% action, rendered as a cell split between
+  two colors. A simple "sample one color" approach can miss these entirely
+  if the sampling point lands on the majority portion. Built a proper
+  mixed-cell detector (fraction of each reference color within the full
+  cell area, not just the mode) and re-scanned all 6 charts.
+- **User-defined inclusion threshold, established through direct
+  spot-checks against the source PDF** (not guessed): hands with roughly
+  ≥20-25% red presence in a mixed cell should count as "raise" for a
+  binary range — confirmed against real examples (J8s/KTo at just under
+  50%, JTo/A9o at about 25%, all confirmed for inclusion by the user
+  checking the actual chart directly).
+- **SB set aside deliberately, not force-fit:** SB's chart has a 3-way
+  split (Raise/Call/Fold) with far more mixed cells (36 vs LJ's 4) —
+  applying the same threshold mechanically produced a result that didn't
+  match any hypothesis for the target percentage, and unlike LJ, the user
+  hadn't personally verified any of the 36 cells. Correctly identified
+  this as a bigger extrapolation than what was validated and stopped
+  rather than guess — SB explicitly deferred to a future round with a more
+  careful approach.
+- **Final result inserted:** `_RANGES[9].deep`'s `RFI` field updated for
+  UTG (226 combos/17.04%), UTG+1 (266/20.06%), LJ (320/24.13%), HJ
+  (374/28.21%), CO (470/35.44%), BTN (726/54.75%) — replacing what were
+  previously unverified/placeholder ranges for 9-max at this depth. Only
+  the `RFI` field was touched; each position's existing `3bet`/`call`/
+  `4bet` fields were left untouched, since those haven't been verified
+  against this source yet. Verified the final inserted values directly
+  against the source JSON — all six match exactly.
+- SB (RFI), and the `3bet`/`call`/`4bet` fields for all positions, remain
+  open for future rounds, along with the other 4 depths (50/30/20/12bb)
+  in this same PDF.
+
 ## 2026-07-14 (cont'd 62) — Bug: table visibly shrank when the Raise/Bet keyboard opened
 **Files: render.js**
 
