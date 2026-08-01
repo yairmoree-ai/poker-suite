@@ -10,7 +10,7 @@ const PC={BTN:'#5b9bd5','BTN/SB':'#8b7cb8',SB:'#8b7cb8',BB:'#e07b6a',
 const PBN={
   2:['BTN/SB','BB'],3:['BTN','SB','BB'],4:['BTN','SB','BB','UTG'],
   5:['BTN','SB','BB','UTG','CO'],6:['BTN','SB','BB','LJ','HJ','CO'],
-  7:['BTN','SB','BB','UTG','UTG+1','MP','CO'],
+  7:['BTN','SB','BB','UTG','UTG+1','HJ','CO'],
   8:['BTN','SB','BB','UTG','UTG+1','LJ','HJ','CO'],
   9:['BTN','SB','BB','UTG','UTG+1','MP','MP+1','HJ','CO'],
   10:['BTN','SB','BB','UTG','UTG+1','MP','MP+1','HJ','CO','LJ']

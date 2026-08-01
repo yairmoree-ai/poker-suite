@@ -322,7 +322,28 @@ _RANGES[9].midlow = JSON.parse(JSON.stringify(_RANGES[9].mid));
 _RANGES[4]={deep:{BTN:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,76s,65s,AKo,AQo,AJo,ATo,KQo,KJo,QJo,JTo','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,A4s',call:'TT,99,88,AJs,ATs,KQs,QJs,JTs,AJo','4bet':'AA,KK,AKs,AKo'},CO:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,87s,AKo,AQo,AJo,ATo,KQo,KJo,QJo','3bet':'AA,KK,QQ,AKs,AQs,AKo,A5s',call:'JJ,TT,AJs,KQs,QJs,AJo,KQo','4bet':'AA,KK,AKs,AKo'},SB:{RFI:'AA,KK,QQ,JJ,TT,99,88,77,66,55,44,AKs,AQs,AJs,ATs,A9s,A5s,A4s,KQs,KJs,QJs,JTs,T9s,98s,AKo,AQo,AJo,KQo','3bet':'AA,KK,QQ,AKs,AKo,A5s',call:'JJ,TT,AJs,KQs','4bet':'AA,KK,AKs'},BB:{RFI:'','3bet':'AA,KK,QQ,JJ,AKs,AQs,AKo,A5s,87s',call:'TT,99,88,77,66,AJs,ATs,KQs,QJs,JTs,AJo,KQo','4bet':'AA,KK,AKs,AKo'}},mid:{},short:{},push:{}};
 ['mid','short','push'].forEach(d=>{ _RANGES[4][d]=_RANGES[4].deep; });
 _RANGES[4].midlow = _RANGES[4].deep;
-_RANGES[5]=_RANGES[6]; _RANGES[7]=_RANGES[9]; _RANGES[8]=_RANGES[9];
+_RANGES[5]=_RANGES[6];
+// גדלי שולחן קטנים יותר: לא רק "אותם נתונים" (הכינוי הישן, _RANGES[8]=_RANGES[9],
+// היה בעצם אותה הפניה ממש) — אלא הסרה עקבית של *העמדה המוקדמת ביותר* בכל פעם
+// ששולחן מתכווץ בשחקן אחד, עם הזזה של כל שאר העמדות המוקדמות/אמצעיות למלא את
+// המקום. עמדות מאוחרות (HJ/CO ומעלה) לא זזות — הן כבר "מעוגנות" קרוב ל-BTN,
+// ומספר היריבים שפועלים אחריהן לא משתנה משמעותית בגלל שחקן אחד פחות/יותר.
+// לדוגמה מבוססת-משתמש: מי שהיה UTG+1 ב-9 שחקנים הופך ל-UTG ב-8 שחקנים.
+function _buildShiftedRanges(sourceRanges, sourceOrder, targetOrder){
+  const offset = sourceOrder.length - targetOrder.length;
+  const result = {};
+  Object.keys(sourceRanges).forEach(bucket=>{
+    result[bucket] = {};
+    ['BTN','SB'].forEach(p=>{ if(sourceRanges[bucket][p]) result[bucket][p]=sourceRanges[bucket][p]; });
+    targetOrder.forEach((label,i)=>{
+      const srcLabel = sourceOrder[offset+i];
+      if(sourceRanges[bucket][srcLabel]) result[bucket][label] = sourceRanges[bucket][srcLabel];
+    });
+  });
+  return result;
+}
+_RANGES[8] = _buildShiftedRanges(_RANGES[9], ['UTG','UTG+1','MP','MP+1','HJ','CO'], ['UTG','UTG+1','LJ','HJ','CO']);
+_RANGES[7] = _buildShiftedRanges(_RANGES[8], ['UTG','UTG+1','LJ','HJ','CO'], ['UTG','UTG+1','HJ','CO']);
 
 const _POS_BY_SIZE = {
   2:['BTN','BB'], 3:['BTN','SB','BB'], 4:['BTN','CO','SB','BB'],
