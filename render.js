@@ -2012,6 +2012,17 @@ function renderTableShape(){
   const svg = document.getElementById('table-svg');
   if(!wrap || !svg) return;
 
+  // אם יש שדה קלט פעיל כרגע (המשתמש מקליד, למשל בקופסת Raise/Bet) — לא
+  // מרנדרים מחדש את צורת השולחן בכלל. הבדיקה הזו הייתה קיימת עד עכשיו רק
+  // בתוך _handleViewportResize (שמטפל באירוע resize של המקלדת) — אבל
+  // renderTableShape() גם נקראת ללא תנאי מתוך render() הכללי, שרץ כמעט בכל
+  // שינוי מצב באפליקציה (כולל סנכרון רקע כל 10 שניות) — ואם זה קורה בזמן
+  // שהמקלדת פתוחה (visualViewport כבר מכווץ), השולחן היה מתכווץ בכל זאת,
+  // גם אם אירוע ה-resize עצמו כן טופל נכון. מרכזים את הבדיקה כאן במקור,
+  // כדי שהיא תגן בלי קשר איזו נקודת-קריאה גרמה לזה.
+  const ae = document.activeElement;
+  if(ae && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA')) return;
+
   // Lovable: max-w-[420px] aspect-[3/4] (portrait) / aspect-[4/3] (landscape)
   // מדידת שטח זמין אמיתי (במקום הנחת "topBarH=175" קבועה) —
   // כך זה מתאים את עצמו לכל דפדפן/מכשיר: ספארי עם/בלי סרגלים, כרום, דסקטופ, PWA

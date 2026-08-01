@@ -1,5 +1,33 @@
 ---
 
+## 2026-07-14 (cont'd 62) — Bug: table visibly shrank when the Raise/Bet keyboard opened
+**Files: render.js**
+
+- User's screenshot: opening the Raise amount input squeezed the entire
+  poker table into a small strip at the bottom of the screen, behind the
+  modal.
+- **Root cause:** `renderTableShape()` sizes the table using
+  `visualViewport.height`, which — correctly and intentionally — shrinks
+  whenever Safari's on-screen keyboard opens (that's literally what
+  `visualViewport` is for, and there was already a good reason it's used
+  here: it lets the table correctly adapt across different browsers/
+  toolbar states). There was already a guard for this exact problem, but
+  it only lived inside `_handleViewportResize` (the `visualViewport`
+  resize-event listener) — checking `document.activeElement` for a
+  focused input before re-running the layout. That guard alone wasn't
+  enough: `renderTableShape()` is *also* called unconditionally from the
+  main `render()` function, which runs on nearly every state change in the
+  app — including the background sync pull that fires every 10 seconds.
+  If that unrelated call happened to fire while the Raise keyboard was
+  open, the table would shrink regardless of whether the resize-event path
+  itself was properly guarded.
+- Fixed by moving the same focused-input check to the very top of
+  `renderTableShape()` itself, rather than only at one of its several
+  call sites — now it protects against every path that can trigger a
+  re-layout, not just the resize event specifically. Verified the guard's
+  `return` is correctly positioned before any of the actual table-sizing
+  calculations run.
+
 ## 2026-07-14 (cont'd 61) — BTN-at-bottom applied to the hand-detail view too
 **Files: ui.js**
 
