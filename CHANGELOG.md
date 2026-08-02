@@ -6,6 +6,54 @@
 
 ---
 
+## 2026-07-14 (cont'd 66) — Bug: PokerTracker export only got SB/BB positions right
+**Files: ui.js**
+
+- User's friend imported an export and only SB/BB showed correct positions
+  for the other players.
+- **Root cause:** PokerStars-format seat numbers (`Seat 1:`, `Seat 2:`...)
+  were assigned in raw physical `seatIdx` order — the code comment even
+  admitted this was just an assumption ("usually sorted by position"),
+  never actually enforced. PokerTracker doesn't read position from
+  explicit text tags for most players — it *computes* each player's
+  position by walking around the table starting from whichever seat number
+  the "Seat #N is the button" line points to. SB and BB are the only
+  positions PT gets "for free," directly from the `posts small/big blind`
+  text lines — every other player's position depends entirely on the seat
+  numbers actually reflecting true table order. With scrambled seat
+  numbers, that computation breaks for everyone except the two blinds.
+- Fixed by sorting seats into true table-relative order (reusing
+  `_sortSeatsByPos()`, the same helper already proven correct for the
+  replayer's table layout) before assigning seat numbers, instead of using
+  raw seat array order.
+- Verified directly with the user's actual reported hand structure (6-max,
+  BTN at physical seat index 1): seat numbers now correctly cycle
+  BTN→SB→BB→UTG→HJ→CO in true table order starting from the button,
+  instead of the previous scrambled physical order.
+
+## 2026-07-14 (cont'd 65) — Bug: PokerTracker export silently dropped hands while claiming success
+**Files: ui.js**
+
+- User's friend received a PT export claiming "2 hands" but with no actual
+  content.
+- **Root cause:** `exportHandsToPokerTracker`'s success notification
+  reported `sorted.length` (how many hands were *selected*), but the
+  actual file content was built via `.filter(Boolean)`, which silently
+  drops any hand where `_handToPSFormat` returns `''` — which happens
+  whenever a hand's `seats` array has no entries with `playerName` set
+  (likely older/incomplete saved hands). The count and the content could
+  diverge with no indication anything had gone wrong.
+- Fixed: now tracks succeeded vs. failed hands separately. If *all* fail,
+  stops before creating a file at all and shows a clear alert (no more
+  empty file with a false "success" toast). If *some* fail, still exports
+  the valid ones but explicitly alerts with the real count
+  ("1 מתוך 2 ידיים... 1 דולגה") so the user knows to check which specific
+  hands have bad data, instead of silently getting less than they expected.
+- Verified both paths directly: all-broken input correctly stops with no
+  file and a clear alert; mixed valid/broken input correctly exports just
+  the valid hand and reports "1/2" accurately in both the toast and a
+  detailed alert.
+
 ## 2026-07-14 (cont'd 64) — New table-size scaling model: shift, don't just alias
 **Files: ranges.js, state.js**
 

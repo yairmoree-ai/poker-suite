@@ -1659,15 +1659,21 @@ function _handToPSFormat(hand, handNumber){
   const dateStr = `${dateObj.getFullYear()}/${pad(dateObj.getMonth()+1)}/${pad(dateObj.getDate())} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
   const lines = [];
 
-  // מספור מושבים: 1..N לפי סדר הופעה ב-hand.seats (כבר מסודר לפי עמדה בדרך כלל)
+  // מספור מושבים: 1..N לפי סדר-שולחן אמיתי (יחסית לכפתור), לא לפי seatIdx
+  // הפיזי הגולמי — PokerTracker מחשב את העמדה של כל שחקן (UTG/MP/CO וכו')
+  // על ידי הליכה סביב השולחן ממספר-המושב של הכפתור, לא מטקסט מפורש. רק
+  // SB/BB מקבלים את העמדה שלהם "בחינם" משורות ה-posts blind — לכל שאר
+  // השחקנים, אם מספור המושבים לא באמת עוקב אחרי סדר השולחן, PT מחשב עמדה
+  // שגויה. בדיוק זה מה שגרם לבאג שדווח: רק SB/BB יצאו עם עמדה נכונה.
+  const sortedSeats = _sortSeatsByPos(seats);
   const seatNum = new Map();
-  seats.forEach((s,i)=>seatNum.set(s.seatIdx, i+1));
+  sortedSeats.forEach((s,i)=>seatNum.set(s.seatIdx, i+1));
   const btnSeat = seats.find(s=>s.pos==='BTN');
   const btnNum = btnSeat ? seatNum.get(btnSeat.seatIdx) : 1;
 
   lines.push(`PokerStars Hand #HG${handNumber}: Tournament #1, Home Game Hold'em No Limit - Level I (${sbAmt}/${bbAmt}) - ${dateStr} ET`);
   lines.push(`Table 'HomeGame' ${seats.length}-max Seat #${btnNum} is the button`);
-  seats.forEach(s=>{
+  sortedSeats.forEach(s=>{
     lines.push(`Seat ${seatNum.get(s.seatIdx)}: ${s.playerName} (${s.stack||0} in chips)`);
   });
 
@@ -1778,7 +1784,15 @@ function exportHandsToPokerTracker(handIds){
   const selected = handIds && handIds.length ? all.filter(h=>handIds.includes(h.id)) : all;
   if(!selected.length){ notify('לא נבחרו ידיים לייצוא'); return; }
   const sorted = [...selected].sort((a,b)=>handTs(a)-handTs(b));
-  const text = sorted.map((h,i)=>_handToPSFormat(h, i+1)).filter(Boolean).join('\n\n\n');
+  const formatted = sorted.map((h,i)=>({hand:h, text:_handToPSFormat(h, i+1)}));
+  const failed = formatted.filter(f=>!f.text);
+  const succeeded = formatted.filter(f=>f.text);
+  const text = succeeded.map(f=>f.text).join('\n\n\n');
+  if(!succeeded.length){
+    alert('הייצוא נכשל — אף אחת מהידיים שנבחרו לא הכילה נתוני מושבים תקינים (אולי ידיים ישנות/חלקיות). לא נוצר קובץ.');
+    notify('הייצוא נכשל — 0 ידיים תקינות');
+    return;
+  }
   const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1786,7 +1800,15 @@ function exportHandsToPokerTracker(handIds){
   a.href = url; a.download = fname;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-  notify(`יוצאו ${sorted.length} ידיים 📥 (${fname})`);
+  if(failed.length){
+    // מדווחים במפורש כשידיים נופלות בשקט — כדי שהמשתמש ידע שיש בעיה בנתונים,
+    // לא רק יראה קובץ עם פחות תוכן ממה שציפה בלי שום הסבר. זה בדיוק מה שקרה
+    // כשחבר קיבל "2 ידיים" בהודעה אבל בלי תוכן בפועל.
+    alert(`יוצאו ${succeeded.length} מתוך ${sorted.length} ידיים — ${failed.length} ידיים דולגו כי לא הכילו נתוני מושבים תקינים (seats חסרים). בדוק את הידיים האלה בהיסטוריה.`);
+    notify(`יוצאו ${succeeded.length}/${sorted.length} ידיים ⚠️ (${fname})`);
+  } else {
+    notify(`יוצאו ${succeeded.length} ידיים 📥 (${fname})`);
+  }
 }
 
 // מצב הבחירה הנוכחי בדיאלוג הייצוא: 'manual' (בחירת ידיים ספציפיות בצ'קבוקס) או
