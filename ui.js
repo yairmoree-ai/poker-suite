@@ -1677,8 +1677,11 @@ function _handToPSFormat(hand, handNumber){
     lines.push(`Seat ${seatNum.get(s.seatIdx)}: ${s.playerName} (${s.stack||0} in chips)`);
   });
 
-  // הימורי חובה
-  seats.forEach(s=>{
+  // הימורי חובה — לפי sortedSeats (סדר שולחן אמיתי), לא seats הגולמי, אחרת
+  // הסדר של שורות ה-posts יכול לצאת הפוך (BB לפני SB) גם אם מספרי המושבים
+  // כבר נכונים — בדיוק הבאג שנתפס: SB תמיד מיד אחרי BTN ב-sortedSeats, אז
+  // איטרציה עליו נותנת "SB posts" לפני "BB posts" כמו שבאמת קורה במשחק.
+  sortedSeats.forEach(s=>{
     (s.actions||[]).forEach(a=>{
       if(a.type==='SB') lines.push(`${s.playerName}: posts small blind ${a.amount||0}`);
       if(a.type==='BB') lines.push(`${s.playerName}: posts big blind ${a.amount||0}`);

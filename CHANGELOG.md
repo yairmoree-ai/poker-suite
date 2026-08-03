@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-07-14 (cont'd 67) — Bug #2 in the same area: blind lines could print BB before SB
+**Files: ui.js**
+
+- User caught a second issue in the exporter, right after the seat-order
+  fix: the blind-posting lines could come out as "BB posts... SB posts..."
+  — backwards from real game order (SB always posts before BB) and from
+  standard PokerStars format convention.
+- **Root cause:** this specific loop (building the `posts small/big blind`
+  lines) still iterated over the raw, unsorted `seats` array — it wasn't
+  updated when `sortedSeats` was introduced for the seat-*numbering* fix
+  earlier this session. Correct seat numbers didn't guarantee correct line
+  *order*, since this was a separate loop over separate (stale) data.
+- Fixed by switching this loop to `sortedSeats` too. Since SB always
+  immediately follows BTN and BB always immediately follows SB in
+  `sortedSeats`, iterating over it naturally produces SB's line before
+  BB's — no extra logic needed, just using the already-correct array
+  consistently instead of only in one of the two places it was needed.
+- Verified directly on the user's real hand data: "ביאנה: posts small
+  blind 400" now correctly appears before "בנדוס: posts big blind 800".
+
 ## 2026-07-14 (cont'd 66) — Bug: PokerTracker export only got SB/BB positions right
 **Files: ui.js**
 
