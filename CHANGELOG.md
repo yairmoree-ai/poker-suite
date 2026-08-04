@@ -6,6 +6,115 @@
 
 ---
 
+## 2026-08-04 (70) — Built a real test harness (not just reading code) — caught a live bug #69 missed entirely
+**Files: ui.js**
+
+- User asked to see a sample of what the export actually produces. Rather
+  than hand-tracing the code again, extracted the real functions straight
+  out of `ui.js` (`_handToPSFormat` and its helpers, verbatim — not
+  reimplemented/paraphrased) into a small Node harness, fed it a fully
+  simulated hand object (ante hand, 6-max, real multi-way showdown with
+  two made hands), and actually ran it.
+- **Live bug caught that pure code-reading had missed:** the per-street
+  action-collection loop excluded `SB`/`BB` types but not `Ante`. Since
+  `Ante` doesn't match any specific `case` in the action-type switch, it
+  fell through to the `default` (raise/bet) branch — meaning every ante
+  action was *also* being rendered a second time, in the middle of the
+  preflop action list, as a garbage line like `BTN_Dan: raises -175 to
+  25` (negative numbers, wrong totals, corrupting every subsequent bet's
+  math on that street too). This is exactly the kind of thing bug #69's
+  reasoning-only review couldn't have caught — it only became visible by
+  actually executing the code against ante data and reading real output.
+  Fixed by adding `&& a.type!=='Ante'` to the same filter, mirroring how
+  SB/BB are already excluded there.
+- **Also fixed while comparing the simulated output against both real
+  reference samples:** every seat now gets a `Dealt to X` line after
+  `*** HOLE CARDS ***`, even with no known hole cards (blank, no
+  brackets) — previously only seats with two known cards got a line at
+  all, which didn't match either working reference.
+- Verified with two full simulated hands run through the actual
+  extracted code (not reasoning by hand): (1) an ante hand with a real
+  river showdown between two made hands — output now correctly shows
+  `CO_Hero: raises 400 to 600` (not the earlier garbage) and a coherent
+  `three of a kind, Nines` vs `two pair, Kings and Queens` summary; (2) a
+  no-ante fold-around hand — output matches the user's real GG Rush&Cash
+  reference structurally line-for-line (`Uncalled bet`, `folded before
+  Flop (didn't bet)`, `collected`).
+- Test harness itself isn't committed anywhere (lived only in this
+  session's scratch space) — worth considering keeping a small fixture-
+  based test script in the repo going forward, since this is the second
+  time in two rounds that a real bug was invisible until actually run.
+
+## 2026-08-04 (69) — Real root cause found: the whole SHOWDOWN/SUMMARY block was missing, not just ante order
+**Files: ui.js**
+
+- User reported *zero* difference between the pre-fix and post-fix export
+  (bug #68) — a strong signal the ante/blind ordering wasn't the (or the
+  only) real cause. User then supplied a second confirmed-working
+  reference: a cash-game hand (no ante at all, from GGPoker's "Rush &
+  Cash") to diff against.
+- **Real root cause, confirmed against *two* independently-working
+  references (one with ante, one without):** `_handToPSFormat` never
+  built the `*** SHOWDOWN ***` section, the `Uncalled bet (X) returned to
+  Y` line, or a per-seat `*** SUMMARY ***` breakdown at all — it only
+  emitted a bare `*** SUMMARY ***` + `Total pot` + a single flat
+  `collected` line. This was a known, explicitly-flagged simplification
+  (see the old comment block at the top of the export section), not a
+  hidden bug — but it turns out this missing section is what PT4's
+  parser actually needs to accept a hand's *body*, not just its header.
+  Since **every** exported hand was missing this same block regardless of
+  ante, this explains why bug #68's fix (real, but narrower in scope)
+  produced no visible change: the bigger structural gap was still there
+  on both the "before" and "after" files being compared.
+- Rebuilt the section from scratch, reverse-engineered directly from the
+  two working samples:
+  - **`Uncalled bet` line**: tracks each player's total contribution
+    across the whole hand (`a.amount` already stores each action's own
+    incremental cost — verified directly against the cash sample: the
+    button's `raises $0.03 to $0.05` stores `a.amount=0.05`, matching
+    their full street commitment, not just the $0.03 delta). When exactly
+    one player never folds, the gap between their total and the next-
+    highest contributor's total is refunded via this line — verified this
+    reproduces the sample's exact `Uncalled bet ($0.03) returned to
+    8652b512` from the raw action data.
+  - **`*** SHOWDOWN ***` + `collected` line(s)**, always present (even for
+    uncontested pots — both references show it that way), before `***
+    SUMMARY ***`.
+  - **Full per-seat `*** SUMMARY ***` lines** for every seat, not just
+    winners: position tag (`(button)`/`(small blind)`/`(big blind)`),
+    `collected (X)` for an uncontested winner, `showed [cards] and
+    won/lost with <hand description>` for a real multi-way showdown
+    (board complete + >1 player never folded), `folded before/on <street>`
+    read directly from the fold action's own `street` field (not guessed),
+    with a `(didn't bet)` suffix when the player's total contribution was
+    zero — verified this exact rule against both samples: ante-hand
+    folders never get the suffix (everyone already paid an ante, so
+    nobody's contribution is truly zero), cash-hand non-blind folders do
+    (confirmed against all 3 matching seats in that sample).
+  - **Human-readable hand descriptions** ("a pair of Aces", "three of a
+    kind, Kings", etc.) added as a new small helper (`_describeHandScore`),
+    built on top of the existing `evaluateHand()` (`game.js`) rank/
+    tiebreak output rather than a new evaluator. Pair/two-pair/trips/
+    flush/full-house/quads phrasing verified directly against the
+    reference sample's exact wording. Straight/straight-flush "wheel"
+    (A-2-3-4-5) phrasing is **not** verified against a real example —
+    flagged as an open, lower-confidence guess, worth checking if a hand
+    with that specific straight ever fails to import cleanly.
+- **Known, explicitly-flagged simplification kept as-is:** the inline
+  "`X: shows [cards] (description)`" line that real formats sometimes
+  print mid-street right after an all-in call — not implemented; hand
+  descriptions are only emitted in the final `*** SUMMARY ***` block
+  (always correct, uses the final board) rather than also at the
+  earlier reveal moment. Multi-way side-pots (different-sized all-ins)
+  also remain unhandled — same known gap as before, just now stated
+  clearly in the code comment instead of the removed inline claim that
+  this was the *only* missing piece.
+- **Not yet re-verified against real PT4/PT5 import** — this is a much
+  larger, riskier change than #68 (rewrites a large block of the export
+  logic) so recommend re-testing with 2-3 varied hands (a walk-uncontested
+  fold, and if possible a real multi-way showdown) before trusting bulk
+  exports.
+
 ## 2026-08-04 (68) — Bug #3 in PokerTracker export: antes interleaved with blind lines broke PT4 parsing entirely
 **Files: ui.js**
 

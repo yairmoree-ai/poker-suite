@@ -1638,11 +1638,10 @@ function exportToExcel(){ exportTournsToCSV(); }
 // שני הפורמטים (PT4/PT5) קוראים בדיוק את אותו טקסט hand-history של PokerStars —
 // אין צורך בשני יצואים נפרדים.
 //
-// הגבלות ידועות, לא מוסתרות: אין תיאור-יד בשלב showdown ("a pair of Kings" וכו') —
-// רק קלפים+זכייה, וזה מספיק ל-PT כדי לחשב סטטיסטיקות (VPIP/PFR/עמדות/תוצאות),
-// זה רק לא יראה יפה ב-replayer. גם side-pots במצבי all-in מרובי-שחקנים לא מטופלים
-// בדיוק לפי הספירה המדויקת של PokerStars (פשוט pot אחד). מומלץ לבדוק ייבוא עם
-// 2-3 ידיים לפני ייצוא גדול.
+// הגבלות ידועות, לא מוסתרות: side-pots במצבי all-in מרובי-שחקנים בסכומים
+// שונים לא מטופלים בדיוק לפי החישוב המלא של PokerStars (וגם "Uncalled bet"
+// מטפל רק במקרה הפשוט של שחקן יחיד שנשאר). מומלץ לבדוק ייבוא עם 2-3 ידיים
+// לפני ייצוא גדול.
 function _cardToPS(c){
   if(!c || !c.rank) return '';
   const suitMap = {'♠':'s','♥':'h','♦':'d','♣':'c'};
@@ -1704,9 +1703,12 @@ function _handToPSFormat(hand, handNumber){
   });
 
   lines.push('*** HOLE CARDS ***');
+  // תואם לשתי הדוגמאות שאומתו: כל שחקן מקבל שורת "Dealt to X", גם בלי קלפים
+  // ידועים (ריקה, בלי סוגריים) — לא רק מי שיש לו שני קלפים. שינוי קטן אבל
+  // תואם למבנה שנצפה בפועל בשני הפורמטים העובדים.
   seats.forEach(s=>{
     const c0 = s.cards?.[0], c1 = s.cards?.[1];
-    if(c0 && c1) lines.push(`Dealt to ${s.playerName} [${_cardToPS(c0)} ${_cardToPS(c1)}]`);
+    lines.push((c0 && c1) ? `Dealt to ${s.playerName} [${_cardToPS(c0)} ${_cardToPS(c1)}]` : `Dealt to ${s.playerName} `);
   });
 
   const board = (hand.board||[]).filter(Boolean);
@@ -1718,7 +1720,12 @@ function _handToPSFormat(hand, handNumber){
     let acts = [];
     seats.forEach(s=>{
       (s.actions||[]).forEach(a=>{
-        if(a.street===street && a.type!=='SB' && a.type!=='BB') acts.push({...a, playerName:s.playerName});
+        // 'Ante' חייב להיות מוחרג כאן בדיוק כמו SB/BB — הוא כבר מטופל בנפרד
+        // בבלוק ה-antes/blinds למעלה. באג שנתפס רק על ידי הרצת סימולציה בפועל
+        // (לא נראה מקריאת הקוד): בלי ההחרגה הזו, כל שורת "posts the ante" הייתה
+        // גם נכנסת ללולאת הפעולות הרגילה, נופלת ל-default (raise/bet) כי אין לה
+        // case תואם, ומייצרת שורות "raises ### to ###" מפוברקות/שליליות לגמרי.
+        if(a.street===street && a.type!=='SB' && a.type!=='BB' && a.type!=='Ante') acts.push({...a, playerName:s.playerName});
       });
     });
     acts.sort((a,b)=>_actionSortKey(a)-_actionSortKey(b));
@@ -1782,18 +1789,134 @@ function _handToPSFormat(hand, handNumber){
     });
   });
 
-  // Showdown / תוצאה — פשוט: מי אסף כמה, בלי תיאור-יד מילולי (ראו הגבלה למעלה)
+  // *** SHOWDOWN/SUMMARY — נבנה מחדש לגמרי, ראה CHANGELOG (69): הגרסה
+  // הקודמת (רק "*** SUMMARY ***" + שורת "collected" שטוחה) הייתה חסרה
+  // לחלוטין את הבלוק הזה בהשוואה לשתי דוגמאות עובדות אמיתיות שהמשתמש
+  // סיפק (יד עם ante מ-7XL, יד קאש בלי ante מ-GG Rush&Cash) — וזה קרה
+  // בכל יד, לא רק ביד עם/בלי ante, מה שמסביר למה התיקון הקודם (סדר
+  // antes/blinds) לא שינה כלום בפועל: הבעיה האמיתית הייתה כאן, לא שם.
+
+  // סכום כולל ששולם על ידי כל שחקן על פני היד כולה (בליינד+אנטה+כל
+  // הרחובות) — a.amount כבר מייצג את העלות המצטברת של כל פעולה בפני עצמה
+  // (אומת ישירות מול הדוגמה: הראייז של הבאטן ל-$0.05 נשמר כ-a.amount=0.05,
+  // לא כדלתא-מעל-ההימור-הקודם), אז סכימה פשוטה נכונה.
+  const totalPaid = {};
+  seats.forEach(s=>{
+    let paid = 0;
+    (s.actions||[]).forEach(a=>{
+      if(['SB','BB','Ante','Call','Raise','Open','3bet','4bet','All-in'].includes(a.type)){
+        paid += parseFloat(a.amount)||0;
+      }
+    });
+    totalPaid[s.playerName] = paid;
+  });
+
+  const foldedNames = new Set(seats.filter(s=>(s.actions||[]).some(a=>a.type==='Fold')).map(s=>s.playerName));
+  const stillActive = seats.filter(s=>!foldedNames.has(s.playerName));
+
+  // "Uncalled bet" — מטפל רק במקרה הפשוט/הנפוץ: כולם קיפלו מול השחקן
+  // האחרון שנשאר (לא מטפל ב-side-pots של all-in מרובה-שחקנים בסכומים
+  // שונים — הגבלה ידועה, מסומנת).
+  if(stillActive.length===1){
+    const w = stillActive[0];
+    const wPaid = totalPaid[w.playerName]||0;
+    const others = seats.filter(s=>s!==w).map(s=>totalPaid[s.playerName]||0);
+    const maxOther = others.length ? Math.max(...others) : 0;
+    const uncalled = wPaid - maxOther;
+    if(uncalled > 0.0000001){
+      lines.push(`Uncalled bet (${uncalled}) returned to ${w.playerName}`);
+      totalPaid[w.playerName] = wPaid - uncalled;
+    }
+  }
+
   const winners = hand.winners||[];
+  const winnerNames = new Set(winners.map(w=>w.name||w.playerName));
+  const realShowdown = board.length===5 && stillActive.length>1; // הגיע לריבר עם יותר משחקן אחד שלא קיפל
+
+  lines.push('*** SHOWDOWN ***');
   if(winners.length){
-    lines.push('*** SUMMARY ***');
-    lines.push(`Total pot ${hand.finalPot||0} | Rake 0`);
-    if(board.length) lines.push(`Board [${board.map(_cardToPS).join(' ')}]`);
     winners.forEach(w=>{
       lines.push(`${w.name||w.playerName||'?'} collected ${w.amount||hand.finalPot||0} from pot`);
     });
+  } else if(stillActive.length===1){
+    // אין winners רשום אבל רק שחקן אחד לא קיפל — בטוח להסיק שהוא לקח את הקופה
+    const potTotal = Object.values(totalPaid).reduce((a,b)=>a+b,0);
+    lines.push(`${stillActive[0].playerName} collected ${hand.finalPot||potTotal} from pot`);
+    winnerNames.add(stillActive[0].playerName);
   }
 
+  lines.push('*** SUMMARY ***');
+  // הערה: הדוגמה מ-7XL (טורניר, כמו הכותרת שלנו) הראתה "Total pot X | Rake 0"
+  // בלבד; הדוגמה השנייה (GG Rush&Cash, קאש) הראתה שדות נוספים (Jackpot/Bingo/
+  // Fortune/Tax) — כנראה מוסכמה שונה בין אתרים/עולמות (טורניר מול קאש), לא
+  // סתירה. מכיוון שהכותרת שלנו תמיד בסגנון "Tournament" (כמו דוגמה #1), הולכים
+  // לפי הפורמט הפשוט שלה.
+  lines.push(`Total pot ${hand.finalPot||0} | Rake 0`);
+  if(board.length) lines.push(`Board [${board.map(_cardToPS).join(' ')}]`);
+
+  sortedSeats.forEach(s=>{
+    const num = seatNum.get(s.seatIdx);
+    const posTag = s.pos==='BTN' ? ' (button)' : s.pos==='SB' ? ' (small blind)' : s.pos==='BB' ? ' (big blind)' : '';
+    const isWinner = winnerNames.has(s.playerName);
+    const folded = foldedNames.has(s.playerName);
+    const paid = totalPaid[s.playerName]||0;
+    let desc;
+    if(isWinner){
+      const wRec = winners.find(w=>(w.name||w.playerName)===s.playerName);
+      const amt = wRec ? (wRec.amount||hand.finalPot||0) : (hand.finalPot||0);
+      if(realShowdown && s.cards?.[0] && s.cards?.[1]){
+        const score = evaluateHand([...s.cards.filter(Boolean), ...board]);
+        desc = `showed [${_cardToPS(s.cards[0])} ${_cardToPS(s.cards[1])}] and won (${amt}) with ${_describeHandScore(score)}`;
+      } else {
+        desc = `collected (${amt})`;
+      }
+    } else if(folded){
+      // "folded before/on X" — לפי הרחוב שבו נרשמה פעולת ה-Fold עצמה (לא
+      // לפי איפה שהם "נכחו" בכלל). "(didn't bet)" כשהתרומה הכוללת שלהם
+      // ליד היא אפס (לא שילמו אנטה/בליינד ולא הכניסו כלום לפני שקיפלו).
+      const foldAction = (s.actions||[]).find(a=>a.type==='Fold');
+      let label = 'before Flop';
+      if(foldAction){
+        if(foldAction.street==='ריבר') label = 'on the River';
+        else if(foldAction.street==='טורן') label = 'on the Turn';
+        else if(foldAction.street==='פלופ') label = 'on the Flop';
+      }
+      desc = `folded ${label}${paid<=0.0000001 ? " (didn't bet)" : ''}`;
+    } else if(realShowdown && s.cards?.[0] && s.cards?.[1]){
+      const score = evaluateHand([...s.cards.filter(Boolean), ...board]);
+      desc = `showed [${_cardToPS(s.cards[0])} ${_cardToPS(s.cards[1])}] and lost with ${_describeHandScore(score)}`;
+    } else {
+      desc = 'mucked';
+    }
+    lines.push(`Seat ${num}: ${s.playerName}${posTag} ${desc}`);
+  });
+
   return lines.join('\n');
+}
+
+// שמות-יד קריאים לבני-אדם לשלב showdown ("a pair of Aces" וכו') — בנוי מעל
+// ה-evaluateHand הקיים ב-game.js (rank 0-8 + tiebreak array), לא נבנה evaluator
+// חדש. הבהרה: הניסוח המדויק של straight/straight-flush "Ace to Five" (wheel)
+// לא אומת מול דוגמה אמיתית — שאר הידיים (pair/two-pair/trips/flush/full-house/
+// quads) כן אומתו ישירות מול הדוגמה שהמשתמש סיפק ("a pair of Aces", "three of
+// a kind, Kings").
+const _RANK_SING = {2:'Two',3:'Three',4:'Four',5:'Five',6:'Six',7:'Seven',8:'Eight',9:'Nine',10:'Ten',11:'Jack',12:'Queen',13:'King',14:'Ace'};
+const _RANK_PLUR = {2:'Twos',3:'Threes',4:'Fours',5:'Fives',6:'Sixes',7:'Sevens',8:'Eights',9:'Nines',10:'Tens',11:'Jacks',12:'Queens',13:'Kings',14:'Aces'};
+function _describeHandScore(score){
+  if(!score) return 'high card';
+  const {rank, tb} = score;
+  switch(rank){
+    case 0: return `high card ${_RANK_SING[tb[0]]}`;
+    case 1: return `a pair of ${_RANK_PLUR[tb[0]]}`;
+    case 2: return `two pair, ${_RANK_PLUR[tb[0]]} and ${_RANK_PLUR[tb[1]]}`;
+    case 3: return `three of a kind, ${_RANK_PLUR[tb[0]]}`;
+    case 4: return tb[0]===5 ? `a straight, Ace to Five` : `a straight, ${_RANK_SING[tb[0]-4]} to ${_RANK_SING[tb[0]]}`;
+    case 5: return `a flush, ${_RANK_SING[tb[0]]} high`;
+    case 6: return `a full house, ${_RANK_PLUR[tb[0]]} full of ${_RANK_PLUR[tb[1]]}`;
+    case 7: return `four of a kind, ${_RANK_PLUR[tb[0]]}`;
+    case 8: return tb[0]===5 ? `a straight flush, Ace to Five` : `a straight flush, ${_RANK_SING[tb[0]-4]} to ${_RANK_SING[tb[0]]}`;
+    default: return '';
+  }
 }
 
 function exportHandsToPokerTracker(handIds){
