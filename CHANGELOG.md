@@ -6,6 +6,51 @@
 
 ---
 
+## 2026-08-04 (68) — Bug #3 in PokerTracker export: antes interleaved with blind lines broke PT4 parsing entirely
+**Files: ui.js**
+
+- User's friend re-tested the export (after bugs #65/#66/#67 were fixed)
+  with real PT4/PT5 software: import showed "1 hand" but with no content
+  at all — worse than before, since now even the header-level info wasn't
+  usable.
+- User supplied a real, confirmed-working hand-history sample (exported
+  from a different site, "7XL") to diff against. Comparing it line-by-line
+  against our output exposed the real structural bug.
+- **Root cause:** traced `Ante`/`SB`/`BB` action creation in `game.js` —
+  `SB` and `BB` are pushed to each seat's `actions` array first, and `Ante`
+  is pushed *afterward* in a separate loop over all seats. The exporter's
+  blind/ante block in `ui.js` was a *single* loop over `sortedSeats` that
+  printed whatever it found in each seat's own `actions` array in
+  whatever order it appeared there. Net effect: for the SB and BB seats
+  specifically, their blind-post line printed *before* their own ante
+  line (since SB/BB were pushed to the array first) — so the actual
+  output interleaved blind lines into the middle of the antes block
+  (e.g. `SB posts small blind` / `SB posts the ante` / `BB posts big
+  blind` / `BB posts the ante` / ...) instead of the required structure:
+  **all antes as one complete block, then small blind, then big blind**,
+  immediately before `*** HOLE CARDS ***`. This is the standard structure
+  in every real hand-history format (confirmed against the user's 7XL
+  sample) — PT4's parser evidently uses this exact sequence as a
+  state-machine transition point, so scrambling it doesn't just misorder
+  a couple of lines, it derails parsing of the entire hand body while
+  still leaving the header/seat lines intact enough to register as "1
+  hand" with nothing readable inside.
+- Fixed by splitting the single mixed loop into three separate,
+  sequential loops over `sortedSeats` — all `Ante` lines first, then all
+  `SB` lines, then all `BB` lines — guaranteeing the antes block is fully
+  emitted before any blind-post line, matching the proven-working
+  reference structure exactly.
+- **Not yet re-verified against real PT4/PT5 import** — user is
+  re-testing with the friend next. If the hand still doesn't come through
+  clean, other smaller differences noticed against the 7XL reference
+  (chip amounts formatted without thousands-separator commas; folded
+  players without known hole cards skipped entirely instead of getting a
+  blank `Dealt to X` line; header text `PokerStars Hand #...` vs. the
+  reference's `Poker Hand #...` and a different Level/blinds format) are
+  flagged as next things to check, in that order of suspicion — but
+  intentionally not changed yet, to keep this test isolated to the one
+  high-confidence fix.
+
 ## 2026-07-14 (cont'd 67) — Bug #2 in the same area: blind lines could print BB before SB
 **Files: ui.js**
 

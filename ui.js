@@ -1677,15 +1677,29 @@ function _handToPSFormat(hand, handNumber){
     lines.push(`Seat ${seatNum.get(s.seatIdx)}: ${s.playerName} (${s.stack||0} in chips)`);
   });
 
-  // הימורי חובה — לפי sortedSeats (סדר שולחן אמיתי), לא seats הגולמי, אחרת
-  // הסדר של שורות ה-posts יכול לצאת הפוך (BB לפני SB) גם אם מספרי המושבים
-  // כבר נכונים — בדיוק הבאג שנתפס: SB תמיד מיד אחרי BTN ב-sortedSeats, אז
-  // איטרציה עליו נותנת "SB posts" לפני "BB posts" כמו שבאמת קורה במשחק.
+  // הימורי חובה — קריטי: כל בלוק ה-ante חייב להופיע *במלואו* לפני שורות
+  // ה-blind, לא מעורבב per-seat. בפורמט PokerStars אמיתי (ואומת מול דוגמה
+  // עובדת מ-7XL) הסדר הוא תמיד: כל ה-antes (לפי סדר מושבים כלשהו) → SB →
+  // BB → *** HOLE CARDS ***. הבאג שנתפס: מכיוון ש-Ante נדחף ל-actions של
+  // כל מושב *אחרי* SB/BB (בלולאה נפרדת ב-game.js), לולאה יחידה שעוברת
+  // מושב-מושב ומדפיסה "מה שנמצא" הייתה מפיקה SB/BB מעורבבים בתוך בלוק ה-
+  // antes (למשל "SB posts small blind" ואז מיד "SB posts the ante") —
+  // זה שובר את הפרסר של PT4 בדיוק במעבר "antes→blinds→hole cards", ולכן
+  // הידיים נקלטו (כותרת/מושבים) אבל בלי תוכן בכלל. לכן: 3 לולאות נפרדות,
+  // לא אחת — antes קודם (בלוק שלם), אח"כ SB, אח"כ BB.
+  sortedSeats.forEach(s=>{
+    (s.actions||[]).forEach(a=>{
+      if(a.type==='Ante') lines.push(`${s.playerName}: posts the ante ${a.amount||0}`);
+    });
+  });
   sortedSeats.forEach(s=>{
     (s.actions||[]).forEach(a=>{
       if(a.type==='SB') lines.push(`${s.playerName}: posts small blind ${a.amount||0}`);
+    });
+  });
+  sortedSeats.forEach(s=>{
+    (s.actions||[]).forEach(a=>{
       if(a.type==='BB') lines.push(`${s.playerName}: posts big blind ${a.amount||0}`);
-      if(a.type==='Ante') lines.push(`${s.playerName}: posts the ante ${a.amount||0}`);
     });
   });
 
