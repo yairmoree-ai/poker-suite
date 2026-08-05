@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-08-04 (71) — "Hero" wasn't marked at all in exports; PT4 likely needs it to identify the tracked player
+**Files: ui.js**
+
+- User's own idea, independent of the two structural bugs above: neither
+  reference sample uses the player's real name for their own seat — both
+  literally use the string `Hero`. Our exports never did this at all —
+  every seat, including whichever one is the app's own logged-in user,
+  was always printed with their real assigned display name. This likely
+  doesn't break *parsing* the hand body (unrelated to bugs #69/#70), but
+  is very plausibly needed for PT4/PT5 to correctly attribute HUD stats
+  to "you" specifically, since real converters use exactly this
+  convention precisely because they can't know a user's real site login.
+- The app already tracks who's logged in — `currentUser.name` (set in
+  `auth.js`) is exactly what `renderSeats()`'s existing `isMe` check
+  already compares against seat names for UI highlighting (`isMe = s.
+  playerName===myNameDet2...`). This just hadn't been reused for export.
+- Added a small `_disp(name)` helper inside `_handToPSFormat`: returns
+  `'Hero'` when the name matches `currentUser.name`, otherwise the real
+  name unchanged. Applied it only at the point of writing into the output
+  text (every `lines.push` that includes a player name) — all internal
+  bookkeeping (`streetTotal`, `totalPaid`, `foldedNames`, `stillActive`,
+  etc.) still keys off the real `playerName` throughout, so nothing about
+  the matching/calculation logic changes, only what gets printed.
+- Verified via the same simulation harness (re-run with a fake
+  `currentUser = {name:'CO_Hero'}`): that seat's name is replaced with
+  `Hero` everywhere it appears (seat list, ante line, actions, `Dealt to`,
+  summary line) while every other seat keeps their real name, unchanged.
+
 ## 2026-08-04 (70) — Built a real test harness (not just reading code) — caught a live bug #69 missed entirely
 **Files: ui.js**
 

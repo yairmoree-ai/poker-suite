@@ -1670,10 +1670,21 @@ function _handToPSFormat(hand, handNumber){
   const btnSeat = seats.find(s=>s.pos==='BTN');
   const btnNum = btnSeat ? seatNum.get(btnSeat.seatIdx) : 1;
 
+  // "Hero": שתי הדוגמאות האמיתיות שסופקו (7XL, GG Rush&Cash) מראות ששחקן-
+  // הבית תמיד נקרא בטקסט הייצוא בשם הליטרלי "Hero" — לא שם אמיתי — וזה כנראה
+  // איך PT4 מזהה איזה שחקן זה "אתה" (ולא רק תיוג קוסמטי). אצלנו לא היה שום
+  // סימון כזה עד עכשיו. currentUser.name (מ-auth.js) כבר קיים בקוד בשביל
+  // בדיוק הזיהוי הזה (ראו isMe ב-renderSeats) — פשוט לא נוצל כאן. הפונקציה
+  // הזו רק מחליפה את השם *בטקסט המוצג*; כל הלוגיקה הפנימית (streetTotal/
+  // totalPaid/foldedNames וכו') ממשיכה להשתמש ב-playerName האמיתי כמפתח,
+  // כדי לא לשבור שום התאמה.
+  const heroRealName = (typeof currentUser!=='undefined' && currentUser?.name) || '';
+  const _disp = name => (heroRealName && name===heroRealName) ? 'Hero' : name;
+
   lines.push(`PokerStars Hand #HG${handNumber}: Tournament #1, Home Game Hold'em No Limit - Level I (${sbAmt}/${bbAmt}) - ${dateStr} ET`);
   lines.push(`Table 'HomeGame' ${seats.length}-max Seat #${btnNum} is the button`);
   sortedSeats.forEach(s=>{
-    lines.push(`Seat ${seatNum.get(s.seatIdx)}: ${s.playerName} (${s.stack||0} in chips)`);
+    lines.push(`Seat ${seatNum.get(s.seatIdx)}: ${_disp(s.playerName)} (${s.stack||0} in chips)`);
   });
 
   // הימורי חובה — קריטי: כל בלוק ה-ante חייב להופיע *במלואו* לפני שורות
@@ -1688,17 +1699,17 @@ function _handToPSFormat(hand, handNumber){
   // לא אחת — antes קודם (בלוק שלם), אח"כ SB, אח"כ BB.
   sortedSeats.forEach(s=>{
     (s.actions||[]).forEach(a=>{
-      if(a.type==='Ante') lines.push(`${s.playerName}: posts the ante ${a.amount||0}`);
+      if(a.type==='Ante') lines.push(`${_disp(s.playerName)}: posts the ante ${a.amount||0}`);
     });
   });
   sortedSeats.forEach(s=>{
     (s.actions||[]).forEach(a=>{
-      if(a.type==='SB') lines.push(`${s.playerName}: posts small blind ${a.amount||0}`);
+      if(a.type==='SB') lines.push(`${_disp(s.playerName)}: posts small blind ${a.amount||0}`);
     });
   });
   sortedSeats.forEach(s=>{
     (s.actions||[]).forEach(a=>{
-      if(a.type==='BB') lines.push(`${s.playerName}: posts big blind ${a.amount||0}`);
+      if(a.type==='BB') lines.push(`${_disp(s.playerName)}: posts big blind ${a.amount||0}`);
     });
   });
 
@@ -1708,7 +1719,7 @@ function _handToPSFormat(hand, handNumber){
   // תואם למבנה שנצפה בפועל בשני הפורמטים העובדים.
   seats.forEach(s=>{
     const c0 = s.cards?.[0], c1 = s.cards?.[1];
-    lines.push((c0 && c1) ? `Dealt to ${s.playerName} [${_cardToPS(c0)} ${_cardToPS(c1)}]` : `Dealt to ${s.playerName} `);
+    lines.push((c0 && c1) ? `Dealt to ${_disp(s.playerName)} [${_cardToPS(c0)} ${_cardToPS(c1)}]` : `Dealt to ${_disp(s.playerName)} `);
   });
 
   const board = (hand.board||[]).filter(Boolean);
@@ -1771,17 +1782,17 @@ function _handToPSFormat(hand, handNumber){
       const newTotal = prevTotal + (a.type==='Call'||a.type==='Check'||a.type==='Fold' ? 0 : delta);
       const raiseBy = newTotal - highBet; // כמה מעל ההימור הגבוה הקיים
       switch(a.type){
-        case 'Fold': lines.push(`${a.playerName}: folds`); break;
-        case 'Check': lines.push(`${a.playerName}: checks`); break;
-        case 'Call': lines.push(`${a.playerName}: calls ${delta||0}`); streetTotal[a.playerName]=prevTotal+delta; break;
+        case 'Fold': lines.push(`${_disp(a.playerName)}: folds`); break;
+        case 'Check': lines.push(`${_disp(a.playerName)}: checks`); break;
+        case 'Call': lines.push(`${_disp(a.playerName)}: calls ${delta||0}`); streetTotal[a.playerName]=prevTotal+delta; break;
         case 'All-in':
-          lines.push(`${a.playerName}: ${highBet>0?'raises '+raiseBy+' to '+newTotal:'bets '+delta} and is all-in`);
+          lines.push(`${_disp(a.playerName)}: ${highBet>0?'raises '+raiseBy+' to '+newTotal:'bets '+delta} and is all-in`);
           streetTotal[a.playerName]=newTotal; highBet=Math.max(highBet,newTotal); break;
         default: // Raise, Open, 3bet, 4bet
           if(highBet>0){
-            lines.push(`${a.playerName}: raises ${raiseBy} to ${newTotal}`);
+            lines.push(`${_disp(a.playerName)}: raises ${raiseBy} to ${newTotal}`);
           } else {
-            lines.push(`${a.playerName}: bets ${delta}`);
+            lines.push(`${_disp(a.playerName)}: bets ${delta}`);
           }
           streetTotal[a.playerName]=newTotal;
           highBet=Math.max(highBet,newTotal);
@@ -1824,7 +1835,7 @@ function _handToPSFormat(hand, handNumber){
     const maxOther = others.length ? Math.max(...others) : 0;
     const uncalled = wPaid - maxOther;
     if(uncalled > 0.0000001){
-      lines.push(`Uncalled bet (${uncalled}) returned to ${w.playerName}`);
+      lines.push(`Uncalled bet (${uncalled}) returned to ${_disp(w.playerName)}`);
       totalPaid[w.playerName] = wPaid - uncalled;
     }
   }
@@ -1836,12 +1847,12 @@ function _handToPSFormat(hand, handNumber){
   lines.push('*** SHOWDOWN ***');
   if(winners.length){
     winners.forEach(w=>{
-      lines.push(`${w.name||w.playerName||'?'} collected ${w.amount||hand.finalPot||0} from pot`);
+      lines.push(`${_disp(w.name||w.playerName)||'?'} collected ${w.amount||hand.finalPot||0} from pot`);
     });
   } else if(stillActive.length===1){
     // אין winners רשום אבל רק שחקן אחד לא קיפל — בטוח להסיק שהוא לקח את הקופה
     const potTotal = Object.values(totalPaid).reduce((a,b)=>a+b,0);
-    lines.push(`${stillActive[0].playerName} collected ${hand.finalPot||potTotal} from pot`);
+    lines.push(`${_disp(stillActive[0].playerName)} collected ${hand.finalPot||potTotal} from pot`);
     winnerNames.add(stillActive[0].playerName);
   }
 
@@ -1888,7 +1899,7 @@ function _handToPSFormat(hand, handNumber){
     } else {
       desc = 'mucked';
     }
-    lines.push(`Seat ${num}: ${s.playerName}${posTag} ${desc}`);
+    lines.push(`Seat ${num}: ${_disp(s.playerName)}${posTag} ${desc}`);
   });
 
   return lines.join('\n');
