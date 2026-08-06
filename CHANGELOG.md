@@ -6,6 +6,47 @@
 
 ---
 
+## 2026-08-04 (72) — FOUND IT: the header said "PokerStars Hand", not "Poker Hand" — wrong parser entirely
+**Files: ui.js**
+
+- After bugs #69/#70/#71 were all fixed and verified correct via
+  simulation, user's friend still got "same shit" (1 hand, no content) —
+  even with a hand-body that's now byte-for-byte structurally validated
+  against two real working samples. This ruled out every body-content
+  hypothesis at once and pointed at something outside the body.
+- Side-quest that also got ruled out cleanly: suspected Hebrew player
+  names (`איל`, `ביאנה`, etc.) might not survive whatever regex PT4 uses
+  to match player names in action lines, since no real poker site allows
+  non-ASCII usernames. Tested in isolation (manually swapped to Latin
+  names, no code change, no other change) — still failed identically.
+  Ruled out.
+- **Next isolated test, single variable:** noticed neither of the two
+  working reference samples ever say "PokerStars" — both open with the
+  literal string `Poker Hand #...:`. Our header said `PokerStars Hand
+  #HG1: ...`. Tested by hand-editing just that one word in the same
+  Latin-names file (`PokerStars Hand` → `Poker Hand`, nothing else
+  touched) — **this fixed it.** Confirmed by the user's friend with real
+  PT4/PT5 import.
+- **Root cause, now confirmed:** PT4 selects which site-specific parser
+  to run based on matching the header text. `"PokerStars Hand"` routes
+  to PokerStars' own real, strict official grammar (built around actual
+  PokerStars conventions — real tournament ID formats, specific date/
+  currency conventions, etc.) which our synthetic body was never actually
+  written to satisfy. Every other structural fix we made (#68/#69/#70/#71)
+  was real and correct, but none of it mattered as long as the header
+  routed to the wrong parser entirely — that parser was rejecting the
+  body regardless of how correct it was by some *other* site's grammar.
+- Fix: changed the one line in `_handToPSFormat` that builds the header —
+  `PokerStars Hand #HG${handNumber}: ...` → `Poker Hand #HG${handNumber}:
+  ...`. Nothing else changed.
+- **Confirmed working end-to-end by the user's friend with real PT4/PT5
+  import** — this is the first confirmed real-world working export since
+  this whole investigation started (#68 through #72).
+- Lesson worth keeping in mind for next time: when matching a working
+  reference format, match **everything**, including parts that look like
+  throwaway branding text — a single word in a header line was masking
+  four other real, correctly-fixed bugs for several rounds.
+
 ## 2026-08-04 (71) — "Hero" wasn't marked at all in exports; PT4 likely needs it to identify the tracked player
 **Files: ui.js**
 

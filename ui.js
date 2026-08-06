@@ -1681,7 +1681,12 @@ function _handToPSFormat(hand, handNumber){
   const heroRealName = (typeof currentUser!=='undefined' && currentUser?.name) || '';
   const _disp = name => (heroRealName && name===heroRealName) ? 'Hero' : name;
 
-  lines.push(`PokerStars Hand #HG${handNumber}: Tournament #1, Home Game Hold'em No Limit - Level I (${sbAmt}/${bbAmt}) - ${dateStr} ET`);
+  // "Poker Hand" — לא "PokerStars Hand"! זה היה השורש האמיתי לכל הבעיה
+  // (ראו CHANGELOG 72) — "PokerStars" מפעיל ב-PT4 את הפרסר הרשמי המחמיר
+  // של PokerStars האמיתי, שדוחה את גוף היד שלנו (שבנוי לפי מוסכמות אתרים
+  // אחרים). שתי הדוגמאות האמיתיות (7XL, GG Rush&Cash) גם הן פותחות ב-
+  // "Poker Hand", לא "PokerStars Hand" — לא במקרה.
+  lines.push(`Poker Hand #HG${handNumber}: Tournament #1, Home Game Hold'em No Limit - Level I (${sbAmt}/${bbAmt}) - ${dateStr} ET`);
   lines.push(`Table 'HomeGame' ${seats.length}-max Seat #${btnNum} is the button`);
   sortedSeats.forEach(s=>{
     lines.push(`Seat ${seatNum.get(s.seatIdx)}: ${_disp(s.playerName)} (${s.stack||0} in chips)`);
