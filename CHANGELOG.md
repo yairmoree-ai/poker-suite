@@ -6,6 +6,117 @@
 
 ---
 
+## 2026-08-14 (74) — New feature: in-app "🏆 Leaderboard" button, computed live from existing tournament data
+**Files: state.js, ui.js**
+
+- User wanted a Leaderboard button in the app itself (rather than manually
+  re-entering results into the Excel workbook built earlier this session)
+  that shows an up-to-date table and can be exported.
+- **Key realization while building this:** the app already records
+  everything the formula needs, per saved tournament (`saveTournament()`
+  in `ui.js`) — `totalEntries`, `place1`/`place2`/`place3`/`place4` (actual
+  prize amounts), `buyinCost`, and `finishOrder` (`{place, pid, name,
+  rebuy}` for every player, not just the top 3). None of this required new
+  tracking — it's the same `S.tournLog` data that already powers the
+  existing tournament-history view and CSV export. So the feature needed
+  zero new data entry, unlike the Excel workbook from earlier (which
+  still requires manually retyping each night's results).
+- **`computeLeaderboard()` (`state.js`)** — pure function over `S.
+  tournLog`: for each saved tournament, `points = sqrt(totalEntries) /
+  finish place`, summed per player (keyed by `pid`, not name, so a later
+  rename doesn't split someone's history in two); profit = actual prize
+  for that tournament's place (from `place1..place4`, real recorded
+  values — not a guessed 30/70 split) minus `buyinCost × (1 + rebuys)`.
+  Sorted by points, ties broken by cumulative profit — same rule agreed
+  on earlier for the spreadsheet version.
+- **Verified against the real data**, not just reasoned about: extracted
+  the actual `computeLeaderboard` function verbatim out of `state.js` and
+  ran it in a small Node harness against the same 12-tournament dataset
+  used for the Excel workbook — output matches exactly, row for row.
+- **`showLeaderboard()` (`ui.js`)** — new full-screen overlay (same visual
+  pattern as the existing hand replayer overlay), ranked table with medal
+  colors for top 3, profit shown green/red. Triggered by a new "🏆
+  Leaderboard" button placed next to the existing history "📊 Excel" / "🔧
+  תקן סדר" buttons in the tournament tab — **unlike those two, this one is
+  visible to everyone, not just admins**, since it's read-only and
+  doesn't touch tournament data (worth flagging in case that's not the
+  intended access level).
+- **`exportLeaderboardToCSV()`** — reuses the existing `downloadCSV()`
+  helper (already used by `exportTournsToCSV()`, already handles the
+  UTF-8 BOM Hebrew needs to render correctly in Excel) rather than adding
+  a new export mechanism. Produces a flat `leaderboard.csv` with the same
+  columns shown on screen.
+- **Not yet tested in a real browser session** — verified the computation
+  logic directly (see above), but the overlay/DOM rendering and the two
+  new buttons haven't been clicked through in an actual running instance
+  of the app yet. Recommend a quick manual check after deploying.
+
+## 2026-08-06 (73) — New feature: block concurrent logins (single active session per user)
+**Files: poker-auth-worker.js, auth.js, index.html**
+
+- User asked whether double/concurrent login by the same user could be
+  prevented. Checked: previously **no such mechanism existed at all** —
+  `/login` issued stateless, unvalidated JWT-style tokens with a 7-day
+  expiry and no server-side session record, so any number of devices
+  could hold valid tokens for the same user simultaneously.
+- User's choice (asked directly, two options): a *new* login attempt
+  should be **blocked** with a clear error while another session is
+  already active, rather than silently kicking the older one.
+- **Implementation, worker side (`poker-auth-worker.js`):**
+  - `generateToken()` now embeds a random `sessionId` (`crypto.
+    randomUUID()`) in the token payload alongside the existing claims.
+  - `/login` checks `session:{username}` in KV before issuing a token:
+    if a recorded session's `lastSeen` is within a 45s staleness window,
+    the login is rejected with `{ok:false, code:'ALREADY_LOGGED_IN'}`
+    (HTTP 409). Otherwise it proceeds and overwrites the KV record with
+    a fresh `sessionId`/`lastSeen`.
+  - New `POST /heartbeat`: the active client pings this every 15s
+    (comfortably inside the 45s staleness window) to keep its session
+    alive. If the stored `sessionId` for that username no longer matches
+    the caller's own token (i.e. it went stale and someone else logged
+    in and took the slot), returns `SESSION_REPLACED` so the stale client
+    can log itself out cleanly instead of silently continuing to run
+    against a session it no longer owns.
+  - New `POST /logout`: immediately deletes the `session:{username}` KV
+    record (only if the caller's own `sessionId` still matches — a no-op
+    otherwise), so switching devices doesn't require waiting out the 45s
+    staleness window every time.
+  - **Why staleness-based, not a hard lock:** the app never had a logout
+    button before this change — people just closed the tab. A hard lock
+    tied only to token expiry (7 days) would have permanently locked
+    people out of their own account after any non-graceful exit. The
+    heartbeat+staleness design self-heals within ~45s even with zero
+    client cooperation, and the new explicit logout (below) makes the
+    common case near-instant instead.
+- **Implementation, client side (`auth.js`):**
+  - `_startHeartbeat()` — 15s interval calling `/heartbeat` with the
+    stored bearer token; on `SESSION_REPLACED` it stops the interval,
+    alerts the person, and force-logs-out.
+  - `logout(skipConfirm)` — **new function, didn't exist at all before.**
+    Confirms (unless called internally after a forced kick), calls
+    `/logout` to release the session server-side, then clears the local
+    token/`currentUser` and reloads to the lock screen.
+  - `checkPass()`'s error handling had a pre-existing (unrelated, but now
+    more visible) bug: on any non-ok login response it always showed a
+    generic "connection error" regardless of what the server actually
+    said, silently swallowing the real reason. Fixed in passing — now
+    shows `data.error` when present (so `ALREADY_LOGGED_IN`'s message
+    actually reaches the person), falling back to the generic message
+    only when there truly was no response to read.
+  - Heartbeat is started right after a successful worker login.
+- **Implementation, UI (`index.html`):** added a `#btn-logout` (⏻) next
+  to the existing user badge, hidden by default, shown on any successful
+  login/upgrade/viewer-entry path (`loginSuccess`, `tryUpgrade`,
+  `enterAsViewer`) — wired to the new `logout()`.
+- **Not yet tested against the real deployed Worker** — this touches the
+  Cloudflare Worker (`poker-auth-worker.js`), which needs to actually be
+  redeployed (not just committed) for any of this to take effect; same
+  caution as bug #68 about deploy vs. commit applies here even more
+  directly, since this is server code, not client code loaded by the
+  static site. Recommend testing with two browser sessions (e.g. a normal
+  window + a private/incognito window) logging in as the same user
+  before trusting this in a real multi-device session.
+
 ## 2026-08-04 (72) — FOUND IT: the header said "PokerStars Hand", not "Poker Hand" — wrong parser entirely
 **Files: ui.js**
 

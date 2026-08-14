@@ -1480,10 +1480,13 @@ function renderTournList(){
   if(S.tournLog.length){
     html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:12px;font-weight:700;color:var(--gold)">היסטוריה (${S.tournLog.length})</div>
-      ${isAdmin()?`<div style="display:flex;gap:6px">
+      <div style="display:flex;gap:6px">
+        <button onclick="showLeaderboard()" style="font-size:10px;color:#c8a96e;background:rgba(200,169,110,0.1);border:1px solid rgba(200,169,110,0.4);border-radius:7px;padding:3px 8px;cursor:pointer;font-weight:800">🏆 Leaderboard</button>
+        ${isAdmin()?`<div style="display:flex;gap:6px">
         <button onclick="exportToExcel()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>
         <button onclick="fixTournFinishOrders()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">🔧 תקן סדר</button>
       </div>`:''}
+      </div>
     </div>`;
     html += S.tournLog.map((t,ti)=>{
       const prizeByPlaceT = {1:Math.round(t.place1||0),2:Math.round(t.place2||0),3:t.place3||0,4:t.place4||0};
@@ -1631,6 +1634,71 @@ function setPlayerType(pid, type){
 }
 
 function openSaveTournBox(){ showSaveTournDialog(); }
+
+function showLeaderboard(){
+  const lb = computeLeaderboard();
+  document.getElementById('leaderboard-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'leaderboard-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.94);overflow-y:auto;direction:rtl';
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:480px;margin:0 auto;padding:12px';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  const hdrTop = document.createElement('div');
+  hdrTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
+  hdrTop.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c8a96e">🏆 Leaderboard (${S.tournLog.length} טורנירים)</div>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = ()=>overlay.remove();
+  hdrTop.appendChild(closeBtn);
+  box.appendChild(hdrTop);
+
+  if(!lb.length){
+    box.innerHTML += `<div style="text-align:center;color:var(--muted);font-size:13px;padding:30px 10px">אין עדיין מספיק נתונים (צריך טורנירים שמורים עם סדר-סיום)</div>`;
+    return;
+  }
+
+  const exportBtn = document.createElement('button');
+  exportBtn.textContent = '📊 ייצוא ל-Excel';
+  exportBtn.style.cssText = 'width:100%;padding:9px;border-radius:9px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:10px';
+  exportBtn.onclick = exportLeaderboardToCSV;
+  box.appendChild(exportBtn);
+
+  const table = document.createElement('div');
+  table.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden';
+  table.innerHTML = `
+    <div style="display:grid;grid-template-columns:28px 1fr 60px 50px 50px 70px;gap:4px;padding:8px 10px;background:rgba(255,255,255,0.04);font-size:10px;font-weight:800;color:var(--muted)">
+      <div>#</div><div>שחקן</div><div style="text-align:center">נקודות</div><div style="text-align:center">ערבים</div><div style="text-align:center">נצחונות</div><div style="text-align:center">רווח</div>
+    </div>
+    ${lb.map((p,i)=>`
+      <div style="display:grid;grid-template-columns:28px 1fr 60px 50px 50px 70px;gap:4px;padding:8px 10px;font-size:12px;border-top:1px solid rgba(255,255,255,0.05);${i<3?'background:rgba(200,169,110,0.06)':''}">
+        <div style="font-weight:800;color:${i===0?'#c8a96e':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--muted)'}">${i+1}</div>
+        <div style="font-weight:700;color:#f0ece4">${p.name}</div>
+        <div style="text-align:center;font-weight:800;color:#c8a96e">${p.points.toFixed(2)}</div>
+        <div style="text-align:center;color:var(--muted)">${p.nights}</div>
+        <div style="text-align:center;color:var(--muted)">${p.wins}</div>
+        <div style="text-align:center;font-weight:700;color:${p.profit>=0?'#7ec98f':'#e07b6a'}">${p.profit>=0?'+':''}${Math.round(p.profit).toLocaleString()}</div>
+      </div>
+    `).join('')}
+  `;
+  box.appendChild(table);
+
+  const note = document.createElement('div');
+  note.style.cssText = 'font-size:10px;color:var(--muted2);margin-top:10px;text-align:center';
+  note.textContent = 'נקודות = √(כניסות באותו ערב) ÷ מקום-סיום · טיברייקר: רווח כספי מצטבר';
+  box.appendChild(note);
+}
+
+function exportLeaderboardToCSV(){
+  const lb = computeLeaderboard();
+  const rows = [['#','שחקן','נקודות','ערבים','נצחונות','רווח מצטבר']];
+  lb.forEach((p,i)=>rows.push([i+1, p.name, p.points.toFixed(2), p.nights, p.wins, Math.round(p.profit)]));
+  downloadCSV(rows, 'leaderboard.csv');
+}
 
 function exportToExcel(){ exportTournsToCSV(); }
 

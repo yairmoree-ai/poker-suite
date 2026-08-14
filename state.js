@@ -375,6 +375,38 @@ function totalChips(){
   return totalEntries() * 50000;
 }
 
+// ===== Leaderboard =====
+// נוסחה שנקבעה יחד עם המשתמש (ראו שיחה): נקודות = sqrt(כניסות-הערב) / מקום-סיום.
+// "כניסות" = totalEntries של הטורניר (buyins+rebuys), לא מספר-שחקנים — כי כל
+// rebuy הוא סיכון עצמאי אמיתי (סטאק חדש, תרומה מלאה לקופה), החלטה מודעת
+// אחרי דיון על היתרונות/חסרונות של שתי הגישות. טיברייקר: רווח כספי מצטבר
+// (won - spent), כי הנתון כבר קיים בלי חישוב נוסף. מקורות: sqrt(entries)/
+// position היא הנוסחה הרשמית של ClubGG (אומתה מול צילום מסך מהאפליקציה).
+//
+// דורש ש-t.totalEntries ו-t.finishOrder (עם place/pid/rebuy) יהיו תקינים —
+// שניהם כבר נשמרים על ידי saveTournament(), אין צורך בהזנה נוספת.
+function computeLeaderboard(){
+  const stats = {}; // pid -> {pid,name,points,nights,wins,profit}
+  (S.tournLog||[]).forEach(t=>{
+    const entries = t.totalEntries||0;
+    if(entries<=0 || !(t.finishOrder||[]).length) return;
+    const sq = Math.sqrt(entries);
+    const prizeByPlace = {1:t.place1||0, 2:t.place2||0, 3:t.place3||0, 4:t.place4||0};
+    t.finishOrder.forEach(f=>{
+      if(!f.pid || !f.place) return;
+      if(!stats[f.pid]) stats[f.pid] = {pid:f.pid, name: pName(f.pid)||f.name||'?', points:0, nights:0, wins:0, profit:0};
+      const st = stats[f.pid];
+      st.points += sq / f.place;
+      st.nights += 1;
+      if(f.place===1) st.wins += 1;
+      const spent = (t.buyinCost||0) * (1 + (f.rebuy||0));
+      const won = prizeByPlace[f.place] || 0;
+      st.profit += (won - spent);
+    });
+  });
+  return Object.values(stats).sort((a,b)=> b.points-a.points || b.profit-a.profit);
+}
+
 function calcPaidEntries(){
   const totalR = totalRebuys();
   const free = calcFreeRebuys();
