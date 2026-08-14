@@ -1650,6 +1650,7 @@ function showLeaderboard(){
   const closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
+  closeBtn.className = 'share-hide';
   closeBtn.onclick = ()=>overlay.remove();
   hdrTop.appendChild(closeBtn);
   box.appendChild(hdrTop);
@@ -1659,11 +1660,23 @@ function showLeaderboard(){
     return;
   }
 
+  const btnRow = document.createElement('div');
+  btnRow.className = 'share-hide';
+  btnRow.style.cssText = 'display:flex;gap:8px;margin-bottom:10px';
+
+  const shareBtn = document.createElement('button');
+  shareBtn.textContent = '📤 שתף';
+  shareBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:12px;font-weight:800;cursor:pointer';
+  shareBtn.onclick = ()=>shareLeaderboardImage(box);
+  btnRow.appendChild(shareBtn);
+
   const exportBtn = document.createElement('button');
   exportBtn.textContent = '📊 ייצוא ל-Excel';
-  exportBtn.style.cssText = 'width:100%;padding:9px;border-radius:9px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:10px';
+  exportBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:12px;font-weight:800;cursor:pointer';
   exportBtn.onclick = exportLeaderboardToCSV;
-  box.appendChild(exportBtn);
+  btnRow.appendChild(exportBtn);
+
+  box.appendChild(btnRow);
 
   const table = document.createElement('div');
   table.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden';
@@ -1695,6 +1708,48 @@ function exportLeaderboardToCSV(){
   const rows = [['#','שחקן','נקודות','ערבים','נצחונות','רווח מצטבר']];
   lb.forEach((p,i)=>rows.push([i+1, p.name, p.points.toFixed(2), p.nights, p.wins, Math.round(p.profit)]));
   downloadCSV(rows, 'leaderboard.csv');
+}
+
+// אותה שיטה בדיוק כמו shareHandImage/shareTournamentImage — html2canvas לצילום
+// ה-box, ואז Web Share API (עם fallback להורדה במחשב-שולחני שאין בו share
+// sheet). ה-class 'share-hide' על כפתור-הסגירה ושורת-הכפתורים מסתיר אותם
+// מהצילום עצמו (usoing visibility, לא display, כדי לא לשבור את הלייאאוט).
+async function shareLeaderboardImage(box){
+  if(typeof html2canvas === 'undefined'){
+    notify('טעינת כלי השיתוף נכשלה — בדוק חיבור לאינטרנט');
+    return;
+  }
+  const hideEls = box.querySelectorAll('.share-hide');
+  hideEls.forEach(el=>el.style.visibility = 'hidden');
+  try{
+    const canvas = await html2canvas(box, { backgroundColor:'#0a0d14', scale:2, useCORS:true });
+    hideEls.forEach(el=>el.style.visibility = '');
+
+    canvas.toBlob(async (blob)=>{
+      if(!blob){ notify('שגיאה ביצירת התמונה'); return; }
+      const fileName = 'poker-leaderboard-'+Date.now()+'.png';
+      const file = new File([blob], fileName, {type:'image/png'});
+
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({ files:[file], title:'🏆 Leaderboard', text:'טבלת דירוג' });
+        }catch(shareErr){
+          if(shareErr?.name !== 'AbortError') console.error('share error:', shareErr);
+        }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        notify('התמונה הורדה 📥');
+      }
+    }, 'image/png');
+  }catch(err){
+    hideEls.forEach(el=>el.style.visibility = '');
+    console.error('shareLeaderboardImage error:', err);
+    notify('שגיאה בשיתוף הטבלה');
+  }
 }
 
 function exportToExcel(){ exportTournsToCSV(); }

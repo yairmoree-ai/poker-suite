@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-08-14 (77) — Added "📤 שתף" (share) button to the Leaderboard overlay
+**Files: ui.js**
+
+- User asked for a share button on the leaderboard table.
+- Followed the app's existing convention exactly (`shareHandImage()`,
+  `shareTournamentImage()`) rather than inventing a new mechanism:
+  `html2canvas` screenshots the leaderboard `box` element → Web Share API
+  (`navigator.share` with a `File`) on mobile, falls back to a plain PNG
+  download on desktop where there's no share sheet.
+- The close button and the share/export button row are tagged with the
+  same `share-hide` class the existing share functions already look for
+  and hide (via `visibility`, not `display`, so layout doesn't shift)
+  before capturing — so the shared image is just the title + ranked
+  table + formula caption, not the UI chrome.
+- New `shareLeaderboardImage(box)` placed next to `exportLeaderboardToCSV`
+  in `ui.js`. Button sits beside the existing Excel-export button, same
+  row, inside the leaderboard overlay.
+
 ## 2026-08-14 (76) — Leaderboard formula bug: buy-in was silently dropped, only mattered because this user's buy-in never varies
 **Files: state.js, ui.js**
 
