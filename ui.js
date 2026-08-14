@@ -1482,10 +1482,7 @@ function renderTournList(){
       <div style="font-size:12px;font-weight:700;color:var(--gold)">היסטוריה (${S.tournLog.length})</div>
       <div style="display:flex;gap:6px">
         <button onclick="showLeaderboard()" style="font-size:10px;color:#c8a96e;background:rgba(200,169,110,0.1);border:1px solid rgba(200,169,110,0.4);border-radius:7px;padding:3px 8px;cursor:pointer;font-weight:800">🏆 Leaderboard</button>
-        ${isAdmin()?`<div style="display:flex;gap:6px">
-        <button onclick="exportToExcel()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>
-        <button onclick="fixTournFinishOrders()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">🔧 תקן סדר</button>
-      </div>`:''}
+        ${isAdmin()?`<button onclick="exportToExcel()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>`:''}
       </div>
     </div>`;
     html += S.tournLog.map((t,ti)=>{
@@ -2120,6 +2117,11 @@ function _confirmPTExport(){
   document.getElementById('pt-export-modal').style.display = 'none';
 }
 
+// כלי-תיקון חד-פעמי לנתונים היסטוריים (מלפני ש-saveTournament() בנתה
+// finishOrder נכון מ-koOrder בזמן השמירה עצמו). הכפתור בממשק הוסר (2026-
+// 08-14, לבקשת המשתמש) כי טורנירים חדשים כבר נכונים מהיסוד — אבל הפונקציה
+// נשארת בקוד בכוונה, כרשת-ביטחון שאפשר להריץ ידנית מה-console אם אי-פעם
+// תתגלה שוב בעיה דומה. אין לה עלות כשהיא לא נקראת.
 function fixTournFinishOrders(){
   // מתקן finishOrder לפי koOrder לכל הטורנירים
   let fixed=0;

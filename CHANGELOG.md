@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-08-14 (75) — Removed the "🔧 תקן סדר" button (kept the function)
+**Files: ui.js**
+
+- User asked whether the manual finish-order repair button was still
+  needed, correctly guessing it was a one-time fix for historical data
+  saved before `saveTournament()` built `finishOrder` correctly at
+  save-time. Confirmed from the code: `fixTournFinishOrders()` rebuilds
+  `finishOrder` purely from `koOrder`, ignoring the existing field except
+  for `rebuy` lookups — exactly the shape of a historical-data migration
+  tool, not something newly-saved tournaments should ever need.
+- Removed the button from the tournament-history header (next to the
+  Leaderboard/Excel buttons). Deliberately **kept the function itself**
+  in `ui.js`, unused — zero cost while dormant, and still callable from
+  the browser console as a safety net if a similar data issue ever
+  resurfaces, without needing to restore code from history.
+
 ## 2026-08-14 (74) — New feature: in-app "🏆 Leaderboard" button, computed live from existing tournament data
 **Files: state.js, ui.js**
 
