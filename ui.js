@@ -1686,7 +1686,7 @@ function showLeaderboard(){
 
   const note = document.createElement('div');
   note.style.cssText = 'font-size:10px;color:var(--muted2);margin-top:10px;text-align:center';
-  note.textContent = 'נקודות = √(כניסות באותו ערב) ÷ מקום-סיום · טיברייקר: רווח כספי מצטבר';
+  note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו ערב) ÷ מקום-סיום · טיברייקר: רווח כספי מצטבר';
   box.appendChild(note);
 }
 

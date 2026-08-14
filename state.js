@@ -376,21 +376,30 @@ function totalChips(){
 }
 
 // ===== Leaderboard =====
-// נוסחה שנקבעה יחד עם המשתמש (ראו שיחה): נקודות = sqrt(כניסות-הערב) / מקום-סיום.
-// "כניסות" = totalEntries של הטורניר (buyins+rebuys), לא מספר-שחקנים — כי כל
-// rebuy הוא סיכון עצמאי אמיתי (סטאק חדש, תרומה מלאה לקופה), החלטה מודעת
-// אחרי דיון על היתרונות/חסרונות של שתי הגישות. טיברייקר: רווח כספי מצטבר
-// (won - spent), כי הנתון כבר קיים בלי חישוב נוסף. מקורות: sqrt(entries)/
-// position היא הנוסחה הרשמית של ClubGG (אומתה מול צילום מסך מהאפליקציה).
+// נוסחה שנקבעה יחד עם המשתמש (ראו שיחה): נקודות = sqrt(כניסות-הערב ×
+// עלות-כניסה) / מקום-סיום — בהשראת הנוסחה הרשמית של ClubGG (אומתה מול
+// צילום מסך מהאפליקציה). "כניסות" = totalEntries של הטורניר (buyins+
+// rebuys), לא מספר-שחקנים — כי כל rebuy הוא סיכון עצמאי אמיתי (סטאק חדש,
+// תרומה מלאה לקופה), החלטה מודעת אחרי דיון על היתרונות/חסרונות של שתי
+// הגישות. buyinCost נכלל בפועל בשורש (לא רק entries לבד) כדי שהנוסחה תהיה
+// נכונה גם למשתמשים אחרים שמנהלים טורנירים עם buy-in משתנה בין ערבים —
+// אצל המשתמש הראשון buy-in קבוע (50 בכל ערב), ולכן זה היה בעבר מכפיל-קבוע
+// זהה על כל הנקודות (לא משנה שום דירוג יחסי), אבל הושמט בטעות בגרסה
+// הראשונה של הפונקציה; זו לא הייתה החלטה מודעת. תוקן כדי שהנוסחה תהיה
+// נכונה כללית, לא רק "נכונה במקרה" בגלל buy-in קבוע אצל משתמש ספציפי.
+// טיברייקר: רווח כספי מצטבר (won - spent), כי הנתון כבר קיים בלי חישוב
+// נוסף.
 //
-// דורש ש-t.totalEntries ו-t.finishOrder (עם place/pid/rebuy) יהיו תקינים —
-// שניהם כבר נשמרים על ידי saveTournament(), אין צורך בהזנה נוספת.
+// דורש ש-t.totalEntries, t.buyinCost, ו-t.finishOrder (עם place/pid/rebuy)
+// יהיו תקינים — כולם כבר נשמרים על ידי saveTournament(), אין צורך בהזנה
+// נוספת.
 function computeLeaderboard(){
   const stats = {}; // pid -> {pid,name,points,nights,wins,profit}
   (S.tournLog||[]).forEach(t=>{
     const entries = t.totalEntries||0;
-    if(entries<=0 || !(t.finishOrder||[]).length) return;
-    const sq = Math.sqrt(entries);
+    const buyin = t.buyinCost||0;
+    if(entries<=0 || buyin<=0 || !(t.finishOrder||[]).length) return;
+    const sq = Math.sqrt(entries * buyin);
     const prizeByPlace = {1:t.place1||0, 2:t.place2||0, 3:t.place3||0, 4:t.place4||0};
     t.finishOrder.forEach(f=>{
       if(!f.pid || !f.place) return;
@@ -399,7 +408,7 @@ function computeLeaderboard(){
       st.points += sq / f.place;
       st.nights += 1;
       if(f.place===1) st.wins += 1;
-      const spent = (t.buyinCost||0) * (1 + (f.rebuy||0));
+      const spent = buyin * (1 + (f.rebuy||0));
       const won = prizeByPlace[f.place] || 0;
       st.profit += (won - spent);
     });

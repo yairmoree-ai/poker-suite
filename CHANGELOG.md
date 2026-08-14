@@ -6,6 +6,44 @@
 
 ---
 
+## 2026-08-14 (76) — Leaderboard formula bug: buy-in was silently dropped, only mattered because this user's buy-in never varies
+**Files: state.js, ui.js**
+
+- User asked directly what formula was actually implemented, since their
+  original request was `sqrt(entries × buyinCost) / place` (matching the
+  ClubGG reference discussed earlier), and pointed out the implementation
+  should be correct **regardless of this specific user's setup** — other
+  users of the app might run tournaments with a buy-in that changes
+  between nights.
+- **Checked the actual code (`computeLeaderboard()` in `state.js`) rather
+  than trusting memory of what was discussed:** bug #74's implementation
+  was `sqrt(entries) / place` — `buyinCost` was silently dropped entirely,
+  not intentionally simplified. This happened to produce byte-for-byte
+  identical *rankings* for this user only because their buy-in is
+  constant (50) across every recorded night — a constant factor inside a
+  `sqrt()` scales every player's points by the same amount and cannot
+  change relative order or a ratio-based tiebreak. It was invisible in
+  testing precisely because the one dataset available to test against
+  couldn't expose it.
+- Fixed: `sq = Math.sqrt(entries * buyinCost)`, using the night's actual
+  recorded `buyinCost` (already stored per tournament, no new data
+  needed). Updated the in-app formula caption in `showLeaderboard()`
+  (`ui.js`) to match (`√(כניסות × עלות-כניסה)`, not just `√(כניסות)`).
+- **Verified with two automated checks, not just re-reading the formula:**
+  (1) re-ran the real 12-night dataset — ranking order is unchanged from
+  before the fix, confirming the earlier bug truly was invisible for this
+  specific user's data, as reasoned; (2) built a synthetic two-tournament
+  case with a 10x buy-in difference between nights and confirmed the
+  player who won the *expensive* night now outranks the player who won
+  the *cheap* night — the exact behavior the formula fix was meant to
+  restore, and the exact case bug #74's single-buy-in dataset could never
+  have caught.
+- General lesson worth keeping in mind: validating a formula fix against
+  only the one dataset on hand (constant buy-in here) can pass every
+  check and still hide a real bug — needed a second, deliberately
+  different synthetic case (varying buy-in) to actually exercise the
+  code path that mattered.
+
 ## 2026-08-14 (75) — Removed the "🔧 תקן סדר" button (kept the function)
 **Files: ui.js**
 
