@@ -6,6 +6,32 @@
 
 ---
 
+## 2026-08-14 (80) — Hid the profit/loss column from the Leaderboard display (kept it for tiebreaking)
+**Files: ui.js**
+
+- User raised a real social concern, not a technical one: this is a
+  friendly home game, and openly displaying cumulative profit/loss next
+  to everyone's name — especially with the current top-of-points leader
+  also holding the largest profit — risked creating an uncomfortable
+  "look who's taking everyone's money" dynamic that doesn't fit the
+  spirit of a casual group game.
+- Removed the profit column from both the on-screen table
+  (`showLeaderboard()`) and the CSV export (`exportLeaderboardToCSV()`),
+  and reworded the formula caption to explain that ties are broken by
+  profit *without* showing the number, so the ranking still makes sense
+  to anyone who reads the note.
+- **Deliberately left `computeLeaderboard()` itself untouched (`state.
+  js`)** — profit is still computed and still used as the tiebreaker
+  exactly as before; only the *display* of it was removed. This keeps
+  the ranking logic correct while addressing the actual concern (visible
+  social pressure), rather than removing the underlying data.
+- **Open question for the user, not yet addressed:** the `leaderboard.
+  xlsx` workbook built earlier in this session still has a "רווח מצטבר"
+  column visible on its own Leaderboard sheet. If that file might also
+  get shared with the group (not just used privately), it has the same
+  social-comfort issue and would need the same treatment — flagged for
+  the user to decide, not assumed.
+
 ## 2026-08-14 (79) — New feature: edit finish order on a saved tournament (fix mis-marked places)
 **Files: ui.js**
 

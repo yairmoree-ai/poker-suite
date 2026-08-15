@@ -1735,17 +1735,16 @@ function showLeaderboard(){
   const table = document.createElement('div');
   table.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden';
   table.innerHTML = `
-    <div style="display:grid;grid-template-columns:28px 1fr 60px 50px 50px 70px;gap:4px;padding:8px 10px;background:rgba(255,255,255,0.04);font-size:10px;font-weight:800;color:var(--muted)">
-      <div>#</div><div>שחקן</div><div style="text-align:center">נקודות</div><div style="text-align:center">משחקים</div><div style="text-align:center">נצחונות</div><div style="text-align:center">רווח</div>
+    <div style="display:grid;grid-template-columns:28px 1fr 60px 55px 60px;gap:4px;padding:8px 10px;background:rgba(255,255,255,0.04);font-size:10px;font-weight:800;color:var(--muted)">
+      <div>#</div><div>שחקן</div><div style="text-align:center">נקודות</div><div style="text-align:center">משחקים</div><div style="text-align:center">נצחונות</div>
     </div>
     ${lb.map((p,i)=>`
-      <div style="display:grid;grid-template-columns:28px 1fr 60px 50px 50px 70px;gap:4px;padding:8px 10px;font-size:12px;border-top:1px solid rgba(255,255,255,0.05);${i<3?'background:rgba(200,169,110,0.06)':''}">
+      <div style="display:grid;grid-template-columns:28px 1fr 60px 55px 60px;gap:4px;padding:8px 10px;font-size:12px;border-top:1px solid rgba(255,255,255,0.05);${i<3?'background:rgba(200,169,110,0.06)':''}">
         <div style="font-weight:800;color:${i===0?'#c8a96e':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--muted)'}">${i+1}</div>
         <div style="font-weight:700;color:#f0ece4">${p.name}</div>
         <div style="text-align:center;font-weight:800;color:#c8a96e">${p.points.toFixed(2)}</div>
         <div style="text-align:center;color:var(--muted)">${p.nights}</div>
         <div style="text-align:center;color:var(--muted)">${p.wins}</div>
-        <div style="text-align:center;font-weight:700;color:${p.profit>=0?'#7ec98f':'#e07b6a'}">${p.profit>=0?'+':''}${Math.round(p.profit).toLocaleString()}</div>
       </div>
     `).join('')}
   `;
@@ -1753,14 +1752,14 @@ function showLeaderboard(){
 
   const note = document.createElement('div');
   note.style.cssText = 'font-size:10px;color:var(--muted2);margin-top:10px;text-align:center';
-  note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו משחק) ÷ מקום-סיום · טיברייקר: רווח כספי מצטבר';
+  note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו משחק) ÷ מקום-סיום · במקרה של שוויון נקודות, הכרעה לפי רווח כספי מצטבר (לא מוצג בטבלה)';
   box.appendChild(note);
 }
 
 function exportLeaderboardToCSV(){
   const lb = computeLeaderboard();
-  const rows = [['#','שחקן','נקודות','משחקים','נצחונות','רווח מצטבר']];
-  lb.forEach((p,i)=>rows.push([i+1, p.name, p.points.toFixed(2), p.nights, p.wins, Math.round(p.profit)]));
+  const rows = [['#','שחקן','נקודות','משחקים','נצחונות']];
+  lb.forEach((p,i)=>rows.push([i+1, p.name, p.points.toFixed(2), p.nights, p.wins]));
   downloadCSV(rows, 'leaderboard.csv');
 }
 
