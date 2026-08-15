@@ -1303,6 +1303,59 @@ function deleteTournament(ti){
   markDeleted('tourns',S.tournLog[ti]?.id);
   S.tournLog.splice(ti,1); persist(); renderTournList();
 }
+
+// עריכת סדר-סיום לטורניר שכבר נשמר — למקרים כמו "סימנתי בטעות את המנצח
+// הלא-נכון". מחליף רק את שדה ה-place בין שני שחקנים שכנים בדירוג (⬆️/⬇️),
+// לא בונה מסך-עריכה מלא — כי זה בדיוק המקרה השכיח (שני שחקנים הפוכים),
+// ותמיד אפשר להזיז כמה פעמים ברצף כדי להעביר שחקן מספר מקומות. הפרסים
+// (מקום 1/2/3/4) לא שמורים per-player — הם מקושרים ל*מקום*, אז ברגע
+// שמחליפים place, הפרס עוקב אוטומטית בלי לגעת בו בנפרד. אותו נתון (t.
+// finishOrder) הוא גם המקור היחיד ל-Leaderboard (computeLeaderboard ב-
+// state.js), אז תיקון כאן מתעדכן שם אוטומטית גם כן, בלי מקום נוסף לתקן.
+function toggleEditFinishOrder(ti){
+  const existing = document.getElementById('edit-finish-'+ti);
+  if(existing){ existing.remove(); return; }
+  const t = S.tournLog[ti];
+  if(!t) return;
+  const card = document.getElementById('tourn-card-'+ti);
+  if(!card) return;
+  const box = document.createElement('div');
+  box.id = 'edit-finish-'+ti;
+  box.style.cssText = 'margin-top:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(200,169,110,0.25)';
+  box.innerHTML = renderEditFinishOrderHTML(ti);
+  card.appendChild(box);
+}
+
+function renderEditFinishOrderHTML(ti){
+  const t = S.tournLog[ti];
+  const finish = (t.finishOrder||[]).slice().sort((a,b)=>a.place-b.place);
+  return `
+    <div style="font-size:11px;font-weight:800;color:#c8a96e;margin-bottom:6px">✏️ עריכת סדר-סיום</div>
+    ${finish.map((f,idx)=>`
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <span style="width:22px;font-size:12px;font-weight:800;color:var(--gold)">${f.place}.</span>
+        <span style="flex:1;font-size:13px;color:#e2ddd4">${f.name||'?'}${f.rebuy>0?` <span style="color:var(--muted);font-size:11px">(rebuy ${f.rebuy})</span>`:''}</span>
+        <button onclick="swapTournFinishPlace(${ti},${idx},-1)" ${idx===0?'disabled':''} style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:2px 8px;color:#e2ddd4;cursor:pointer;${idx===0?'opacity:0.25;cursor:default':''}">⬆️</button>
+        <button onclick="swapTournFinishPlace(${ti},${idx},1)" ${idx===finish.length-1?'disabled':''} style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:2px 8px;color:#e2ddd4;cursor:pointer;${idx===finish.length-1?'opacity:0.25;cursor:default':''}">⬇️</button>
+      </div>
+    `).join('')}
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">שינוי סדר-הסיום מעדכן אוטומטית גם את הפרסים (לפי מקום) וגם את ה-Leaderboard.</div>
+  `;
+}
+
+function swapTournFinishPlace(ti, idx, dir){
+  const t = S.tournLog[ti];
+  if(!t || !t.finishOrder) return;
+  const finish = t.finishOrder.slice().sort((a,b)=>a.place-b.place); // same object refs as t.finishOrder
+  const otherIdx = idx+dir;
+  if(otherIdx<0 || otherIdx>=finish.length) return;
+  const a = finish[idx], b = finish[otherIdx];
+  const tmp = a.place; a.place = b.place; b.place = tmp;
+  persist(); renderTournList();
+  // renderTournList() רק בנה מחדש את כל הרשימה מאפס — פותחים שוב את
+  // העורך לאותו טורניר כדי שהמשתמש יראה מיד את התוצאה המעודכנת
+  setTimeout(()=>toggleEditFinishOrder(ti), 0);
+}
 function renderTournList(){
   const cont = document.getElementById('tourn-list');
   const pr = calcPrizes();
@@ -1502,6 +1555,7 @@ function renderTournList(){
           </div>
           <div class="share-hide" style="display:flex;gap:6px">
             <button class="btn btn-xs" style="background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.4);color:#5b9bd5" onclick="shareTournamentImage(${ti})" title="שתף כתמונה">📤</button>
+            ${isAdmin()?`<button class="btn btn-xs" style="background:rgba(200,169,110,0.12);border:1px solid rgba(200,169,110,0.4);color:#c8a96e" onclick="toggleEditFinishOrder(${ti})" title="ערוך סדר-סיום">✏️</button>`:''}
             <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
           </div>
         </div>

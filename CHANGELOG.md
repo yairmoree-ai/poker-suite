@@ -6,6 +6,39 @@
 
 ---
 
+## 2026-08-14 (79) — New feature: edit finish order on a saved tournament (fix mis-marked places)
+**Files: ui.js**
+
+- User caught a real historical mistake: in the 24.7 tournament, Michal
+  (2nd place, marked with fewer chips) actually had *more* chips than
+  Yoram (marked as the winner) — a manual data-entry error at save time.
+  No existing way to fix a saved tournament's finish order (only
+  `editTournName()` existed, name-only).
+- Asked whether the user wanted a one-off console fix or a proper
+  reusable feature — user chose the feature (correctly noting this will
+  happen again, and it now also feeds the Leaderboard's points/profit
+  calculation directly).
+- **`toggleEditFinishOrder(ti)` / `swapTournFinishPlace(ti, idx, dir)`**
+  (admin-only, new ✏️ button next to the existing 📤/✕ on each saved
+  tournament card): shows every player in finish order with ⬆️/⬇️
+  buttons that swap `.place` with the adjacent entry. Deliberately not a
+  free-form editor — a chain of adjacent swaps covers moving anyone any
+  number of positions, and matches the actual common case (two people
+  swapped) with the least UI.
+- **Why this needed no other changes anywhere else in the app:** prize
+  amounts (`place1`..`place4`) are stored per-*place*, not per-player —
+  so swapping which player holds place 1 vs 2 automatically carries the
+  right prize with it, no separate update needed. And since `t.
+  finishOrder` is the exact same field `computeLeaderboard()` (bug #74)
+  reads from, correcting it here is immediately reflected in the
+  Leaderboard too, with nothing else to keep in sync.
+- Verified the core swap logic in an isolated Node test against the
+  Yoram/Michal scenario from the screenshot before trusting it — confirms
+  places swap correctly and every other player's data is untouched.
+- Persistence follows the exact same `persist()` pattern already used by
+  `saveTournName()`/`deleteTournament()` — no new sync mechanism
+  introduced.
+
 ## 2026-08-14 (78) — Renamed "ערבים" → "משחקים" everywhere (app + Excel workbook)
 **Files: ui.js, state.js, leaderboard.xlsx**
 
