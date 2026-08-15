@@ -1758,8 +1758,11 @@ function showLeaderboard(){
 
 function exportLeaderboardToCSV(){
   const lb = computeLeaderboard();
-  const rows = [['#','שחקן','נקודות','משחקים','נצחונות']];
-  lb.forEach((p,i)=>rows.push([i+1, p.name, p.points.toFixed(2), p.nights, p.wins]));
+  // הרווח מוחזר כאן בכוונה — ה-CSV מיועד לשימוש פרטי (כמו האקסל), לא
+  // לשיתוף עם הקבוצה, בניגוד לטבלה על המסך/בתמונה המשותפת (ראו שיחה:
+  // הוסר מהתצוגה כי זה משחק חברי ולא רוצים ליצור אי-נוחות חברתית).
+  const rows = [['#','שחקן','נקודות','משחקים','נצחונות','רווח מצטבר']];
+  lb.forEach((p,i)=>rows.push([i+1, p.name, p.points.toFixed(2), p.nights, p.wins, Math.round(p.profit)]));
   downloadCSV(rows, 'leaderboard.csv');
 }
 

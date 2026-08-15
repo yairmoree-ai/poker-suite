@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-08-14 (81) — Restored profit/loss to the CSV export only (screen table stays hidden)
+**Files: ui.js**
+
+- Follow-up to #80: user clarified the CSV export (like the xlsx
+  workbook) is for personal use, not something shared with the group —
+  only the on-screen table and the shared image go to others. So the
+  privacy concern from #80 doesn't apply to the CSV.
+- `exportLeaderboardToCSV()` now includes the "רווח מצטבר" column again.
+  `showLeaderboard()`'s on-screen table (and therefore the shared image,
+  since it's a screenshot of the same box) still excludes it, unchanged
+  from #80.
+
 ## 2026-08-14 (80) — Hid the profit/loss column from the Leaderboard display (kept it for tiebreaking)
 **Files: ui.js**
 
