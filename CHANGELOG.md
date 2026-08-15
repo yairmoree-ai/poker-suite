@@ -6,6 +6,32 @@
 
 ---
 
+## 2026-08-14 (78) — Renamed "ערבים" → "משחקים" everywhere (app + Excel workbook)
+**Files: ui.js, state.js, leaderboard.xlsx**
+
+- User asked for a wording change: "ערבים" (evenings/nights) → "משחקים"
+  (games), in the Leaderboard table, the app in general, and the Excel
+  workbook — "wherever you find it".
+- Found and changed every occurrence across the app files: the
+  Leaderboard overlay's "ערבים" column header, its CSV export header row,
+  the formula caption text ("באותו ערב" → "באותו משחק"), and the related
+  code comments in `computeLeaderboard()`. (Left the unrelated word
+  "ערבוב"/"לערבב" — card shuffling, in `render.js` — alone; different word,
+  not what was meant.)
+- Also updated the Excel workbook build script and regenerated
+  `leaderboard.xlsx`: the "ערבים" sheet is now named "משחקים", including
+  every cross-sheet formula reference to it (`INDEX(ערבים!...)` →
+  `INDEX(משחקים!...)`) and the instructions-sheet text.
+- **While rebuilding the workbook, caught that it had gone stale**: its
+  points formula was still the pre-#76 `SQRT(entries)/place`, missing the
+  `buyinCost` fix made directly in the app's `computeLeaderboard()` after
+  bug #76. Fixed the workbook's formula to match
+  (`SQRT(entries*buyin)/place`, buy-in looked up per-date from the
+  משחקים sheet) while doing this rename, so the two artifacts (app +
+  spreadsheet) don't quietly drift apart. Re-verified after recalculating
+  with LibreOffice (0 errors, 697 formulas) that the ranked output now
+  matches the app's own numbers exactly (e.g. יאיר: 257.08 in both).
+
 ## 2026-08-14 (77) — Added "📤 שתף" (share) button to the Leaderboard overlay
 **Files: ui.js**
 
