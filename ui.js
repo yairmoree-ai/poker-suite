@@ -1758,7 +1758,7 @@ function showLeaderboard(){
   // בקובץ ה-CSS לפי הקשר, ואחת מהן (#3a3650) כהה כמעט-שחור וגרמה לטקסט
   // הזה להיות בלתי-קריא לגמרי על הרקע השחור.
   note.style.cssText = 'font-size:11px;color:#8a8799;margin-top:10px;text-align:center;line-height:1.5';
-  note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו משחק) ÷ מקום-סיום · במקרה של שוויון נקודות, הכרעה לפי רווח כספי מצטבר (לא מוצג בטבלה)';
+  note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו משחק) ÷ מקום-סיום';
   box.appendChild(note);
 }
 
