@@ -6,6 +6,61 @@
 
 ---
 
+## 2026-08-15 (82) — IMPORTANT: this session's `/mnt/project/` sandbox copy reset to the original upload — restored from outputs before continuing
+**No source changes to the app itself in this note — infrastructure/process only.**
+
+- User reported the caption text at the bottom of the Leaderboard was
+  unreadable. Before investigating, checking the live file turned up
+  something more urgent: `/mnt/project/ui.js` (and every other file
+  touched this session — `state.js`, `auth.js`, `poker-auth-worker.js`,
+  `index.html`) had silently reverted to the **original uploaded
+  snapshot**, losing all 81 entries'/session's worth of changes from this
+  conversation. Almost certainly caused by the earlier tool/environment
+  outage mid-session (the stretch where bash/view calls were failing).
+- **This did not affect the user's actual GitHub repo** — Claude never
+  writes back to the user's real project; every fix in this session only
+  ever reached the user via the files presented in `/mnt/user-data/
+  outputs/`, which the user then had to manually upload themselves. Those
+  output files were untouched by the reset and still had the complete,
+  correct, final version of everything through entry #81.
+- Restored `/mnt/project/`'s working copies of `ui.js`, `state.js`,
+  `CHANGELOG.md`, `index.html`, `auth.js`, `poker-auth-worker.js` from
+  the last-known-good `/mnt/user-data/outputs/` versions before making
+  any further edits, and re-verified syntax on all of them.
+- **Flagged to the user directly**: worth double-checking their actual
+  repo already has the latest uploads from this session, since this
+  reset was on Claude's side, not theirs — but it's exactly the kind of
+  thing worth a sanity check rather than assuming.
+- Practical lesson for future long sessions: if a tool outage happens
+  mid-session, re-verify the working files (e.g. a quick `diff` against
+  the last output copy) before trusting further edits build on the
+  correct base — don't assume the sandbox survived the outage intact.
+
+## 2026-08-15 (83) — Leaderboard overlay readability: opaque background + fixed caption text color
+**Files: ui.js**
+
+- User reported the caption text under the Leaderboard table was
+  unreadable, with a screenshot showing faint "ghost" content (background
+  tabs, the tournament card behind it) bleeding through the overlay.
+- **Two separate causes, both fixed:**
+  1. The overlay background was `rgba(0,0,0,0.94)` — not fully opaque,
+     letting whatever was behind it show through faintly, which explains
+     the ghosting visible in the screenshot. Changed to a solid `#080b12`
+     (same tone as the app's own lock-screen background).
+  2. The caption text used `var(--muted2)` — checked `styles.css` and
+     found this variable is redefined differently in different contexts,
+     and one of those definitions (`#3a3650`) is a near-black
+     purple-gray, effectively invisible on a dark background. Replaced
+     with an explicit, unambiguous color (`#8a8799`) instead of relying
+     on a CSS variable whose value depends on which cascade context
+     happens to apply.
+- Left the same `rgba(0,0,0,0.94)` pattern as-is in the hand replayer
+  overlay (`showReplayer`, same original source this was copied from) —
+  the user only reported the issue on the Leaderboard, and this file
+  wasn't touched to keep the fix scoped to what was actually reported;
+  worth applying the same opacity fix there too if the same ghosting
+  turns out to be visible on that screen as well.
+
 ## 2026-08-14 (81) — Restored profit/loss to the CSV export only (screen table stays hidden)
 **Files: ui.js**
 

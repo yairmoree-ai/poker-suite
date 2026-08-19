@@ -1692,7 +1692,10 @@ function showLeaderboard(){
 
   const overlay = document.createElement('div');
   overlay.id = 'leaderboard-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.94);overflow-y:auto;direction:rtl';
+  // רקע אטום לגמרי (לא rgba עם שקיפות) — בגרסה הקודמת rgba(0,0,0,0.94) גרם
+  // ל"רפאים" של התוכן שמאחורי ה-overlay (טאבים/כרטיס-טורניר) לחלחל דרך,
+  // מה שפגע בקריאות של כל הטקסט העמום, במיוחד ההערה בתחתית הטבלה.
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:450;background:#080b12;overflow-y:auto;direction:rtl';
   const box = document.createElement('div');
   box.style.cssText = 'max-width:480px;margin:0 auto;padding:12px';
   overlay.appendChild(box);
@@ -1751,7 +1754,10 @@ function showLeaderboard(){
   box.appendChild(table);
 
   const note = document.createElement('div');
-  note.style.cssText = 'font-size:10px;color:var(--muted2);margin-top:10px;text-align:center';
+  // צבע קבוע-מפורש, לא var(--muted2) — יש כמה הגדרות שונות למשתנה הזה
+  // בקובץ ה-CSS לפי הקשר, ואחת מהן (#3a3650) כהה כמעט-שחור וגרמה לטקסט
+  // הזה להיות בלתי-קריא לגמרי על הרקע השחור.
+  note.style.cssText = 'font-size:11px;color:#8a8799;margin-top:10px;text-align:center;line-height:1.5';
   note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו משחק) ÷ מקום-סיום · במקרה של שוויון נקודות, הכרעה לפי רווח כספי מצטבר (לא מוצג בטבלה)';
   box.appendChild(note);
 }
