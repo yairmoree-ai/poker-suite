@@ -6,6 +6,45 @@
 
 ---
 
+## 2026-08-15 (85) — New feature: shared-place ties in the Leaderboard scoring
+**Files: state.js, ui.js**
+
+- User clarified this isn't a rare edge case: the last two players
+  splitting the pot 50/50 happens often enough in this group to need real
+  support, not just the earlier ad-hoc guidance (chip-count decides who's
+  "place 1").
+- **Scoring rule, confirmed with the user earlier in this conversation:**
+  tied players get the *average of the points* each place would earn, not
+  points computed from an averaged place number — `avg(1/1, 1/2) = 0.75`,
+  not `1/1.5 ≈ 0.667`. This is the standard convention for shared
+  placements in sports scoring.
+- **Data model (`f.tieGroup`, added to `finishOrder` entries):** each
+  player keeps their individual `place` (1, 2, ...) — still needed for
+  the existing per-place prize lookup (`place1`/`place2`/...) and for
+  display — but tied players additionally carry a shared `tieGroup` array
+  (e.g. `[1,2]`) that `computeLeaderboard()` (`state.js`) checks: when
+  present, points = `sq * average(1/p for p in tieGroup)` instead of
+  `sq/place`. Untouched, non-tied entries behave exactly as before —
+  fully backward compatible with every tournament already saved.
+- **UI (`ui.js`, inside the finish-order editor built in #79):** a new
+  "🤝 סמן תיקו עם השחקן הבא" toggle between every adjacent pair of rows.
+  Tied players show a "🤝 תיקו" badge and a merged place label (e.g.
+  "1-2." instead of two separate numbers). Toggling is symmetric — click
+  again to un-tie.
+- **Deliberately left the prize amounts alone** — `place1`/`place2` don't
+  auto-equalize when players are tied. The user already has
+  `place1Override`/`place2Override` (existing, in tournament settings)
+  for setting an equal cash split manually; this feature only changes
+  *scoring*, not money, since those are separate decisions (the user
+  might want a 50/50 chip-based prize split with unequal chip counts, or
+  vice versa) and conflating them risked surprising behavior.
+- **Verified with a real computation, not just logic review:** ran
+  `computeLeaderboard()` (extracted verbatim from `state.js`) against a
+  synthetic tie between two players — confirmed both land on exactly the
+  same points (33.541, matching `sqrt(entries×buyin)×0.75` computed
+  independently), versus a ~2x gap (44.7 vs 22.4) for the same two
+  players without the tie flag.
+
 ## 2026-08-15 (84) — Removed the tiebreaker sentence from the Leaderboard caption text, and a note on entries #82/#83 below
 **Files: ui.js**
 

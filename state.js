@@ -393,6 +393,15 @@ function totalChips(){
 // דורש ש-t.totalEntries, t.buyinCost, ו-t.finishOrder (עם place/pid/rebuy)
 // יהיו תקינים — כולם כבר נשמרים על ידי saveTournament(), אין צורך בהזנה
 // נוספת.
+//
+// תיקו-בניקוד (f.tieGroup): כשמסמנים שני שחקנים (או יותר) כתיקו דרך עורך
+// סדר-הסיום (toggleTiePlaces ב-ui.js), הם עדיין שומרים מקומות נפרדים
+// (place=1, place=2...) — זה נשאר כי הפרס (t.place1/place2) עדיין מקושר
+// למקום הבודד, ואפשר לקבוע אותו ידנית שווה דרך place1Override/
+// place2Override הקיימים אם רוצים חלוקה כספית שווה, בלי לגעת בזה כאן.
+// אבל *הניקוד* של שניהם מחושב כממוצע-הניקוד על פני כל המקומות בקבוצת-
+// התיקו (לא ממוצע-המקום — 1/1 ו-1/2 ממוצעים ל-0.75, לא ל-1/1.5≈0.667 —
+// זו המוסכמה הסטנדרטית לתיקו-משותף בספורט: ממצעים ניקוד, לא דירוג).
 function computeLeaderboard(){
   const stats = {}; // pid -> {pid,name,points,nights,wins,profit}
   (S.tournLog||[]).forEach(t=>{
@@ -405,7 +414,14 @@ function computeLeaderboard(){
       if(!f.pid || !f.place) return;
       if(!stats[f.pid]) stats[f.pid] = {pid:f.pid, name: pName(f.pid)||f.name||'?', points:0, nights:0, wins:0, profit:0};
       const st = stats[f.pid];
-      st.points += sq / f.place;
+      let pointsForPlace;
+      if(f.tieGroup && f.tieGroup.length>1){
+        const avgInvPlace = f.tieGroup.reduce((s,p)=>s+1/p,0) / f.tieGroup.length;
+        pointsForPlace = sq * avgInvPlace;
+      } else {
+        pointsForPlace = sq / f.place;
+      }
+      st.points += pointsForPlace;
       st.nights += 1;
       if(f.place===1) st.wins += 1;
       const spent = buyin * (1 + (f.rebuy||0));

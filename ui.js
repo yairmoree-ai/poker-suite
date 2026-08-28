@@ -1329,17 +1329,26 @@ function toggleEditFinishOrder(ti){
 function renderEditFinishOrderHTML(ti){
   const t = S.tournLog[ti];
   const finish = (t.finishOrder||[]).slice().sort((a,b)=>a.place-b.place);
+  const tieKey = f => f.tieGroup ? f.tieGroup.join(',') : null;
   return `
     <div style="font-size:11px;font-weight:800;color:#c8a96e;margin-bottom:6px">✏️ עריכת סדר-סיום</div>
-    ${finish.map((f,idx)=>`
-      <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
-        <span style="width:22px;font-size:12px;font-weight:800;color:var(--gold)">${f.place}.</span>
-        <span style="flex:1;font-size:13px;color:#e2ddd4">${f.name||'?'}${f.rebuy>0?` <span style="color:var(--muted);font-size:11px">(rebuy ${f.rebuy})</span>`:''}</span>
+    ${finish.map((f,idx)=>{
+      const next = finish[idx+1];
+      const isTiedWithNext = next && tieKey(f) && tieKey(f)===tieKey(next);
+      const placeLabel = f.tieGroup ? f.tieGroup.join('-') : f.place;
+      return `
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 0;${isTiedWithNext?'':'border-bottom:1px solid rgba(255,255,255,0.05)'}">
+        <span style="width:34px;font-size:12px;font-weight:800;color:var(--gold)">${placeLabel}.</span>
+        <span style="flex:1;font-size:13px;color:#e2ddd4">${f.name||'?'}${f.tieGroup?' <span style="color:#c8a96e;font-size:11px">🤝 תיקו</span>':''}${f.rebuy>0?` <span style="color:var(--muted);font-size:11px">(rebuy ${f.rebuy})</span>`:''}</span>
         <button onclick="swapTournFinishPlace(${ti},${idx},-1)" ${idx===0?'disabled':''} style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:2px 8px;color:#e2ddd4;cursor:pointer;${idx===0?'opacity:0.25;cursor:default':''}">⬆️</button>
         <button onclick="swapTournFinishPlace(${ti},${idx},1)" ${idx===finish.length-1?'disabled':''} style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:2px 8px;color:#e2ddd4;cursor:pointer;${idx===finish.length-1?'opacity:0.25;cursor:default':''}">⬇️</button>
       </div>
-    `).join('')}
-    <div style="font-size:10px;color:var(--muted);margin-top:6px">שינוי סדר-הסיום מעדכן אוטומטית גם את הפרסים (לפי מקום) וגם את ה-Leaderboard.</div>
+      ${next?`
+      <div style="display:flex;justify-content:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <button onclick="toggleTiePlaces(${ti},${idx})" style="font-size:10px;padding:2px 10px;border-radius:8px;cursor:pointer;${isTiedWithNext?'background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.5);color:#c8a96e;font-weight:800':'background:none;border:1px dashed rgba(255,255,255,0.15);color:var(--muted)'}">🤝 ${isTiedWithNext?'תיקו (לחץ לביטול)':'סמן תיקו עם השחקן הבא'}</button>
+      </div>`:''}
+    `;}).join('')}
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">שינוי סדר-הסיום מעדכן אוטומטית גם את הפרסים (לפי מקום) וגם את ה-Leaderboard. תיקו נותן לשני השחקנים ניקוד ממוצע (לא ממוצע-המקום) — הפרס הכספי לא משתנה אוטומטית, תוכל לקבוע סכום שווה ידנית דרך override הפרסים בהגדרות הטורניר אם תרצה.</div>
   `;
 }
 
@@ -1354,6 +1363,27 @@ function swapTournFinishPlace(ti, idx, dir){
   persist(); renderTournList();
   // renderTournList() רק בנה מחדש את כל הרשימה מאפס — פותחים שוב את
   // העורך לאותו טורניר כדי שהמשתמש יראה מיד את התוצאה המעודכנת
+  setTimeout(()=>toggleEditFinishOrder(ti), 0);
+}
+
+// מסמן/מבטל תיקו-ניקוד בין שני שחקנים סמוכים בדירוג (idx ו-idx+1). ה-
+// place הבודד של כל אחד לא משתנה (עדיין דרוש לתצוגה ולזיהוי פרס-לפי-מקום)
+// — רק tieGroup משותף נוסף/מוסר, ש-computeLeaderboard (state.js) קורא כדי
+// לתת ניקוד ממוצע לשניהם במקום ניקוד-לפי-מקום נפרד.
+function toggleTiePlaces(ti, idx){
+  const t = S.tournLog[ti];
+  if(!t || !t.finishOrder) return;
+  const finish = t.finishOrder.slice().sort((a,b)=>a.place-b.place);
+  const a = finish[idx], b = finish[idx+1];
+  if(!a || !b) return;
+  const alreadyTied = a.tieGroup && b.tieGroup && a.tieGroup.join(',')===b.tieGroup.join(',');
+  if(alreadyTied){
+    delete a.tieGroup; delete b.tieGroup;
+  } else {
+    const group = [a.place, b.place].sort((x,y)=>x-y);
+    a.tieGroup = group.slice(); b.tieGroup = group.slice();
+  }
+  persist(); renderTournList();
   setTimeout(()=>toggleEditFinishOrder(ti), 0);
 }
 function renderTournList(){
