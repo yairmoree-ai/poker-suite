@@ -1268,12 +1268,24 @@ function resetTournament(){if(isViewer()){notify('צופה בלבד');return;}
   // Show inline confirm inside the app
   const cont = document.getElementById('tourn-list');
   const prev = cont.innerHTML;
+  // אותה בדיקת "כמה שחקנים עדיין פעילים" כמו ב-showSaveTournDialog — מסלול
+  // ה"אפס ושמור" עבר קודם בלי הצ'קבוקס הזה בכלל (באג אמיתי שנתפס: משתמש
+  // ששמר טורניר עם 2 שחקנים לא-מודחים דרך המסלול הזה קיבל 1/2 נפרד במקום
+  // תיקו, כי doSaveAndReset() קרא ל-saveTournament בלי הדגל).
+  const activePidsForTie = Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid));
+  const tieHtml = activePidsForTie.length>=2
+    ? `<label style="display:flex;align-items:center;gap:8px;padding:9px 10px;margin-bottom:10px;border-radius:9px;background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.3);cursor:pointer">
+        <input id="reset-tourn-tie-chk" type="checkbox" style="width:16px;height:16px;accent-color:#c8a96e">
+        <span style="font-size:12px;color:#e2ddd4">🤝 <b>${activePidsForTie.map(pid=>pName(pid)||'?').join(' / ')}</b> התחלקו — תן ניקוד שווה</span>
+      </label>`
+    : '';
   cont.insertAdjacentHTML('afterbegin', `
     <div id="reset-confirm" style="background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.4);border-radius:12px;padding:16px;margin-bottom:12px">
       <div style="font-size:14px;font-weight:700;color:#e07b6a;margin-bottom:6px;text-align:center">לאפס את כל נתוני הטורניר?</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px;text-align:center">פעולה זו תמחק BuyIn, Rebuy, סדר הדחה וכל נתוני השולחן</div>
       <input id="reset-tourn-name" type="text" placeholder="שם הטורניר לשמירה (אופציונלי)..."
         style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;direction:rtl;box-sizing:border-box;margin-bottom:10px">
+      ${tieHtml}
       <div style="display:flex;gap:8px">
         <button class="btn btn-gold" style="flex:2" onclick="doSaveAndReset()">💾 שמור ואפס</button>
         <button class="btn btn-red" style="flex:1" onclick="doResetTournament()">אפס בלבד</button>
@@ -1283,7 +1295,9 @@ function resetTournament(){if(isViewer()){notify('צופה בלבד');return;}
 }
 function doSaveAndReset(){
   const name = document.getElementById('reset-tourn-name')?.value?.trim()||'';
-  saveTournament(name);
+  const tieChk = document.getElementById('reset-tourn-tie-chk');
+  const tieActive = !!(tieChk && tieChk.checked);
+  saveTournament(name, tieActive);
   doResetTournament();
 }
 

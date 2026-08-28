@@ -6,6 +6,30 @@
 
 ---
 
+## 2026-08-15 (88) — Tie checkbox missing from a second save path — "reset & save" bypassed it entirely
+**Files: ui.js**
+
+- User reported a real, reproduced bug: saved a tournament with 2 players
+  still active (Itzik/Eli, both non-eliminated) and expected the tie flow
+  from #86 — instead got the normal 🏆/🥈 split, points included, exactly
+  what the tie feature was supposed to prevent.
+- **Root cause, confirmed rather than assumed:** the app has *two*
+  separate save paths — the "💾 שמור טורניר" button (`showSaveTournDialog`)
+  which got the tie checkbox in #86, and a second, independent
+  "🔄 אפס טורניר" → "💾 שמור ואפס" combo flow (`resetTournament()` →
+  `doSaveAndReset()`) which did not. This was already flagged as a known
+  gap in #86's own changelog entry ("not addressed here... flagged in
+  case it turns out to matter too") — it did.
+- Fix: `resetTournament()` now runs the same active-player check
+  `showSaveTournDialog()` does, and shows the identical "🤝 X / Y
+  התחלקו" checkbox inline in the reset-confirmation box when 2+ players
+  are still active. `doSaveAndReset()` reads it and passes `tieActive`
+  through to `saveTournament()`, exactly like the other path.
+- **For the tournament already saved incorrectly** (Itzik/Eli, 28.8):
+  pointed the user to the ✏️ finish-order editor built in #79/#85, which
+  already supports fixing this after the fact — no separate repair
+  needed, the tool for exactly this situation already exists.
+
 ## 2026-08-15 (87) — Fixed a real display inconsistency: tied players now both show 🏆 on the main history card
 **Files: ui.js**
 
