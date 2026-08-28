@@ -1193,18 +1193,39 @@ function calcPrizes(){
 }
 function confirmSaveTournament(){
   const name = document.getElementById('tourn-name-inp')?.value?.trim()||'';
+  const tieChk = document.getElementById('save-tourn-tie-chk');
+  const tieActive = !!(tieChk && tieChk.checked);
   document.getElementById('save-tourn-box').style.display='none';
-  saveTournament(name);
+  saveTournament(name, tieActive);
 }
 
+// מזהה אוטומטית מצב "צ'ופ" — 2 (או יותר) שחקנים שעדיין *פעילים* (לא
+// הודחו רשמית) ברגע השמירה, בדיוק המקרה שהמשתמש תיאר: "2 השחקנים
+// האחרונים החליטו להתחלק, אין מקום ראשון ושני". אם יש כאלה, מציג צ'קבוקס
+// לסימון תיקו-ניקוד *לפני* השמירה עצמה — לא רק בדיעבד דרך עורך סדר-הסיום
+// (#79/#85). אם רק שחקן אחד פעיל (סיום רגיל עם מנצח ברור) — לא מוצג כלום.
 function showSaveTournDialog(){
   if(isViewer()){notify('צופה בלבד');return;}
+  const activePids = Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid));
+  const tieBox = document.getElementById('save-tourn-tie-box');
+  if(tieBox){
+    if(activePids.length>=2){
+      const names = activePids.map(pid=>pName(pid)||'?').join(' / ');
+      tieBox.innerHTML = `
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 10px;margin-bottom:12px;border-radius:9px;background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.3);cursor:pointer">
+          <input id="save-tourn-tie-chk" type="checkbox" style="width:16px;height:16px;accent-color:#c8a96e">
+          <span style="font-size:12px;color:#e2ddd4">🤝 <b>${names}</b> התחלקו — תן ניקוד שווה (הפרס הכספי נקבע בנפרד)</span>
+        </label>`;
+    } else {
+      tieBox.innerHTML = '';
+    }
+  }
   document.getElementById('save-tourn-box').style.display='flex';
   document.getElementById('tourn-name-inp').value='';
   setTimeout(()=>document.getElementById('tourn-name-inp')?.focus(),100);
 }
 
-function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');return;}
+function saveTournament(tournName, tieActive){if(isViewer()){notify('צופה בלבד');return;}
   const pr=calcPrizes();
   // Determine places: koOrder = [first KO, second KO, ...]
   // Reverse for placing: last KO = 4th place, second-to-last = 3rd, etc.
@@ -1220,13 +1241,22 @@ function saveTournament(tournName){if(isViewer()){notify('צופה בלבד');re
     const sb2 = S.seats.find(s=>s.playerId===b)?.stack||0;
     return sb2-sa;
   });
+  const finishOrder = [...activeSorted, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid),rebuy:(S.buyins[pid]||{}).rebuy||0}));
+  // תיקו-ניקוד שסומן בדיאלוג השמירה (checkbox) — חל רק על קבוצת ה-active
+  // (activeSorted), שהיא בדיוק מי ש"עדיין בפנים" בזמן השמירה, לא על כל ה-
+  // finishOrder. אותו tieGroup field ש-computeLeaderboard (state.js) וה-
+  // עורך-בדיעבד (#85) כבר יודעים לקרוא — לא נדרש שינוי נוסף שם.
+  if(tieActive && activeSorted.length>=2){
+    const group = activeSorted.map((_,i)=>i+1); // [1,2,...]
+    finishOrder.forEach(f=>{ if(group.includes(f.place)) f.tieGroup = group.slice(); });
+  }
   const t={
     id:uid(), date:new Date().toLocaleDateString('he-IL'), name:tournName||'',
     buyinCost:S.buyinCost, totalBuyins:totalBuyins(), totalRebuys:totalRebuys(),
     totalEntries:totalEntries(), paidEntries:calcPaidEntries(), freeRebuys:calcFreeRebuys(), prizePool:pr.pool,
     houseRake:pr.house, surprisesAmount:S.surprisesAmount||0, place4:pr.p4, place3:pr.p3, place2:pr.p2, place1:pr.p1,
     koOrder:[...S.koOrder],
-    finishOrder:[...activeSorted, ...[...S.koOrder].reverse()].map((pid,i)=>({place:i+1,pid,name:pName(pid),rebuy:(S.buyins[pid]||{}).rebuy||0})),
+    finishOrder,
     activePlayers:activePids.map(pid=>({pid,name:pName(pid)})),
     playerNames:nameMap,
     blinds:`${getBlinds().sb}/${getBlinds().bb}`
@@ -1614,12 +1644,18 @@ function renderTournList(){
             ${finishT.filter(f=>f.place<=4).map(f=>{
               const rb = f.rebuy||0;
               const prize = prizeByPlaceT[f.place]||0;
+              // תיקו (#85/#86): שני שחקנים מתויקים באותה קבוצת-place עדיין
+              // שומרים place נפרד (בשביל פרס לפי-מקום, בכוונה לא equalized
+              // אוטומטית) — אבל *התצוגה* כאן משתמשת במקום הטוב ביותר
+              // בקבוצת התיקו (Math.min), כך ששניהם מוצגים עם אותה מדליה.
+              // הפרס עצמו לא משתנה מזה — עדיין נשלף לפי f.place האמיתי.
+              const displayPlace = f.tieGroup ? Math.min(...f.tieGroup) : f.place;
               const medals={1:'🏆',2:'🥈',3:'🥉'};
               const colors={1:'#FFD700',2:'#C0C0C0',3:'#CD7F32'};
-              const medal = medals[f.place]||'';
-              const color = colors[f.place]||'var(--gold)';
+              const medal = medals[displayPlace]||'';
+              const color = colors[displayPlace]||'var(--gold)';
               return `<div style="display:flex;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-                <span style="font-size:${f.place<=3?'14':'12'}px;flex-shrink:0;margin-left:4px">${medal||f.place+'.'}</span>
+                <span style="font-size:${displayPlace<=3?'14':'12'}px;flex-shrink:0;margin-left:4px">${medal||displayPlace+'.'}</span>
                 <span style="font-size:13px;font-weight:700;color:#e2ddd4;flex:1">${f.name||'?'}${rb>0?` <span style="font-size:12px;font-weight:900;color:var(--gold)">(${rb})</span>`:''}</span>
                 ${prize?`<span style="font-size:13px;font-weight:800;color:${color};flex-shrink:0">₪${prize.toLocaleString()}</span>`:''}
               </div>`;

@@ -6,6 +6,61 @@
 
 ---
 
+## 2026-08-15 (87) — Fixed a real display inconsistency: tied players now both show 🏆 on the main history card
+**Files: ui.js**
+
+- User asked what the main tournament-history card would show for a tie
+  (1/2, or both 1) — checked the code rather than guessing, and found a
+  real gap: the finish-order editor (#79/#85) already displayed ties
+  correctly (merged "1-2." label + 🤝 badge), but the actual card everyone
+  sees day-to-day — and what gets shared as an image — still used raw
+  `medals[f.place]` per player, so a tied pair would show 🏆 and 🥈
+  separately despite scoring equally. Two different displays of the same
+  data, out of sync.
+- User's call: both tied players should show 🏆 (first place), simplicity
+  over precision here — confirmed points aren't affected by this either
+  way (already handled correctly since #85).
+- Fix: the card now computes `displayPlace = tieGroup ? Math.min(...
+  tieGroup) : place` before picking the medal/color/label, so every
+  member of a tie group displays using the *best* place in that group.
+  Prize amounts are untouched — still looked up by each player's own
+  individual `place`, consistent with the earlier decision (#85) to keep
+  scoring and money separate.
+- Verified the display logic directly (not just re-reading it): a tied
+  pair at places 1/2 both resolve to 🏆, an untied 3rd place still shows
+  🥉, unchanged.
+
+## 2026-08-15 (86) — Tie marking moved upstream: available at save time, not just after the fact
+**Files: ui.js, index.html**
+
+- Follow-up to #85: user clarified the tie needs to be settable *before*
+  saving a tournament, not only fixed retroactively via the finish-order
+  editor from #79 — the actual real-time scenario is heads-up ending in
+  a chop, where there's no elimination event at all to derive "1st" vs
+  "2nd" from in the first place.
+- **New checkbox in the save-tournament dialog (`showSaveTournDialog()`)**:
+  auto-detects when 2+ players are still marked *active* (not in
+  `koOrder`) at the moment the save dialog opens — exactly the heads-up-
+  chop situation, since a normal finish always ends with exactly one
+  active player left. Shows their names with a "🤝 X / Y התחלקו — תן
+  ניקוד שווה" checkbox only in that case; a normal single-winner finish
+  shows nothing extra, unchanged from before.
+- **`saveTournament(tournName, tieActive)`** — new second parameter.
+  When checked, applies the same `f.tieGroup` field from #85 directly to
+  the `activeSorted` players' `finishOrder` entries at creation time,
+  instead of requiring a manual post-save edit. Uses the exact same data
+  field and the exact same `computeLeaderboard()` logic from #85 — no
+  new scoring code, just an earlier point to set the flag.
+- `doSaveAndReset()` (the reset-tournament dialog's own save path) still
+  calls `saveTournament(name)` without the tie flag — that flow doesn't
+  have the same checkbox UI. Not addressed here since it wasn't part of
+  what was asked; flagged in case it turns out to matter too.
+- **Verified with a real run of the extracted `saveTournament()`
+  function** (not just reasoning): simulated 2 active players + 1 already
+  eliminated, called with `tieActive=true`, confirmed the two active
+  players both got `tieGroup:[1,2]` while the eliminated player kept a
+  normal, untied `place:3`.
+
 ## 2026-08-15 (85) — New feature: shared-place ties in the Leaderboard scoring
 **Files: state.js, ui.js**
 
