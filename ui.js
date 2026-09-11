@@ -2427,7 +2427,7 @@ function renderPlayerList(){
             <button class="btn btn-outline btn-xs" onclick="doRebuy('${p.id}',1)">+R</button>
             <button class="btn btn-gray btn-xs" onclick="doRebuy('${p.id}',-1)">-R</button>
             ${!S.koOrder.includes(p.id)&&b.buyin>0?`<button class="btn btn-red btn-xs" onclick="koPlayerFromList('${p.id}')">KO 💀</button>`:''}
-            ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:2px 7px">💀 הודח</span>`:''}
+            ${S.koOrder.includes(p.id)?`<button class="btn btn-outline btn-xs" onclick="unKoPlayer('${p.id}')" title="בטל סימון-הדחה">↩️ בטל KO</button>`:''}
             <button class="btn btn-red btn-xs" onclick="deletePlayer('${p.id}')">✕</button>
           `}
         </div>

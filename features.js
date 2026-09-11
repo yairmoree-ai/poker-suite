@@ -548,6 +548,21 @@ function koPlayerFromList(pid){
   playKOAnimation(name, place, totalPlayers);
 }
 
+// מבטל סימון-הדחה — לתיקון מקרה נפוץ: מישהו נשכח להיות מסומן כמודח,
+// כל מי שסומן *אחריו* בטעות נכנס למקום שהוא לא צריך (koOrder הוא
+// כרונולוגי — index נמוך = הודח מוקדם = מקום נמוך יותר בסוף). התיקון:
+// לבטל KO למי שסומן ראשון-אחרי-הטעות, לסמן KO לשחקן שנשכח (עכשיו הוא
+// נכנס במקום הנכון בסוף המערך), ואז לסמן KO מחדש למי שביטלנו — משחזר
+// את הסדר הכרונולוגי הנכון. לא משחזר סטאק/מושב אוטומטית (אין לזה
+// snapshot שמור) — רק מסיר מ-koOrder כדי לאפשר סימון-מחדש בסדר הנכון.
+function unKoPlayer(pid){
+  if(isViewer()){notify('צופה בלבד');return;}
+  if(!S.koOrder.includes(pid)) return;
+  S.koOrder = S.koOrder.filter(id=>id!==pid);
+  persist(); render(); renderPlayerList();
+  notify('KO בוטל — '+(pName(pid)||'שחקן')+' סומן שוב כפעיל (סטאק/מושב לא משוחזר אוטומטית)');
+}
+
 function playKOAnimation(name, place, total) {
   console.log('ANIMATION START for '+name);
   

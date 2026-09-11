@@ -6,6 +6,39 @@
 
 ---
 
+## 2026-08-15 (89) — New feature: undo an incorrect KO mark (fix elimination order mistakes)
+**Files: features.js, ui.js**
+
+- User reported forgetting to mark a player as eliminated mid-tournament,
+  which threw off the whole chronological elimination order for everyone
+  marked afterward (`koOrder` is chronological -- index position
+  determines finishing place, so a missing entry shifts everyone after it
+  into the wrong place).
+- No existing way to remove a player from `koOrder` once marked -- only
+  `koPlayerFromList()` to add one, never a way back.
+- **New `unKoPlayer(pid)` (`features.js`)**: removes the player from `S.
+  koOrder`, re-renders. Deliberately does **not** attempt to restore
+  their seat/stack -- that state is already cleared by the time a KO
+  happens and there's no snapshot to restore from; the fix is meant to
+  unwind just far enough to re-mark eliminations in the correct order
+  (undo the ones after the mistake, mark the forgotten player, re-mark
+  the ones just undone -- chronological order restored).
+- New undo-KO button in the player list (`ui.js`), replacing the plain
+  eliminated-status badge for admins (viewers still just see the
+  read-only badge, unchanged).
+- Verified the fix workflow end-to-end in Node: `koOrder=['Y']` (Y
+  wrongly marked alone) -> `unKoPlayer('Y')` -> re-mark `X` then `Y` in
+  correct chronological order -> confirmed final `koOrder` is `['X','Y']`.
+- **Process note:** this entry required a full rebuild after Claude's own
+  sandbox copy of the project turned out to have regressed mid-session in
+  a way that wasn't caught by an earlier verification pass -- it had
+  fallen behind the user's actual repo (missing the tie-feature save-
+  dialog integration from #85-88, even though Claude's own diff checks
+  had reported it as matching). Recovered by treating the user's freshly
+  re-uploaded repo files as ground truth and rebuilding this fix on top
+  of those, rather than trusting Claude's own prior sandbox state.
+  Confirmed via direct diff against the user's upload before proceeding.
+
 ## 2026-08-15 (88) — Tie checkbox missing from a second save path — "reset & save" bypassed it entirely
 **Files: ui.js**
 
