@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-08-16 (95) -- Rebuy bar chart: finishing place made visually dominant over Rebuy detail
+**Files: ui.js**
+
+- User confirmed #94's fix worked (names read correctly in the shared
+  image now) and asked for a follow-up polish: the finishing-place number
+  should stand out more than the Rebuy detail next to it.
+- Split what was one label (`1. (5)`, single size/weight for the whole
+  string) into two separately-styled spans: the place number is now 15px/
+  weight 900 with a subtle text-shadow for depth, the Rebuy detail in
+  parens is a smaller 8px/weight 600 in muted color right after it. Place
+  is now clearly the primary read, Rebuy the secondary detail -- same
+  information as before, just re-weighted visually.
+- No layout/logic changes beyond the label styling itself -- same medal
+  colors (gold/silver/bronze for 1st-3rd), same tie-group handling
+  (`displayPlace`), same free-rebuy badge logic.
+
 ## 2026-08-16 (94) -- Second, different bug in the same feature: Hebrew names garbled in the shared tournament image
 **Files: ui.js**
 

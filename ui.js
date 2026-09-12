@@ -1709,9 +1709,15 @@ function renderTournList(){
                   const badge=hasFree16?'16✓':hasFree10?'10✓':'';
                   const displayPlace=f.tieGroup?Math.min(...f.tieGroup):f.place;
                   const placeColor=placeColors[displayPlace]||'#8a8090';
-                  const placeLabel=`${displayPlace}.${f.rebuy>0?` (${f.rebuy}${badge?' '+badge:''})`:''}`;
+                  const rebuyText=f.rebuy>0?` (${f.rebuy}${badge?' '+badge:''})`:'';
+                  // מקום-הסיום מודגש הרבה יותר מפרטי ה-Rebuy (פונט גדול/כבד
+                  // + צל קל שנותן לו נפח) — הוא ה"כותרת" של העמודה, ה-rebuy
+                  // הוא פרט-משנה קטן לידו, לא באותה חשיבות חזותית.
                   return `<div style="display:flex;flex-direction:column;align-items:center;width:30px;flex-shrink:0">
-                    <div style="font-size:9px;font-weight:900;color:${placeColor};margin-bottom:2px;white-space:nowrap;min-height:12px">${placeLabel}</div>
+                    <div style="margin-bottom:2px;white-space:nowrap;min-height:16px">
+                      <span style="font-size:15px;font-weight:900;color:${placeColor};text-shadow:0 1px 2px rgba(0,0,0,0.5)">${displayPlace}.</span>
+                      ${rebuyText?`<span style="font-size:8px;font-weight:600;color:var(--muted)">${rebuyText}</span>`:''}
+                    </div>
                     <div style="width:16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
                       ${rebuyH>0?`<div style="width:100%;height:${rebuyH}px;background:${rebuyColor};border-radius:2px 2px 0 0;margin-bottom:1px"></div>`:''}
                       <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'2px 2px 0 0'}"></div>
