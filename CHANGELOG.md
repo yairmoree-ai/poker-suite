@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-08-16 (96) -- Rebuy bar chart: place number resized, colors tightened, Rebuy moved below the name
+**Files: ui.js**
+
+- Follow-up polish round after #95's initial "make it bold" pass. User
+  feedback on the live screen (not the shared image): place number was
+  too big now, wanted the font itself emphasized rather than just sized
+  up, wanted 1st/2nd/3rd to each keep a distinct medal color but every
+  other place to share one uniform color (not a gradient of grays), and
+  asked about moving the Rebuy detail somewhere else.
+- Sketched two Rebuy-position options as an inline mockup (badge floating
+  over the bar itself, vs. a third line under the player's name) before
+  touching code. User picked the under-the-name option.
+- Changes:
+  - Place number: 15px -> 12px, added `-webkit-text-stroke` (thin dark
+    outline) alongside the existing text-shadow so it still reads as
+    "heavier" than its surroundings at the smaller size, rather than
+    relying on size alone for emphasis.
+  - Non-medal places (4th onward) now all use one fixed color (`#a8a4b5`)
+    instead of falling back to the very same muted tone `var(--muted)`
+    used elsewhere on the card -- keeps 1st/2nd/3rd's gold/silver/bronze
+    unambiguous by contrast, and avoids any place beyond 3rd looking
+    "ranked" against each other.
+  - Moved the Rebuy detail out of the place-number line entirely into a
+    new small line directly under the player name -- physically separated
+    from the place number now, per the user's choice between the two
+    mockup options.
+
 ## 2026-08-16 (95) -- Rebuy bar chart: finishing place made visually dominant over Rebuy detail
 **Files: ui.js**
 

@@ -1708,15 +1708,20 @@ function renderTournList(){
                   const rebuyColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
                   const badge=hasFree16?'16✓':hasFree10?'10✓':'';
                   const displayPlace=f.tieGroup?Math.min(...f.tieGroup):f.place;
-                  const placeColor=placeColors[displayPlace]||'#8a8090';
-                  const rebuyText=f.rebuy>0?` (${f.rebuy}${badge?' '+badge:''})`:'';
-                  // מקום-הסיום מודגש הרבה יותר מפרטי ה-Rebuy (פונט גדול/כבד
-                  // + צל קל שנותן לו נפח) — הוא ה"כותרת" של העמודה, ה-rebuy
-                  // הוא פרט-משנה קטן לידו, לא באותה חשיבות חזותית.
+                  // מקומות 1/2/3 צבע-מדליה ייחודי לכל אחד; כל השאר צבע אחיד
+                  // אחד (לא מדורג/לא-שונה בין 4 ל-11) — בכוונה, כדי שהעין
+                  // תזהה מיד "האם זה top-3 או לא" בלי לפענח גוונים עדינים.
+                  const placeColor=placeColors[displayPlace]||'#a8a4b5';
+                  const rebuyText=f.rebuy>0?`(${f.rebuy}${badge?' '+badge:''})`:'';
+                  // מקום-הסיום מודגש מפרטי ה-Rebuy — פונט קטן-יותר מגרסה
+                  // קודמת (15px היה גדול מדי) אבל עדיין כבד+עם קונטור-דק
+                  // (text-stroke) שנותן לו "משקל" חזותי גם בגודל מוקטן,
+                  // בלי לתפוס עוד שטח על המסך. Rebuy עבר למיקום חדש (אופציה
+                  // B שנבחרה) — שורה נפרדת מתחת לשם השחקן, רחוק ממספר-
+                  // המקום כדי לא "להתחרות" איתו על תשומת-לב.
                   return `<div style="display:flex;flex-direction:column;align-items:center;width:30px;flex-shrink:0">
-                    <div style="margin-bottom:2px;white-space:nowrap;min-height:16px">
-                      <span style="font-size:15px;font-weight:900;color:${placeColor};text-shadow:0 1px 2px rgba(0,0,0,0.5)">${displayPlace}.</span>
-                      ${rebuyText?`<span style="font-size:8px;font-weight:600;color:var(--muted)">${rebuyText}</span>`:''}
+                    <div style="margin-bottom:2px;white-space:nowrap;min-height:14px">
+                      <span style="font-size:12px;font-weight:900;color:${placeColor};text-shadow:0 1px 2px rgba(0,0,0,0.6);-webkit-text-stroke:0.4px rgba(0,0,0,0.35)">${displayPlace}.</span>
                     </div>
                     <div style="width:16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
                       ${rebuyH>0?`<div style="width:100%;height:${rebuyH}px;background:${rebuyColor};border-radius:2px 2px 0 0;margin-bottom:1px"></div>`:''}
@@ -1725,6 +1730,7 @@ function renderTournList(){
                     <div style="height:36px;display:flex;align-items:flex-start;justify-content:center;margin-top:2px">
                       <span class="vert-name" style="font-size:12px;font-weight:700;color:#e2ddd4;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;letter-spacing:2px">${f.name}</span>
                     </div>
+                    <div style="font-size:8px;font-weight:600;color:var(--muted);white-space:nowrap;min-height:10px;margin-top:1px">${rebuyText}</div>
                   </div>`;
                 }).join('');
               })()}
