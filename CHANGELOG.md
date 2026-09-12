@@ -6,6 +6,47 @@
 
 ---
 
+## 2026-08-16 (91) -- Rebuy bar chart now sorted by finishing place, not Rebuy count
+**Files: ui.js**
+
+- Follow-up to #90: once place labels were added to each bar, user asked
+  to sort the chart by finishing place (1, 2, 3...) instead of by Rebuy
+  count, since the place label makes place order the more readable
+  default now.
+- Changed the one sort key: `(t.finishOrder||[]).sort((a,b)=>(b.rebuy||0)
+  -(a.rebuy||0))` -> `.slice().sort((a,b)=>a.place-b.place)`. Added
+  `.slice()` while at it -- the original called `.sort()` directly on `t.
+  finishOrder` itself, which mutates the array in place; harmless in
+  practice (nothing else in this codebase depends on finishOrder's
+  storage order) but worth not doing when touching the line anyway.
+- Verified with a small synthetic case (places 3, 1, 7, 2 in scrambled
+  input order) -- output is 1, 2, 3, 7 as expected.
+
+## 2026-08-16 (90) -- Added finishing place to the Rebuy bar chart in tournament history
+**Files: ui.js**
+
+- User wanted each player's finishing place shown in the Rebuy bar chart
+  on saved-tournament history cards (previously that chart only showed
+  Rebuy count per player, all players; finishing place was only visible
+  for the top 4 in a separate "places column" above it).
+- Sketched three label options as an inline mockup (place instead of
+  Rebuy, place plus Rebuy combined, place as a separate line) before
+  writing any code. User picked "place + Rebuy combined".
+- Implemented: each bar's label is now `{place}. ({rebuy} {badge})` when
+  the player has any rebuys (e.g. `1. (5)`, `2. (16 16✓)`), or just
+  `{place}.` when they have none (e.g. `7.`) -- keeps the existing free-
+  rebuy badge (10✓/16✓) and bar-color milestone logic untouched, just adds
+  the place number in front.
+- Colored the place number gold/silver/bronze for 1st/2nd/3rd (matching
+  the existing "places column" above it), muted gray for everyone else.
+- Ties (#85) are handled the same way as the places column: a tied
+  player's `displayPlace` is the minimum of their `tieGroup`, so two
+  players tied for 1st both show `1.` in the bar chart too, consistent
+  with the 2x-trophy display added in #87.
+- Verified the label-generation logic directly against five synthetic
+  cases (plain rebuy, free-rebuy badge, no rebuy, and a genuine tie)
+  before finalizing -- all five produced the expected label and color.
+
 ## 2026-08-15 (89) — New feature: undo an incorrect KO mark (fix elimination order mistakes)
 **Files: features.js, ui.js**
 
