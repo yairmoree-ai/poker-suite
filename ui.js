@@ -1689,25 +1689,29 @@ function renderTournList(){
                  רק סדר-העמודות מתהפך. -->
             <div style="display:flex;flex-direction:row-reverse;align-items:flex-end;gap:4px;padding:0 2px;overflow-x:auto">
               ${(()=>{
-                const maxRebuy=Math.max(...(t.finishOrder||[]).map(f=>f.rebuy||0),1);
-                const BAR_MAX=56; const BUYIN_H=10;
+                const totalPlayers=(t.finishOrder||[]).length||1;
+                const BAR_MAX=56; const BAR_MIN=6;
                 // מקום + Rebuy יחד בתווית (אופציה 2 שנבחרה) — כולל תמיכה
                 // בתיקו (#85): displayPlace = מינימום בקבוצת-התיקו, אותה
                 // לוגיקה בדיוק כמו ב"Places column" למעלה, כדי ששתי
                 // התצוגות בכרטיס יהיו עקביות זו עם זו.
-                const placeColors={1:'#FFD700',2:'#C0C0C0',3:'#CD7F32'};
                 return (t.finishOrder||[]).slice().sort((a,b)=>a.place-b.place).map(f=>{
-                  const rebuyH=f.rebuy>0?Math.max(Math.round((f.rebuy/maxRebuy)*BAR_MAX),5):0;
                   const hasFree16=f.rebuy>=16, hasFree10=f.rebuy>=10;
-                  const rebuyColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
-                  const badge=hasFree16?'16✓':hasFree10?'10✓':'';
+                  // גובה העמודה = מקום-סיום (לא Rebuy יותר) — מקום 1 הכי
+                  // גבוה, יורד ליניארית ככל שהמקום גרוע יותר. הצבע נשאר
+                  // מבוסס-Rebuy (אדום=16+ חינם, כחול=10+ חינם, זהב=רגיל)
+                  // כדי לשמר את האינדיקציה החזותית המהירה של אבן-דרך-
+                  // rebuy, גם כשהגובה עצמו כבר לא מייצג אותה.
                   const displayPlace=f.tieGroup?Math.min(...f.tieGroup):f.place;
+                  const barColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
+                  const barH=Math.max(Math.round(BAR_MAX*(totalPlayers-displayPlace+1)/totalPlayers), BAR_MIN);
                   // מקומות 1/2/3 צבע-מדליה ייחודי לכל אחד (מוגברים מעט
                   // לבולטות — gold בהיר יותר, silver/bronze מוארים); כל
                   // השאר צבע אחיד אחד (לא מדורג בין 4 ל-11) — בכוונה, כדי
                   // שהעין תזהה מיד "האם זה top-3 או לא" בלי לפענח גוונים.
                   const placeColorsBold={1:'#FFD966',2:'#D8D8D8',3:'#E0955A'};
                   const placeColor=placeColorsBold[displayPlace]||'#a8a4b5';
+                  const badge=hasFree16?'16✓':hasFree10?'10✓':'';
                   const rebuyText=f.rebuy>0?`(${f.rebuy}${badge?' '+badge:''})`:'';
                   // מקום-הסיום בלי נקודה (לא נחוץ — "1" ברור בלי "1."),
                   // 13px, עם קונטור-דק שנותן לו "משקל" חזותי.
@@ -1724,8 +1728,7 @@ function renderTournList(){
                       <span style="font-size:13px;font-weight:900;color:${placeColor};text-shadow:0 1px 2px rgba(0,0,0,0.6);-webkit-text-stroke:0.4px rgba(0,0,0,0.35)">${displayPlace}</span>
                     </div>
                     <div style="width:16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
-                      ${rebuyH>0?`<div style="width:100%;height:${rebuyH}px;background:${rebuyColor};border-radius:2px 2px 0 0;margin-bottom:1px"></div>`:''}
-                      <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'2px 2px 0 0'}"></div>
+                      <div style="width:100%;height:${barH}px;background:${barColor};border-radius:2px 2px 0 0"></div>
                     </div>
                     <div style="margin-top:3px;font-size:9px;font-weight:700;color:#e2ddd4;white-space:nowrap;max-width:34px;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
                     <div style="font-size:8px;font-weight:600;color:var(--muted);white-space:nowrap;min-height:10px;margin-top:1px">${rebuyText}</div>
@@ -1733,9 +1736,10 @@ function renderTournList(){
                 }).join('');
               })()}
             </div>
-            <div style="display:flex;gap:8px;margin-top:3px">
-              <span style="font-size:10px;color:rgba(95,196,122,0.8)">■ כניסה</span>
-              ${(t.finishOrder||[]).some(f=>f.rebuy>0)?`<span style="font-size:10px;color:rgba(200,169,110,0.8)">■ Rebuy</span>`:''}
+            <div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">
+              <span style="font-size:9px;color:var(--muted)">גובה העמודה = מקום-סיום</span>
+              ${(t.finishOrder||[]).some(f=>f.rebuy>=10&&f.rebuy<16)?`<span style="font-size:9px;color:#5b9bd5">■ 10+ rebuy</span>`:''}
+              ${(t.finishOrder||[]).some(f=>f.rebuy>=16)?`<span style="font-size:9px;color:#e07b6a">■ 16+ rebuy</span>`:''}
             </div>
           </div>`:''}
         </div>

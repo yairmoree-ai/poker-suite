@@ -6,6 +6,37 @@
 
 ---
 
+## 2026-08-16 (99) -- Bar height now represents finishing place, not Rebuy count
+**Files: ui.js**
+
+- User clarified a request that sounded at first like something already
+  done (#91 sorted the chart by place, #96 moved Rebuy to a label under
+  the name) -- but the actual ask was different: the bar *height* itself
+  should represent finishing place, not Rebuy count. Confirmed the
+  direction explicitly first: place 1 (best) should be the tallest bar,
+  decreasing as place gets worse -- the inverse of the raw place number.
+- Replaced the two-segment bar (a fixed green "buyin" base + a Rebuy-
+  proportional colored segment stacked on top) with a single bar per
+  player. Height = `BAR_MAX * (totalPlayers - place + 1) / totalPlayers`,
+  floored at a small minimum (6px) so last place still shows a visible
+  sliver rather than disappearing. Uses `displayPlace` (tie-aware, same
+  as the place-number label and #85's tie handling) so tied players get
+  equal-height bars too, consistent with everything else on this card.
+- Kept the free-rebuy milestone color-coding on the bar itself (gold =
+  normal, blue = 10+ free rebuy, red = 16+) even though height no longer
+  encodes Rebuy magnitude -- the exact Rebuy count is still fully
+  preserved as text under the player's name (`(5)`, `(16 16✓)`, from
+  #96), so nothing was lost, and the color keeps the "who hit a
+  milestone" at-a-glance signal alive.
+- Updated the now-stale legend, which used to read "■ כניסה / ■ Rebuy"
+  describing the old stacked-segment meaning -- replaced with a plain
+  caption stating what the bar height now means, plus the milestone-color
+  legend only when relevant (only shown if someone in that tournament
+  actually hit 10+ or 16+ rebuys).
+- Verified the height formula directly for an 11-player tournament: place
+  1 -> 56px (max), decreasing in equal steps down to place 11 -> 6px
+  (floor) -- confirmed monotonically decreasing and never disappearing.
+
 ## 2026-08-16 (98) -- Flipped bar chart reading order: place 1 now on the left, ascending rightward
 **Files: ui.js**
 
