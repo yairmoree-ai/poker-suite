@@ -1682,7 +1682,12 @@ function renderTournList(){
           <!-- Buyin + Rebuy vertical bar chart - always shown when players exist -->
           ${(t.finishOrder||[]).length>0?`
           <div>
-            <div style="display:flex;align-items:flex-end;gap:4px;padding:0 2px;overflow-x:auto">
+            <!-- flex-direction:row-reverse (לא direction:ltr!) — מהפך רק
+                 את סדר-התצוגה של העמודות (מקום 1 משמאל, עולה ימינה),
+                 בלי לגעת ב-direction של הטקסט עצמו. כך הטקסט העברי בכל
+                 תווית (שם שחקן, מספרים) ממשיך להיות מיושר/מכוון נכון,
+                 רק סדר-העמודות מתהפך. -->
+            <div style="display:flex;flex-direction:row-reverse;align-items:flex-end;gap:4px;padding:0 2px;overflow-x:auto">
               ${(()=>{
                 const maxRebuy=Math.max(...(t.finishOrder||[]).map(f=>f.rebuy||0),1);
                 const BAR_MAX=56; const BUYIN_H=10;

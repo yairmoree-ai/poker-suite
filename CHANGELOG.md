@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-08-16 (98) -- Flipped bar chart reading order: place 1 now on the left, ascending rightward
+**Files: ui.js**
+
+- User liked #97's result and asked for one more layout change: read the
+  chart left-to-right by finishing place (1st leftmost, 2nd to its right,
+  etc.) -- while keeping the Hebrew text itself displaying normally.
+- Used `flex-direction: row-reverse` on the bar-row container rather than
+  touching the page's `direction` -- this only reverses the *order flex
+  items are placed in*, it doesn't affect how any individual piece of
+  Hebrew text shapes or aligns internally (that's governed by Unicode's
+  own bidi algorithm per text run, independent of a parent flex
+  container's direction). In this app's RTL context, plain `row` already
+  put the first DOM item (place 1, still sorted ascending from #91) at
+  the right edge; `row-reverse` flips that to the left edge with each
+  next item proceeding rightward -- exactly the requested order, with
+  zero risk to the Hebrew rendering since nothing about text direction
+  changed, only sibling order.
+
 ## 2026-08-16 (97) -- Made the bar-chart player name horizontal in the live view too, not just the shared image
 **Files: ui.js**
 
