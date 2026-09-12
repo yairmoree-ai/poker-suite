@@ -25,10 +25,15 @@
 .light-mode .seat-name { color:#1a1a2e !important; }
 .light-mode .seat-stack { color:#2a6a2a !important; }
 :root{
-  --gold:oklch(0.82 0.14 85);--gold-soft:oklch(0.68 0.11 80);--gold2:#a07840;
-  --bg:oklch(0.18 0.03 160);--bg2:#0f1320;
-  --felt:oklch(0.42 0.12 155);--felt2:oklch(0.28 0.05 150);--felt-edge:oklch(0.22 0.04 150);
-  --felt-rail:oklch(0.28 0.05 150);--red:#e05555;--chip-red:oklch(0.6 0.22 25);
+  /* היו oklch() לפני 2026-08-16 — הוחלף לערכי hex מדויקים-שווים כי
+     html2canvas (המנוע מאחורי שלוש פונקציות השיתוף) לא מבין את
+     הפורמט הזה בכלל וזורק "unsupported color function" — לא רק
+     בטורניר, כל שיתוף שנוגע ב-var(--gold) וכו' חשוף לזה. אותו צבע
+     בדיוק, רק תחביר אחר — לא אמור להיראות שום שינוי חזותי. */
+  --gold:#eebc4a;--gold-soft:#bc9041;--gold2:#a07840;
+  --bg:#05160d;--bg2:#0f1320;
+  --felt:#005f2e;--felt2:#15301b;--felt-edge:#0b2010;
+  --felt-rail:#15301b;--red:#e05555;--chip-red:#e62b34;
   --blue:#5b9bd5;--green:#5fc47a;
   --panel:#0d1220;--border:rgba(200,169,110,0.18);
   --text:#e2ddd4;--muted:#8a8799;--muted2:#3a3650;
@@ -277,5 +282,5 @@ input,select,textarea{font-family:inherit}
   animation: blackHoleAppear 0.4s ease-out forwards, blackHolePulse 0.8s ease-in-out 0.4s infinite;
 }
 
-.card-red{color:oklch(0.6 0.22 25)}
-.card-black{color:oklch(0.15 0 0)}
+.card-red{color:#e62b34}
+.card-black{color:#0b0b0b}

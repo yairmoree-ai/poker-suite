@@ -6,6 +6,39 @@
 
 ---
 
+## 2026-08-16 (93) -- FOUND IT: html2canvas can't parse oklch() -- root cause of the share error, fixed at the source
+**Files: styles.css**
+
+- Diagnostic improvement from #92 worked immediately: user retried
+  sharing and the toast showed the real error -- `Attempting to parse an
+  unsupported color function "oklch"`.
+- **Root cause:** `styles.css` defines seven color variables/rules using
+  the modern `oklch()` CSS color function (`--gold`, `--gold-soft`, `--bg`,
+  `--felt`, `--felt2`, `--felt-edge`, `--felt-rail`, `--chip-red`, plus
+  `.card-red`/`.card-black`). Real browsers render `oklch()` fine, but
+  `html2canvas` (the library all three share functions --
+  `shareHandImage`, `shareTournamentImage`, `shareLeaderboardImage` --
+  depend on) uses its own limited CSS color parser that has never
+  supported it. `--gold` alone is used constantly throughout the app
+  (headers, borders, medals), so this wasn't tournament-specific -- any
+  share action touching an element styled through one of these variables
+  was exposed to the same failure; the tournament card was just the first
+  one actually tried.
+- Fixed by converting all seven oklch() values to their exact
+  mathematically-equivalent hex values (proper OKLab -> linear sRGB ->
+  gamma-corrected sRGB conversion, not eyeballed) -- e.g. `--gold: oklch
+  (0.82 0.14 85)` -> `#eebc4a`. Same actual color, different syntax --
+  no visual change anywhere in the live app, only removes the html2canvas
+  incompatibility at its source. Fixes sharing for hands and the
+  Leaderboard too, not just tournaments, even though only the tournament
+  case had actually surfaced yet.
+- Verified brace-balance and structure on the edited CSS file directly
+  (185 open / 185 close) rather than assuming the edit was clean.
+- Not yet confirmed against a real share attempt -- recommend retrying
+  the same tournament share to confirm the fix, now that the diagnostic
+  toast from #92 would show a different, unrelated error if something
+  else is also wrong.
+
 ## 2026-08-16 (92) -- Diagnostic improvement: share errors now show the actual failure, not a generic message
 **Files: ui.js**
 
