@@ -1019,25 +1019,14 @@ async function shareTournamentImage(ti){
   const hideEls = box.querySelectorAll('.share-hide');
   hideEls.forEach(el=>el.style.visibility = 'hidden');
   try{
+    // הערה: עד 2026-08-16 היה כאן onclone עם workaround ל-html2canvas
+    // (לא מטפל נכון בטקסט עברי מסובב אנכית writing-mode:vertical-rl +
+    // rotate). הוסר — שם השחקן בגרף הפך אופקי גם בתצוגה החיה עצמה, אז
+    // אין יותר טקסט מסובב שצריך "לתקן" רק לצורך הצילום.
     const canvas = await html2canvas(box, {
       backgroundColor: '#0a0d14',
       scale: 2,
-      useCORS: true,
-      // html2canvas לא מטפל נכון בטקסט עברי מסובב אנכית (writing-mode:
-      // vertical-rl + rotate(180deg)) — עובד מושלם בדפדפן אמיתי, אבל
-      // ה-rasterizer העצמאי שלו מבלבל את סדר-האותיות/כיוון-הbidi ומייצר
-      // טקסט משובש (בדיוק מה שהמשתמש דיווח עליו). onclone רץ רק על עותק
-      // זמני שנועד לצילום — לא נוגע בתצוגה החיה בכלל — אז אפשר "לפשט"
-      // את הסגנון רק שם, בלי סיכון לשבור משהו במסך האמיתי.
-      onclone: (clonedDoc) => {
-        clonedDoc.querySelectorAll('.vert-name').forEach(el=>{
-          el.style.writingMode = 'horizontal-tb';
-          el.style.transform = 'none';
-          el.style.textOrientation = 'initial';
-          el.style.letterSpacing = 'normal';
-          el.style.fontSize = '9px';
-        });
-      }
+      useCORS: true
     });
     hideEls.forEach(el=>el.style.visibility = '');
 
@@ -1708,28 +1697,32 @@ function renderTournList(){
                   const rebuyColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
                   const badge=hasFree16?'16✓':hasFree10?'10✓':'';
                   const displayPlace=f.tieGroup?Math.min(...f.tieGroup):f.place;
-                  // מקומות 1/2/3 צבע-מדליה ייחודי לכל אחד; כל השאר צבע אחיד
-                  // אחד (לא מדורג/לא-שונה בין 4 ל-11) — בכוונה, כדי שהעין
-                  // תזהה מיד "האם זה top-3 או לא" בלי לפענח גוונים עדינים.
-                  const placeColor=placeColors[displayPlace]||'#a8a4b5';
+                  // מקומות 1/2/3 צבע-מדליה ייחודי לכל אחד (מוגברים מעט
+                  // לבולטות — gold בהיר יותר, silver/bronze מוארים); כל
+                  // השאר צבע אחיד אחד (לא מדורג בין 4 ל-11) — בכוונה, כדי
+                  // שהעין תזהה מיד "האם זה top-3 או לא" בלי לפענח גוונים.
+                  const placeColorsBold={1:'#FFD966',2:'#D8D8D8',3:'#E0955A'};
+                  const placeColor=placeColorsBold[displayPlace]||'#a8a4b5';
                   const rebuyText=f.rebuy>0?`(${f.rebuy}${badge?' '+badge:''})`:'';
-                  // מקום-הסיום מודגש מפרטי ה-Rebuy — פונט קטן-יותר מגרסה
-                  // קודמת (15px היה גדול מדי) אבל עדיין כבד+עם קונטור-דק
-                  // (text-stroke) שנותן לו "משקל" חזותי גם בגודל מוקטן,
-                  // בלי לתפוס עוד שטח על המסך. Rebuy עבר למיקום חדש (אופציה
-                  // B שנבחרה) — שורה נפרדת מתחת לשם השחקן, רחוק ממספר-
-                  // המקום כדי לא "להתחרות" איתו על תשומת-לב.
+                  // מקום-הסיום בלי נקודה (לא נחוץ — "1" ברור בלי "1."),
+                  // 13px, עם קונטור-דק שנותן לו "משקל" חזותי.
+                  //
+                  // שם השחקן — הפך לאופקי (לא vertical-rl+rotate) גם
+                  // בתצוגה החיה, לא רק בשיתוף: הגרסה האנכית עבדה אבל הייתה
+                  // "קצת מבלבלת לעין" (לדברי המשתמש), ועכשיו שהאופקי כבר
+                  // אומת כטוב בתמונה המשותפת (#94), אין סיבה לתחזק שתי
+                  // גרסאות שונות של אותו טקסט — גם מפשט את הקוד (בטל את
+                  // הצורך ב-onclone/class 'vert-name' לגמרי, ראו
+                  // shareTournamentImage).
                   return `<div style="display:flex;flex-direction:column;align-items:center;width:30px;flex-shrink:0">
-                    <div style="margin-bottom:2px;white-space:nowrap;min-height:14px">
-                      <span style="font-size:12px;font-weight:900;color:${placeColor};text-shadow:0 1px 2px rgba(0,0,0,0.6);-webkit-text-stroke:0.4px rgba(0,0,0,0.35)">${displayPlace}.</span>
+                    <div style="margin-bottom:2px;white-space:nowrap;min-height:15px">
+                      <span style="font-size:13px;font-weight:900;color:${placeColor};text-shadow:0 1px 2px rgba(0,0,0,0.6);-webkit-text-stroke:0.4px rgba(0,0,0,0.35)">${displayPlace}</span>
                     </div>
                     <div style="width:16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
                       ${rebuyH>0?`<div style="width:100%;height:${rebuyH}px;background:${rebuyColor};border-radius:2px 2px 0 0;margin-bottom:1px"></div>`:''}
                       <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'2px 2px 0 0'}"></div>
                     </div>
-                    <div style="height:36px;display:flex;align-items:flex-start;justify-content:center;margin-top:2px">
-                      <span class="vert-name" style="font-size:12px;font-weight:700;color:#e2ddd4;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;letter-spacing:2px">${f.name}</span>
-                    </div>
+                    <div style="margin-top:3px;font-size:9px;font-weight:700;color:#e2ddd4;white-space:nowrap;max-width:34px;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
                     <div style="font-size:8px;font-weight:600;color:var(--muted);white-space:nowrap;min-height:10px;margin-top:1px">${rebuyText}</div>
                   </div>`;
                 }).join('');

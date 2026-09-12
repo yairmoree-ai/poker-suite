@@ -6,6 +6,30 @@
 
 ---
 
+## 2026-08-16 (97) -- Made the bar-chart player name horizontal in the live view too, not just the shared image
+**Files: ui.js**
+
+- More fine-tuning after #96: user asked to drop the "." after the place
+  number, bump its font to 13px with a more vivid color, and -- separately
+  -- asked why the player name couldn't just be horizontal in the live
+  history view the same way it already was in the shared image.
+- That last question led to simplifying rather than just patching: since
+  the horizontal name style was already proven to look fine (user
+  confirmed it in #94's shared image), there was no good reason to keep
+  two versions of the same text -- vertical+rotated on screen, horizontal
+  only inside html2canvas's `onclone`. Removed the vertical/rotated style
+  entirely and made the on-screen name horizontal (9px, ellipsis-truncated
+  at 34px) to match.
+- Consequence: the `onclone` workaround from #94 is no longer needed at
+  all (no more rotated text anywhere in the captured box) -- removed it
+  from `shareTournamentImage` rather than leaving dead code that
+  references a class (`vert-name`) that no longer exists on anything.
+- Place number: dropped the trailing "." (`1` instead of `1.` -- doesn't
+  need it), bumped to 13px, and brightened the 1st/2nd/3rd medal colors
+  specifically (`#FFD966`/`#D8D8D8`/`#E0955A` instead of the standard
+  gold/silver/bronze) for more visual punch, while 4th-onward keeps the
+  single flat `#a8a4b5` from #96.
+
 ## 2026-08-16 (96) -- Rebuy bar chart: place number resized, colors tightened, Rebuy moved below the name
 **Files: ui.js**
 
