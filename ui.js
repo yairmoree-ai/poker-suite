@@ -1003,7 +1003,7 @@ async function shareHandImage(h, box){
   }catch(err){
     hideEls.forEach(el=>el.style.visibility = '');
     console.error('shareHandImage error:', err);
-    notify('שגיאה בשיתוף היד');
+    notify('שגיאה בשיתוף היד: '+(err?.message||err?.name||'לא ידוע'));
   }
 }
 
@@ -1053,7 +1053,7 @@ async function shareTournamentImage(ti){
   }catch(err){
     hideEls.forEach(el=>el.style.visibility = '');
     console.error('shareTournamentImage error:', err);
-    notify('שגיאה בשיתוף הטורניר');
+    notify('שגיאה בשיתוף הטורניר: '+(err?.message||err?.name||'לא ידוע'));
   }
 }
 
@@ -1898,7 +1898,7 @@ async function shareLeaderboardImage(box){
   }catch(err){
     hideEls.forEach(el=>el.style.visibility = '');
     console.error('shareLeaderboardImage error:', err);
-    notify('שגיאה בשיתוף הטבלה');
+    notify('שגיאה בשיתוף הטבלה: '+(err?.message||err?.name||'לא ידוע'));
   }
 }
 

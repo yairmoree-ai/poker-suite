@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-08-16 (92) -- Diagnostic improvement: share errors now show the actual failure, not a generic message
+**Files: ui.js**
+
+- User reported a "sharing error" toast when trying to share a tournament
+  card image. Could not reproduce directly (no real browser/canvas
+  available in this environment) -- the existing catch block only logged
+  the real error to `console.error` (invisible on a phone, no easy dev-
+  tools access) and showed a generic "שגיאה בשיתוף הטורניר" toast with
+  no detail.
+- Rather than guess at the cause (html2canvas has several known
+  failure modes -- CORS-tainted canvas, unsupported CSS, canvas size
+  limits -- and guessing wrong wastes a round-trip), improved all three
+  share functions (`shareHandImage`, `shareTournamentImage`,
+  `shareLeaderboardImage`) to include `err?.message||err?.name` directly
+  in the visible toast. Next failure will show the actual reason on
+  screen, no console access needed -- can diagnose precisely instead of
+  guessing.
+- Not a fix yet -- purely a diagnostic step. Waiting on the user to
+  retry sharing and report the new, more specific error text.
+
 ## 2026-08-16 (91) -- Rebuy bar chart now sorted by finishing place, not Rebuy count
 **Files: ui.js**
 
