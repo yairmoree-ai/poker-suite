@@ -1022,7 +1022,22 @@ async function shareTournamentImage(ti){
     const canvas = await html2canvas(box, {
       backgroundColor: '#0a0d14',
       scale: 2,
-      useCORS: true
+      useCORS: true,
+      // html2canvas לא מטפל נכון בטקסט עברי מסובב אנכית (writing-mode:
+      // vertical-rl + rotate(180deg)) — עובד מושלם בדפדפן אמיתי, אבל
+      // ה-rasterizer העצמאי שלו מבלבל את סדר-האותיות/כיוון-הbidi ומייצר
+      // טקסט משובש (בדיוק מה שהמשתמש דיווח עליו). onclone רץ רק על עותק
+      // זמני שנועד לצילום — לא נוגע בתצוגה החיה בכלל — אז אפשר "לפשט"
+      // את הסגנון רק שם, בלי סיכון לשבור משהו במסך האמיתי.
+      onclone: (clonedDoc) => {
+        clonedDoc.querySelectorAll('.vert-name').forEach(el=>{
+          el.style.writingMode = 'horizontal-tb';
+          el.style.transform = 'none';
+          el.style.textOrientation = 'initial';
+          el.style.letterSpacing = 'normal';
+          el.style.fontSize = '9px';
+        });
+      }
     });
     hideEls.forEach(el=>el.style.visibility = '');
 
@@ -1702,7 +1717,7 @@ function renderTournList(){
                       <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'2px 2px 0 0'}"></div>
                     </div>
                     <div style="height:36px;display:flex;align-items:flex-start;justify-content:center;margin-top:2px">
-                      <span style="font-size:12px;font-weight:700;color:#e2ddd4;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;letter-spacing:2px">${f.name}</span>
+                      <span class="vert-name" style="font-size:12px;font-weight:700;color:#e2ddd4;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;letter-spacing:2px">${f.name}</span>
                     </div>
                   </div>`;
                 }).join('');

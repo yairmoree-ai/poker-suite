@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-08-16 (94) -- Second, different bug in the same feature: Hebrew names garbled in the shared tournament image
+**Files: ui.js**
+
+- Good news first: #93's oklch fix worked -- sharing completed and
+  produced an actual image with a working share sheet. But the player
+  names in the Rebuy bar chart came out visually broken -- letters
+  jumbled/disconnected rather than reading as the name.
+- **Different root cause, unrelated to #93:** the bar chart's player-name
+  labels use `writing-mode: vertical-rl` plus `transform: rotate(180deg)`
+  to stack Hebrew names vertically and compactly under each bar -- renders
+  correctly in a real browser, but `html2canvas` re-implements its own
+  text layout rather than using the browser's actual bidi + vertical-text
+  engine, and gets the combination of RTL character ordering + vertical
+  stacking + an extra 180-degree rotation wrong.
+- Fixed via `html2canvas`'s `onclone` option in `shareTournamentImage`
+  only: right before capturing, it swaps the vertical/rotated style for
+  plain horizontal text (`writing-mode: horizontal-tb`, no rotation, 9px)
+  on a clone of the DOM used only for that one screenshot -- the actual
+  on-screen chart is completely untouched, still vertical and compact.
+  Marked the target span with a `vert-name` class so `onclone` can find
+  it reliably instead of matching by inline style text.
+- Scoped deliberately to `shareTournamentImage` only, not the other two
+  share functions -- `shareHandImage` and `shareLeaderboardImage` don't
+  use vertical/rotated Hebrew text anywhere in what they capture, so
+  there was nothing there to fix.
+- **Not yet re-confirmed with a real share attempt** -- recommend trying
+  the same tournament share again to confirm names now read correctly in
+  the exported image.
+
 ## 2026-08-16 (93) -- FOUND IT: html2canvas can't parse oklch() -- root cause of the share error, fixed at the source
 **Files: styles.css**
 
