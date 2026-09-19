@@ -2122,7 +2122,10 @@ function renderTableShape(){
   // הערה: sbox-tablesize הוסר מרשימה זו בכוונה — הנראות שלו נקבעת אך ורק ע"י showView()
   // לפי הטאב הפעיל. קודם היה כאן, וכל render() (כולל סנכרון תקופתי) היה מאפס אותו
   // בחזרה ל-display:'' עבור אדמין, "מחייה" אותו מחדש בטאבים שבהם הוא אמור להיות מוסתר.
-  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
+  // הערה: 'btn-save-tourn'/'btn-reset-tourn' הוסרו מהרשימה הזו (2026-08-16)
+  // יחד עם הכפתורים עצמם ב-index.html — היו כפילות מיותרת של אותם כפתורים
+  // שכבר קיימים בכרטיס "טורניר נוכחי" (openSaveTournBox/resetTournament).
+  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });

@@ -6,279 +6,109 @@
 
 ---
 
-## 2026-08-16 (99) -- Bar height now represents finishing place, not Rebuy count
+## 2026-08-16 (100) — Removed duplicate save/reset-tournament buttons, and a hidden double-confirm bug found along the way
+**Files: index.html, ui.js, render.js**
+
+- User spotted (and marked in a screenshot) two redundant buttons at the top of the tournaments tab — "שמור טורניר נוכחי" and "אפס טורניר" — asking to remove them and to confirm the remaining buttons do the same thing.
+- Confirmed rather than assumed: traced both buttons' onclick handlers. The top pair (index.html, #btn-save-tourn/#btn-reset-tourn) called showSaveTournDialog() and resetTournament() directly; the bottom pair inside the "current tournament" card (ui.js) called openSaveTournBox() (a one-line wrapper around the same showSaveTournDialog()) and also resetTournament(). Confirmed identical underlying actions before removing anything.
+- Found one real, hidden bug while confirming this: the bottom reset button wrapped its call in a native confirm('לאפס את הטורניר?') — but resetTournament() itself already builds its own inline confirmation box (with the tie checkbox from #88), so this was a redundant double confirmation the top button didn't have. Removed the extra native confirm() wrapper so both paths behave identically through one single confirmation step.
+- Removed the duplicate buttons and their now-orphaned row from index.html, keeping the section header itself.
+- Cleaned up a dead reference: render.js's viewer-visibility toggle looped over a hardcoded list of button IDs including the two removed button IDs — harmless after removal (the loop already null-checks each element before touching it), but removed the two dead entries anyway rather than leaving stale references to elements that no longer exist.
+- Verified: brace/tag balance on the edited index.html (61 opening and 61 closing button tags, 153 opening and 153 closing div tags), syntax-checked ui.js and render.js, and confirmed by direct grep that no other code anywhere still references the removed button IDs.
+- Caveat: unlike ui.js (re-verified against the user's own repo upload earlier today), index.html and render.js were not independently re-uploaded and diffed this session — these two edits are built on Claude's existing working copy of those files, not freshly confirmed against the user's actual repo state. Worth an extra check if anything about the tournament tab looks unexpectedly different after deploying.
+- **Process note:** while writing this entry, a scripting mistake on Claude's part (a Python write that failed partway through due to a bad emoji escape) truncated this CHANGELOG.md to empty in the sandbox, and a chained cleanup command copied that empty file over the last-known-good output too, wiping both copies. Recovered by rebuilding from the user's own most recent upload (entries 1-88, confirmed intact) and re-adding entries 89-100 from Claude's own conversation history, since their exact text was still available there. No code files were affected, only this changelog, and nothing was lost that couldn't be reconstructed exactly.
+
+## 2026-08-16 (99) — Bar height now represents finishing place, not Rebuy count
 **Files: ui.js**
 
-- User clarified a request that sounded at first like something already
-  done (#91 sorted the chart by place, #96 moved Rebuy to a label under
-  the name) -- but the actual ask was different: the bar *height* itself
-  should represent finishing place, not Rebuy count. Confirmed the
-  direction explicitly first: place 1 (best) should be the tallest bar,
-  decreasing as place gets worse -- the inverse of the raw place number.
-- Replaced the two-segment bar (a fixed green "buyin" base + a Rebuy-
-  proportional colored segment stacked on top) with a single bar per
-  player. Height = `BAR_MAX * (totalPlayers - place + 1) / totalPlayers`,
-  floored at a small minimum (6px) so last place still shows a visible
-  sliver rather than disappearing. Uses `displayPlace` (tie-aware, same
-  as the place-number label and #85's tie handling) so tied players get
-  equal-height bars too, consistent with everything else on this card.
-- Kept the free-rebuy milestone color-coding on the bar itself (gold =
-  normal, blue = 10+ free rebuy, red = 16+) even though height no longer
-  encodes Rebuy magnitude -- the exact Rebuy count is still fully
-  preserved as text under the player's name (`(5)`, `(16 16✓)`, from
-  #96), so nothing was lost, and the color keeps the "who hit a
-  milestone" at-a-glance signal alive.
-- Updated the now-stale legend, which used to read "■ כניסה / ■ Rebuy"
-  describing the old stacked-segment meaning -- replaced with a plain
-  caption stating what the bar height now means, plus the milestone-color
-  legend only when relevant (only shown if someone in that tournament
-  actually hit 10+ or 16+ rebuys).
-- Verified the height formula directly for an 11-player tournament: place
-  1 -> 56px (max), decreasing in equal steps down to place 11 -> 6px
-  (floor) -- confirmed monotonically decreasing and never disappearing.
+- User clarified a request that sounded at first like something already done (#91 sorted the chart by place, #96 moved Rebuy to a label under the name) — but the actual ask was different: the bar height itself should represent finishing place, not Rebuy count. Confirmed the direction explicitly first: place 1 (best) should be the tallest bar, decreasing as place gets worse — the inverse of the raw place number.
+- Replaced the two-segment bar (a fixed green "buyin" base + a Rebuy-proportional colored segment stacked on top) with a single bar per player. Height = BAR_MAX * (totalPlayers - place + 1) / totalPlayers, floored at a small minimum (6px) so last place still shows a visible sliver rather than disappearing. Uses displayPlace (tie-aware, same as the place-number label and #85's tie handling) so tied players get equal-height bars too, consistent with everything else on this card.
+- Kept the free-rebuy milestone color-coding on the bar itself (gold = normal, blue = 10+ free rebuy, red = 16+) even though height no longer encodes Rebuy magnitude — the exact Rebuy count is still fully preserved as text under the player's name, so nothing was lost, and the color keeps the "who hit a milestone" at-a-glance signal alive.
+- Updated the now-stale legend, which used to read "כניסה / Rebuy" describing the old stacked-segment meaning — replaced with a plain caption stating what the bar height now means, plus the milestone-color legend only when relevant.
+- Verified the height formula directly for an 11-player tournament: place 1 -> 56px (max), decreasing in equal steps down to place 11 -> 6px (floor) — confirmed monotonically decreasing and never disappearing.
 
-## 2026-08-16 (98) -- Flipped bar chart reading order: place 1 now on the left, ascending rightward
+## 2026-08-16 (98) — Flipped bar chart reading order: place 1 now on the left, ascending rightward
 **Files: ui.js**
 
-- User liked #97's result and asked for one more layout change: read the
-  chart left-to-right by finishing place (1st leftmost, 2nd to its right,
-  etc.) -- while keeping the Hebrew text itself displaying normally.
-- Used `flex-direction: row-reverse` on the bar-row container rather than
-  touching the page's `direction` -- this only reverses the *order flex
-  items are placed in*, it doesn't affect how any individual piece of
-  Hebrew text shapes or aligns internally (that's governed by Unicode's
-  own bidi algorithm per text run, independent of a parent flex
-  container's direction). In this app's RTL context, plain `row` already
-  put the first DOM item (place 1, still sorted ascending from #91) at
-  the right edge; `row-reverse` flips that to the left edge with each
-  next item proceeding rightward -- exactly the requested order, with
-  zero risk to the Hebrew rendering since nothing about text direction
-  changed, only sibling order.
+- User liked #97's result and asked for one more layout change: read the chart left-to-right by finishing place (1st leftmost, 2nd to its right, etc.) — while keeping the Hebrew text itself displaying normally.
+- Used flex-direction: row-reverse on the bar-row container rather than touching the page's direction — this only reverses the order flex items are placed in, it doesn't affect how any individual piece of Hebrew text shapes or aligns internally (that's governed by Unicode's own bidi algorithm per text run, independent of a parent flex container's direction). In this app's RTL context, plain row already put the first DOM item (place 1, still sorted ascending from #91) at the right edge; row-reverse flips that to the left edge with each next item proceeding rightward — exactly the requested order, with zero risk to the Hebrew rendering since nothing about text direction changed, only sibling order.
 
-## 2026-08-16 (97) -- Made the bar-chart player name horizontal in the live view too, not just the shared image
+## 2026-08-16 (97) — Made the bar-chart player name horizontal in the live view too, not just the shared image
 **Files: ui.js**
 
-- More fine-tuning after #96: user asked to drop the "." after the place
-  number, bump its font to 13px with a more vivid color, and -- separately
-  -- asked why the player name couldn't just be horizontal in the live
-  history view the same way it already was in the shared image.
-- That last question led to simplifying rather than just patching: since
-  the horizontal name style was already proven to look fine (user
-  confirmed it in #94's shared image), there was no good reason to keep
-  two versions of the same text -- vertical+rotated on screen, horizontal
-  only inside html2canvas's `onclone`. Removed the vertical/rotated style
-  entirely and made the on-screen name horizontal (9px, ellipsis-truncated
-  at 34px) to match.
-- Consequence: the `onclone` workaround from #94 is no longer needed at
-  all (no more rotated text anywhere in the captured box) -- removed it
-  from `shareTournamentImage` rather than leaving dead code that
-  references a class (`vert-name`) that no longer exists on anything.
-- Place number: dropped the trailing "." (`1` instead of `1.` -- doesn't
-  need it), bumped to 13px, and brightened the 1st/2nd/3rd medal colors
-  specifically (`#FFD966`/`#D8D8D8`/`#E0955A` instead of the standard
-  gold/silver/bronze) for more visual punch, while 4th-onward keeps the
-  single flat `#a8a4b5` from #96.
+- More fine-tuning after #96: user asked to drop the "." after the place number, bump its font to 13px with a more vivid color, and — separately — asked why the player name couldn't just be horizontal in the live history view the same way it already was in the shared image.
+- That last question led to simplifying rather than just patching: since the horizontal name style was already proven to look fine (user confirmed it in #94's shared image), there was no good reason to keep two versions of the same text — vertical+rotated on screen, horizontal only inside html2canvas's onclone. Removed the vertical/rotated style entirely and made the on-screen name horizontal (9px, ellipsis-truncated at 34px) to match.
+- Consequence: the onclone workaround from #94 is no longer needed at all (no more rotated text anywhere in the captured box) — removed it from shareTournamentImage rather than leaving dead code that references a class (vert-name) that no longer exists on anything.
+- Place number: dropped the trailing "." (1 instead of 1. — doesn't need it), bumped to 13px, and brightened the 1st/2nd/3rd medal colors specifically for more visual punch, while 4th-onward keeps the single flat color from #96.
 
-## 2026-08-16 (96) -- Rebuy bar chart: place number resized, colors tightened, Rebuy moved below the name
+## 2026-08-16 (96) — Rebuy bar chart: place number resized, colors tightened, Rebuy moved below the name
 **Files: ui.js**
 
-- Follow-up polish round after #95's initial "make it bold" pass. User
-  feedback on the live screen (not the shared image): place number was
-  too big now, wanted the font itself emphasized rather than just sized
-  up, wanted 1st/2nd/3rd to each keep a distinct medal color but every
-  other place to share one uniform color (not a gradient of grays), and
-  asked about moving the Rebuy detail somewhere else.
-- Sketched two Rebuy-position options as an inline mockup (badge floating
-  over the bar itself, vs. a third line under the player's name) before
-  touching code. User picked the under-the-name option.
-- Changes:
-  - Place number: 15px -> 12px, added `-webkit-text-stroke` (thin dark
-    outline) alongside the existing text-shadow so it still reads as
-    "heavier" than its surroundings at the smaller size, rather than
-    relying on size alone for emphasis.
-  - Non-medal places (4th onward) now all use one fixed color (`#a8a4b5`)
-    instead of falling back to the very same muted tone `var(--muted)`
-    used elsewhere on the card -- keeps 1st/2nd/3rd's gold/silver/bronze
-    unambiguous by contrast, and avoids any place beyond 3rd looking
-    "ranked" against each other.
-  - Moved the Rebuy detail out of the place-number line entirely into a
-    new small line directly under the player name -- physically separated
-    from the place number now, per the user's choice between the two
-    mockup options.
+- Follow-up polish round after #95's initial "make it bold" pass. User feedback on the live screen (not the shared image): place number was too big now, wanted the font itself emphasized rather than just sized up, wanted 1st/2nd/3rd to each keep a distinct medal color but every other place to share one uniform color (not a gradient of grays), and asked about moving the Rebuy detail somewhere else.
+- Sketched two Rebuy-position options as an inline mockup (badge floating over the bar itself, vs. a third line under the player's name) before touching code. User picked the under-the-name option.
+- Changes: place number 15px -> 12px with a thin text-stroke outline alongside the existing text-shadow so it still reads as "heavier" than its surroundings at the smaller size; non-medal places (4th onward) now all use one fixed color instead of falling back to the same muted tone used elsewhere on the card; moved the Rebuy detail out of the place-number line entirely into a new small line directly under the player name.
 
-## 2026-08-16 (95) -- Rebuy bar chart: finishing place made visually dominant over Rebuy detail
+## 2026-08-16 (95) — Rebuy bar chart: finishing place made visually dominant over Rebuy detail
 **Files: ui.js**
 
-- User confirmed #94's fix worked (names read correctly in the shared
-  image now) and asked for a follow-up polish: the finishing-place number
-  should stand out more than the Rebuy detail next to it.
-- Split what was one label (`1. (5)`, single size/weight for the whole
-  string) into two separately-styled spans: the place number is now 15px/
-  weight 900 with a subtle text-shadow for depth, the Rebuy detail in
-  parens is a smaller 8px/weight 600 in muted color right after it. Place
-  is now clearly the primary read, Rebuy the secondary detail -- same
-  information as before, just re-weighted visually.
-- No layout/logic changes beyond the label styling itself -- same medal
-  colors (gold/silver/bronze for 1st-3rd), same tie-group handling
-  (`displayPlace`), same free-rebuy badge logic.
+- User confirmed #94's fix worked (names read correctly in the shared image now) and asked for a follow-up polish: the finishing-place number should stand out more than the Rebuy detail next to it.
+- Split what was one label into two separately-styled spans: the place number is now 15px/weight 900 with a subtle text-shadow for depth, the Rebuy detail in parens is a smaller 8px/weight 600 in muted color right after it. Place is now clearly the primary read, Rebuy the secondary detail — same information as before, just re-weighted visually.
+- No layout/logic changes beyond the label styling itself — same medal colors (gold/silver/bronze for 1st-3rd), same tie-group handling (displayPlace), same free-rebuy badge logic.
 
-## 2026-08-16 (94) -- Second, different bug in the same feature: Hebrew names garbled in the shared tournament image
+## 2026-08-16 (94) — Second, different bug in the same feature: Hebrew names garbled in the shared tournament image
 **Files: ui.js**
 
-- Good news first: #93's oklch fix worked -- sharing completed and
-  produced an actual image with a working share sheet. But the player
-  names in the Rebuy bar chart came out visually broken -- letters
-  jumbled/disconnected rather than reading as the name.
-- **Different root cause, unrelated to #93:** the bar chart's player-name
-  labels use `writing-mode: vertical-rl` plus `transform: rotate(180deg)`
-  to stack Hebrew names vertically and compactly under each bar -- renders
-  correctly in a real browser, but `html2canvas` re-implements its own
-  text layout rather than using the browser's actual bidi + vertical-text
-  engine, and gets the combination of RTL character ordering + vertical
-  stacking + an extra 180-degree rotation wrong.
-- Fixed via `html2canvas`'s `onclone` option in `shareTournamentImage`
-  only: right before capturing, it swaps the vertical/rotated style for
-  plain horizontal text (`writing-mode: horizontal-tb`, no rotation, 9px)
-  on a clone of the DOM used only for that one screenshot -- the actual
-  on-screen chart is completely untouched, still vertical and compact.
-  Marked the target span with a `vert-name` class so `onclone` can find
-  it reliably instead of matching by inline style text.
-- Scoped deliberately to `shareTournamentImage` only, not the other two
-  share functions -- `shareHandImage` and `shareLeaderboardImage` don't
-  use vertical/rotated Hebrew text anywhere in what they capture, so
-  there was nothing there to fix.
-- **Not yet re-confirmed with a real share attempt** -- recommend trying
-  the same tournament share again to confirm names now read correctly in
-  the exported image.
+- Good news first: #93's oklch fix worked — sharing completed and produced an actual image with a working share sheet. But the player names in the Rebuy bar chart came out visually broken — letters jumbled/disconnected rather than reading as the name.
+- Different root cause, unrelated to #93: the bar chart's player-name labels use writing-mode: vertical-rl plus transform: rotate(180deg) to stack Hebrew names vertically and compactly under each bar — renders correctly in a real browser, but html2canvas re-implements its own text layout rather than using the browser's actual bidi + vertical-text engine, and gets the combination of RTL character ordering + vertical stacking + an extra 180-degree rotation wrong.
+- Fixed via html2canvas's onclone option in shareTournamentImage only: right before capturing, it swaps the vertical/rotated style for plain horizontal text (writing-mode: horizontal-tb, no rotation, 9px) on a clone of the DOM used only for that one screenshot — the actual on-screen chart is completely untouched, still vertical and compact at that point in time. Marked the target span with a vert-name class so onclone could find it reliably instead of matching by inline style text.
+- Scoped deliberately to shareTournamentImage only, not the other two share functions — shareHandImage and shareLeaderboardImage don't use vertical/rotated Hebrew text anywhere in what they capture, so there was nothing there to fix.
 
-## 2026-08-16 (93) -- FOUND IT: html2canvas can't parse oklch() -- root cause of the share error, fixed at the source
+## 2026-08-16 (93) — FOUND IT: html2canvas can't parse oklch() — root cause of the share error, fixed at the source
 **Files: styles.css**
 
-- Diagnostic improvement from #92 worked immediately: user retried
-  sharing and the toast showed the real error -- `Attempting to parse an
-  unsupported color function "oklch"`.
-- **Root cause:** `styles.css` defines seven color variables/rules using
-  the modern `oklch()` CSS color function (`--gold`, `--gold-soft`, `--bg`,
-  `--felt`, `--felt2`, `--felt-edge`, `--felt-rail`, `--chip-red`, plus
-  `.card-red`/`.card-black`). Real browsers render `oklch()` fine, but
-  `html2canvas` (the library all three share functions --
-  `shareHandImage`, `shareTournamentImage`, `shareLeaderboardImage` --
-  depend on) uses its own limited CSS color parser that has never
-  supported it. `--gold` alone is used constantly throughout the app
-  (headers, borders, medals), so this wasn't tournament-specific -- any
-  share action touching an element styled through one of these variables
-  was exposed to the same failure; the tournament card was just the first
-  one actually tried.
-- Fixed by converting all seven oklch() values to their exact
-  mathematically-equivalent hex values (proper OKLab -> linear sRGB ->
-  gamma-corrected sRGB conversion, not eyeballed) -- e.g. `--gold: oklch
-  (0.82 0.14 85)` -> `#eebc4a`. Same actual color, different syntax --
-  no visual change anywhere in the live app, only removes the html2canvas
-  incompatibility at its source. Fixes sharing for hands and the
-  Leaderboard too, not just tournaments, even though only the tournament
-  case had actually surfaced yet.
-- Verified brace-balance and structure on the edited CSS file directly
-  (185 open / 185 close) rather than assuming the edit was clean.
-- Not yet confirmed against a real share attempt -- recommend retrying
-  the same tournament share to confirm the fix, now that the diagnostic
-  toast from #92 would show a different, unrelated error if something
-  else is also wrong.
+- Diagnostic improvement from #92 worked immediately: user retried sharing and the toast showed the real error — Attempting to parse an unsupported color function "oklch".
+- Root cause: styles.css defines seven color variables/rules using the modern oklch() CSS color function (--gold, --gold-soft, --bg, --felt, --felt2, --felt-edge, --felt-rail, --chip-red, plus .card-red/.card-black). Real browsers render oklch() fine, but html2canvas (the library all three share functions depend on) uses its own limited CSS color parser that has never supported it. --gold alone is used constantly throughout the app, so this wasn't tournament-specific — any share action touching an element styled through one of these variables was exposed to the same failure; the tournament card was just the first one actually tried.
+- Fixed by converting all seven oklch() values to their exact mathematically-equivalent hex values (proper OKLab -> linear sRGB -> gamma-corrected sRGB conversion, not eyeballed) — e.g. --gold: oklch(0.82 0.14 85) -> #eebc4a. Same actual color, different syntax — no visual change anywhere in the live app, only removes the html2canvas incompatibility at its source. Fixes sharing for hands and the Leaderboard too, not just tournaments, even though only the tournament case had actually surfaced yet.
+- Verified brace-balance and structure on the edited CSS file directly (185 open / 185 close) rather than assuming the edit was clean.
 
-## 2026-08-16 (92) -- Diagnostic improvement: share errors now show the actual failure, not a generic message
+## 2026-08-16 (92) — Diagnostic improvement: share errors now show the actual failure, not a generic message
 **Files: ui.js**
 
-- User reported a "sharing error" toast when trying to share a tournament
-  card image. Could not reproduce directly (no real browser/canvas
-  available in this environment) -- the existing catch block only logged
-  the real error to `console.error` (invisible on a phone, no easy dev-
-  tools access) and showed a generic "שגיאה בשיתוף הטורניר" toast with
-  no detail.
-- Rather than guess at the cause (html2canvas has several known
-  failure modes -- CORS-tainted canvas, unsupported CSS, canvas size
-  limits -- and guessing wrong wastes a round-trip), improved all three
-  share functions (`shareHandImage`, `shareTournamentImage`,
-  `shareLeaderboardImage`) to include `err?.message||err?.name` directly
-  in the visible toast. Next failure will show the actual reason on
-  screen, no console access needed -- can diagnose precisely instead of
-  guessing.
-- Not a fix yet -- purely a diagnostic step. Waiting on the user to
-  retry sharing and report the new, more specific error text.
+- User reported a "sharing error" toast when trying to share a tournament card image. Could not reproduce directly (no real browser/canvas available in this environment) — the existing catch block only logged the real error to console.error (invisible on a phone, no easy dev-tools access) and showed a generic "שגיאה בשיתוף הטורניר" toast with no detail.
+- Rather than guess at the cause (html2canvas has several known failure modes — CORS-tainted canvas, unsupported CSS, canvas size limits — and guessing wrong wastes a round-trip), improved all three share functions (shareHandImage, shareTournamentImage, shareLeaderboardImage) to include the real error message directly in the visible toast. Next failure would show the actual reason on screen, no console access needed.
+- Not a fix yet — purely a diagnostic step. This is exactly what surfaced the real oklch bug fixed in #93.
 
-## 2026-08-16 (91) -- Rebuy bar chart now sorted by finishing place, not Rebuy count
+## 2026-08-16 (91) — Rebuy bar chart now sorted by finishing place, not Rebuy count
 **Files: ui.js**
 
-- Follow-up to #90: once place labels were added to each bar, user asked
-  to sort the chart by finishing place (1, 2, 3...) instead of by Rebuy
-  count, since the place label makes place order the more readable
-  default now.
-- Changed the one sort key: `(t.finishOrder||[]).sort((a,b)=>(b.rebuy||0)
-  -(a.rebuy||0))` -> `.slice().sort((a,b)=>a.place-b.place)`. Added
-  `.slice()` while at it -- the original called `.sort()` directly on `t.
-  finishOrder` itself, which mutates the array in place; harmless in
-  practice (nothing else in this codebase depends on finishOrder's
-  storage order) but worth not doing when touching the line anyway.
-- Verified with a small synthetic case (places 3, 1, 7, 2 in scrambled
-  input order) -- output is 1, 2, 3, 7 as expected.
+- Follow-up to #90: once place labels were added to each bar, user asked to sort the chart by finishing place (1, 2, 3...) instead of by Rebuy count, since the place label makes place order the more readable default now.
+- Changed the one sort key from sorting by Rebuy count descending to sorting by place ascending. Added .slice() while at it — the original called .sort() directly on t.finishOrder itself, which mutates the array in place; harmless in practice but worth not doing when touching the line anyway.
+- Verified with a small synthetic case (places 3, 1, 7, 2 in scrambled input order) — output is 1, 2, 3, 7 as expected.
 
-## 2026-08-16 (90) -- Added finishing place to the Rebuy bar chart in tournament history
+## 2026-08-16 (90) — Added finishing place to the Rebuy bar chart in tournament history
 **Files: ui.js**
 
-- User wanted each player's finishing place shown in the Rebuy bar chart
-  on saved-tournament history cards (previously that chart only showed
-  Rebuy count per player, all players; finishing place was only visible
-  for the top 4 in a separate "places column" above it).
-- Sketched three label options as an inline mockup (place instead of
-  Rebuy, place plus Rebuy combined, place as a separate line) before
-  writing any code. User picked "place + Rebuy combined".
-- Implemented: each bar's label is now `{place}. ({rebuy} {badge})` when
-  the player has any rebuys (e.g. `1. (5)`, `2. (16 16✓)`), or just
-  `{place}.` when they have none (e.g. `7.`) -- keeps the existing free-
-  rebuy badge (10✓/16✓) and bar-color milestone logic untouched, just adds
-  the place number in front.
-- Colored the place number gold/silver/bronze for 1st/2nd/3rd (matching
-  the existing "places column" above it), muted gray for everyone else.
-- Ties (#85) are handled the same way as the places column: a tied
-  player's `displayPlace` is the minimum of their `tieGroup`, so two
-  players tied for 1st both show `1.` in the bar chart too, consistent
-  with the 2x-trophy display added in #87.
-- Verified the label-generation logic directly against five synthetic
-  cases (plain rebuy, free-rebuy badge, no rebuy, and a genuine tie)
-  before finalizing -- all five produced the expected label and color.
+- User wanted each player's finishing place shown in the Rebuy bar chart on saved-tournament history cards (previously that chart only showed Rebuy count per player; finishing place was only visible for the top 4 in a separate "places column" above it).
+- Sketched three label options as an inline mockup (place instead of Rebuy, place plus Rebuy combined, place as a separate line) before writing any code. User picked "place + Rebuy combined".
+- Implemented: each bar's label became "{place}. ({rebuy} {badge})" when the player has any rebuys, or just "{place}." when they have none — keeping the existing free-rebuy badge (10 checkmark / 16 checkmark) and bar-color milestone logic untouched, just adding the place number in front.
+- Colored the place number gold/silver/bronze for 1st/2nd/3rd (matching the existing "places column" above it), muted gray for everyone else.
+- Ties (#85) handled the same way as the places column: a tied player's displayPlace is the minimum of their tieGroup, so two players tied for 1st both show 1 in the bar chart too.
+- Verified the label-generation logic directly against five synthetic cases (plain rebuy, free-rebuy badge, no rebuy, and a genuine tie) before finalizing — all five produced the expected label and color.
 
 ## 2026-08-15 (89) — New feature: undo an incorrect KO mark (fix elimination order mistakes)
 **Files: features.js, ui.js**
 
-- User reported forgetting to mark a player as eliminated mid-tournament,
-  which threw off the whole chronological elimination order for everyone
-  marked afterward (`koOrder` is chronological -- index position
-  determines finishing place, so a missing entry shifts everyone after it
-  into the wrong place).
-- No existing way to remove a player from `koOrder` once marked -- only
-  `koPlayerFromList()` to add one, never a way back.
-- **New `unKoPlayer(pid)` (`features.js`)**: removes the player from `S.
-  koOrder`, re-renders. Deliberately does **not** attempt to restore
-  their seat/stack -- that state is already cleared by the time a KO
-  happens and there's no snapshot to restore from; the fix is meant to
-  unwind just far enough to re-mark eliminations in the correct order
-  (undo the ones after the mistake, mark the forgotten player, re-mark
-  the ones just undone -- chronological order restored).
-- New undo-KO button in the player list (`ui.js`), replacing the plain
-  eliminated-status badge for admins (viewers still just see the
-  read-only badge, unchanged).
-- Verified the fix workflow end-to-end in Node: `koOrder=['Y']` (Y
-  wrongly marked alone) -> `unKoPlayer('Y')` -> re-mark `X` then `Y` in
-  correct chronological order -> confirmed final `koOrder` is `['X','Y']`.
-- **Process note:** this entry required a full rebuild after Claude's own
-  sandbox copy of the project turned out to have regressed mid-session in
-  a way that wasn't caught by an earlier verification pass -- it had
-  fallen behind the user's actual repo (missing the tie-feature save-
-  dialog integration from #85-88, even though Claude's own diff checks
-  had reported it as matching). Recovered by treating the user's freshly
-  re-uploaded repo files as ground truth and rebuilding this fix on top
-  of those, rather than trusting Claude's own prior sandbox state.
-  Confirmed via direct diff against the user's upload before proceeding.
+- User reported forgetting to mark a player as eliminated mid-tournament, which threw off the whole chronological elimination order for everyone marked afterward (koOrder is chronological — index position determines finishing place, so a missing entry shifts everyone after it into the wrong place).
+- No existing way to remove a player from koOrder once marked — only koPlayerFromList() to add one, never a way back.
+- New unKoPlayer(pid) (features.js): removes the player from S.koOrder, re-renders. Deliberately does not attempt to restore their seat/stack — that state is already cleared by the time a KO happens and there's no snapshot to restore from; the fix is meant to unwind just far enough to re-mark eliminations in the correct order (undo the ones after the mistake, mark the forgotten player, re-mark the ones just undone — chronological order restored).
+- New undo-KO button in the player list (ui.js), replacing the plain eliminated-status badge for admins (viewers still just see the read-only badge, unchanged).
+- Verified the fix workflow end-to-end in Node: koOrder=['Y'] (Y wrongly marked alone) -> unKoPlayer('Y') -> re-mark X then Y in correct chronological order -> confirmed final koOrder is ['X','Y'].
+- Process note: this feature required a full rebuild after Claude's own sandbox copy of the project turned out to have regressed mid-session in a way that wasn't caught by an earlier verification pass — it had fallen behind the user's actual repo. Recovered by treating the user's freshly re-uploaded repo files as ground truth and rebuilding this fix on top of those.
+
+---
 
 ## 2026-08-15 (88) — Tie checkbox missing from a second save path — "reset & save" bypassed it entirely
+
 **Files: ui.js**
 
 - User reported a real, reproduced bug: saved a tournament with 2 players

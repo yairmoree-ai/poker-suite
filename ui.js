@@ -1603,7 +1603,7 @@ function renderTournList(){
     ${isAdmin()?`
     <div style="display:flex;gap:6px;margin-top:12px">
       <button onclick="openSaveTournBox()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:11px;font-weight:800;cursor:pointer">💾 שמור</button>
-      <button onclick="if(confirm('לאפס את הטורניר?'))resetTournament()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.08);color:#e07b6a;font-size:11px;font-weight:800;cursor:pointer">🗑 אפס</button>
+      <button onclick="resetTournament()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.08);color:#e07b6a;font-size:11px;font-weight:800;cursor:pointer">🗑 אפס</button>
     </div>`:''}
   </div>`;
 
