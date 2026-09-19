@@ -6,6 +6,12 @@
 
 ---
 
+## 2026-08-16 (102) — Removed the now-empty "🏆 טורנירים" header row above the tournament tab
+**Files: index.html**
+
+- Follow-up to #100/#101: once both duplicate buttons that used to sit next to this header were removed, the header row itself (just the label "🏆 טורנירים", between the top toolbar and the current-tournament card) added nothing on its own. User reconsidered and asked to drop it too.
+- Removed the header div along with its now-unnecessary wrapping container. Verified div tag balance dropped by exactly two (matching the two divs removed) and confirmed by grep that the header text no longer appears anywhere in the file.
+
 ## 2026-08-16 (101) — Removed a second duplicate: standalone "ייצוא לExcel" button near the top of the tournaments tab
 **Files: index.html**
 
