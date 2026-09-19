@@ -6,6 +6,13 @@
 
 ---
 
+## 2026-08-16 (101) — Removed a second duplicate: standalone "ייצוא לExcel" button near the top of the tournaments tab
+**Files: index.html**
+
+- User found and marked another leftover duplicate, same pattern as #100: a standalone "ייצוא לExcel" button (index.html, calling exportTournsToCSV() directly) sitting right above the current-tournament card, separate from the "📊 Excel" button already present next to Leaderboard further down (ui.js, calling exportToExcel() -- confirmed to be nothing more than a one-line wrapper around the same exportTournsToCSV()). Confirmed identical before removing anything, same as the save/reset check in #100.
+- Removed the standalone button and its now-empty wrapper row from index.html. The underlying exportTournsToCSV() function itself (render.js) was untouched -- only the duplicate button call was removed, not the function it called.
+- Verified div/button tag balance dropped by exactly one each (152/152 divs, 60/60 buttons) after the edit, and confirmed by grep that no other reference to exportTournsToCSV() remains in index.html while the function definition itself is still intact in render.js.
+
 ## 2026-08-16 (100) — Removed duplicate save/reset-tournament buttons, and a hidden double-confirm bug found along the way
 **Files: index.html, ui.js, render.js**
 
