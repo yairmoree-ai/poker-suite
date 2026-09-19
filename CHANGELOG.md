@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-08-16 (103) — Compacted "נתוני טורניר" and "חישוב וחלוקת פרסים" from 5+4 rows into 3+3 rows
+**Files: ui.js**
+
+- User asked for a specific height-saving layout: pair up related stats side by side in the same row instead of each on its own line, in both tables of the current-tournament card.
+- "נתוני טורניר" (was 5 rows -> 3 rows): שחקנים paired with צ׳יפים כולל (admin-only, so that row falls back to שחקנים alone for non-admins); Rebuy כולל paired with קופת פרסים; כניסות בתשלום stays alone (not requested to pair).
+- "חישוב וחלוקת פרסים" (was 4 rows -> 3 rows): מקום 1 now paired with מקום 2 in one row (previously each had its own full row); מקום 3 paired with מקום 4 (previously מקום 3 was paired with בית, and מקום 4 with הפתעות); בית re-paired with הפתעות into its own row. Net effect: the same four place-prize rows people already knew, just regrouped into the pairing the user asked for, plus בית/הפתעות landing together as their own row instead of being split across the old מקום 3/4 rows.
+- Reused the exact same justify-content:space-between + two inner flex groups pattern the code already used for the old מקום 3/בית and מקום 4/הפתעות pairs (rather than inventing new layout CSS) — kept every existing conditional (isViewer(), isAdmin(), the place1/place2 override inputs) fully intact, only regrouped which two elements share a row. Narrowed the place1/place2 override input width from 80px to 70px to fit two full editable rows side by side on a phone screen without the row wrapping.
+- Verified structurally rather than just visually: confirmed node --check passes, and manually traced every div/close-div pair in the rewritten block by hand (an automated substring count looked off by one at first, but that was a slice-boundary artifact cutting into an unrelated preceding div, not a real mismatch — confirmed by reading the actual block text).
+
 ## 2026-08-16 (102) — Removed the now-empty "🏆 טורנירים" header row above the tournament tab
 **Files: index.html**
 

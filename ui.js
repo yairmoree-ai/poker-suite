@@ -1545,40 +1545,55 @@ function renderTournList(){
 
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">📊 נתוני טורניר</div>
-    <div class="prize-row"><span class="prize-lbl">שחקנים</span><span class="prize-val">${totalBuyins()}</span></div>
-    <div class="prize-row">
-      <span class="prize-lbl">Rebuy כולל</span>
-      <span class="prize-val">${totalRebuys()}${calcFreeRebuys()>0?` <span style="font-size:10px;color:#5b9bd5;font-weight:600">(${calcFreeRebuys()} חינם)</span>`:''}</span>
+    <div class="prize-row" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="prize-lbl" style="min-width:auto">שחקנים</span>
+        <span class="prize-val">${totalBuyins()}</span>
+      </div>
+      ${isAdmin()?`<div style="display:flex;align-items:center;gap:8px">
+        <span class="prize-lbl" style="min-width:auto;color:#7fd47f">🃏 צ׳יפים כולל</span>
+        <span class="prize-val" style="color:#7fd47f">${totalChips().toLocaleString()}</span>
+      </div>`:''}
+    </div>
+    <div class="prize-row" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="prize-lbl" style="min-width:auto">Rebuy כולל</span>
+        <span class="prize-val">${totalRebuys()}${calcFreeRebuys()>0?` <span style="font-size:10px;color:#5b9bd5;font-weight:600">(${calcFreeRebuys()} חינם)</span>`:''}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="prize-lbl" style="min-width:auto">קופת פרסים</span>
+        <span class="prize-val">₪${pr.pool.toLocaleString()}</span>
+      </div>
     </div>
     <div class="prize-row"><span class="prize-lbl">כניסות בתשלום</span><span class="prize-val">${calcPaidEntries()}</span></div>
-    ${isAdmin()?`<div class="prize-row"><span class="prize-lbl" style="color:#7fd47f">🃏 צ׳יפים כולל</span><span class="prize-val" style="color:#7fd47f">${totalChips().toLocaleString()}</span></div>`:''}
-    <div class="prize-row"><span class="prize-lbl">קופת פרסים</span><span class="prize-val">₪${pr.pool.toLocaleString()}</span></div>
 
 
 
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">💰 חישוב וחלוקת פרסים</div>
-    <div class="prize-row">
-      <span class="prize-lbl" style="color:var(--gold);font-weight:700">מקום 1 ${S.place1Override!=null&&pr.rem?`(${Math.round(S.place1Override/pr.rem*100)}%)`:'(70%)'}</span>
-      ${isViewer()?
-        `<span class="prize-val" style="color:var(--green);font-size:16px">₪${Math.round(S.place1Override!=null?S.place1Override:pr.p1).toLocaleString()}</span>`
-       :`<div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--muted)">₪${Math.round(pr.p1).toLocaleString()}</span>
-          <input class="prize-inp" type="number" placeholder="עקוף" value="${S.place1Override!=null?S.place1Override:''}"
-            onchange="S.place1Override=this.value?+this.value:null;persist();renderTournList()"
-            style="width:80px" title="השאר ריק לחישוב אוטומטי 70%">
-        </div>`}
-    </div>
-    <div class="prize-row">
-      <span class="prize-lbl" style="color:var(--text)">מקום 2 ${S.place2Override!=null&&pr.rem?`(${Math.round(S.place2Override/pr.rem*100)}%)`:'(30%)'}</span>
-      ${isViewer()?
-        `<span class="prize-val">₪${Math.round(S.place2Override!=null?S.place2Override:pr.p2).toLocaleString()}</span>`
-       :`<div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--muted)">₪${Math.round(pr.p2).toLocaleString()}</span>
-          <input class="prize-inp" type="number" placeholder="עקוף" value="${S.place2Override!=null?S.place2Override:''}"
-            onchange="S.place2Override=this.value?+this.value:null;persist();renderTournList()"
-            style="width:80px" title="השאר ריק לחישוב אוטומטי 30%">
-        </div>`}
+    <div class="prize-row" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="prize-lbl" style="color:var(--gold);font-weight:700;min-width:auto">מקום 1 ${S.place1Override!=null&&pr.rem?`(${Math.round(S.place1Override/pr.rem*100)}%)`:'(70%)'}</span>
+        ${isViewer()?
+          `<span class="prize-val" style="color:var(--green);font-size:16px">₪${Math.round(S.place1Override!=null?S.place1Override:pr.p1).toLocaleString()}</span>`
+         :`<div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;color:var(--muted)">₪${Math.round(pr.p1).toLocaleString()}</span>
+            <input class="prize-inp" type="number" placeholder="עקוף" value="${S.place1Override!=null?S.place1Override:''}"
+              onchange="S.place1Override=this.value?+this.value:null;persist();renderTournList()"
+              style="width:70px" title="השאר ריק לחישוב אוטומטי 70%">
+          </div>`}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="prize-lbl" style="color:var(--text);min-width:auto">מקום 2 ${S.place2Override!=null&&pr.rem?`(${Math.round(S.place2Override/pr.rem*100)}%)`:'(30%)'}</span>
+        ${isViewer()?
+          `<span class="prize-val">₪${Math.round(S.place2Override!=null?S.place2Override:pr.p2).toLocaleString()}</span>`
+         :`<div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;color:var(--muted)">₪${Math.round(pr.p2).toLocaleString()}</span>
+            <input class="prize-inp" type="number" placeholder="עקוף" value="${S.place2Override!=null?S.place2Override:''}"
+              onchange="S.place2Override=this.value?+this.value:null;persist();renderTournList()"
+              style="width:70px" title="השאר ריק לחישוב אוטומטי 30%">
+          </div>`}
+      </div>
     </div>
     <div class="prize-row" style="justify-content:space-between">
       <div style="display:flex;align-items:center;gap:8px">
@@ -1586,14 +1601,14 @@ function renderTournList(){
         ${isViewer()?`<span class="prize-val">${S.place3?'₪'+S.place3.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place3||0}" placeholder="0" onchange="S.place3=+this.value;persist();renderTournList()">`}
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">בית</span>
-        ${isViewer()?`<span class="prize-val">₪${S.houseRake.toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">`}
+        <span class="prize-lbl" style="min-width:auto">מקום 4</span>
+        ${isViewer()?`<span class="prize-val">${S.place4?'₪'+S.place4.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()">`}
       </div>
     </div>
     <div class="prize-row" style="justify-content:space-between">
       <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">מקום 4</span>
-        ${isViewer()?`<span class="prize-val">${S.place4?'₪'+S.place4.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()">`}
+        <span class="prize-lbl" style="min-width:auto">בית</span>
+        ${isViewer()?`<span class="prize-val">₪${S.houseRake.toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">`}
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <span class="prize-lbl" style="min-width:auto">הפתעות</span>
