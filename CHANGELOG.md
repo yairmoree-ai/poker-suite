@@ -6,6 +6,13 @@
 
 ---
 
+## 2026-08-16 (104) — Actually fixed the מקום 1/2 row: it was one flex row all along, just too wide to fit
+**Files: ui.js**
+
+- User reported #103's change only showed up in "נתוני טורניר" -- מקום 1/2 in "חישוב וחלוקת פרסים" still looked like two separate rows. A screenshot confirmed מקום 3/4 and בית/הפתעות were correctly paired side by side, but מקום 1/2 wasn't.
+- Root cause, found by inspecting the actual rendered content rather than the markup structure alone: מקום 1/2 genuinely was one flex container (not a code bug, not a stale file -- that hypothesis was floated and correctly ruled out once the screenshot showed the other two rows *had* updated). The `flex-wrap: wrap` added as a safety net in #103 was silently kicking in on a real phone screen, because each side's content -- label with an inline "(70%)" percentage, a separate muted preview span showing the auto-calculated amount, and a 70px override input -- was simply too wide for two copies to fit side by side. מקום 3/4 and בית/הפתעות have far simpler content (just a plain number input each), so they fit without wrapping; מקום 1/2 never had a chance to.
+- Fixed by shrinking the actual content, not just styling: moved the percentage out of the visible label into a `title` tooltip; removed the separate muted preview `<span>` entirely and instead used the input's own `placeholder` to show the auto-calculated default (a value that's only visible when the field is empty/not overridden -- exactly when you'd want to see the default) instead of a static "עקוף" placeholder; narrowed the input to 62px at a smaller font size. Kept `flex-wrap: wrap` in place as a fallback for genuinely narrow screens rather than removing it outright -- a graceful two-row fallback is a much better failure mode than clipped/overflowing content on some device Claude can't test directly.
+
 ## 2026-08-16 (103) — Compacted "נתוני טורניר" and "חישוב וחלוקת פרסים" from 5+4 rows into 3+3 rows
 **Files: ui.js**
 

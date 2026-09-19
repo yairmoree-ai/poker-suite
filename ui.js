@@ -1572,27 +1572,21 @@ function renderTournList(){
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">💰 חישוב וחלוקת פרסים</div>
     <div class="prize-row" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
-      <div style="display:flex;align-items:center;gap:6px">
-        <span class="prize-lbl" style="color:var(--gold);font-weight:700;min-width:auto">מקום 1 ${S.place1Override!=null&&pr.rem?`(${Math.round(S.place1Override/pr.rem*100)}%)`:'(70%)'}</span>
+      <div style="display:flex;align-items:center;gap:5px;min-width:0">
+        <span class="prize-lbl" style="color:var(--gold);font-weight:700;min-width:auto;flex-shrink:0" title="${S.place1Override!=null&&pr.rem?Math.round(S.place1Override/pr.rem*100):70}%">מקום 1</span>
         ${isViewer()?
-          `<span class="prize-val" style="color:var(--green);font-size:16px">₪${Math.round(S.place1Override!=null?S.place1Override:pr.p1).toLocaleString()}</span>`
-         :`<div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:11px;color:var(--muted)">₪${Math.round(pr.p1).toLocaleString()}</span>
-            <input class="prize-inp" type="number" placeholder="עקוף" value="${S.place1Override!=null?S.place1Override:''}"
-              onchange="S.place1Override=this.value?+this.value:null;persist();renderTournList()"
-              style="width:70px" title="השאר ריק לחישוב אוטומטי 70%">
-          </div>`}
+          `<span class="prize-val" style="color:var(--green);font-size:15px">₪${Math.round(S.place1Override!=null?S.place1Override:pr.p1).toLocaleString()}</span>`
+         :`<input class="prize-inp" type="number" placeholder="₪${Math.round(pr.p1).toLocaleString()}" value="${S.place1Override!=null?S.place1Override:''}"
+            onchange="S.place1Override=this.value?+this.value:null;persist();renderTournList()"
+            style="width:62px;font-size:12px" title="ברירת מחדל (70%): ₪${Math.round(pr.p1).toLocaleString()} — השאר ריק לחישוב אוטומטי">`}
       </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span class="prize-lbl" style="color:var(--text);min-width:auto">מקום 2 ${S.place2Override!=null&&pr.rem?`(${Math.round(S.place2Override/pr.rem*100)}%)`:'(30%)'}</span>
+      <div style="display:flex;align-items:center;gap:5px;min-width:0">
+        <span class="prize-lbl" style="color:var(--text);min-width:auto;flex-shrink:0" title="${S.place2Override!=null&&pr.rem?Math.round(S.place2Override/pr.rem*100):30}%">מקום 2</span>
         ${isViewer()?
-          `<span class="prize-val">₪${Math.round(S.place2Override!=null?S.place2Override:pr.p2).toLocaleString()}</span>`
-         :`<div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:11px;color:var(--muted)">₪${Math.round(pr.p2).toLocaleString()}</span>
-            <input class="prize-inp" type="number" placeholder="עקוף" value="${S.place2Override!=null?S.place2Override:''}"
-              onchange="S.place2Override=this.value?+this.value:null;persist();renderTournList()"
-              style="width:70px" title="השאר ריק לחישוב אוטומטי 30%">
-          </div>`}
+          `<span class="prize-val" style="font-size:14px">₪${Math.round(S.place2Override!=null?S.place2Override:pr.p2).toLocaleString()}</span>`
+         :`<input class="prize-inp" type="number" placeholder="₪${Math.round(pr.p2).toLocaleString()}" value="${S.place2Override!=null?S.place2Override:''}"
+            onchange="S.place2Override=this.value?+this.value:null;persist();renderTournList()"
+            style="width:62px;font-size:12px" title="ברירת מחדל (30%): ₪${Math.round(pr.p2).toLocaleString()} — השאר ריק לחישוב אוטומטי">`}
       </div>
     </div>
     <div class="prize-row" style="justify-content:space-between">
