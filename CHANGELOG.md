@@ -6,6 +6,42 @@
 
 ---
 
+## 2026-08-16 (105) — Real grid alignment: fixed-width columns instead of content-sized flex groups
+**Files: ui.js, styles.css**
+
+- User pointed out the paired rows from #103/#104 weren't actually
+  aligned as a table — text under text, numbers under numbers, inputs
+  under inputs, consistently down every row. Root cause: every row used
+  flex groups sized by their own content (a `<div style="display:flex">`
+  per side), so a wide value like `₪1,505` shifted its whole group wider
+  than a short one like `100`, and nothing forced the same horizontal
+  position across different rows — looked "off" and inconsistent, not a
+  clean table.
+- Real fix: a shared CSS Grid class, `.tstats-row` (styles.css) —
+  `grid-template-columns: 64px 66px 64px 66px` (label-right, value-right,
+  label-left, value-left), applied identically to every paired row in
+  both "נתוני טורניר" and "חישוב וחלוקת פרסים". Fixed column widths mean
+  every label starts at the same x-position and every value/input cell
+  is the same width, regardless of what that row's specific content
+  happens to be — actual table alignment, not just visual approximation.
+- Rewrote every row (ui.js) to place its label/value/input elements
+  directly as grid children instead of nesting them in per-side flex
+  wrapper divs — simpler markup as a side effect, not just a visual fix.
+  Rows with only one side (e.g. "שחקנים" alone when not admin, "כניסות
+  בתשלום" alone) just supply 2 children instead of 4; CSS Grid leaves the
+  remaining columns empty automatically without needing placeholder
+  elements or breaking alignment for the rows around it.
+- Inputs now use `width:100%` (filling their fixed-width grid cell)
+  instead of a manually-matched pixel width — one shared source of truth
+  for column width (the grid template) rather than needing input widths
+  and column widths to be kept in sync by hand in multiple places.
+- Verified brace-balance on styles.css (186/186) and span-tag balance
+  within the two rewritten ui.js blocks (11/11, 12/12) directly, plus
+  `node --check`. The div count looked off by one again on a raw
+  substring check — confirmed, as in #103, that this is the same
+  slice-boundary artifact (a preceding div's closing tag falling just
+  inside the cut point) rather than a real mismatch.
+
 ## 2026-08-16 (104) — Actually fixed the מקום 1/2 row: it was one flex row all along, just too wide to fit
 **Files: ui.js**
 

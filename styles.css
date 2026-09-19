@@ -217,6 +217,13 @@ input,select,textarea{font-family:inherit}
 .res-btn.active{border-color:rgba(200,169,110,0.5);background:rgba(200,169,110,0.12);color:var(--gold)}
 /* TOURNAMENT PRIZE */
 .prize-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+/* grid-template אחיד לשתי הטבלאות ("נתוני טורניר" ו-"חישוב וחלוקת פרסים")
+   כדי שתיבה/טקסט בעמודה מסוימת יתיישר בדיוק מתחת לתיבה/טקסט באותה עמודה
+   בשורה אחרת — רוחב עמודה קבוע (לא flex גמיש), אז אורך-תוכן משתנה (למשל
+   "₪1,505" מול "100") כבר לא מזיז את מיקום העמודות. 4 עמודות = תווית-ימין,
+   ערך-ימין, תווית-שמאל, ערך-שמאל; אם יש רק 2 ילדים (למשל שורה בלי צד שני),
+   העמודות 3-4 פשוט נשארות ריקות אוטומטית ב-grid, בלי לשבור את היישור. */
+.tstats-row{display:grid;grid-template-columns:64px 66px 64px 66px;column-gap:8px;align-items:center;margin-bottom:6px;direction:rtl}
 .prize-lbl{font-size:12px;color:var(--text);min-width:80px}
 .prize-val{font-size:13px;font-weight:800;color:var(--gold)}
 .prize-inp{width:90px;padding:6px 8px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:#141824;color:#c8a96e;font-size:13px;font-weight:700;outline:none;text-align:center;direction:ltr;-webkit-appearance:none}

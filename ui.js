@@ -1545,69 +1545,52 @@ function renderTournList(){
 
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">📊 נתוני טורניר</div>
-    <div class="prize-row" style="justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">שחקנים</span>
-        <span class="prize-val">${totalBuyins()}</span>
-      </div>
-      ${isAdmin()?`<div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto;color:#7fd47f">🃏 צ׳יפים כולל</span>
-        <span class="prize-val" style="color:#7fd47f">${totalChips().toLocaleString()}</span>
-      </div>`:''}
+    <div class="tstats-row">
+      <span class="prize-lbl" style="min-width:auto">שחקנים</span>
+      <span class="prize-val">${totalBuyins()}</span>
+      ${isAdmin()?`<span class="prize-lbl" style="min-width:auto;color:#7fd47f">🃏 צ׳יפים</span>
+      <span class="prize-val" style="color:#7fd47f">${totalChips().toLocaleString()}</span>`:''}
     </div>
-    <div class="prize-row" style="justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">Rebuy כולל</span>
-        <span class="prize-val">${totalRebuys()}${calcFreeRebuys()>0?` <span style="font-size:10px;color:#5b9bd5;font-weight:600">(${calcFreeRebuys()} חינם)</span>`:''}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">קופת פרסים</span>
-        <span class="prize-val">₪${pr.pool.toLocaleString()}</span>
-      </div>
+    <div class="tstats-row">
+      <span class="prize-lbl" style="min-width:auto">Rebuy כולל</span>
+      <span class="prize-val">${totalRebuys()}${calcFreeRebuys()>0?` <span style="font-size:9px;color:#5b9bd5;font-weight:600">(${calcFreeRebuys()}חינם)</span>`:''}</span>
+      <span class="prize-lbl" style="min-width:auto">קופת פרסים</span>
+      <span class="prize-val">₪${pr.pool.toLocaleString()}</span>
     </div>
-    <div class="prize-row"><span class="prize-lbl">כניסות בתשלום</span><span class="prize-val">${calcPaidEntries()}</span></div>
+    <div class="tstats-row">
+      <span class="prize-lbl" style="min-width:auto">כניסות בתשלום</span>
+      <span class="prize-val">${calcPaidEntries()}</span>
+    </div>
 
 
 
     <div style="height:1px;background:rgba(255,255,255,0.06);margin:10px 0"></div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">💰 חישוב וחלוקת פרסים</div>
-    <div class="prize-row" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
-      <div style="display:flex;align-items:center;gap:5px;min-width:0">
-        <span class="prize-lbl" style="color:var(--gold);font-weight:700;min-width:auto;flex-shrink:0" title="${S.place1Override!=null&&pr.rem?Math.round(S.place1Override/pr.rem*100):70}%">מקום 1</span>
-        ${isViewer()?
-          `<span class="prize-val" style="color:var(--green);font-size:15px">₪${Math.round(S.place1Override!=null?S.place1Override:pr.p1).toLocaleString()}</span>`
-         :`<input class="prize-inp" type="number" placeholder="₪${Math.round(pr.p1).toLocaleString()}" value="${S.place1Override!=null?S.place1Override:''}"
-            onchange="S.place1Override=this.value?+this.value:null;persist();renderTournList()"
-            style="width:62px;font-size:12px" title="ברירת מחדל (70%): ₪${Math.round(pr.p1).toLocaleString()} — השאר ריק לחישוב אוטומטי">`}
-      </div>
-      <div style="display:flex;align-items:center;gap:5px;min-width:0">
-        <span class="prize-lbl" style="color:var(--text);min-width:auto;flex-shrink:0" title="${S.place2Override!=null&&pr.rem?Math.round(S.place2Override/pr.rem*100):30}%">מקום 2</span>
-        ${isViewer()?
-          `<span class="prize-val" style="font-size:14px">₪${Math.round(S.place2Override!=null?S.place2Override:pr.p2).toLocaleString()}</span>`
-         :`<input class="prize-inp" type="number" placeholder="₪${Math.round(pr.p2).toLocaleString()}" value="${S.place2Override!=null?S.place2Override:''}"
-            onchange="S.place2Override=this.value?+this.value:null;persist();renderTournList()"
-            style="width:62px;font-size:12px" title="ברירת מחדל (30%): ₪${Math.round(pr.p2).toLocaleString()} — השאר ריק לחישוב אוטומטי">`}
-      </div>
+    <div class="tstats-row">
+      <span class="prize-lbl" style="color:var(--gold);font-weight:700;min-width:auto" title="${S.place1Override!=null&&pr.rem?Math.round(S.place1Override/pr.rem*100):70}%">מקום 1</span>
+      ${isViewer()?
+        `<span class="prize-val" style="color:var(--green);font-size:14px">₪${Math.round(S.place1Override!=null?S.place1Override:pr.p1).toLocaleString()}</span>`
+       :`<input class="prize-inp" type="number" placeholder="₪${Math.round(pr.p1).toLocaleString()}" value="${S.place1Override!=null?S.place1Override:''}"
+          onchange="S.place1Override=this.value?+this.value:null;persist();renderTournList()"
+          style="width:100%;box-sizing:border-box;font-size:12px" title="ברירת מחדל (70%): ₪${Math.round(pr.p1).toLocaleString()} — השאר ריק לחישוב אוטומטי">`}
+      <span class="prize-lbl" style="color:var(--text);min-width:auto" title="${S.place2Override!=null&&pr.rem?Math.round(S.place2Override/pr.rem*100):30}%">מקום 2</span>
+      ${isViewer()?
+        `<span class="prize-val" style="font-size:14px">₪${Math.round(S.place2Override!=null?S.place2Override:pr.p2).toLocaleString()}</span>`
+       :`<input class="prize-inp" type="number" placeholder="₪${Math.round(pr.p2).toLocaleString()}" value="${S.place2Override!=null?S.place2Override:''}"
+          onchange="S.place2Override=this.value?+this.value:null;persist();renderTournList()"
+          style="width:100%;box-sizing:border-box;font-size:12px" title="ברירת מחדל (30%): ₪${Math.round(pr.p2).toLocaleString()} — השאר ריק לחישוב אוטומטי">`}
     </div>
-    <div class="prize-row" style="justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">מקום 3</span>
-        ${isViewer()?`<span class="prize-val">${S.place3?'₪'+S.place3.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place3||0}" placeholder="0" onchange="S.place3=+this.value;persist();renderTournList()">`}
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">מקום 4</span>
-        ${isViewer()?`<span class="prize-val">${S.place4?'₪'+S.place4.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()">`}
-      </div>
+    <div class="tstats-row">
+      <span class="prize-lbl" style="min-width:auto">מקום 3</span>
+      ${isViewer()?`<span class="prize-val">${S.place3?'₪'+S.place3.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place3||0}" placeholder="0" onchange="S.place3=+this.value;persist();renderTournList()" style="width:100%;box-sizing:border-box">`}
+      <span class="prize-lbl" style="min-width:auto">מקום 4</span>
+      ${isViewer()?`<span class="prize-val">${S.place4?'₪'+S.place4.toLocaleString():'-'}</span>`:`<input class="prize-inp" type="number" value="${S.place4||0}" placeholder="0" onchange="S.place4=+this.value;persist();renderTournList()" style="width:100%;box-sizing:border-box">`}
     </div>
-    <div class="prize-row" style="justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">בית</span>
-        ${isViewer()?`<span class="prize-val">₪${S.houseRake.toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()">`}
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="prize-lbl" style="min-width:auto">הפתעות</span>
-        ${isViewer()?`<span class="prize-val">₪${(S.surprisesAmount||0).toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.surprisesAmount||0}" placeholder="0" onchange="S.surprisesAmount=+this.value;persist();renderTournList()">`}
-      </div>
+    <div class="tstats-row">
+      <span class="prize-lbl" style="min-width:auto">בית</span>
+      ${isViewer()?`<span class="prize-val">₪${S.houseRake.toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.houseRake}" onchange="S.houseRake=+this.value;persist();renderTournList()" style="width:100%;box-sizing:border-box">`}
+      <span class="prize-lbl" style="min-width:auto">הפתעות</span>
+      ${isViewer()?`<span class="prize-val">₪${(S.surprisesAmount||0).toLocaleString()}</span>`:`<input class="prize-inp" type="number" value="${S.surprisesAmount||0}" placeholder="0" onchange="S.surprisesAmount=+this.value;persist();renderTournList()" style="width:100%;box-sizing:border-box">`}
     </div>
     ${isAdmin()?`
     <div style="display:flex;gap:6px;margin-top:12px">
