@@ -6,6 +6,175 @@
 
 ---
 
+## 2026-09-22 (109) — Reverted the #106 filename regex "fix" -- it split backups into a brand-new file
+**Files: poker-google-script.js**
+
+- User reported the "Backups" sheet wasn't found at all -- turned out a
+  whole new backup *file* had been created instead of reusing the
+  existing one, with its own fresh "Backups" tab inside it.
+- Root cause, traced directly rather than guessed: #106 changed
+  `backupFileName`'s computation from a literal `.replace('Poker Suite —
+  ', '')` (matching only an em-dash) to a regex matching either an
+  em-dash or a plain hyphen, intended purely as a cosmetic fix for the
+  "Poker Suite Backup — Poker Suite" duplication noticed earlier. But
+  this user's actual live spreadsheet name uses a plain hyphen ("Poker
+  Suite - יאיר מורה"), so the "cosmetic fix" actually *changed* the
+  computed backup filename for this user -- from the existing file's
+  real name ("Poker Suite Backup — Poker Suite - יאיר מורה") to a
+  different, cleaner-looking one that had never existed. `DriveApp.
+  getFilesByName()` requires an exact match, found nothing under the new
+  name, and the code's own fallback (`files.hasNext() ? ... :
+  SpreadsheetApp.create(...)`) correctly did what it was told: created a
+  brand-new file rather than reusing the old one.
+- Fixed by reverting to the exact original literal `.replace('Poker
+  Suite — ', '')` in all three places (`autoBackup`, `getBackupList`,
+  `getBackupData`) -- restores the historical filename computation
+  exactly, so it finds and reuses the existing backup file again. The
+  cosmetic double-naming ("Poker Suite Backup — Poker Suite - ...") is
+  ugly but was never actually broken; #106 traded a real identity bug for
+  a cosmetic one, which was the wrong trade.
+- Lesson worth keeping in mind: a "harmless cosmetic fix" to a string
+  used as a lookup key is not harmless if different users' underlying
+  data doesn't share the exact same original format -- worth checking
+  what the key is actually *used for* (identity/lookup vs. display)
+  before changing how it's computed, not just whether the change looks
+  more correct in isolation.
+- **Not yet re-verified against a real run** -- same deployment
+  requirement as before (paste, save, new Web App deployment) applies.
+  The stray empty file created by the bug can be deleted manually once
+  the next real backup confirms it's writing to the correct, original
+  file again.
+
+## 2026-09-22 (108) — FOUND IT: Google Sheets silently converts date-like strings to real Date cells, breaking backup identity
+**Files: poker-google-script.js, features.js**
+
+- User reported both backup and restore "broken" after deploying #106/
+  #107 -- backup list showed raw ISO strings like `2026-09-22T18:49:00.
+  000Z` instead of the intended `dd/MM/yyyy HH:mm` label, and restore
+  failed with "גיבוי לא נמצא" even for backups visibly present in the
+  list.
+- **Root cause, confirmed by the exact symptom, not guessed:** the
+  "Backups" sheet's timestamp column stored a plain JS string (`22/09/
+  2026 18:50`) as each row's identifying key. Google Sheets auto-detects
+  strings that look like dates/times and silently converts that cell to
+  a real Date-typed value -- even when written via `setValues()` with an
+  explicit string, not typed manually. Reading it back via `getValues()`
+  then returns a native `Date` object, not the original string; once that
+  object passes through `JSON.stringify()` in the HTTP response, JS's
+  default `Date.toJSON()` produces ISO 8601 -- exactly the mangled label
+  seen. And since `getBackupData` compared the row's value against the
+  string the client sent back with strict `===`, comparing a `Date`
+  object against a string is *always* false -- explaining "not found"
+  for backups that genuinely existed.
+- Fixed by removing the date-like string from the data model entirely:
+  each row's key is now `now.getTime()` -- a plain numeric epoch, which
+  Sheets has no format-pattern to "recognize" and silently convert.
+  `getBackupList` derives the human-readable `dd/MM/yyyy HH:mm` label
+  fresh from the epoch on every request (not stored anywhere) and returns
+  `{key, label}` pairs; `getBackupData` compares `Number(cell) === Number
+  (requestedKey)` instead of string equality.
+- Client (`features.js`, `showDriveRestore`/`loadDriveBackup`) updated to
+  match: buttons display `label`, pass `key` through to the restore call;
+  `loadDriveBackup` now takes `(key, label)` instead of a single
+  overloaded string.
+- Verified the new key/label logic directly in an isolated Node
+  simulation (list ordering, and retrieval by a key round-tripped through
+  a string, matching how it actually travels via URL parameters) before
+  trusting it -- both produced correct results.
+- **Cleanup needed on the user's actual Drive file, not just code:** the
+  ~16 rows created while debugging (buggy version, before this fix) are
+  stored with corrupted/Date-typed keys that won't match the new numeric
+  model at all -- they'll simply become invisible to `getBackupList`
+  going forward. Recommended deleting those data rows from the "Backups"
+  sheet (keep the header row) for a clean start, rather than trying to
+  salvage them.
+- Same deployment requirement as #106/#107 applies again: this needs to
+  be re-pasted into the Apps Script editor and a **new Web App
+  deployment** created (not just saved) for `get_backup_list`/
+  `get_backup_data` to actually serve the fixed code to the app.
+
+## 2026-09-22 (107) — Backup schedule reduced to weekly (Fridays), rotation removed entirely
+**Files: poker-google-script.js**
+
+- User's actual usage pattern is weekly (once a week), with manual backup
+  already available on-demand whenever needed — twice-daily automation
+  from #106 was more than necessary, and the goal is now to keep
+  everything forever rather than rotate old backups out.
+- Confirmed first (not assumed): `manual_backup` calls `autoBackup()`
+  directly (same function, same code path) — so it already produces a
+  row in the "Backups" sheet under the new #106 model, not a separate
+  tab. No change needed there; manual on-demand backups already fit this
+  request as-is.
+- `setupBackupTriggers()`: replaced the two daily triggers (8:00, 22:00)
+  with a single weekly trigger — Friday mornings, 8:00 (`onWeekDay
+  (ScriptApp.WeekDay.FRIDAY).atHour(8)`), dropping `everyDays(1)`
+  entirely. Must be re-run once manually from the Apps Script editor to
+  replace the existing triggers (same deployment step as before — this
+  file isn't picked up by re-uploading it to GitHub).
+- `autoBackup()`: removed the `KEEP_BACKUPS` rotation block from #106
+  entirely — no deletion of any kind anymore, backups accumulate
+  indefinitely. Sized the decision explicitly rather than just doing it:
+  Google Sheets' actual hard limit is 10 million cells per file (4
+  columns here -> roughly 2.5 million rows); even decades of weekly
+  backups (~50/year) with several chunk-rows each stays many orders of
+  magnitude below that ceiling, so removing the cap doesn't create a
+  realistic risk of hitting it.
+
+## 2026-09-22 (106) — Backup system redesigned: one-sheet-per-user, rows instead of tabs, true chronological rotation
+**Files: poker-google-script.js**
+
+- Follow-up to the backup investigation earlier in this conversation
+  (confirmed real ~3.5-month gap in automatic backups, plus a corrupted
+  tab from the trigger's first run after recovering). User pushed back
+  correctly on two points once the root design was visible: (1) the old
+  rotation deleted `sheets[0]` — array order of tabs in the file, not
+  actually-oldest-by-date — so a tab created out of normal order (exactly
+  what happened with the corrupted 21/9 tab) could get the wrong one
+  deleted; (2) why cap at 20 tabs at all, when one sheet with a row per
+  backup avoids the whole problem.
+- Rewrote the backup storage model in `autoBackup()`, `getBackupList()`,
+  and `getBackupData()`: instead of one new spreadsheet **tab** per
+  backup run, every backup now appends rows to a single sheet named
+  "Backups" (columns: timestamp, chunk_index, data, updated). Since rows
+  are only ever appended (never inserted out of order), row order is
+  *guaranteed* to match true chronological order — there's no longer any
+  way for "the first one found" to not actually be the oldest one, which
+  is exactly the ambiguity that caused the original bug.
+- Rotation now keeps the last `KEEP_BACKUPS = 60` distinct timestamps (up
+  from 20 tabs — roughly 30 days at twice a day instead of ~10), and
+  deletes by literally removing the rows belonging to the oldest
+  timestamps once that cap is exceeded, iterating from the bottom up so
+  row indices don't shift mid-deletion.
+- `getBackupList`/`getBackupData` updated to match: list unique
+  timestamps found in the "Backups" sheet (reversed, newest first) rather
+  than sheet names; fetch a specific backup by filtering rows to that
+  timestamp, sorting by `chunk_index`, and joining — same reassembly
+  logic as before, just row-based instead of tab-based.
+- Also fixed, while touching every `backupFileName` computation: the
+  cosmetic "Poker Suite Backup — Poker Suite" duplication noticed
+  earlier (caused by `.replace('Poker Suite — ', '')` using an em-dash
+  that didn't match the user's actual sheet name, which used a plain
+  hyphen) — replaced with a regex (`/^Poker Suite\s*[—-]\s*/`) that
+  matches either dash style.
+- **Backward compatibility, explicitly not built:** existing per-date
+  tabs from the old model (04/06–11/06/2026, the recovered 21–22/09/2026
+  ones) are left untouched in Drive — nothing deletes them — but the
+  in-app "שחזר מגיבוי Drive" list will only show backups from the new
+  "Backups" sheet going forward, since that's what `getBackupList` now
+  reads. The old tabs remain manually accessible directly in the Drive
+  file if ever needed, just not through the app's restore UI.
+- Verified the core algorithm in an isolated Node simulation (not just
+  read through) before trusting it: appended four small backups with a
+  keep-limit of 3, confirmed the list returns newest-first in the right
+  order, confirmed a specific backup's chunks reassemble correctly, and
+  confirmed the true-oldest one was the one actually removed once the
+  limit was exceeded.
+- **Not yet tested against a real Google Sheets/Drive run** — this is
+  server-side Apps Script code that can only be validated by watching the
+  next real `autoBackup()` execution (8:00 or 22:00) succeed and produce
+  a "Backups" sheet with rows, or by triggering a manual backup and
+  checking the Executions log.
+
 ## 2026-08-16 (105) — Real grid alignment: fixed-width columns instead of content-sized flex groups
 **Files: ui.js, styles.css**
 

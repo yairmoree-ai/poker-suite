@@ -807,29 +807,33 @@ async function showDriveRestore(){
     console.log('[showDriveRestore]', data);
     if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
     if(!data.backups?.length){ cont.innerHTML='<div style="text-align:center;color:#8a8799;padding:20px;font-size:13px">לא נמצאו גיבויים</div>'; return; }
+    // כל גיבוי הוא {key, label} — key הוא epoch מספרי (משמש לשליפה
+    // אמינה), label הוא הטקסט הקריא-לבנאדם (dd/MM/yyyy HH:mm). לפני
+    // התיקון הזה שני אלה היו אותה מחרוזת, מה שהתגלה כלא-אמין (Sheets
+    // ממיר מחרוזות-שנראות-כמו-תאריך לתא-תאריך אמיתי בשקט).
     cont.innerHTML=`
       <div style="font-size:11px;color:#8a8799;margin-bottom:10px">נמצאו ${data.backups.length} גיבויים — בחר תאריך:</div>
       ${data.backups.map(b=>`
-        <button onclick="loadDriveBackup('${b}')" style="width:100%;text-align:right;padding:10px 12px;border-radius:10px;border:1px solid rgba(95,196,122,0.2);background:rgba(95,196,122,0.06);color:#e2ddd4;font-size:13px;cursor:pointer;margin-bottom:6px;display:block">
-          📅 ${b}
+        <button onclick="loadDriveBackup('${b.key}','${b.label}')" style="width:100%;text-align:right;padding:10px 12px;border-radius:10px;border:1px solid rgba(95,196,122,0.2);background:rgba(95,196,122,0.06);color:#e2ddd4;font-size:13px;cursor:pointer;margin-bottom:6px;display:block">
+          📅 ${b.label}
         </button>`).join('')}`;
   }catch(e){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${e.message}</div>`; }
 }
 
 let _driveSnap = null;
 
-async function loadDriveBackup(sheetName){
+async function loadDriveBackup(key, label){
   const gsUrl = getGsUrl();
   const cont = document.getElementById('drive-restore-content');
-  cont.innerHTML=`<div style="text-align:center;color:#8a8799;padding:20px">⏳ טוען גיבוי מ-${sheetName}...</div>`;
+  cont.innerHTML=`<div style="text-align:center;color:#8a8799;padding:20px">⏳ טוען גיבוי מ-${label||key}...</div>`;
   try{
     const username = encodeURIComponent(currentUser?.username||'');
-    const resp = await fetch(gsUrl+'?action=get_backup_data&username='+username+'&sheetName='+encodeURIComponent(sheetName)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
+    const resp = await fetch(gsUrl+'?action=get_backup_data&username='+username+'&sheetName='+encodeURIComponent(key)+'&t='+Date.now(), {method:'GET',redirect:'follow'});
     const data = await resp.json();
     if(!data.ok){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${data.error}</div>`; return; }
     _driveSnap = data.data;
     document.getElementById('drive-restore-box').style.display='none';
-    previewMergeFromSnap(_driveSnap, sheetName);
+    previewMergeFromSnap(_driveSnap, label||key);
   }catch(e){ cont.innerHTML=`<div style="color:#e07b6a;padding:12px;font-size:13px">שגיאה: ${e.message}</div>`; }
 }
 
