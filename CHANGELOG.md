@@ -6,6 +6,58 @@
 
 ---
 
+## 2026-09-22 (111) — Extended locking to the read side too (getBackupList/getBackupData)
+**Files: poker-google-script.js**
+
+- User's exact same "The string did not match the expected pattern"
+  error recurred, this time inside the restore-list flow specifically,
+  after admitting to clicking through backup/restore quickly during
+  testing.
+- Gap in #110's fix: the lock only covered `autoBackup()`'s write path.
+  `getBackupList()`/`getBackupData()` (the read path used every time the
+  "שחזר מגיבוי Drive" list is opened) had no lock at all -- so a read
+  landing in the middle of a concurrent `autoBackup()` write could still
+  observe a partially-written, inconsistent sheet state and fail in a
+  timing-dependent way that matches exactly what's been reported twice
+  now.
+- Wrapped the `getDataRange().getValues()` call in both `getBackupList`
+  and `getBackupData` with the same `LockService.getScriptLock()` used in
+  `autoBackup()`. Since it's the same script-wide lock, a read now always
+  waits for any in-progress write to finish before looking at the sheet,
+  and a write waits for any in-progress read -- fully serialized access
+  to the "Backups" sheet across all three entry points, not just the
+  write side.
+
+## 2026-09-22 (110) — Added locking around the backup write, addressing likely intermittent race-condition errors
+**Files: poker-google-script.js**
+
+- User reported the core system now works (existing tab found again,
+  manual backup + restore succeeded twice) but an error is thrown
+  occasionally, with no clear/reproducible pattern -- consistent with a
+  timing-dependent issue rather than a deterministic bug, especially
+  since testing involved several rapid manual backup/restore cycles in a
+  row.
+- Fixed proactively rather than waiting for the exact error text (asked
+  for it too, for next time): `autoBackup()` read `sheet.getLastRow()`
+  and then wrote new rows starting right after it as two separate,
+  non-atomic steps. If two runs happen close together (a manual backup
+  overlapping the weekly trigger, or two quick manual clicks), both could
+  read the same `lastRow` and then both try to write starting at the same
+  row -- exactly the kind of collision that only shows up "sometimes,
+  no obvious reason," since it depends on exact timing rather than any
+  specific input.
+- Wrapped the read-then-write sequence in `LockService.getScriptLock()`
+  (30s wait), moving the `getLastRow()` read to happen *inside* the lock
+  rather than before it, so only one execution at a time can be mid-way
+  through this sequence for a given backup file. Removed the earlier,
+  now-redundant `lastRow` read that happened before lock acquisition
+  (which would have defeated the purpose, since a race could still occur
+  between that read and actually acquiring the lock).
+- This is a real, well-reasoned hardening fix regardless of whether it
+  turns out to be the exact cause of the specific error seen -- still
+  waiting on the actual error text (Executions log) to confirm or rule it
+  out definitively, rather than treating this as a confirmed diagnosis.
+
 ## 2026-09-22 (109) — Reverted the #106 filename regex "fix" -- it split backups into a brand-new file
 **Files: poker-google-script.js**
 
