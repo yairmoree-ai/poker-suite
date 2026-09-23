@@ -879,12 +879,38 @@ function previewMergeTournaments(){
   }catch(e){ notify('קוד לא תקין'); }
 }
 
+// מפרש תאריך בפורמט "D.M.YYYY" (מה ש-toLocaleDateString('he-IL') מפיק,
+// למשל "22.9.2026") לערך-זמן מספרי בר-מיון. new Date(str) הישיר לא עובד
+// על הפורמט הזה — נבדק ישירות: new Date("22.9.2026") מחזיר Invalid Date
+// (לא MM/DD/YYYY אמריקאי, לא ISO — פורמט לא-סטנדרטי ש-JS לא מזהה). זה
+// הבאג שגרם לטורניר-מיובא "להיעלם" — לא נמחק בפועל (persist() שומר את
+// כל המערך בלי קשר), רק ה-sort עם NaN-comparator (Invalid Date חיסור
+// Invalid Date = NaN) דוחף אותו למקום לא-צפוי ברשימה, לא בהכרח למעלה
+// איפה שמצפים לראות ייבוא טרי.
+function _parseHeDate(str){
+  if(!str) return 0;
+  const parts = String(str).split('.');
+  if(parts.length !== 3) return 0;
+  const d = +parts[0], m = +parts[1], y = +parts[2];
+  if(!d || !m || !y) return 0;
+  return new Date(y, m-1, d).getTime();
+}
+
 function confirmMergeTournaments(){
   if(!_driveSnap) return;
   const selected = new Set([...document.querySelectorAll('.merge-cb:checked')].map(c=>c.dataset.id));
   if(!selected.size){ notify('לא נבחרו טורנירים'); return; }
   const toAdd = (_driveSnap.tournLog||[]).filter(t=>selected.has(t.id));
-  S.tournLog = [...(S.tournLog||[]), ...toAdd].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  // בחירה מפורשת ואישור-בפועל של המשתמש מתוך מסך-השחזור היא כוונה ברורה
+  // וחד-משמעית "אני רוצה את זה בחזרה" — שונה לגמרי מסנכרון-רקע פסיבי
+  // (syncFromSheets, כל 10 שניות) שלא אמור "להחיות" דבר בלי שהמשתמש ביקש.
+  // לכן מסירים כאן tombstone לכל טורניר שנבחר במפורש — אחרת מנגנון-ההגנה-
+  // מפני-מחיקה-חוזרת (שנועד למקרה השונה של סנכרון בין מכשירים) היה עוקר
+  // כל שחזור בתוך 10 שניות, מה שהופך את "שחזר מגיבוי" לחסר-שימוש כמעט
+  // תמיד (טורניר ש"חסר" הוא כמעט תמיד טורניר שנמחק במפורש, ולכן יש לו
+  // בדיוק את אותו tombstone).
+  toAdd.forEach(t=>{ if(t.id && S.deleted?.tourns) delete S.deleted.tourns[t.id]; });
+  S.tournLog = [...(S.tournLog||[]), ...toAdd].sort((a,b)=>_parseHeDate(b.date)-_parseHeDate(a.date));
   persist();
   renderTournList();
   document.getElementById('merge-box').style.display='none';

@@ -6,6 +6,48 @@
 
 ---
 
+## 2026-09-22 (112) — Restore-from-backup now clears the tombstone for explicitly-selected tournaments
+**Files: features.js**
+
+- User's imported tournament ("1 imported") disappeared within seconds
+  and never showed up, even scrolling to the bottom of the list. Traced
+  through the actual data flow rather than guessing: `confirmMerge
+  Tournaments()` genuinely did add it to `S.tournLog` and persist it --
+  but the tournament had a tombstone in `S.deleted.tourns` from being
+  deleted earlier (confirmed by the user: it was deleted on purpose,
+  during testing). `applySnapshot()`'s tombstone-merge logic (`S.tournLog
+  = (S.tournLog||[]).filter(t=>!isDeleted('tourns',t.id))`) runs on every
+  incoming sync -- including the unrelated 10-second periodic
+  `syncFromSheets()` pull -- and silently filtered the just-restored
+  tournament right back out, with no error or indication anything
+  happened.
+- Initially framed this as "working as intended" (tombstones are meant to
+  stop a deleted item from being silently revived by a stale sync) -- but
+  the user correctly pushed back: the tombstone system can't distinguish
+  "deleted on purpose" from "deleted by mistake," and **any** tournament
+  someone would actually want to restore from a backup is, almost by
+  definition, one that was explicitly deleted at some point (otherwise it
+  wouldn't be missing) -- meaning the tombstone system as it stood made
+  the entire "restore from backup" feature nearly useless for its actual
+  purpose.
+- Real fix: an explicit, deliberate user action -- selecting a specific
+  tournament in the restore UI and clicking confirm -- is a clear signal
+  of intent to bring it back, categorically different from a passive
+  background sync that shouldn't resurrect anything on its own.
+  `confirmMergeTournaments()` now deletes the tombstone entry
+  (`S.deleted.tourns[t.id]`) for each tournament actually being restored,
+  before adding it, so the very next sync doesn't immediately re-filter
+  it back out.
+- **Known residual gap, stated honestly rather than claimed fixed:** the
+  tombstone removal is immediate locally, but the push to the server is
+  debounced by 2 seconds; the independent 10-second `syncFromSheets` pull
+  isn't synchronized with that debounce, so there's still a narrow window
+  where an incoming pull could re-apply the old (still-tombstoned) remote
+  state before the local removal has been pushed. Much smaller than the
+  previous guaranteed-to-fail-within-10s window, but not provably zero --
+  worth tightening further (e.g. forcing an immediate push right after
+  tombstone removal) if this is ever observed in practice.
+
 ## 2026-09-22 (111) — Extended locking to the read side too (getBackupList/getBackupData)
 **Files: poker-google-script.js**
 
