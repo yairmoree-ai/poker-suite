@@ -88,6 +88,10 @@ const TRN_STYLE = `
 .trn-anchor-table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:2px}
 .trn-anchor-table td{padding:4px;border-bottom:1px solid var(--trn-border);text-align:center}
 .trn-anchor-table td:first-child{text-align:right;color:var(--trn-muted)}
+.trn-insights{background:var(--trn-card2);border:1px solid var(--trn-border);border-radius:10px;padding:10px 12px;width:100%;text-align:right}
+.trn-insights .trn-ins-title{font-size:10.5px;color:var(--trn-muted);font-weight:700;margin-bottom:6px}
+.trn-insights .trn-ins-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
+.trn-insights .trn-ins-row b{color:var(--trn-red)}
 [data-trn-hidden]{display:none!important}
 `;
 
@@ -131,6 +135,15 @@ const TRN_HTML = `
         <button data-v="big">גדול (500–15,000)</button>
       </div>
     </div>
+    <div class="trn-field">
+      <div class="trn-field-label">מצב אדפטיבי</div>
+      <div class="trn-seg" id="trn-track-adaptive">
+        <button data-v="on" class="on">פועל — מתמקד בחולשות שלי</button>
+        <button data-v="off">כבוי — אקראי לגמרי</button>
+      </div>
+      <div class="trn-hint">כשפועל, האפליקציה זוכרת באילו שילובי גודל/קושי אתה טועה יותר, ומגריל יותר ידיים מהסוג הזה.</div>
+    </div>
+    <div class="trn-insights" id="trn-track-insights" data-trn-hidden></div>
     <button class="trn-start" id="trn-track-start">התחל יד ▶</button>
   </div>
 
@@ -181,7 +194,15 @@ const TRN_HTML = `
         <button data-v="8">8 שניות</button>
       </div>
     </div>
+    <div class="trn-field">
+      <div class="trn-field-label">מצב אדפטיבי</div>
+      <div class="trn-seg" id="trn-odds-adaptive">
+        <button data-v="on" class="on">פועל — מתמקד בטווחי % שאני טועה בהם</button>
+        <button data-v="off">כבוי — אקראי לגמרי</button>
+      </div>
+    </div>
     <div class="trn-hint">קופה + סכום להשלמה. ענה באחוזים (%) — סטייה של עד 1% נחשבת נכונה.</div>
+    <div class="trn-insights" id="trn-odds-insights" data-trn-hidden></div>
     <button class="trn-start" id="trn-odds-start">התחל תרגול ▶</button>
   </div>
 
@@ -216,6 +237,14 @@ const TRN_HTML = `
       <tr><td>8:1</td><td class="trn-num">11%</td></tr>
       <tr><td>10:1</td><td class="trn-num">9%</td></tr>
     </table>
+    <div class="trn-field">
+      <div class="trn-field-label">מצב אדפטיבי</div>
+      <div class="trn-seg" id="trn-anchor-adaptive">
+        <button data-v="on" class="on">פועל — מתמקד בעוגנים שאני טועה בהם</button>
+        <button data-v="off">כבוי — אקראי לגמרי</button>
+      </div>
+    </div>
+    <div class="trn-insights" id="trn-anchor-insights" data-trn-hidden></div>
     <button class="trn-start" id="trn-anchor-start">התחל תרגול ▶</button>
   </div>
 
@@ -255,6 +284,49 @@ function trnInit(){
   function saveBest(obj){ try{ localStorage.setItem('potTrainerBest', JSON.stringify(obj)); }catch(e){} }
   let bestScores = loadBest();
 
+  // ---------- adaptive weak-point engine (per-device, localStorage) ----------
+  // trnStats = { anchor:{ "<label>":{correct,total} }, odds:{ "<bucket>":{...} }, track:{ "<scale>_<diff>":{...} } }
+  function loadStats(){ try{ return JSON.parse(localStorage.getItem('potTrainerStats')||'{}'); }catch(e){ return {}; } }
+  function saveStats(o){ try{ localStorage.setItem('potTrainerStats', JSON.stringify(o)); }catch(e){} }
+  let trnStats = loadStats();
+
+  function recordStat(cat, key, ok){
+    if(!trnStats[cat]) trnStats[cat] = {};
+    if(!trnStats[cat][key]) trnStats[cat][key] = { correct:0, total:0 };
+    trnStats[cat][key].total++;
+    if(ok) trnStats[cat][key].correct++;
+    saveStats(trnStats);
+  }
+  // Laplace-smoothed error rate: unseen buckets start neutral (0.5), buckets
+  // with a worse track record get a higher weight (picked more often).
+  function weaknessWeight(stat){
+    const c = stat?.correct||0, t = stat?.total||0;
+    return (t - c + 1) / (t + 2);
+  }
+  function weightedPick(weights){
+    const sum = weights.reduce((a,b)=>a+b,0);
+    let r = Math.random()*sum;
+    for(let i=0;i<weights.length;i++){ r -= weights[i]; if(r<=0) return i; }
+    return weights.length-1;
+  }
+  // Returns up to 3 weakest buckets with >=3 attempts, for the "insights" panel.
+  function weakestBuckets(cat, labelFn){
+    const stats = trnStats[cat]||{};
+    return Object.entries(stats)
+      .filter(([,v])=>v.total>=3)
+      .map(([k,v])=>({ label: labelFn(k), acc: Math.round(v.correct/v.total*100), total:v.total }))
+      .sort((a,b)=>a.acc-b.acc)
+      .slice(0,3);
+  }
+  function renderInsights(elId, cat, labelFn){
+    const el = $(elId); if(!el) return;
+    const weak = weakestBuckets(cat, labelFn);
+    if(!weak.length){ el.setAttribute('data-trn-hidden',''); return; }
+    el.removeAttribute('data-trn-hidden');
+    el.innerHTML = '<div class="trn-ins-title">🎯 הנקודות החלשות שלך (לפי ההיסטוריה במכשיר הזה)</div>' +
+      weak.map(w=>'<div class="trn-ins-row"><span>'+w.label+'</span><b class="trn-num">'+w.acc+'%</b></div>').join('');
+  }
+
   let currentMode = 'track';
   let session = null;
 
@@ -265,7 +337,25 @@ function trnInit(){
   const $ = id => document.getElementById(id);
 
   // ===== TRACK MODE =====
-  const trackCfg = { diff:'easy', pace:'manual', scale:'small' };
+  const trackCfg = { diff:'easy', pace:'manual', scale:'small', adaptive:'on' };
+  const TRACK_COMBOS = [
+    { scale:'small', diff:'easy' }, { scale:'small', diff:'hard' },
+    { scale:'big',   diff:'easy' }, { scale:'big',   diff:'hard' },
+  ];
+  function trackBucketKey(scale, diff){ return scale+'_'+diff; }
+  function trackBucketLabel(key){
+    const [scale,diff] = key.split('_');
+    return (scale==='big'?'צ׳יפים גדולים':'צ׳יפים קטנים')+' · '+(diff==='hard'?'מציאותי':'קל');
+  }
+  // When adaptive is on, pick the scale/diff combo for the NEXT hand by weakness
+  // instead of using the manual seg buttons directly (the buttons still show
+  // what was picked, so the person sees why).
+  function pickTrackCombo(){
+    if(trackCfg.adaptive!=='on') return { scale:trackCfg.scale, diff:trackCfg.diff };
+    const weights = TRACK_COMBOS.map(c=> weaknessWeight(trnStats.track?.[trackBucketKey(c.scale,c.diff)]));
+    const idx = weightedPick(weights);
+    return TRACK_COMBOS[idx];
+  }
 
   function buildHand(cfg){
     const scale = cfg.scale==='big'
@@ -334,8 +424,16 @@ function trnInit(){
     $('trn-summary').setAttribute('data-trn-hidden','');
     $('trn-track-play').removeAttribute('data-trn-hidden');
     $('trn-scorebar').removeAttribute('data-trn-hidden');
+    const combo = pickTrackCombo();
+    trackCfg.scale = combo.scale; trackCfg.diff = combo.diff;
+    if(trackCfg.adaptive==='on'){
+      // reflect the auto-picked combo in the seg buttons so it's not a silent switch
+      ['trn-track-scale','trn-track-diff'].forEach(id=>{
+        $(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.v===(id==='trn-track-scale'?combo.scale:combo.diff)));
+      });
+    }
     const hand = buildHand(trackCfg);
-    session = { type:'track', hand, ptr:0, correct:0, total:0, streak:(session&&session.type==='track'?session.streak:0)||0 };
+    session = { type:'track', hand, ptr:0, correct:0, total:0, streak:(session&&session.type==='track'?session.streak:0)||0, comboKey: trackBucketKey(combo.scale,combo.diff) };
     $('trn-feed').innerHTML='';
     $('trn-street-lbl').textContent = 'פרה-פלופ';
     updateScorebar();
@@ -398,6 +496,7 @@ function trnInit(){
     cp.setAttribute('data-trn-hidden','');
     showFeedback(ok, correct, val, ()=>{ advance(); });
     registerResult(ok);
+    if(session?.comboKey) recordStat('track', session.comboKey, ok);
   }
 
   function showFeedback(ok, correct, given, onContinue){
@@ -437,12 +536,18 @@ function trnInit(){
       '<div class="trn-cell"><b class="trn-num">'+s.correct+'/'+s.total+'</b><span>תשובות נכונות</span></div>'+
       '<div class="trn-cell"><b class="trn-num">'+s.streak+'</b><span>רצף נוכחי</span></div>';
     $('trn-sum-again').onclick = startTrackHand;
-    $('trn-sum-settings').onclick = ()=>{ sum.setAttribute('data-trn-hidden',''); $('trn-track-settings').removeAttribute('data-trn-hidden'); };
+    $('trn-sum-settings').onclick = ()=>{ sum.setAttribute('data-trn-hidden',''); $('trn-track-settings').removeAttribute('data-trn-hidden'); renderInsights('trn-track-insights','track',trackBucketLabel); };
   }
 
   // ===== ODDS MODE =====
-  const oddsCfg = { diff:'round', time:0 };
+  const oddsCfg = { diff:'round', time:0, adaptive:'on' };
   let oddsTimerHandle = null;
+  const ODDS_BUCKETS = [10,20,30,40,50,60,70]; // upper bound of each 10-wide bucket, covers the ~9%-70% range this mode can generate
+  function oddsBucketKey(pct){
+    for(const upper of ODDS_BUCKETS) if(pct < upper) return (upper-10)+'-'+upper;
+    return '70+';
+  }
+  function oddsBucketLabel(key){ return key==='70+' ? 'מעל 70%' : key+'%'; }
 
   function startOddsSession(){
     $('trn-odds-settings').setAttribute('data-trn-hidden','');
@@ -456,7 +561,18 @@ function trnInit(){
 
   function genOddsScenario(){
     let pot, call;
-    if(oddsCfg.diff==='round'){ pot = roundTo(200+Math.random()*9800, 100); call = roundTo(100+Math.random()*pot*0.8, 100); }
+    if(oddsCfg.adaptive==='on'){
+      // Pick a target %-bucket by weakness, then build a pot/call pair whose
+      // real percentage lands inside that bucket.
+      const weights = ODDS_BUCKETS.map(upper=> weaknessWeight(trnStats.odds?.[(upper-10)+'-'+upper]));
+      const bIdx = weightedPick(weights);
+      const upper = ODDS_BUCKETS[bIdx], lower = upper-10;
+      const targetPct = lower + Math.random()*10;
+      const ratio = targetPct/(100-targetPct); // call/pot
+      pot = oddsCfg.diff==='round' ? roundTo(200+Math.random()*9800, 100) : Math.round(150+Math.random()*12000);
+      call = oddsCfg.diff==='round' ? roundTo(pot*ratio, 100) : Math.round(pot*ratio);
+      if(call<1) call = oddsCfg.diff==='round' ? 100 : 1;
+    } else if(oddsCfg.diff==='round'){ pot = roundTo(200+Math.random()*9800, 100); call = roundTo(100+Math.random()*pot*0.8, 100); }
     else { pot = Math.round(150+Math.random()*12000); call = Math.round(80+Math.random()*pot*0.9); }
     return { pot, call, pct: call/(pot+call)*100 };
   }
@@ -507,6 +623,7 @@ function trnInit(){
       'התשובה: <b class="trn-num">'+correct.toFixed(1)+'%</b> — נוסחה: <span class="trn-num">להשלים ÷ (קופה+להשלים) × 100</span>';
     $('trn-fb-continue').onclick = ()=>{ fb.setAttribute('data-trn-hidden',''); nextOdds(); };
     registerResult(ok);
+    if(!timedOut || cp._correct!=null) recordStat('odds', oddsBucketKey(correct), ok);
   }
 
   function finishOdds(){
@@ -520,11 +637,11 @@ function trnInit(){
       '<div class="trn-cell"><b class="trn-num">'+s.correct+'/'+s.total+'</b><span>תשובות נכונות</span></div>'+
       '<div class="trn-cell"><b class="trn-num">'+s.streak+'</b><span>רצף נוכחי</span></div>';
     $('trn-sum-again').onclick = startOddsSession;
-    $('trn-sum-settings').onclick = ()=>{ sum.setAttribute('data-trn-hidden',''); $('trn-odds-settings').removeAttribute('data-trn-hidden'); };
+    $('trn-sum-settings').onclick = ()=>{ sum.setAttribute('data-trn-hidden',''); $('trn-odds-settings').removeAttribute('data-trn-hidden'); renderInsights('trn-odds-insights','odds',oddsBucketLabel); };
   }
 
   // ===== ANCHOR RATIO MODE =====
-  const anchorCfg = { scale:'round' };
+  const anchorCfg = { scale:'round', adaptive:'on' };
   const ANCHORS = [
     { label:'1:1',   pct:50 }, { label:'1.5:1', pct:40 }, { label:'2:1', pct:33.3 },
     { label:'2.5:1', pct:28.6 }, { label:'3:1', pct:25 }, { label:'4:1', pct:20 },
@@ -545,7 +662,18 @@ function trnInit(){
 
   function genAnchorScenario(){
     let pot, call;
-    if(anchorCfg.scale==='round'){ pot = roundTo(300+Math.random()*9700, 100); call = roundTo(pot*0.09 + Math.random()*pot*0.9, 100); }
+    if(anchorCfg.adaptive==='on'){
+      // Pick a target anchor by weakness, then build a pot/call pair that
+      // actually lands nearest that anchor (small jitter for variety).
+      const weights = ANCHORS.map(a => weaknessWeight(trnStats.anchor?.[a.label]));
+      const targetIdx = weightedPick(weights);
+      const jitter = (Math.random()-0.5)*3; // ± up to 1.5 pct points
+      const targetPct = Math.min(55, Math.max(7, ANCHORS[targetIdx].pct + jitter));
+      const ratio = targetPct/(100-targetPct); // call/pot
+      pot = anchorCfg.scale==='round' ? roundTo(300+Math.random()*9700, 100) : Math.round(200+Math.random()*12000);
+      call = anchorCfg.scale==='round' ? roundTo(pot*ratio, 100) : Math.round(pot*ratio);
+      if(call<1) call = anchorCfg.scale==='round' ? 100 : 1;
+    } else if(anchorCfg.scale==='round'){ pot = roundTo(300+Math.random()*9700, 100); call = roundTo(pot*0.09 + Math.random()*pot*0.9, 100); }
     else { pot = Math.round(200+Math.random()*12000); call = Math.round(pot*0.09 + Math.random()*pot*0.9); }
     const pct = call/(pot+call)*100;
     let best = 0, bestDiff = Infinity;
@@ -586,6 +714,7 @@ function trnInit(){
     btns[idx].classList.add(ok?'trn-correct':'trn-wrong');
     if(!ok) btns[sc.correctIdx].classList.add('trn-correct');
     registerResult(ok);
+    recordStat('anchor', ANCHORS[sc.correctIdx].label, ok);
     setTimeout(()=>{
       const fb = $('trn-feedback');
       fb.removeAttribute('data-trn-hidden');
@@ -608,7 +737,7 @@ function trnInit(){
       '<div class="trn-cell"><b class="trn-num">'+s.correct+'/'+s.total+'</b><span>תשובות נכונות</span></div>'+
       '<div class="trn-cell"><b class="trn-num">'+s.streak+'</b><span>רצף נוכחי</span></div>';
     $('trn-sum-again').onclick = startAnchorSession;
-    $('trn-sum-settings').onclick = ()=>{ sum.setAttribute('data-trn-hidden',''); $('trn-anchor-settings').removeAttribute('data-trn-hidden'); };
+    $('trn-sum-settings').onclick = ()=>{ sum.setAttribute('data-trn-hidden',''); $('trn-anchor-settings').removeAttribute('data-trn-hidden'); renderInsights('trn-anchor-insights','anchor',k=>k); };
   }
 
   // ===== UI wiring =====
@@ -625,9 +754,16 @@ function trnInit(){
   bindSeg('trn-track-diff', trackCfg, 'diff');
   bindSeg('trn-track-pace', trackCfg, 'pace');
   bindSeg('trn-track-scale', trackCfg, 'scale');
+  bindSeg('trn-track-adaptive', trackCfg, 'adaptive');
   bindSeg('trn-odds-diff', oddsCfg, 'diff');
   bindSeg('trn-odds-time', oddsCfg, 'time');
+  bindSeg('trn-odds-adaptive', oddsCfg, 'adaptive');
   bindSeg('trn-anchor-scale', anchorCfg, 'scale');
+  bindSeg('trn-anchor-adaptive', anchorCfg, 'adaptive');
+
+  renderInsights('trn-track-insights', 'track', trackBucketLabel);
+  renderInsights('trn-odds-insights', 'odds', oddsBucketLabel);
+  renderInsights('trn-anchor-insights', 'anchor', k=>k);
 
   $('trn-track-start').onclick = startTrackHand;
   $('trn-odds-start').onclick = startOddsSession;
