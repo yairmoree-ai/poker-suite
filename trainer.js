@@ -42,12 +42,19 @@ const TRN_STYLE = `
 .trn-stat.gold b{color:var(--trn-gold-soft)}
 .trn-stat.green b{color:var(--trn-green)}
 .trn-felt-panel{background:linear-gradient(180deg,var(--trn-felt-soft),var(--trn-felt));border-radius:16px;border:1px solid rgba(0,0,0,0.4);box-shadow:inset 0 0 30px rgba(0,0,0,0.35);padding:12px;min-height:200px;display:flex;flex-direction:column;gap:8px}
-.trn-street{align-self:center;font-size:10px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,0.55);text-transform:uppercase;background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:20px}
-.trn-feed{display:flex;flex-direction:column;gap:6px;flex:1;justify-content:flex-end;min-height:0}
-.trn-feed-item{background:rgba(8,11,18,0.55);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:7px 10px;font-size:12.5px;color:#f2eee4;display:flex;justify-content:space-between;gap:8px;align-items:center}
-.trn-feed-item .trn-amt{color:var(--trn-gold-soft);font-weight:700;flex-shrink:0}
-.trn-feed-item.trn-fold{opacity:.55}
-.trn-feed-item.trn-fold .trn-amt{color:var(--trn-muted)}
+.trn-street{font-size:10px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,0.55);text-transform:uppercase;background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:20px}
+.trn-table-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.trn-blinds{font-size:10px;font-weight:800;color:var(--trn-gold-soft);background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:20px;font-family:'Space Grotesk',monospace;direction:ltr}
+.trn-table-oval{position:relative;width:100%;aspect-ratio:4/3;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,0.06),rgba(0,0,0,0.3));border:3px solid rgba(0,0,0,0.35);box-shadow:inset 0 0 26px rgba(0,0,0,0.45);flex:1;min-height:170px}
+.trn-table-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9.5px;color:rgba(255,255,255,0.28);font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:center}
+.trn-seats{position:absolute;inset:0}
+.trn-seat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;transition:.2s}
+.trn-seat-name{font-size:10px;font-weight:700;color:#f2eee4;background:rgba(8,11,18,0.62);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:4px 9px;white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis;transition:.2s}
+.trn-seat.trn-acting .trn-seat-name{border-color:var(--trn-gold);box-shadow:0 0 0 3px rgba(200,169,110,0.28)}
+.trn-seat.trn-folded .trn-seat-name{opacity:.35}
+.trn-seat.trn-folded .trn-seat-bet{opacity:.35}
+.trn-seat-bet{font-size:11px;font-weight:800;color:#1a1408;background:var(--trn-gold-soft);border-radius:20px;padding:2px 9px}
+.trn-seat-tag{font-size:8.5px;color:var(--trn-muted);font-weight:700}
 .trn-tap-next{align-self:center;padding:8px 20px;border-radius:20px;border:1px solid rgba(255,255,255,0.25);background:rgba(0,0,0,0.25);color:#f2eee4;font-size:12px;font-weight:700;cursor:pointer}
 .trn-checkpoint{background:var(--trn-card);border:1px solid var(--trn-border-strong);border-radius:14px;padding:18px 16px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
 .trn-checkpoint .trn-q{font-size:13px;font-weight:800;color:var(--trn-gold-soft)}
@@ -115,10 +122,10 @@ const TRN_HTML = `
     <div class="trn-field">
       <div class="trn-field-label">רמת קושי</div>
       <div class="trn-seg" id="trn-track-diff">
-        <button data-v="easy" class="on">קל — כל פעולה מציגה כמה נוסף</button>
-        <button data-v="hard">מציאותי — "מעלה ל-X" / "משלים"</button>
+        <button data-v="easy" class="on">קל — הצ'יפ מציג כמה נוסף</button>
+        <button data-v="hard">מציאותי — הצ'יפ מציג סה"כ בסיבוב</button>
       </div>
-      <div class="trn-hint">ברמה מציאותית תראה הכרזות כמו בשולחן אמיתי — "מעלה ל-₪1,200" — ואתה צריך לזכור את סכום ההשלמה הקודם ולחשב את התוספת בעצמך.</div>
+      <div class="trn-hint">ברמה מציאותית הצ'יפ ליד כל שחקן מציג את סך ההשקעה שלו בסיבוב (כמו על שולחן אמיתי) — ואתה צריך לחשב בעצמך כמה כל אחד הוסיף. העיוורים תמיד מוצגים למעלה, כדי שיהיה לך בסיס לחישוב.</div>
     </div>
     <div class="trn-field">
       <div class="trn-field-label">קצב</div>
@@ -149,8 +156,14 @@ const TRN_HTML = `
 
   <div id="trn-track-play" data-trn-hidden style="display:flex;flex-direction:column;gap:12px">
     <div class="trn-felt-panel">
-      <div class="trn-street" id="trn-street-lbl">פרה-פלופ</div>
-      <div class="trn-feed" id="trn-feed"></div>
+      <div class="trn-table-top">
+        <div class="trn-street" id="trn-street-lbl">פרה-פלופ</div>
+        <div class="trn-blinds" id="trn-blinds-lbl">—/—</div>
+      </div>
+      <div class="trn-table-oval">
+        <div class="trn-table-center">קופה<br>סמויה</div>
+        <div class="trn-seats" id="trn-seats"></div>
+      </div>
       <button class="trn-tap-next" id="trn-tap-next" data-trn-hidden>הצג פעולה הבאה ›</button>
     </div>
   </div>
@@ -365,12 +378,12 @@ function trnInit(){
     const names = shuffled(NAMES).slice(0, numPlayers);
     let pot = 0;
     const events = [];
-    function push(text, delta){ pot += delta; events.push({ text, delta, potAfter: pot }); }
+    function push(name, kind, delta, levelAfter){ pot += delta; events.push({ name, kind, delta, levelAfter, potAfter: pot }); }
 
     const sb = roundTo(scale.sbRange[0] + Math.random()*(scale.sbRange[1]-scale.sbRange[0]), scale.step/2 || 5);
     const bb = sb*2;
-    push(names[0]+' משלים עיוור קטן', sb);
-    push(names[1]+' משלים עיוור גדול', bb);
+    push(names[0], 'blind', sb, sb);
+    push(names[1], 'blind', bb, bb);
 
     const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
     let active = names.slice();
@@ -387,20 +400,20 @@ function trnInit(){
         if(active.indexOf(name)===-1) return;
         const myContrib = contrib[name]||0;
         if(level===0){
-          if(Math.random()<0.5){ push(name+' עובר (Check)', 0); return; }
+          if(Math.random()<0.5){ push(name, 'check', 0, myContrib); return; }
           const amt = roundTo(scale.betMin + Math.random()*(pot*0.9 + scale.betMin), scale.step);
           level = amt; contrib[name]=amt;
-          push(name+' מהמר '+fmt(amt), amt);
+          push(name, 'bet', amt, amt);
         } else if(myContrib < level){
           const r = Math.random();
-          if(r<0.18 && !isSecondPass){ active = active.filter(n=>n!==name); push(name+' קיפל', 0); return; }
+          if(r<0.18 && !isSecondPass){ active = active.filter(n=>n!==name); push(name, 'fold', 0, myContrib); return; }
           if(r<0.62 || isSecondPass){
             const delta = level - myContrib; contrib[name]=level;
-            push(name+' משלים', delta);
+            push(name, 'call', delta, level);
           } else {
             const to = roundTo(level*(1.8+Math.random()*1.4), scale.step);
             const delta = to - myContrib; contrib[name]=to; level = to;
-            push(name+' מעלה ל-'+fmt(to), delta);
+            push(name, 'raise', delta, to);
           }
         }
       }
@@ -416,7 +429,7 @@ function trnInit(){
       chosen.add(actionIdxs[1 + Math.floor(Math.random()*(actionIdxs.length-1))]);
     }
     chosen.forEach(idx=> events[idx].checkpoint = true);
-    return { events };
+    return { events, names, sb, bb };
   }
 
   function startTrackHand(){
@@ -434,10 +447,33 @@ function trnInit(){
     }
     const hand = buildHand(trackCfg);
     session = { type:'track', hand, ptr:0, correct:0, total:0, streak:(session&&session.type==='track'?session.streak:0)||0, comboKey: trackBucketKey(combo.scale,combo.diff) };
-    $('trn-feed').innerHTML='';
+    renderSeats(hand.names);
+    $('trn-blinds-lbl').textContent = fmt(hand.sb)+' / '+fmt(hand.bb);
     $('trn-street-lbl').textContent = 'פרה-פלופ';
     updateScorebar();
     advance();
+  }
+
+  let seatEls = {};
+  function renderSeats(names){
+    const wrap = $('trn-seats');
+    wrap.innerHTML = '';
+    seatEls = {};
+    const n = names.length;
+    names.forEach((name,i)=>{
+      const angle = (-90 + i*(360/n)) * Math.PI/180;
+      const left = 50 + 41*Math.cos(angle);
+      const top = 50 + 40*Math.sin(angle);
+      const seat = document.createElement('div');
+      seat.className = 'trn-seat';
+      seat.style.left = left+'%';
+      seat.style.top = top+'%';
+      seat.innerHTML = '<div class="trn-seat-name">'+name+'</div>'+
+        '<div class="trn-seat-bet trn-num" data-trn-hidden></div>'+
+        '<div class="trn-seat-tag" data-trn-hidden>קיפל</div>';
+      wrap.appendChild(seat);
+      seatEls[name] = seat;
+    });
   }
 
   function advance(){
@@ -445,17 +481,30 @@ function trnInit(){
     if(!s || s.type!=='track') return;
     if(s.ptr >= s.hand.events.length){ finishTrackHand(); return; }
     const ev = s.hand.events[s.ptr];
-    const feed = $('trn-feed');
     if(ev.street){
       $('trn-street-lbl').textContent = ev.name;
+      Object.values(seatEls).forEach(el=>{
+        el.classList.remove('trn-acting');
+        const bet = el.querySelector('.trn-seat-bet');
+        bet.setAttribute('data-trn-hidden',''); bet.textContent='';
+      });
       s.ptr++; autoOrManual(); return;
     }
-    const row = document.createElement('div');
-    row.className = 'trn-feed-item' + (ev.delta===0?' trn-fold':'');
-    const amtShown = (trackCfg.diff==='easy' && ev.delta>0) ? '+'+fmt(ev.delta) : '';
-    row.innerHTML = '<span>'+ev.text+'</span>'+(amtShown?'<span class="trn-amt trn-num">'+amtShown+'</span>':'');
-    feed.appendChild(row);
-    while(feed.children.length>5) feed.removeChild(feed.firstChild);
+
+    Object.values(seatEls).forEach(el=>el.classList.remove('trn-acting'));
+    const seat = seatEls[ev.name];
+    if(seat){
+      seat.classList.add('trn-acting');
+      const betEl = seat.querySelector('.trn-seat-bet');
+      const tagEl = seat.querySelector('.trn-seat-tag');
+      if(ev.kind==='fold'){
+        seat.classList.add('trn-folded');
+        tagEl.removeAttribute('data-trn-hidden');
+      } else if(ev.kind!=='check'){
+        betEl.textContent = trackCfg.diff==='easy' ? '+'+fmt(ev.delta) : fmt(ev.levelAfter);
+        betEl.removeAttribute('data-trn-hidden');
+      }
+    }
 
     const isCheckpoint = !!ev.checkpoint;
     s.ptr++;
