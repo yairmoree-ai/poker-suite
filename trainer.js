@@ -394,7 +394,11 @@ function trnInit(){
       let level = si===0 ? bb : 0;
       const contrib = {}; active.forEach(n=>contrib[n]=0);
       if(si===0){ contrib[names[0]]=sb; contrib[names[1]]=bb; }
-      const order = shuffled(active);
+      // Action always moves seat-by-seat around the table (never a random jump):
+      // preflop starts after the blinds (seat 3 / UTG), later streets start from
+      // whichever active seat comes first after the button.
+      const startIdx = (si===0 ? 2 : 0) % active.length;
+      const order = active.slice(startIdx).concat(active.slice(0, startIdx));
 
       function playerAction(name, isSecondPass){
         if(active.indexOf(name)===-1) return;
