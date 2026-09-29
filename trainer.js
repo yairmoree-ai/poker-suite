@@ -231,6 +231,14 @@ const TRN_HTML = `
 
   <div class="trn-card" id="trn-anchor-settings" data-trn-hidden>
     <div class="trn-field">
+      <div class="trn-field-label">רמת קושי</div>
+      <div class="trn-seg" id="trn-anchor-diff">
+        <button data-v="intro" class="on">קל מאוד — מספרים עגולים, יחס מדויק</button>
+        <button data-v="normal">רגיל — הערכה מול מספרים מהחיים</button>
+      </div>
+      <div class="trn-hint">ברמה "קל מאוד" הקופה וסכום ההשלמה תמיד יוצרים בדיוק את היחס של אחד העוגנים (למשל 1,000/500 = בדיוק 2:1) — כדי לתרגל את עצם ההיכרות עם הטבלה בלי צורך להעריך. ברמה "רגיל" המספרים לא מדויקים ואתה צריך למצוא את העוגן הקרוב ביותר.</div>
+    </div>
+    <div class="trn-field" id="trn-anchor-scale-field">
       <div class="trn-field-label">גודל צ'יפים</div>
       <div class="trn-seg" id="trn-anchor-scale">
         <button data-v="round" class="on">מספרים עגולים</button>
@@ -694,12 +702,18 @@ function trnInit(){
   }
 
   // ===== ANCHOR RATIO MODE =====
-  const anchorCfg = { scale:'round', adaptive:'on' };
+  const anchorCfg = { scale:'round', adaptive:'on', diff:'intro' };
   const ANCHORS = [
     { label:'1:1',   pct:50 }, { label:'1.5:1', pct:40 }, { label:'2:1', pct:33.3 },
     { label:'2.5:1', pct:28.6 }, { label:'3:1', pct:25 }, { label:'4:1', pct:20 },
     { label:'5:1',   pct:16.7 }, { label:'6:1', pct:14.3 }, { label:'8:1', pct:11.1 }, { label:'10:1', pct:9.1 },
   ];
+  // exact call/pot fraction for each anchor, used to build "intro" scenarios
+  // whose numbers land exactly on the ratio (no estimation needed).
+  const ANCHOR_FRACS = {
+    '1:1':[1,1], '1.5:1':[2,3], '2:1':[1,2], '2.5:1':[2,5], '3:1':[1,3],
+    '4:1':[1,4], '5:1':[1,5], '6:1':[1,6], '8:1':[1,8], '10:1':[1,10],
+  };
 
   function renderAnchorGrid(){
     const grid = $('trn-anchor-grid');
@@ -713,7 +727,26 @@ function trnInit(){
     });
   }
 
+  function genIntroAnchorScenario(){
+    let targetIdx;
+    if(anchorCfg.adaptive==='on'){
+      const weights = ANCHORS.map(a => weaknessWeight(trnStats.anchor?.[a.label]));
+      targetIdx = weightedPick(weights);
+    } else {
+      targetIdx = Math.floor(Math.random()*ANCHORS.length);
+    }
+    const [num, den] = ANCHOR_FRACS[ANCHORS[targetIdx].label];
+    const bases = [100,200,500,1000];
+    const base = bases[Math.floor(Math.random()*bases.length)];
+    const k = 1 + Math.floor(Math.random()*3); // 1..3, keeps numbers small & clean
+    const pot = den*k*base;
+    const call = num*k*base;
+    const pct = call/(pot+call)*100;
+    return { pot, call, pct, ratio: pot/call, correctIdx: targetIdx };
+  }
+
   function genAnchorScenario(){
+    if(anchorCfg.diff==='intro') return genIntroAnchorScenario();
     let pot, call;
     if(anchorCfg.adaptive==='on'){
       // Pick a target anchor by weakness, then build a pot/call pair that
@@ -813,6 +846,13 @@ function trnInit(){
   bindSeg('trn-odds-adaptive', oddsCfg, 'adaptive');
   bindSeg('trn-anchor-scale', anchorCfg, 'scale');
   bindSeg('trn-anchor-adaptive', anchorCfg, 'adaptive');
+  bindSeg('trn-anchor-diff', anchorCfg, 'diff');
+  function syncAnchorScaleVisibility(){
+    $('trn-anchor-scale-field').style.opacity = anchorCfg.diff==='intro' ? '0.4' : '1';
+    $('trn-anchor-scale-field').style.pointerEvents = anchorCfg.diff==='intro' ? 'none' : '';
+  }
+  $('trn-anchor-diff').querySelectorAll('button').forEach(b=> b.addEventListener('click', syncAnchorScaleVisibility));
+  syncAnchorScaleVisibility();
 
   renderInsights('trn-track-insights', 'track', trackBucketLabel);
   renderInsights('trn-odds-insights', 'odds', oddsBucketLabel);

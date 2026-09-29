@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-09-29 (cont'd 71) — Anchor-ratio mode: new "very easy" difficulty with exact, round-number scenarios
+**Files: claude/trainer.js**
+
+- User said the anchor-ratio drills felt inconsistent — it "jumps between
+  easy and less easy" — and asked for a series of really easy exercises
+  with simple numbers to internalize the ratio↔% mapping itself.
+- **Root cause:** the existing "round numbers" scale setting only rounded
+  pot/call to the nearest 100 — it never constrained the actual pot:call
+  *ratio*, so a "round" scenario could just as easily land near a clean
+  anchor (e.g. pot 2,000/call 1,000 → exactly 2:1) as land on a messy
+  in-between ratio needing real estimation (e.g. pot 4,700/call 3,800).
+  Both looked equally "round" to the setting, but felt wildly different in
+  difficulty to practice.
+- Added a new `diff` setting to anchor mode ("קל מאוד" vs "רגיל", defaulting
+  to the new easy tier) with its own generator (`genIntroAnchorScenario`):
+  picks a target anchor (respecting adaptive weighting when on), converts
+  it to an exact call/pot fraction (`ANCHOR_FRACS`, e.g. 4:1 → 1/4), then
+  builds pot/call as clean multiples of a friendly base (100/200/500/1000)
+  — so the numbers shown always land *exactly* on one of the ten anchor
+  ratios, with zero rounding/estimation required. The existing "רגיל"
+  behavior (the old estimate-and-round-to-nearest logic) is unchanged and
+  stays available as a harder second step. The "גודל צ'יפים" (round/real)
+  setting is dimmed and disabled while the easy tier is selected, since it
+  doesn't apply there.
+- Verified headless across ~10 generated scenarios in the new mode: every
+  pot/call pair reduces to an exact listed anchor ratio (e.g. 18,000/3,000
+  = 6:1, 200/100 = 2:1, 2,000/2,000 = 1:1, 3,000/600 = 5:1), no console
+  errors.
+
 ## 2026-09-29 (cont'd 70) — Bug: seat action order in the pot-trainer table jumped randomly instead of moving around the table
 **Files: claude/trainer.js**
 
