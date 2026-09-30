@@ -138,6 +138,7 @@ const TRN_HTML = `
     <div class="trn-field">
       <div class="trn-field-label">גודל צ'יפים</div>
       <div class="trn-seg" id="trn-track-scale">
+        <button data-v="mini">התחלה — מספרים קטנים (5–400)</button>
         <button data-v="small" class="on">קטן (100–2,000)</button>
         <button data-v="big">גדול (500–15,000)</button>
       </div>
@@ -358,15 +359,17 @@ function trnInit(){
   const $ = id => document.getElementById(id);
 
   // ===== TRACK MODE =====
-  const trackCfg = { diff:'easy', pace:'manual', scale:'small', adaptive:'on' };
+  const trackCfg = { diff:'easy', pace:'manual', scale:'mini', adaptive:'on' };
   const TRACK_COMBOS = [
+    { scale:'mini',  diff:'easy' }, { scale:'mini',  diff:'hard' },
     { scale:'small', diff:'easy' }, { scale:'small', diff:'hard' },
     { scale:'big',   diff:'easy' }, { scale:'big',   diff:'hard' },
   ];
   function trackBucketKey(scale, diff){ return scale+'_'+diff; }
   function trackBucketLabel(key){
     const [scale,diff] = key.split('_');
-    return (scale==='big'?'צ׳יפים גדולים':'צ׳יפים קטנים')+' · '+(diff==='hard'?'מציאותי':'קל');
+    const scaleLbl = scale==='big' ? 'צ׳יפים גדולים' : scale==='mini' ? 'מספרים קטנים (התחלה)' : 'צ׳יפים קטנים';
+    return scaleLbl+' · '+(diff==='hard'?'מציאותי':'קל');
   }
   // When adaptive is on, pick the scale/diff combo for the NEXT hand by weakness
   // instead of using the manual seg buttons directly (the buttons still show
@@ -379,16 +382,21 @@ function trnInit(){
   }
 
   function buildHand(cfg){
+    // "mini" הוא שלב-התחלה מכוון: פחות שחקנים (2-3, לא עד 6) וגידול קופה מרוסן
+    // הרבה יותר (betPotFactor נמוך) — כדי שסכום הקופה המצטבר שצריך
+    // לחבר בראש יישאר בעשרות/מאות בודדות ולא יתפוצץ לאלפים תוך כמה פעולות.
     const scale = cfg.scale==='big'
-      ? { step:500, sbRange:[100,300], betMin:500 }
-      : { step:100, sbRange:[25,100], betMin:100 };
-    const numPlayers = 2 + Math.floor(Math.random()*5);
+      ? { step:500, sbRange:[100,300], sbStep:250, betMin:500, maxPlayers:6, betPotFactor:0.9, maxRaises:3 }
+      : cfg.scale==='mini'
+      ? { step:20,  sbRange:[5,20],    sbStep:5,   betMin:20,  maxPlayers:3, betPotFactor:0.5, maxRaises:2 }
+      : { step:100, sbRange:[25,100],  sbStep:50,  betMin:100, maxPlayers:6, betPotFactor:0.9, maxRaises:3 };
+    const numPlayers = 2 + Math.floor(Math.random()*(scale.maxPlayers-1));
     const names = shuffled(NAMES).slice(0, numPlayers);
     let pot = 0;
     const events = [];
     function push(name, kind, delta, levelAfter){ pot += delta; events.push({ name, kind, delta, levelAfter, potAfter: pot }); }
 
-    const sb = roundTo(scale.sbRange[0] + Math.random()*(scale.sbRange[1]-scale.sbRange[0]), scale.step/2 || 5);
+    const sb = roundTo(scale.sbRange[0] + Math.random()*(scale.sbRange[1]-scale.sbRange[0]), scale.sbStep);
     const bb = sb*2;
     push(names[0], 'blind', sb, sb);
     push(names[1], 'blind', bb, bb);
@@ -399,6 +407,11 @@ function trnInit(){
     streets.forEach((street, si)=>{
       if(active.length<2) return;
       events.push({street:true, name:street, isFirst: si===0});
+      // "עוגן" גודל ההימורים לסיבוב הזה הוא הקופה כפי שהייתה *בתחילת* הסיבוב,
+      // לא ה-pot המתעדכן תוך כדי — אחרת כל העלאה מגדילה את ה-pot, וההעלאה
+      // הבאה מחשבת את גודלה מתוך ה-pot שכבר תפח, מה שיוצר פיצוץ אקספוננציאלי
+      // תוך סיבוב הימורים אחד (וגרוע במיוחד עם כמה שחקנים שמעלים ברצף).
+      const potAtStreetStart = pot;
       let level = si===0 ? bb : 0;
       const contrib = {}; active.forEach(n=>contrib[n]=0);
       if(si===0){ contrib[names[0]]=sb; contrib[names[1]]=bb; }
@@ -407,24 +420,31 @@ function trnInit(){
       // whichever active seat comes first after the button.
       const startIdx = (si===0 ? 2 : 0) % active.length;
       const order = active.slice(startIdx).concat(active.slice(0, startIdx));
+      // תקרת ריי-רייזים לסיבוב: בלי זה, עם עד 6 שחקנים שכל אחד יכול להעלות
+      // מעל הקודם, הקופה יכולה עדיין לתפוח יותר מדי גם עם העוגן הקבוע.
+      let raisesThisStreet = 0;
+      const maxRaisesThisStreet = scale.maxRaises;
 
       function playerAction(name, isSecondPass){
         if(active.indexOf(name)===-1) return;
         const myContrib = contrib[name]||0;
         if(level===0){
           if(Math.random()<0.5){ push(name, 'check', 0, myContrib); return; }
-          const amt = roundTo(scale.betMin + Math.random()*(pot*0.9 + scale.betMin), scale.step);
+          const amt = roundTo(scale.betMin + Math.random()*(potAtStreetStart*scale.betPotFactor + scale.betMin), scale.step);
           level = amt; contrib[name]=amt;
           push(name, 'bet', amt, amt);
         } else if(myContrib < level){
           const r = Math.random();
+          const canRaise = raisesThisStreet < maxRaisesThisStreet;
           if(r<0.18 && !isSecondPass){ active = active.filter(n=>n!==name); push(name, 'fold', 0, myContrib); return; }
-          if(r<0.62 || isSecondPass){
+          if(r<0.62 || isSecondPass || !canRaise){
             const delta = level - myContrib; contrib[name]=level;
             push(name, 'call', delta, level);
           } else {
-            const to = roundTo(level*(1.8+Math.random()*1.4), scale.step);
+            const raiseBy = roundTo(scale.betMin + Math.random()*(potAtStreetStart*scale.betPotFactor + scale.betMin), scale.step);
+            const to = level + raiseBy;
             const delta = to - myContrib; contrib[name]=to; level = to;
+            raisesThisStreet++;
             push(name, 'raise', delta, to);
           }
         }

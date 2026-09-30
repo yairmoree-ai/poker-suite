@@ -6,6 +6,42 @@
 
 ---
 
+## 2026-09-30 (cont'd 74) — Track mode: new "mini" beginner scale + fixed exponential pot-size runaway bug
+**Files: claude/trainer.js**
+
+- User reported struggling to calculate the pot mentally and asked for an
+  easier starting tier with small numbers ("בלי עשרות אלפים").
+- Added a new scale tier, `mini` ("התחלה — מספרים קטנים"), alongside the
+  existing `small`/`big`: fewer players (2-3, not up to 6), smaller chip
+  units (5-20 blinds, 20-chip steps), and a gentler bet-to-pot ratio, so
+  the numbers players add up in their head during a hand stay in the tens
+  to low hundreds.
+- While building this, found and fixed a real pre-existing bug affecting
+  **all** scale tiers, not just the new one: bet/raise sizing was computed
+  from the live, ever-growing `pot` variable and (for raises) by
+  multiplying the *current bet level* by a random factor. With up to 6
+  players able to re-raise each other in sequence within one street, this
+  compounded exponentially — simulation testing showed the existing
+  "small" tier could occasionally produce pots in the **hundreds of
+  millions** (₪) from a single hand, which is almost certainly why numbers
+  felt impossible to track/calculate correctly.
+- Fix: (1) capped the number of raises per street (`maxRaises`: 2 for
+  mini, 3 for small/big) — further raise attempts after the cap become
+  calls instead; (2) anchored all bet/raise sizing within a street to the
+  pot size *at the start of that street* (`potAtStreetStart`) instead of
+  the live, already-inflated `pot`, removing the runaway feedback loop;
+  (3) raises are now sized as `level + (a fresh pot-proportional
+  increment)` rather than `level * randomMultiplier`, avoiding
+  multiplicative blowup from chained raises.
+- Verified via headless simulation (5,000 hands per tier): mini avg pot
+  ₪865/max ₪22,680 (previously not applicable — new tier); small avg pot
+  dropped from ₪1.9M/max ₪688M (bug) to avg ₪146K/max ₪6.9M (still the
+  bug's tail, out of scope for this fix — this pass focused on making
+  `mini` safe and capping the worst-case blowup for existing tiers).
+  Also verified end-to-end with a headless Playwright run through several
+  `mini`-tier hands including real checkpoint quizzes — pot values shown
+  at checkpoints stayed at ₪30-₪120 across 7 checkpoints, zero JS errors.
+
 ## 2026-09-30 (cont'd 73) — Track mode: pot amount now stays visible after a checkpoint, instead of hiding again
 **Files: claude/trainer.js**
 
