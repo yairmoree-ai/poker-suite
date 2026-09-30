@@ -398,7 +398,7 @@ function trnInit(){
 
     streets.forEach((street, si)=>{
       if(active.length<2) return;
-      events.push({street:true, name:street});
+      events.push({street:true, name:street, isFirst: si===0});
       let level = si===0 ? bb : 0;
       const contrib = {}; active.forEach(n=>contrib[n]=0);
       if(si===0){ contrib[names[0]]=sb; contrib[names[1]]=bb; }
@@ -497,8 +497,14 @@ function trnInit(){
       $('trn-street-lbl').textContent = ev.name;
       Object.values(seatEls).forEach(el=>{
         el.classList.remove('trn-acting');
-        const bet = el.querySelector('.trn-seat-bet');
-        bet.setAttribute('data-trn-hidden',''); bet.textContent='';
+        // רק במעבר סטריט אמיתי (פלופ/טרן/ריבר) מנקים את הצ'יפים שהוצגו —
+        // הכסף "נבלע" לתוך הקופה הסמויה. במעבר הראשון (תחילת פרה-פלופ, מיד
+        // אחרי הבליינדים) אין שום סיבוב הימורים קודם שצריך "לפנות" — הצ'יפים
+        // שהוצגו הם הבליינדים עצמם, ועדיין רלוונטיים לסיבוב הנוכחי.
+        if(!ev.isFirst){
+          const bet = el.querySelector('.trn-seat-bet');
+          bet.setAttribute('data-trn-hidden',''); bet.textContent='';
+        }
       });
       s.ptr++; autoOrManual(); return;
     }

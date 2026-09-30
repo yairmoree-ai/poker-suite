@@ -6,6 +6,27 @@
 
 ---
 
+## 2026-09-30 (cont'd 72) — Bug: blind amounts vanished from the table right after being posted
+**Files: claude/trainer.js**
+
+- User reported that in the graphical-table track mode, after the small
+  and big blind chips appear on the table, pressing "הצג פעולה הבאה" (show
+  next action) made both amounts disappear instead of staying visible.
+- **Root cause:** `buildHand()` inserts a `street:true` marker event for
+  "פרה-פלופ" right after the two blind-post events, purely to set the
+  street label — but `advance()` treats *every* street marker the same
+  way: sweep all seats' displayed chip amounts (the correct behavior when
+  moving from one real betting round to the next, e.g. flop → turn, since
+  that money has genuinely moved into the hidden pot). Preflop's own
+  marker isn't a real transition — nothing has happened yet except posting
+  the blinds — so it was wiping the very chips it had just shown.
+- Fixed by tagging that specific marker (`isFirst: si===0`) and skipping
+  the chip-clearing step for it in `advance()`, while leaving the sweep
+  behavior for every later street unchanged.
+- Verified headless: after starting a hand, the SB/BB chips stay visible
+  through the preflop-marker step and correctly accumulate as later
+  players act, with zero console errors.
+
 ## 2026-09-29 (cont'd 71) — Anchor-ratio mode: new "very easy" difficulty with exact, round-number scenarios
 **Files: claude/trainer.js**
 
