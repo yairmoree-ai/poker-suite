@@ -161,7 +161,7 @@ const TRN_HTML = `
         <div class="trn-blinds" id="trn-blinds-lbl">—/—</div>
       </div>
       <div class="trn-table-oval">
-        <div class="trn-table-center">קופה<br>סמויה</div>
+        <div class="trn-table-center" id="trn-pot-center">קופה<br>סמויה</div>
         <div class="trn-seats" id="trn-seats"></div>
       </div>
       <button class="trn-tap-next" id="trn-tap-next" data-trn-hidden>הצג פעולה הבאה ›</button>
@@ -462,6 +462,9 @@ function trnInit(){
     renderSeats(hand.names);
     $('trn-blinds-lbl').textContent = fmt(hand.sb)+' / '+fmt(hand.bb);
     $('trn-street-lbl').textContent = 'פרה-פלופ';
+    // איפוס תצוגת הקופה במרכז השולחן — חוזרת ל"סמויה" ביד חדשה, גם אם
+    // ביד הקודמת היא נחשפה בצ'ק-פוינט (ראו submitCheckpoint)
+    $('trn-pot-center').innerHTML = 'קופה<br>סמויה';
     updateScorebar();
     advance();
   }
@@ -561,6 +564,10 @@ function trnInit(){
     const correct = cp._correct;
     const ok = !isNaN(val) && val === correct;
     cp.setAttribute('data-trn-hidden','');
+    // אחרי צ'ק-פוינט, משאירים את סכום הקופה האמיתי גלוי במרכז השולחן (במקום
+    // לחזור ל"קופה סמויה") — כדי שלא יהיה צורך לזכור אותו בעל פה עד היד הבאה.
+    // מתאפס בחזרה רק ביד חדשה (startTrackHand).
+    $('trn-pot-center').innerHTML = '<b class="trn-num" style="font-size:15px;color:var(--trn-gold-soft)">'+fmt(correct)+'</b><br>קופה';
     showFeedback(ok, correct, val, ()=>{ advance(); });
     registerResult(ok);
     if(session?.comboKey) recordStat('track', session.comboKey, ok);

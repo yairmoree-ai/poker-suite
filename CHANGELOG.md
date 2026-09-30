@@ -6,6 +6,25 @@
 
 ---
 
+## 2026-09-30 (cont'd 73) — Track mode: pot amount now stays visible after a checkpoint, instead of hiding again
+**Files: claude/trainer.js**
+
+- User asked for a memory aid: after each checkpoint quiz ("how much is in
+  the pot?"), leave the real number showing at the center of the table
+  instead of going back to the "קופה סמויה" placeholder — otherwise they
+  have to hold the just-revealed number in their head with nowhere to
+  glance back at it.
+- The table's center label (`#trn-pot-center`) was purely static text
+  before this — it never actually displayed a number. Now `submitCheckpoint()`
+  fills it in with the real pot as soon as the checkpoint is answered (right
+  or wrong), and it stays there through the rest of the hand. `startTrackHand()`
+  resets it back to "קופה סמויה" when a new hand begins, so it's only ever
+  visible for streets that already had their checkpoint revealed.
+- Verified headless across several hands: the center stays hidden until the
+  first checkpoint, shows the correct pot immediately on submit, survives
+  clicking past the feedback card and continuing the hand, and resets
+  cleanly on the next hand. No console errors.
+
 ## 2026-09-30 (cont'd 72) — Bug: blind amounts vanished from the table right after being posted
 **Files: claude/trainer.js**
 
