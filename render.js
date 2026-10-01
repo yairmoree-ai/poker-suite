@@ -1698,7 +1698,10 @@ function captureChipDefPhoto(id){
 // נפח הדאטה שנשלח ל-Anthropic — כל תמונה (גם קטנה) נושאת תקורת-עיבוד קבועה
 // משל עצמה, אז פחות תמונות = תגובה מהירה יותר.
 async function _buildChipRefComposite(defs){
-  const cell = 130, labelH = 22, cols = Math.min(3, defs.length), rows = Math.ceil(defs.length/cols);
+  // תאים גדולים מספיק (220px) כדי שגווני צבע ודוגמת-הדפס יישארו ברורים אחרי
+  // הדחיסה, ותווית גדולה/קריאה מתחת לכל צ'יפ — תאים קטנים מדי (היה 130px)
+  // טשטשו פרטים ובלבלו בין סוגי צ'יפים דומים (לדוג' לבן-אדום מול שחור)
+  const cell = 220, labelH = 30, cols = Math.min(3, defs.length), rows = Math.ceil(defs.length/cols);
   const canvas = document.createElement('canvas');
   canvas.width = cols*cell;
   canvas.height = rows*(cell+labelH);
@@ -1711,18 +1714,19 @@ async function _buildChipRefComposite(defs){
     const col = i%cols, row = Math.floor(i/cols);
     const x = col*cell, y = row*(cell+labelH);
     if(img){
-      const scale = Math.min((cell-8)/img.width, (cell-8)/img.height);
+      const scale = Math.min((cell-12)/img.width, (cell-12)/img.height);
       const dw = img.width*scale, dh = img.height*scale;
       ctx.drawImage(img, x+(cell-dw)/2, y+(cell-dh)/2, dw, dh);
     }
-    ctx.strokeStyle = '#999999';
-    ctx.strokeRect(x+1, y+1, cell-2, cell-2);
+    ctx.strokeStyle = '#666666';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x+2, y+2, cell-4, cell-4);
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 13px sans-serif';
+    ctx.font = 'bold 20px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('#'+(i+1)+' '+d.name, x+cell/2, y+cell+16);
+    ctx.fillText('#'+(i+1)+' '+d.name, x+cell/2, y+cell+22);
   }
-  return canvas.toDataURL('image/jpeg', 0.82);
+  return canvas.toDataURL('image/jpeg', 0.88);
 }
 async function countPotChips(){
   const defs = (S.chipDefs||[]).filter(d=>d.image && d.name && d.value>0);
