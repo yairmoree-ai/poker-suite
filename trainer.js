@@ -453,14 +453,40 @@ function trnInit(){
       active.slice().forEach(n=>{ if((contrib[n]||0) < level) playerAction(n,true); });
     });
 
-    const actionIdxs = [];
-    events.forEach((e,i)=>{ if(!e.street) actionIdxs.push(i); });
-    const cpCount = Math.min(4, Math.max(2, Math.floor(actionIdxs.length/3)));
-    const chosen = new Set();
-    while(chosen.size < cpCount && chosen.size < actionIdxs.length-1){
-      chosen.add(actionIdxs[1 + Math.floor(Math.random()*(actionIdxs.length-1))]);
-    }
-    chosen.forEach(idx=> events[idx].checkpoint = true);
+    // ── צ'ק-פוינטים ──
+    // מבנה (כמו חשיבה בזמן אמת): (1) תמיד צ'ק-פוינט בסיום כל סיבוב הימורים
+    // — מיד אחרי הפעולה האחרונה של הסיבוב, לפני שהצ'יפים נגרפים לקופה;
+    // (2) בנוסף, צ'ק-פוינט אקראי אחד (ולפעמים שני) *באמצע* הסיבוב.
+    // הבליינדים (לפני סמן הסטריט הראשון) אף פעם לא מועמדים לצ'ק-פוינט.
+    const rounds = [];
+    let curRound = null;
+    events.forEach((e,i)=>{
+      if(e.street){ curRound = { actions:[] }; rounds.push(curRound); }
+      else if(curRound){ curRound.actions.push(i); }
+    });
+    rounds.forEach(r=>{
+      if(!r.actions.length) return;
+      const lastIdx = r.actions[r.actions.length-1];
+      events[lastIdx].checkpoint = 'end';
+      // מועמדים לצ'ק-פוינט אמצע-סיבוב: לא שתי הפעולות האחרונות (כדי שלא
+      // יבוא צ'ק-פוינט כמעט צמוד לצ'ק-פוינט הסיום), והעדפה לפעולות שמשנות
+      // את הקופה (bet/call/raise) ולא check/fold.
+      const early = r.actions.slice(0, -2);
+      const moving = early.filter(i=> events[i].kind!=='check' && events[i].kind!=='fold');
+      const pool = moving.length ? moving : early;
+      if(!pool.length) return;
+      if(Math.random() < 0.6){
+        const first = pool[Math.floor(Math.random()*pool.length)];
+        events[first].checkpoint = 'mid';
+        // סיבוב ארוך (5+ פעולות מועמדות) — לפעמים גם צ'ק-פוינט שני, לא צמוד לראשון
+        if(early.length>=5 && Math.random()<0.35){
+          const rest = pool.filter(i=> Math.abs(i-first)>1);
+          if(rest.length){
+            events[rest[Math.floor(Math.random()*rest.length)]].checkpoint = 'mid';
+          }
+        }
+      }
+    });
     return { events, names, sb, bb };
   }
 
@@ -542,14 +568,25 @@ function trnInit(){
         seat.classList.add('trn-folded');
         tagEl.removeAttribute('data-trn-hidden');
       } else if(ev.kind!=='check'){
-        betEl.textContent = trackCfg.diff==='easy' ? '+'+fmt(ev.delta) : fmt(ev.levelAfter);
+        // ev.levelAfter הוא תמיד סך ההשקעה המצטברת של השחקן הזה בסיבוב הנוכחי
+        // (לא רק הפעולה האחרונה) — זה מה שצריך להציג ולסכום כדי לקבל את הקופה
+        // הנכונה. אבל להציג רק את זה עם "+" מטעה: אם שחקן כבר הימר (למשל
+        // ₪50) ואז משלים אחרי 3-בט ל-₪150, התג "קופץ" ל-"+₪150" — ונראה
+        // כאילו הוא הוסיף עוד 150 חדשים, לא שזה הסכום הכולל שלו. כדי שלא
+        // יהיה צורך "לנחש" אם המספר הוא תוספת או סה"כ, מציגים את שניהם
+        // יחד: הסכום הכולל (השדה שצריך לסכם), ובסוגריים כמה בדיוק נוסף
+        // עכשיו (easy בלבד — hard נשאר בלי רמז, לאתגר גבוה יותר).
+        betEl.textContent = trackCfg.diff==='easy'
+          ? fmt(ev.levelAfter) + ' (+' + fmt(ev.delta) + ')'
+          : fmt(ev.levelAfter);
         betEl.removeAttribute('data-trn-hidden');
       }
     }
 
-    const isCheckpoint = !!ev.checkpoint;
+    // ev.checkpoint: 'end' (סיום סיבוב הימורים) | 'mid' (אקראי באמצע סיבוב) | undefined
+    const cpType = ev.checkpoint;
     s.ptr++;
-    if(isCheckpoint){ setTimeout(()=> showCheckpoint(ev.potAfter), trackCfg.pace==='manual'?200:400); }
+    if(cpType){ setTimeout(()=> showCheckpoint(ev.potAfter, cpType), trackCfg.pace==='manual'?200:400); }
     else autoOrManual();
   }
 
@@ -564,14 +601,15 @@ function trnInit(){
     }
   }
 
-  function showCheckpoint(correctPot){
+  function showCheckpoint(correctPot, cpType){
     $('trn-tap-next').setAttribute('data-trn-hidden','');
     const cp = $('trn-checkpoint');
     cp.removeAttribute('data-trn-hidden');
-    $('trn-cp-question').textContent = 'כמה יש בקופה כרגע?';
+    $('trn-cp-question').textContent = cpType==='end' ? 'כמה יש בקופה בסיום הסיבוב?' : 'כמה יש בקופה כרגע?';
     const input = $('trn-cp-input');
-    input.value=''; input.focus();
+    input.value=''; input.placeholder='₪'; input.focus();
     cp._correct = correctPot;
+    cp._type = cpType;
     $('trn-cp-timerwrap').setAttribute('data-trn-hidden','');
     $('trn-cp-submit').onclick = ()=> submitCheckpoint();
     input.onkeydown = (e)=>{ if(e.key==='Enter') submitCheckpoint(); };
@@ -586,8 +624,11 @@ function trnInit(){
     cp.setAttribute('data-trn-hidden','');
     // אחרי צ'ק-פוינט, משאירים את סכום הקופה האמיתי גלוי במרכז השולחן (במקום
     // לחזור ל"קופה סמויה") — כדי שלא יהיה צורך לזכור אותו בעל פה עד היד הבאה.
-    // מתאפס בחזרה רק ביד חדשה (startTrackHand).
-    $('trn-pot-center').innerHTML = '<b class="trn-num" style="font-size:15px;color:var(--trn-gold-soft)">'+fmt(correct)+'</b><br>קופה';
+    // מתאפס בחזרה רק ביד חדשה (startTrackHand). אחרי צ'ק-פוינט *באמצע* סיבוב
+    // הסכום הוא נכון רק לרגע הבדיקה (עוד פעולות יבואו אחריו), ולכן התווית
+    // אומרת זאת במפורש — כדי שלא יתפרש כקופה העדכנית.
+    const centerLbl = cp._type==='mid' ? 'קופה בבדיקה האחרונה' : 'קופה';
+    $('trn-pot-center').innerHTML = '<b class="trn-num" style="font-size:15px;color:var(--trn-gold-soft)">'+fmt(correct)+'</b><br>'+centerLbl;
     showFeedback(ok, correct, val, ()=>{ advance(); });
     registerResult(ok);
     if(session?.comboKey) recordStat('track', session.comboKey, ok);
@@ -658,7 +699,7 @@ function trnInit(){
     if(oddsCfg.adaptive==='on'){
       // Pick a target %-bucket by weakness, then build a pot/call pair whose
       // real percentage lands inside that bucket.
-      const weights = ODDS_BUCKETS.map(upper=> weaknessWeight(trnStats.odds?.[(upper-10)+'-'+upper]));
+      const weights = ODDS_BUCKETS.map(upper=>weaknessWeight(trnStats.odds?.[(upper-10)+'-'+upper]));
       const bIdx = weightedPick(weights);
       const upper = ODDS_BUCKETS[bIdx], lower = upper-10;
       const targetPct = lower + Math.random()*10;
