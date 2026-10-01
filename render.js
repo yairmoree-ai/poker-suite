@@ -1518,24 +1518,45 @@ function hudStat(label, value, color, desc){
     '</div>';
 }
 
+// פותח בורר-קובץ/מצלמה בצורה אמינה: מצרף את ה-<input> ל-DOM (מוסתר) לפני
+// הקליק ומסיר אותו אחרי. אלמנט <input type=file> "תלוש" (שלא מחובר ל-DOM)
+// עובד בד"כ בפעם הראשונה, אבל בספארי/PWA ב-iOS יש באג ידוע שבו צילומים
+// חוזרים באותו טעינת-עמוד נכשלים אחר-כך בשקט (NotFoundError) עד שעושים
+// רענון לעמוד — בדיוק התופעה של "צריך לצאת ולהיכנס מחדש כדי לצלם שוב".
+function _openCameraInput(onFile){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px';
+  const cleanup = ()=>{ try{ input.remove(); }catch(e){} };
+  input.onchange = async ()=>{
+    const file = input.files && input.files[0];
+    cleanup();
+    if(!file) return;
+    try{ await onFile(file); }catch(e){ console.error(e); }
+  };
+  document.body.appendChild(input);
+  input.click();
+  // גיבוי: אם המשתמש ביטל (לא נבחר קובץ, onchange לא נורה), ננקה בכל זאת
+  window.addEventListener('focus', function onFocusBack(){
+    window.removeEventListener('focus', onFocusBack);
+    setTimeout(()=>{ if(!input.files || !input.files[0]) cleanup(); }, 1000);
+  }, {once:true});
+}
 async function openCameraForCards(target){
   if(!getGsUrl()){ notify('הגדר Google Sheets URL קודם'); return; }
   requireSuperAdmin(()=>_openCameraForCardsInner(target));
 }
 async function _openCameraForCardsInner(target){
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.capture = 'environment';
-  input.onchange = async ()=>{
-    if(!input.files[0]) return;
+  _openCameraInput(async (file)=>{
     notify('🔍 מזהה קלפים...');
     try {
       const base64 = await new Promise((res,rej)=>{
         const r = new FileReader();
         r.onload = ()=>res(r.result.split(',')[1]);
         r.onerror = rej;
-        r.readAsDataURL(input.files[0]);
+        r.readAsDataURL(file);
       });
 
       const prompt = target==='board'
@@ -1587,8 +1608,7 @@ async function _openCameraForCardsInner(target){
       setTimeout(()=>errDiv.remove(), 8000);
       notify('שגיאה בזיהוי');
     }
-  };
-  input.click();
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1662,38 +1682,65 @@ function _resizeImageDataUrl(dataUrl, maxDim, quality){
   });
 }
 function captureChipDefPhoto(id){
-  const input = document.createElement('input');
-  input.type='file'; input.accept='image/*'; input.capture='environment';
-  input.onchange = async ()=>{
-    if(!input.files[0]) return;
+  _openCameraInput(async (file)=>{
     const rawUrl = await new Promise((res,rej)=>{
-      const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(input.files[0]);
+      const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);
     });
-    const dataUrl = await _resizeImageDataUrl(rawUrl, 700, 0.75);
+    // 480px מספיק להבחין בצבע/דוגמה של צ'יפ — ממילא התמונה עוד תוקטן לתמונת
+    // התג הקטנה ולתמונת-הקולאז' המאוחדת שנשלחת לספירה (ראו _buildChipRefComposite)
+    const dataUrl = await _resizeImageDataUrl(rawUrl, 480, 0.72);
     const d = (S.chipDefs||[]).find(x=>x.id===id);
     if(d){ d.image = dataUrl; persistChipDefs(); renderChipCounter(); }
-  };
-  input.click();
+  });
+}
+// מאחד את כל תמונות-הייחוס לתמונה אחת (קולאז' עם מספור+שם מתחת לכל צ'יפ),
+// במקום לשלוח N תמונות נפרדות. מקטין משמעותית גם את מספר התמונות וגם את
+// נפח הדאטה שנשלח ל-Anthropic — כל תמונה (גם קטנה) נושאת תקורת-עיבוד קבועה
+// משל עצמה, אז פחות תמונות = תגובה מהירה יותר.
+async function _buildChipRefComposite(defs){
+  const cell = 130, labelH = 22, cols = Math.min(3, defs.length), rows = Math.ceil(defs.length/cols);
+  const canvas = document.createElement('canvas');
+  canvas.width = cols*cell;
+  canvas.height = rows*(cell+labelH);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let i=0;i<defs.length;i++){
+    const d = defs[i];
+    const img = await new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=d.image; });
+    const col = i%cols, row = Math.floor(i/cols);
+    const x = col*cell, y = row*(cell+labelH);
+    if(img){
+      const scale = Math.min((cell-8)/img.width, (cell-8)/img.height);
+      const dw = img.width*scale, dh = img.height*scale;
+      ctx.drawImage(img, x+(cell-dw)/2, y+(cell-dh)/2, dw, dh);
+    }
+    ctx.strokeStyle = '#999999';
+    ctx.strokeRect(x+1, y+1, cell-2, cell-2);
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('#'+(i+1)+' '+d.name, x+cell/2, y+cell+16);
+  }
+  return canvas.toDataURL('image/jpeg', 0.82);
 }
 async function countPotChips(){
   const defs = (S.chipDefs||[]).filter(d=>d.image && d.name && d.value>0);
   if(!defs.length){ notify('הגדר לפחות סוג צ\'יפ אחד עם תמונה, שם וערך'); return; }
-  const input = document.createElement('input');
-  input.type='file'; input.accept='image/*'; input.capture='environment';
-  input.onchange = async ()=>{
-    if(!input.files[0]) return;
+  _openCameraInput(async (file)=>{
     const resultBox = document.getElementById('chip-count-result');
     if(resultBox) resultBox.innerHTML = '<div style="text-align:center;padding:10px;color:#8a8799;font-size:12px">🔍 סופר צ\'יפים...</div>';
     try{
       const rawPotUrl = await new Promise((res,rej)=>{
-        const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(input.files[0]);
+        const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);
       });
       const potDataUrl = await _resizeImageDataUrl(rawPotUrl, 1000, 0.78); // תמונת הקופה קצת יותר גדולה — יש בה יותר פרטים לספור
       const potImage = potDataUrl.split(',')[1];
-      const refs = defs.map(d=>({name:d.name, value:d.value, image:d.image.split(',')[1]}));
+      const refsImage = (await _buildChipRefComposite(defs)).split(',')[1];
+      const refsMeta = defs.map((d,i)=>({idx:i+1, name:d.name, value:d.value}));
       const resp = await fetch(getGsUrl(), {
         method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ action:'count_chips', refs, image: potImage })
+        body: JSON.stringify({ action:'count_chips', refsMeta, refsImage, image: potImage })
       });
       const rawText = await resp.text();
       let data;
@@ -1709,8 +1756,7 @@ async function countPotChips(){
       const errMsg = e.message||String(e);
       if(resultBox) resultBox.innerHTML = '<div style="text-align:center;padding:10px;color:#e07b6a;font-size:11px;direction:ltr;word-break:break-all">שגיאה: '+errMsg+'</div>';
     }
-  };
-  input.click();
+  });
 }
 function renderChipCountResult(defs, counts){
   const resultBox = document.getElementById('chip-count-result');
