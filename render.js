@@ -1641,14 +1641,35 @@ function removeChipDef(id){
   persistChipDefs();
   renderChipCounter();
 }
+// מקטין/דוחס תמונה בצד הלקוח לפני שליחה — מאיץ מאוד את הספירה (פחות דאטה להעלות/לעבד)
+function _resizeImageDataUrl(dataUrl, maxDim, quality){
+  return new Promise((res)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      let w = img.width, h = img.height;
+      if(w>maxDim || h>maxDim){
+        if(w>=h){ h = Math.round(h*maxDim/w); w = maxDim; }
+        else { w = Math.round(w*maxDim/h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      res(canvas.toDataURL('image/jpeg', quality||0.72));
+    };
+    img.onerror = ()=>res(dataUrl); // נכשל? נשלח את המקור כגיבוי
+    img.src = dataUrl;
+  });
+}
 function captureChipDefPhoto(id){
   const input = document.createElement('input');
   input.type='file'; input.accept='image/*'; input.capture='environment';
   input.onchange = async ()=>{
     if(!input.files[0]) return;
-    const dataUrl = await new Promise((res,rej)=>{
+    const rawUrl = await new Promise((res,rej)=>{
       const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(input.files[0]);
     });
+    const dataUrl = await _resizeImageDataUrl(rawUrl, 700, 0.75);
     const d = (S.chipDefs||[]).find(x=>x.id===id);
     if(d){ d.image = dataUrl; persistChipDefs(); renderChipCounter(); }
   };
@@ -1664,9 +1685,11 @@ async function countPotChips(){
     const resultBox = document.getElementById('chip-count-result');
     if(resultBox) resultBox.innerHTML = '<div style="text-align:center;padding:10px;color:#8a8799;font-size:12px">🔍 סופר צ\'יפים...</div>';
     try{
-      const potImage = await new Promise((res,rej)=>{
-        const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(input.files[0]);
+      const rawPotUrl = await new Promise((res,rej)=>{
+        const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(input.files[0]);
       });
+      const potDataUrl = await _resizeImageDataUrl(rawPotUrl, 1000, 0.78); // תמונת הקופה קצת יותר גדולה — יש בה יותר פרטים לספור
+      const potImage = potDataUrl.split(',')[1];
       const refs = defs.map(d=>({name:d.name, value:d.value, image:d.image.split(',')[1]}));
       const resp = await fetch(getGsUrl(), {
         method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain'},
