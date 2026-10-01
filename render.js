@@ -1695,7 +1695,14 @@ async function countPotChips(){
         method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain'},
         body: JSON.stringify({ action:'count_chips', refs, image: potImage })
       });
-      const data = JSON.parse(await resp.text());
+      const rawText = await resp.text();
+      let data;
+      try{ data = JSON.parse(rawText); }
+      catch(parseErr){
+        // השרת החזיר משהו שהוא לא JSON (לרוב עמוד HTML של גוגל) — נציג התחלה
+        // של התשובה הגולמית כדי שאפשר יהיה לאבחן בלי להיכנס ל-Apps Script
+        throw new Error('תשובה לא תקינה מהשרת (לא JSON): ' + rawText.slice(0,160));
+      }
       if(!data.ok) throw new Error(data.error||'שגיאה לא ידועה');
       renderChipCountResult(defs, data.counts||[]);
     }catch(e){
