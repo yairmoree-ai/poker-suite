@@ -6,6 +6,74 @@
 
 ---
 
+## 2026-10-01 (cont'd) — פריסה: הוראות עדכון לריפו ול-Apps Script
+**Files: אין שינוי קוד — תיעוד תהליך פריסה בלבד**
+
+- לאחר שהתכונה (ראו entry למעלה) נבנתה ואומתה, הוסברו למשתמש שני ערוצי
+  הפריסה הנפרדים: (1) שלושת קבצי האתר (`state.js`, `render.js`,
+  `index.html`) — מוחלפים בתיקיית ה-GitSync הרגילה ונדחפים אוטומטית
+  ל-GitHub Pages, בלי פעולה נוספת; (2) `poker-google-script.js` — **לא**
+  חלק מ-GitSync, דורש הדבקה ידנית של הקוד המעודכן במקום הקוד הקיים
+  ב-script.google.com ו-Deploy מחדש.
+- הודגשה נקודה קריטית: בעת ה-Deploy מחדש חובה לעדכן את ה-deployment
+  **הקיים** (לא ליצור Web App URL חדש) — אחרת `getGsUrl()` באפליקציה ימשיך
+  להצביע לכתובת הישנה והלא-מעודכנת, מה שהיה שובר לא רק את תכונת ספירת
+  הצ'יפים החדשה אלא גם את זיהוי הקלפים הקיים שתלוי באותו endpoint.
+- סטטוס: הוראות נמסרו למשתמש; הפריסה בפועל (העלאת הקבצים + Deploy
+  ב-Apps Script) באחריות המשתמש ומחוץ לסשן הזה.
+
+## 2026-09-30 (cont'd 76) — Track mode: 'easy' chip badge now shows both the running total and what was just added
+**Files: claude/trainer.js**
+
+- Follow-up to cont'd 75: after that fix, the badge in 'easy' mode showed
+  only the cumulative total with a "+" prefix (e.g. a player who'd bet ₪50
+  then completed to ₪150 after facing a 3-bet would suddenly show
+  "+₪150"). User pointed out this is genuinely ambiguous either way — you
+  either have to remember what they'd already put in and mentally work out
+  what they just added, or trust that a "+" number is secretly a total and
+  not a fresh addition. Neither is obviously easier, and the "+" actively
+  implies "freshly added," which the cumulative total is not.
+- Fix: 'easy' mode badges now show both pieces explicitly, so nothing needs
+  to be inferred — e.g. `₪150 (+₪100)`: the total (what to sum for the
+  pot) and, in parentheses, exactly how much this specific action added.
+  'hard' mode is unchanged (still just the bare total, no hints — that's
+  its whole point).
+- Verified: `node --check` passes; headless Playwright re-run of the
+  same 21-checkpoint preflop-sum-matches-pot test from cont'd 75 (updated
+  to parse the new two-number format) still passes 21/21 with zero JS
+  errors — confirms the richer display didn't reintroduce the undercount
+  bug.
+
+## 2026-09-30 (cont'd 75) — Track mode: fixed a real bug where a seat's chip badge showed only its last action, undercounting the pot
+**Files: claude/trainer.js**
+
+- User hit a checkpoint where the visible seat chips (60+60+40=160) summed to
+  less than the real pot (180) and asked "באג?" — screenshot showed a 2-seat
+  discrepancy of exactly one blind's worth.
+- Root cause confirmed: in 'easy' difficulty, each seat's chip badge showed
+  `ev.delta` — only the amount added by that player's *latest* action. If a
+  player acted twice in the same street (e.g. posted a blind, then later
+  called a raise), the badge overwrote to show only the second action,
+  silently dropping the earlier contribution from what's visible on the
+  table — even though it was correctly still counted in the real pot. A
+  player summing what they currently see on the table (the natural way to
+  play this) would systematically undercount whenever any seat re-acted.
+- Fix: seat badges in 'easy' mode now show `ev.levelAfter` (that player's
+  running cumulative contribution *within the current street*) instead of
+  the raw per-action delta — same value 'hard' mode already used correctly,
+  just with the "+" prefix kept for the easy-mode framing. No new state
+  needed; `ev.levelAfter` was already tracking this correctly in
+  `buildHand()`, only the display was wrong.
+- Note: pot amounts still accumulate *across* streets normally (chips are
+  swept into the hidden pot at each real street transition, per existing
+  design) — that memory challenge is intentional, not part of this bug. This
+  fix only affects same-street, same-seat re-actions.
+- Verified via headless Playwright: 23 checkpoints hit during the very
+  first street (no cross-street sweep possible) across 2-6 player hands
+  in 'small' scale, 'easy' diff — visible on-table sum matched the real
+  pot in all 23, versus systematic mismatches before the fix. Zero JS
+  errors.
+
 ## 2026-09-30 (cont'd 74) — Track mode: new "mini" beginner scale + fixed exponential pot-size runaway bug
 **Files: claude/trainer.js**
 
