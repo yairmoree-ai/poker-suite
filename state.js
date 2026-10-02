@@ -391,6 +391,63 @@ function totalChips(){
   return totalEntries() * 50000;
 }
 
+// ===== Leaderboard =====
+// נוסחה שנקבעה יחד עם המשתמש (ראו שיחה): נקודות = sqrt(כניסות-המשחק ×
+// עלות-כניסה) / מקום-סיום — בהשראת הנוסחה הרשמית של ClubGG (אומתה מול
+// צילום מסך מהאפליקציה). "כניסות" = totalEntries של הטורניר (buyins+
+// rebuys), לא מספר-שחקנים — כי כל rebuy הוא סיכון עצמאי אמיתי (סטאק חדש,
+// תרומה מלאה לקופה), החלטה מודעת אחרי דיון על היתרונות/חסרונות של שתי
+// הגישות. buyinCost נכלל בפועל בשורש (לא רק entries לבד) כדי שהנוסחה תהיה
+// נכונה גם למשתמשים אחרים שמנהלים טורנירים עם buy-in משתנה בין משחקים —
+// אצל המשתמש הראשון buy-in קבוע (50 בכל משחק), ולכן זה היה בעבר מכפיל-קבוע
+// זהה על כל הנקודות (לא משנה שום דירוג יחסי), אבל הושמט בטעות בגרסה
+// הראשונה של הפונקציה; זו לא הייתה החלטה מודעת. תוקן כדי שהנוסחה תהיה
+// נכונה כללית, לא רק "נכונה במקרה" בגלל buy-in קבוע אצל משתמש ספציפי.
+// טיברייקר: רווח כספי מצטבר (won - spent), כי הנתון כבר קיים בלי חישוב
+// נוסף.
+//
+// דורש ש-t.totalEntries, t.buyinCost, ו-t.finishOrder (עם place/pid/rebuy)
+// יהיו תקינים — כולם כבר נשמרים על ידי saveTournament(), אין צורך בהזנה
+// נוספת.
+//
+// תיקו-בניקוד (f.tieGroup): כשמסמנים שני שחקנים (או יותר) כתיקו דרך עורך
+// סדר-הסיום (toggleTiePlaces ב-ui.js), הם עדיין שומרים מקומות נפרדים
+// (place=1, place=2...) — זה נשאר כי הפרס (t.place1/place2) עדיין מקושר
+// למקום הבודד, ואפשר לקבוע אותו ידנית שווה דרך place1Override/
+// place2Override הקיימים אם רוצים חלוקה כספית שווה, בלי לגעת בזה כאן.
+// אבל *הניקוד* של שניהם מחושב כממוצע-הניקוד על פני כל המקומות בקבוצת-
+// התיקו (לא ממוצע-המקום — 1/1 ו-1/2 ממוצעים ל-0.75, לא ל-1/1.5≈0.667 —
+// זו המוסכמה הסטנדרטית לתיקו-משותף בספורט: ממצעים ניקוד, לא דירוג).
+function computeLeaderboard(){
+  const stats = {}; // pid -> {pid,name,points,nights,wins,profit}
+  (S.tournLog||[]).forEach(t=>{
+    const entries = t.totalEntries||0;
+    const buyin = t.buyinCost||0;
+    if(entries<=0 || buyin<=0 || !(t.finishOrder||[]).length) return;
+    const sq = Math.sqrt(entries * buyin);
+    const prizeByPlace = {1:t.place1||0, 2:t.place2||0, 3:t.place3||0, 4:t.place4||0};
+    t.finishOrder.forEach(f=>{
+      if(!f.pid || !f.place) return;
+      if(!stats[f.pid]) stats[f.pid] = {pid:f.pid, name: pName(f.pid)||f.name||'?', points:0, nights:0, wins:0, profit:0};
+      const st = stats[f.pid];
+      let pointsForPlace;
+      if(f.tieGroup && f.tieGroup.length>1){
+        const avgInvPlace = f.tieGroup.reduce((s,p)=>s+1/p,0) / f.tieGroup.length;
+        pointsForPlace = sq * avgInvPlace;
+      } else {
+        pointsForPlace = sq / f.place;
+      }
+      st.points += pointsForPlace;
+      st.nights += 1;
+      if(f.place===1) st.wins += 1;
+      const spent = buyin * (1 + (f.rebuy||0));
+      const won = prizeByPlace[f.place] || 0;
+      st.profit += (won - spent);
+    });
+  });
+  return Object.values(stats).sort((a,b)=> b.points-a.points || b.profit-a.profit);
+}
+
 function calcPaidEntries(){
   const totalR = totalRebuys();
   const free = calcFreeRebuys();

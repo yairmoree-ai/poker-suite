@@ -5,8 +5,14 @@ const _MC_RANK_VAL = Object.fromEntries(_MC_RANKS.map((r,i)=>[r,i]));
 
 function _fullDeck(){ const d=[]; _MC_RANKS.forEach(r=>_MC_SUITS.forEach(s=>d.push({rank:r,suit:s}))); return d; }
 function _cardKey(c){ return c.rank+c.suit; }
+// ממיר תו נוטציה בודד ('T' מתוך מחרוזות range כמו "ATs") לדרגת הקלף האמיתית ('10')
+// שבה משתמשים evaluateHand ושאר האפליקציה. קריטי: בלעדיו, קלפי עשר שנוצרים בתוך
+// סימולציות Monte Carlo (מטווחים) מוערכים כ"חסרי ערך" (rank 0) על ידי evaluateHand,
+// כי היא לא מזהה 'T' — רק '10'.
 function _notationRankToCard(r){ return r==='T' ? '10' : r; }
 function _handRankMC(cards){
+  // מחזיר ערך השוואה (מספר גדול = יד טובה יותר)
+  // שימוש ב-evaluateHand שכבר קיים ב-game.js
   try {
     const h = evaluateHand(cards);
     return h.rank * 1e10 + (h.tb||[]).reduce((a,v,i)=>a+v*Math.pow(15,4-i),0);
@@ -14,6 +20,9 @@ function _handRankMC(cards){
 }
 
 function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=8000){
+  // holeCards: [{rank,suit},{rank,suit}]
+  // boardCards: קלפי בורד קיימים (0-4)
+  // numOpponents: מספר יריבים פעילים
   if(!holeCards || holeCards.filter(Boolean).length < 2) return null;
 
   const known = [...holeCards, ...boardCards].filter(Boolean);
@@ -21,22 +30,26 @@ function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=8000){
   const deck = _fullDeck().filter(c=>!knownKeys.has(_cardKey(c)));
   const baseBoard = boardCards.filter(Boolean);
   const boardNeeded = 5 - baseBoard.length;
-  const need = boardNeeded + numOpponents*2;
+  const need = boardNeeded + numOpponents*2; // כמה קלפים באמת נשלפים בכל איטרציה
 
   let wins=0, ties=0;
 
   for(let i=0; i<iterations; i++){
+    // ערבוב חלקי — רק את הקלפים שנשלפים בפועל (מסוף החפיסה), במקום ערבוב מלא
     for(let j=deck.length-1; j>=deck.length-need; j--){
       const k=Math.floor(Math.random()*(j+1));
       [deck[j],deck[k]]=[deck[k],deck[j]];
     }
     let idx=deck.length-1;
+    // השלמת בורד
     const runBoard = baseBoard.slice();
     for(let b=0;b<boardNeeded;b++) runBoard.push(deck[idx--]);
 
+    // קלפים ליריבים
     const oppHands=[];
     for(let o=0;o<numOpponents;o++) oppHands.push([deck[idx--],deck[idx--]]);
 
+    // חישוב ידיים
     const myVal = _handRankMC([...holeCards,...runBoard]);
     let best = myVal, iWin=true, iTie=false;
     for(const oh of oppHands){
@@ -51,6 +64,13 @@ function monteCarloEquity(holeCards, boardCards, numOpponents, iterations=8000){
   return ((wins + ties*0.5) / iterations * 100);
 }
 
+// ── טווחי GTO/סולבר (_RANGES ופונקציות העזר) — עברו ל-ranges.js ──
+
+// Monte Carlo מאוחד: כל יריב יכול להיות "ידוע" (קלפים קבועים) או "עם טווח"
+// (מערך קומבינציות אפשריות; null = ללא הגבלה, קלף אקראי מהחפיסה). מטפל בהתנגשויות
+// בין קלפי יריבים שונים באותה איטרציה.
+// heroCombos (אופציונלי): אם holeCards ריק ו-heroCombos סופק — גם היד של השחקן
+// הפועל נדגמת מתוך טווח בכל איטרציה (חישוב "טווח מול טווח").
 function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLists, iterations=8000, heroCombos=null){
   const heroFixed = holeCards && holeCards.filter(Boolean).length === 2;
   if(!heroFixed && !(heroCombos && heroCombos.length)) return null;
@@ -65,6 +85,7 @@ function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLi
     guard++;
     const usedKeys = new Set(staticKeys);
 
+    // אם היד שלנו מגיעה מטווח — דוגמים אותה ראשונה בכל איטרציה
     let heroHand = heroFixed ? holeCards : null;
     if(!heroFixed){
       for(let attempt=0; attempt<25 && !heroHand; attempt++){
@@ -92,7 +113,7 @@ function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLi
           const cand = combos[Math.floor(Math.random()*combos.length)];
           if(cand && !usedKeys.has(_cardKey(cand[0])) && !usedKeys.has(_cardKey(cand[1]))) picked=cand;
         }
-        if(!picked){ bail=true; break; }
+        if(!picked){ bail=true; break; } // הטווח הזה "נחסם" לגמרי באיטרציה הזו — דלג ונסה שוב
       }
       rangedHands.push(picked);
       usedKeys.add(_cardKey(picked[0])); usedKeys.add(_cardKey(picked[1]));
@@ -124,6 +145,8 @@ function monteCarloEquityMulti(holeCards, boardCards, knownOppHands, oppCombosLi
   return ((wins + ties*0.5) / done * 100);
 }
 
+// Monte Carlo מול קלפי יריב/ים ידועים בפועל (שהוזנו על המושב) +
+// יריבים נוספים ללא קלפים ידועים (מוחלפים בידיים אקראיות)
 function monteCarloEquityVsKnown(holeCards, boardCards, knownOppHands, numRandomOpponents, iterations=8000){
   if(!holeCards || holeCards.filter(Boolean).length < 2) return null;
 
@@ -162,6 +185,11 @@ function monteCarloEquityVsKnown(holeCards, boardCards, knownOppHands, numRandom
   return ((wins + ties*0.5) / iterations * 100);
 }
 
+// מחשב עבור יד היסטורית (שמורה) — לכל שחקן שקלפיו ידועים (הוזנו בפועל, לא משנה מי),
+// ולכל סטריט שבו הוא עמד מול הימור בפועל — מה היה ה-pot, ה-call, ה-break-even וה-equity
+// שלו באותו רגע. לא תלוי בכלל אם המנהל/ת המחובר/ת נכח/ה באותה יד או ישב/ה בשולחן.
+// זו הערכה בדיעבד: טווח היריב מבוסס על העמדה+הפעולה שביצע ביד + התגית הנוכחית שלו
+// (לא בהכרח זהה למה שהיה ידוע בזמן אמת), אלא אם קלפיו ידועים בפועל (showdown).
 function computeHistoricalStreetOdds(h){
   const bbNum = parseFloat((h.blinds||'').split('/')[1]) || 0;
   const streetsOrder = ['פרה-פלופ','פלופ','טורן','ריבר'];
@@ -186,6 +214,7 @@ function computeHistoricalStreetOdds(h){
     });
     acts.sort((a,b)=>(a.idx??999)-(b.idx??999));
 
+    // הפוט לפני הסטריט הזה: בליינדים + כל מה שהושקע בסטריטים קודמים
     let potBefore = 0;
     (h.seats||[]).forEach(s=>{
       (s.actions||[]).forEach(a=>{
@@ -199,7 +228,7 @@ function computeHistoricalStreetOdds(h){
     const investedThisStreet = {};
     let lastBet = 0;
     const recordedSeatsThisStreet = new Set();
-    const actedSeatsThisStreet = new Set();
+    const actedSeatsThisStreet = new Set(); // מי כבר פעל בפועל בסטריט הזה עד כה (לא כולל בליינדים)
 
     for(const a of acts){
       const already = investedThisStreet[a.seatIdx]||0;
@@ -211,6 +240,8 @@ function computeHistoricalStreetOdds(h){
         if(callAmt > 0 && ['Call','Raise','3bet','4bet','All-in','Fold'].includes(a.type)){
           recordedSeatsThisStreet.add(a.seatIdx);
           const potNow = potBefore + Object.values(investedThisStreet).reduce((s,v)=>s+v,0);
+          // רק יריבים שכבר פעלו בפועל בסטריט הזה (לא כל מי שעדיין לא קיפל) —
+          // מי שתורו טרם הגיע לא נחשב "יריב עם טווח" באותו רגע
           const oppSeatsH = (h.seats||[]).filter(s=>s.playerId && s.seatIdx!==a.seatIdx && !folded.has(s.seatIdx) && actedSeatsThisStreet.has(s.seatIdx));
           if(oppSeatsH.length){
             const knownOppHands = oppSeatsH.filter(s=>(s.cards||[]).filter(Boolean).length===2).map(s=>s.cards.filter(Boolean));
@@ -253,11 +284,24 @@ function computeHistoricalStreetOdds(h){
 }
 
 // ── עורך טווח ידני per-player (גריד 13×13) ─────────────────────
-let _rangeEditPid = null;
-let _rangeEditSel = new Set();
+// נשמר ב-S.playerRanges[playerId], מתמיד עד שינוי ידני, דורס את הזיהוי האוטומטי
+// לאותו שחקן בלבד. _rangeEditPid/_rangeEditSel הם מצב זמן-ריצה של העורך בלבד.
+let _rangeEditPid = null;      // playerId שנערך כרגע (null = עורך סגור)
+let _rangeEditSel = new Set(); // בחירת הידיים הנוכחית בעורך (טרם נשמרה)
+// עוקב אחרי הערך האוטומטי האחרון שסונכרנו ממנו (מחרוזת), כדי לדעת אם מותר
+// לרענן בשקט בלי למחוק עריכה ידנית שהמשתמש כבר התחיל. null = לא במעקב-רענון
+// בכלל (יש טווח ידני שמור, או שאנחנו בתצוגת לימפים) — ראו _maybeRefreshAutoRangeEdit.
 let _rangeEditLastAutoStr = null;
+// אילו ידיים בבחירה הנוכחית הגיעו ספציפית מחלק ה-3bet/4bet (לא ה-call) של איחוד
+// טווח-ההמשך — לצורך צביעה שונה בגריד בלבד (הבחנה חזותית), לא משפיע על מה נבחר
+// בפועל. ריק כברירת מחדל, ותמיד ריק כשמקור הזרעה הוא טווח ידני (אין שם סיווג
+// לפי-קטגוריה כזה בכלל — טווח ידני הוא רשימה שטוחה).
 let _rangeEdit3betHands = new Set();
-let _rangeEditOriginal3bet = new Set();
+let _rangeEditOriginal3bet = new Set(); // גיבוי של _rangeEdit3betHands מרגע פתיחת העורך — כדי ש-'original' ישחזר נכון אחרי ביקור ב-'auto'/'limp'
+// true כשהטווח הנוכחי הגיע מאיחוד call∪3bet/4bet ידוע (ולכן יודעים בוודאות שכל
+// יד נבחרת שאינה ב-_rangeEdit3betHands היא ספציפית call, לא רק "לא ידוע") —
+// UTG/RFI רגיל, טווח ידני, ותצוגת לימפים לא נחשבים "הקשר איחוד" ונופלים לצביעה
+// לפי סוג-יד (זוג/סוטד) כברירת מחדל, כי שם אין בכלל הבחנה call-מול-3bet.
 const _UNION_ACTION_CATS = new Set(['call','facing-open','facing-3bet']);
 let _rangeEditUnionContext = false;
 let _rangeEditOriginalUnionContext = false;
@@ -267,6 +311,11 @@ const _GRID_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
 
 function _openRangeEditor(pid){
   _rangeEditPid = pid;
+  // נקודת פתיחה: הטווח הידני השמור אם קיים; אחרת הטווח האוטומטי של המושב הפתוח
+  // (עמדה/פעולה/עומק/סוג שחקן) — כך שהעריכה היא כוונון-עדין ולא בחירה מאפס.
+  // _rangeEditOriginal מתעד את זה בדיוק (מחרוזת, לא Set) ולא משתנה כל עוד העורך
+  // פתוח — זו נקודת "המקורי" שחוזרים אליה, גם אם הקצית טווח ידני מותאם-אישית
+  // (לא רק הטווח התיאורטי הגנרי — ראו הבחנה מול 'auto' למטה).
   const existing = S.playerRanges?.[pid] || '';
   const auto = (typeof activeSeat==='number' && activeSeat!==null) ? _getAutoRangeForSeat(activeSeat) : {rangeStr:'', aggressiveHands:''};
   const seed = existing || auto.rangeStr;
@@ -277,19 +326,24 @@ function _openRangeEditor(pid){
   _rangeEditUnionContext = !existing && _UNION_ACTION_CATS.has(auto.actionCat);
   _rangeEditOriginalUnionContext = _rangeEditUnionContext;
   _rangeEditActiveView = 'original';
+  // טווח ידני קיים → קפוא לגמרי בכוונה, לא עוקבים אחרי שינויי מצב-שולחן.
   _rangeEditLastAutoStr = existing ? null : seed;
   renderSeatPanel();
 }
+// קיצור: פותח את עורך הטווח ומיד מציג רק את הלימפים האמפיריים הידועים (במקום את
+// הטווח האוטומטי/הידני הרגיל) — לכניסה מהירה מכפתור "🃏 X לימפים ידועים" בפאנל.
+// גם מכאן אפשר לעבור חזרה ל"מקורי" בכל רגע דרך הטאב בעורך עצמו — לכן חייבים לחשב
+// ולתעד את _rangeEditOriginal בדיוק כמו ב-_openRangeEditor, לא לדלג על זה.
 function _openRangeEditorShowLimps(pid){
   _rangeEditPid = pid;
   const existing = S.playerRanges?.[pid] || '';
   _rangeEditOriginal = existing || (typeof activeSeat==='number' && activeSeat!==null ? _getAutoRangeForSeat(activeSeat).rangeStr : '');
   const limpTally = _getEmpiricalLimpHands(pid);
   _rangeEditSel = new Set(Object.keys(limpTally));
-  _rangeEdit3betHands = new Set();
+  _rangeEdit3betHands = new Set(); // תצוגת לימפים לא רלוונטית ל-3bet מעצם ההגדרה
   _rangeEditUnionContext = false;
   _rangeEditActiveView = 'limp';
-  _rangeEditLastAutoStr = null;
+  _rangeEditLastAutoStr = null; // תצוגת לימפים = דריסה מפורשת, לא עוקבים אחרי מצב-שולחן
   renderSeatPanel();
 }
 function _closeRangeEditor(){
@@ -304,19 +358,23 @@ function _closeRangeEditor(){
 function _toggleRangeCell(hand){
   if(_rangeEditSel.has(hand)) _rangeEditSel.delete(hand);
   else _rangeEditSel.add(hand);
-  _rangeEditActiveView = null;
+  _rangeEditActiveView = null; // עריכה ידנית של תא בודד = כבר לא "בסיס" טהור ולא "לימפים" טהור
   _rangeEditorRefresh(true);
 }
 function _rangeEditorApplyTopPct(pct){
   const rs = _topPercentRange(Number(pct));
   _rangeEditSel = new Set(rs ? rs.split(',') : []);
-  _rangeEditActiveView = null;
+  _rangeEditActiveView = null; // סליידר = בחירה חדשה, לא "בסיס" ולא "לימפים"
+  // בזמן גרירת הסליידר — עדכון ממוקד בלבד, בלי לבנות מחדש את הסליידר עצמו
+  // (בנייה מחדש באמצע גרירה שוברת את המחווה וגורמת לתחושת "קפיצות")
   _rangeEditorRefresh(false);
 }
+// מעדכן רק את הגריד והמונה (ואופציונלית את מיקום הסליידר) בלי לבנות את כל הפאנל.
+// updateSlider=false בזמן שהסליידר עצמו נגרר (אסור "להילחם" בגרירה של המשתמש).
 function _rangeEditorRefresh(updateSlider){
   const grid = document.getElementById('range-editor-grid');
   const count = document.getElementById('range-editor-count');
-  if(!grid || !count){ renderSeatPanel(); return; }
+  if(!grid || !count){ renderSeatPanel(); return; } // fallback אם הפאנל טרם צויר
   grid.innerHTML = _rangeEditorGridHtml();
   const c = _rangeEditorSelCombos();
   count.textContent = c + ' combos · ' + (c/1326*100).toFixed(1) + '%';
@@ -330,14 +388,15 @@ function _saveRangeEditor(){
   if(!S.playerRanges) S.playerRanges = {};
   const arr = [..._rangeEditSel];
   if(arr.length){
+    // שומרים בסדר הדירוג הקבוע (קריא יותר מסדר הקלקה אקראי)
     const orderIdx = Object.fromEntries(_HAND_RANKING.map((h,i)=>[h,i]));
     arr.sort((a,b)=>(orderIdx[a]??999)-(orderIdx[b]??999));
     S.playerRanges[_rangeEditPid] = arr.join(',');
   } else {
-    delete S.playerRanges[_rangeEditPid];
+    delete S.playerRanges[_rangeEditPid]; // בחירה ריקה = כמו "חזרה לאוטומטי"
   }
   persist();
-  window._eqCache = null;
+  window._eqCache = null; // הטווח השתנה — חובה לחשב equity מחדש
   _closeRangeEditor();
 }
 function _clearPlayerRange(pid){
@@ -351,6 +410,9 @@ function _rangeEditorSelCombos(){
   _rangeEditSel.forEach(h=>{ n += h.length===2 ? 6 : (h.endsWith('s') ? 4 : 12); });
   return n;
 }
+// בונה את ה-HTML של הגריד 13×13: אלכסון=זוגות, מעל=סוטד, מתחת=אופסוט.
+// אם לשחקן הנערך יש לימפים אמפיריים ידועים (S.handLog) — מסומנים במסגרת סגולה
+// נוספת מעל כל צביעת בחירה/אי-בחירה רגילה (מידע בלבד, לא משפיע על הבחירה עצמה).
 function _rangeEditorGridHtml(){
   const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
   let rows='';
@@ -362,6 +424,11 @@ function _rangeEditorGridHtml(){
       const on = _rangeEditSel.has(hand);
       const isPair = i===j;
       const is3bet = on && _rangeEdit3betHands.has(hand);
+      // כשידוע שהטווח בא מאיחוד call∪3bet/4bet (_rangeEditUnionContext), הצבע
+      // לפי קטגוריה (call=כחול / 3bet=אדום) גובר תמיד על ההבחנה זוג-מול-סוטד —
+      // גם AA שהוא ספציפית call יראה כחול, לא זהב, כי עכשיו יודעים בוודאות
+      // מאיזה חלק של הטווח הוא הגיע. זהב לזוגות נשאר רק כברירת מחדל כשאין בכלל
+      // מידע קטגוריה (RFI רגיל, טווח ידני, תצוגת לימפים).
       const bg = on
         ? (is3bet ? '#e07b6a' : (_rangeEditUnionContext ? '#5b9bd5' : (isPair?'#c8a96e':'#5b9bd5')))
         : 'rgba(255,255,255,0.04)';
@@ -375,8 +442,17 @@ function _rangeEditorGridHtml(){
   return `<div style="display:flex;flex-direction:column;gap:1px;direction:ltr">${rows}</div>`;
 }
 
-let _rangeEditActiveView = null;
-let _rangeEditOriginal = '';
+// מעבר בין שלוש תצוגות בעורך הטווח:
+//  'original' — בדיוק מה שהיה שמור לשחקן ברגע פתיחת העורך (טווח ידני מותאם-אישית
+//               שהקצית בעבר, אם היה כזה; אחרת הטווח האוטומטי). זו נקודת "חזרה
+//               אחורה" האמיתית — לא מאבדים הקצאה ידנית קודמת.
+//  'auto'     — הטווח התיאורטי הגנרי (עמדה/פעולה/עומק/סוג שחקן), מחושב תמיד מחדש,
+//               לצורך השוואה בלבד — לא בהכרח זהה ל-'original' אם הוקצה טווח ידני.
+//  'limp'     — הסט האמפירי שנצפה בהיסטוריית הידיים.
+// כל מעבר מחליף את הבחירה הנוכחית בעורך לגמרי (לא משמר עריכות ידניות שנעשו על
+// התצוגה הקודמת). שום דבר לא נשמר עד לחיצה על 💾 שמור.
+let _rangeEditActiveView = null; // 'original' | 'auto' | 'limp' | null (null = נערך ידנית מאז המעבר האחרון)
+let _rangeEditOriginal = ''; // מחרוזת טווח — מוקפא בפתיחת העורך, לא משתנה עד סגירה
 function _setRangeEditorView(view){
   if(!_rangeEditPid) return;
   if(view==='original'){
@@ -401,20 +477,29 @@ function _setRangeEditorView(view){
   _rangeEditActiveView = view;
   _rangeEditorRefresh(true);
 }
+// נשמר לשם תאימות לאחור (נקרא גם מ-_openRangeEditorShowLimps) — alias ל-view='limp'
 function _isolateLimpRange(){ _setRangeEditorView('limp'); }
+// כפתור יחיד שמחליף בין 'original' ל-'limp' (במקום שתי כרטיסיות נפרדות) — הלייבל
+// שלו משתנה לפי המצב הנוכחי: אם כרגע על לימפים, הכפתור מציע לחזור למקורי, ולהפך.
+// אם אין בכלל נתוני לימפ לשחקן — הכפתור תמיד רק חוזר ל'original' (לא "מחליף" לריק).
 function _toggleOriginalLimpView(){
   if(_rangeEditActiveView==='limp'){ _setRangeEditorView('original'); return; }
   const hasLimpData = _rangeEditPid && Object.keys(_getEmpiricalLimpHands(_rangeEditPid)).length>0;
   _setRangeEditorView(hasLimpData ? 'limp' : 'original');
 }
 
+// אם העורך פתוח במצב אוטומטי טהור (לא לימפים, לא נערך ידנית) ומצב השולחן
+// השתנה מאז שנטען (למשל: מישהו פתח, או עשה 3bet, בזמן שהעורך כבר היה פתוח)
+// — מרעננים בשקט, בלי לצאת ולהיכנס. לא נוגעים אם המשתמש כבר לחץ על תא בעצמו
+// (או-אז _rangeEditActiveView כבר null, וגם ה-Set לא תואם ל-_rangeEditLastAutoStr
+// כבדיקת ביטחון נוספת) — כך שלעולם לא נמחקת עריכה ידנית באמצע.
 function _maybeRefreshAutoRangeEdit(){
-  if(_rangeEditLastAutoStr===null) return;
+  if(_rangeEditLastAutoStr===null) return; // טווח ידני שמור, או תצוגת לימפים — קפוא בכוונה
   if(_rangeEditActiveView!=='original' && _rangeEditActiveView!=='auto') return;
   if(typeof activeSeat!=='number' || activeSeat===null) return;
-  if(_sortedHandsKey([..._rangeEditSel].join(',')) !== _sortedHandsKey(_rangeEditLastAutoStr)) return;
+  if(_sortedHandsKey([..._rangeEditSel].join(',')) !== _sortedHandsKey(_rangeEditLastAutoStr)) return; // כבר נערך, לא נוגעים
   const fresh = _getAutoRangeForSeat(activeSeat);
-  if(_sortedHandsKey(fresh.rangeStr||'') === _sortedHandsKey(_rangeEditLastAutoStr)) return;
+  if(_sortedHandsKey(fresh.rangeStr||'') === _sortedHandsKey(_rangeEditLastAutoStr)) return; // לא השתנה בפועל
   _rangeEditOriginal = fresh.rangeStr||'';
   _rangeEditSel = new Set(fresh.rangeStr ? fresh.rangeStr.split(',').map(x=>x.trim()).filter(Boolean) : []);
   _rangeEdit3betHands = _parseRangeToSet(fresh.aggressiveHands||'');
@@ -424,6 +509,8 @@ function _maybeRefreshAutoRangeEdit(){
   _rangeEditLastAutoStr = fresh.rangeStr||'';
 }
 
+// מייצר את בלוק ה-HTML המלא של עורך הטווח (גריד+סליידר+כפתורים) — לשימוש בתוך
+// פאנל המושב. _rangeEditPid חייב להיות מוגדר לפני הקריאה.
 function _rangeEditorPanelHtml(){
   _maybeRefreshAutoRangeEdit();
   const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
@@ -455,7 +542,7 @@ function _rangeEditorPanelHtml(){
       <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>
       <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:11px;cursor:pointer">ביטול</button>
     </div>
-    <div style="font-size:9px;color:#3a3850;text-align:center">שינויים כאן זמניים עד ✕/ביטול — שום דבר לא נשמר עד 💾 שמור</div>
+    <div style="font-size:9px;color:#3a3850;text-align:center">שינויים כאן זמניים עד ✕/ביטול — שום דבר לא נשמר עד 💾</div>
   </div>`;
 }
 
@@ -472,8 +559,10 @@ function renderPotOdds(){
   const pot = calcPot();
   const alreadyIn = getStreetInvested(actor);
   const callAmt = Math.max(0, (S.lastBet||0) - alreadyIn);
+  // אם אין call פעיל — הצג HUD של השחקן הפעיל
   if(callAmt <= 0 || pot <= 0){
     bar.style.display='none';
+    // הצג HUD קומפקטי של currentActor
     if(S.btnLocked && !S.bettingClosed && actor!==null && seat?.playerId){
       const hud = calcPlayerHUD(seat.playerId);
       if(hud && hud.n > 0){
@@ -506,30 +595,58 @@ function renderPotOdds(){
   const boardCards = (S.board||[]).filter(Boolean);
   const rs = S._rangeSelection;
 
+  // שם הסטריט הנוכחי — אותו חישוב בדיוק כמו בשאר הקוד (game.js), לפי כמות קלפי הבורד
   const _curStreetName = boardCards.length===0?'פרה-פלופ':boardCards.length<=3?'פלופ':boardCards.length===4?'טורן':'ריבר';
 
+  // יריבים פעילים: לא קיפלו, לא all-in, לא השחקן הפעיל, ורק מי שבאמת כבר פעל בסטריט הזה
+  // (לא רק "עוד לא קיפל") — מי שתורו טרם הגיע לא נחשב "יריב עם טווח" עדיין
   const oppSeats = S.seats.filter(s=>{
     if(!s.playerId || s.folded || s.allin || s.seatIdx===actor) return false;
     return (s.actions||[]).some(a=>a.street===_curStreetName && a.type!=='SB' && a.type!=='BB');
   });
-  const swpForEq = assignPos();
+  const swpForEq = assignPos(); // עמדות מעודכנות, לשימוש בזיהוי טווח אוטומטי
 
+  // "מצב פתיחה": אף יריב עדיין לא פעל בפועל (כולל אתה — זו ההחלטה הראשונה בסטריט,
+  // ל-callAmt>0 רק כי יש BB לכסות). זה לא באמת "מול טווח" במובן הרגיל — זו שאלת RFI
+  // קלאסית, ונבדקת מול טבלת הטווחים הסטטית (_RANGES)/הטווח הידני, לא equity-מול-יריב-
+  // שכבר-פעל. שני תתי-מצבים: (1) קלפים ספציפיים מוזנים — בדיקת "בטווח?" + equity של
+  // אותה יד מול טווחי-השדה. (2) אין קלפים אבל יש טווח (ידני/אוטומטי) — הטווח כולו
+  // מדגם יד בכל איטרציה (heroCombos), בדיוק כמו "טווח מול טווח" הרגיל באפליקציה,
+  // רק שהיריבים כאן הם טווחי-המשך היפותטיים במקום יריבים שכבר פעלו בפועל.
   const isOpeningSpot = _curStreetName==='פרה-פלופ' && oppSeats.length===0 && !rs && holeCards.length!==1;
   let openRangeInfo = null;
   if(isOpeningSpot){
     const mySwp = swpForEq.find(x=>x.seatIdx===actor);
     const myPos = mySwp?.pos || '';
+    // עומק ה-stack להחלטת פתיחה נגזר מהמחסנית של הפותח עצמו, לא מהמחסנית
+    // הכי קצרה בשולחן (_getStackDepth) — שחקן צדדי קצר-יד לא הופך פתיחה עם 124BB לפתיחת push/fold
     const bbNow = (getBlinds&&getBlinds()?.bb)||50;
     const myStackNow = seat?.stack||0;
     const myDepth = _depthFromBB(bbNow>0 ? myStackNow/bbNow : 100);
+    // עדיפות: טווח ידני שמור לשחקן הזה (אם קיים) > הטבלה התיאורטית — בדיוק אותו
+    // סדר עדיפויות שכבר חל בכל מקום אחר באפליקציה (עורך הטווח, equity חי וכו').
+    // בלי זה, טווח ידני ששמרת לא היה משפיע בכלל על הבדיקה הזו הספציפית — באג אמיתי.
     const myManualRange = seat?.playerId ? S.playerRanges?.[seat.playerId] : null;
     const myRangeStr = myManualRange || (myPos ? _getRangeStrForDepth(S.tableSize, myPos, 'RFI', myDepth) : '');
 
+    // equity מול השדה (מידע נוסף, לא מחליף את בדיקת "בטווח"): ה-equity של היד/הטווח
+    // מול טווחי-ההמשך ההיפותטיים (call∪3bet, דרך _getContextualRangeInfo עם round=1
+    // מדומה — לא נוגעים ב-S.raiseRound האמיתי) של כל שאר השחקנים שעדיין לא פעלו.
+    // שונה מ-equity "רגיל": כאן אין יריב קונקרטי שכבר פעל — כולם עדיין "שדה" תיאורטי,
+    // בהנחה שאני פותח עכשיו. יוזם השאלה: המשתמש, בעקבות דיון על equity-of-range.
     const allRemainingSeats = S.seats.filter(s=>s.playerId && !s.folded && !s.allin && s.seatIdx!==actor);
+    // מיקוד על יריב ספציפי: לחיצה על אחד מהם (ראו UI למטה) מציגה equity מול הטווח שלו
+    // *בלבד* במקום מול כל השדה. שונה בכוונה ממנגנון "🎯 Range" הישן (S._rangeSelection) —
+    // כאן הבחירה מעוגנת למושב אמיתי בשולחן, ולכן "מרפאת את עצמה" אוטומטית: אם המושב
+    // הממוקד כבר לא בין allRemainingSeats (קיפל/עזב/יד חדשה) — חוזרים ל"כל השדה" לבד,
+    // בלי שום מצב-תקוע אפשרי (בניגוד לבאג שתוקן עכשיו ברכיב הישן).
     const focusSeatIdx = (typeof S._openingFocusSeat==='number' && allRemainingSeats.some(s=>s.seatIdx===S._openingFocusSeat)) ? S._openingFocusSeat : null;
     const remainingSeats = focusSeatIdx!==null ? allRemainingSeats.filter(s=>s.seatIdx===focusSeatIdx) : allRemainingSeats;
     const focusPlayerId = focusSeatIdx!==null ? S.seats.find(s=>s.seatIdx===focusSeatIdx)?.playerId : null;
     const focusName = focusSeatIdx!==null ? (pName(focusPlayerId)||'יריב') : null;
+    // actionCatOverride: משמש רק במצב פוקוס-על-יריב-בודד, כדי לחשב equity מול
+    // חלק ה-call או חלק ה-3bet בנפרד (במקום האיחוד call∪3bet הרגיל) — ההפרדה
+    // בין הטבלאות עצמן לא משתנה, רק בוחרים כאן איזו מהן לקחת לחישוב הזה.
     const computeFieldCombos = (deadKeysField, actionCatOverride) => {
       if(!remainingSeats.length) return null;
       const fieldStacks = remainingSeats.map(s=>s.stack||0);
@@ -538,17 +655,23 @@ function renderPotOdds(){
       let hasUnsplittableManual = false;
       const lists = remainingSeats.map(s=>{
         const pos2 = swpForEq.find(x=>x.seatIdx===s.seatIdx)?.pos || '';
+        // rs לא נבדק כאן בכוונה: isOpeningSpot מוגדר תוך דרישה מפורשת ש-!rs
+        // (ראו למעלה), כך שבהקשר הזה rs תמיד null ממילא — התלות בסדר העדיפויות
+        // המשותף (_resolveOpponentRangeStr) מדלגת עליו אוטומטית באותו אופן.
         const {rangeStr: adjR} = _resolveOpponentRangeStr(s, {pos: pos2, tableSize: S.tableSize, depth: fieldDepth, round: 1, actionCatOverride, rs: null});
-        if(adjR===null){ hasUnsplittableManual = true; return null; }
+        if(adjR===null){ hasUnsplittableManual = true; return null; } // טווח ידני שלא ניתן לפיצול call/3bet
         const combos = _rangeStrToCombos(adjR, deadKeysField);
         return combos.length ? combos : null;
       });
       if(actionCatOverride && hasUnsplittableManual) return null;
       return lists.some(c=>c) ? lists : null;
     };
+    // פיצול call/3bet רלוונטי רק כשמפוקסים על יריב בודד (לא "כל השדה") — עם כמה
+    // יריבים ביחד אין דרך פשוטה להציג "מול ה-call של אחד ומול ה-3bet של השני".
     const wantSplit = focusSeatIdx!==null;
 
     if(holeCards.length===2){
+      // תת-מצב 1: יד ספציפית מוזנת — בדיקת "בטווח?" + equity של היד הזו מול השדה/הממוקד
       const handNotation = _cardsToHandNotation(holeCards);
       const rangeSet = _parseRangeToSet(myRangeStr);
       openRangeInfo = { pos: myPos, hand: handNotation, inRange: rangeSet.has(handNotation), isManual: !!myManualRange };
@@ -571,6 +694,8 @@ function renderPotOdds(){
         }
       }
     } else if(myRangeStr){
+      // תת-מצב 2: אין קלפים ספציפיים, אבל יש טווח (ידני/אוטומטי) — הטווח כולו מדגם
+      // יד בכל איטרציה (heroCombos), מול אותם טווחי-שדה/הממוקד — "טווח מול טווח"
       const deadKeysField = new Set(boardCards.filter(Boolean).map(_cardKey));
       const heroCombosArr = _rangeStrToCombos(myRangeStr, deadKeysField);
       const fieldCombosLists = computeFieldCombos(deadKeysField);
@@ -600,12 +725,19 @@ function renderPotOdds(){
     }
   }
 
+  // מתוכם — מי שקלפיו הוזנו בפועל (ידועים), לעומת מי שהם עדיין "יד סמויה"
   const knownOppSeats = oppSeats.filter(s=>(s.cards||[]).filter(Boolean).length===2);
   const knownOppHands = knownOppSeats.map(s=>s.cards.filter(Boolean));
   const unknownOppSeats = oppSeats.filter(s=>(s.cards||[]).filter(Boolean).length!==2);
   const hasKnownOpp = knownOppHands.length > 0;
 
+  // לכל יריב "סמוי": אם נבחר range ידני — הוא חל על כולם; אחרת מזהים אוטומטית
+  // עמדה + פעולה שביצע ביד הזאת + תגית שחקן (TAG/LAG/Nit/Station/Fish) כדי להרחיב/להצר
+  // את טווח הסולבר בהתאם — בלי צורך לבחור range ידנית בכל פעם
   const deadKeysBase = new Set([...holeCards, ...boardCards, ...knownOppHands.flat()].filter(Boolean).map(_cardKey));
+  // עומק ה-stack לחישוב הטווח האוטומטי — לפי היריבים הרלוונטיים בפועל (oppSeats, שכבר
+  // מסונן ל"מי שבאמת פעל") ולא לפי כל שחקן פעיל בשולחן (אותו באג בדיוק כמו ב-RFI:
+  // שחקן קצר-יד באיזשהו מושב אחר לא אמור להשפיע על העומק מול היריב שבאמת בפוט)
   const _bbNow = (getBlinds&&getBlinds()?.bb)||50;
   const _relevantStacks = oppSeats.map(s=>s.stack||0);
   const _minRelevantStack = _relevantStacks.length ? Math.min(seat?.stack||0, ..._relevantStacks) : (seat?.stack||0);
@@ -615,11 +747,21 @@ function renderPotOdds(){
     return _resolveOpponentRangeStr(s, {pos, tableSize:S.tableSize, depth:_eqDepth, round:S.raiseRound, rs});
   });
 
+  // חישוב equity — עם cache וחישוב נדחה (לא חוסם את ציור המסך). מדלגים לגמרי במצב פתיחה
+  // (isOpeningSpot) — שם השאלה הנכונה היא "בטווח?" ולא "equity מול מה?"
+  // מצב "טווח מול טווח": אם לשחקן הפועל אין קלפים מוזנים אבל יש לו טווח ידני שמור —
+  // היד שלו נדגמת מהטווח בכל איטרציה (heroCombos), במקום לדרוש קלפים ספציפיים.
+  // עדיפות טווח לפועל: קלפים מוזנים > טווח ידני שמור > אוטומטי (לפי מה שקרה בפועל
+  // על השולחן — _getContextualRangeInfo, אותה פונקציה בדיוק כמו לכל שחקן/מושב אחר,
+  // כדי שהניתוח יהיה עקבי בין כל השחקנים ולא רק "אני מול יריב מסוים").
   const heroManualRange = (holeCards.length!==2) ? (S.playerRanges?.[seat?.playerId] || null) : null;
   let heroAutoRange = null, heroAutoTag = '';
   if(holeCards.length!==2 && !heroManualRange && seat){
     const heroPos = swpForEq.find(x=>x.seatIdx===actor)?.pos || '';
     if(heroPos){
+      // _detectVsPos (ranges.js) — מקור אמת יחיד לזיהוי מי בדיוק עשה 3bet
+      // אחרון (דרך S.lastRaiser), משותף עם _getAutoRangeForSeat כדי לא לחזור
+      // על הבאג שכבר קרה: זוהה כאן אבל נשכח בעורך הטווח.
       const vsPos = _detectVsPos(swpForEq);
       const {rangeStr: hRangeStr, actionCat: hCat} = _getContextualRangeInfo(seat, heroPos, S.tableSize, _eqDepth, S.raiseRound, vsPos);
       heroAutoRange = hRangeStr || null;
@@ -628,6 +770,8 @@ function renderPotOdds(){
   }
   const heroRangeStr = heroManualRange || heroAutoRange;
   const heroRangeIsAuto = !heroManualRange && !!heroAutoRange;
+  // מצב טווח-מול-טווח דורש לפחות יריב אחד בחישוב (ידוע או עם טווח). בלי אף יריב
+  // שפעל, "equity" הוא 100% חסר משמעות (אין מול מי להפסיד) — אז לא מחשבים.
   const heroRangeMode = !!heroRangeStr && (knownOppHands.length + unknownOppSeats.length) > 0;
   let equityPct = null;
   let equityComputing = false;
@@ -641,20 +785,20 @@ function renderPotOdds(){
     const eqKey = heroKey+'|'+boardCards.map(c=>c.rank+c.suit).join('')
       +'|k:'+knownOppKey+'|u:'+rangeKey;
     if(window._eqCache?.key === eqKey){
-      equityPct = window._eqCache.val;
+      equityPct = window._eqCache.val; // אותם קלפים/תנאים — אין צורך לחשב שוב
     } else {
       equityComputing = true;
       const jobId = (window._eqJob = (window._eqJob||0)+1);
       setTimeout(()=>{
-        if(jobId !== window._eqJob) return;
+        if(jobId !== window._eqJob) return; // בינתיים נכנסה בקשה עדכנית יותר
         const oppCombosLists = unknownOppRangeInfo.map(r=>{
           const combos = _rangeStrToCombos(r.rangeStr, deadKeysBase);
-          return combos.length ? combos : null;
+          return combos.length ? combos : null; // טווח שיצא ריק → נופל חזרה לאקראי מלא
         });
         const heroCombos = heroRangeMode ? _rangeStrToCombos(heroRangeStr, deadKeysBase) : null;
         const val = monteCarloEquityMulti(heroRangeMode?[]:holeCards, boardCards, knownOppHands, oppCombosLists, 8000, heroCombos);
         window._eqCache = {key: eqKey, val};
-        if(jobId === window._eqJob) renderPotOdds();
+        if(jobId === window._eqJob) renderPotOdds(); // רינדור חוזר — הפעם מה-cache
       }, 30);
     }
   }
@@ -666,6 +810,7 @@ function renderPotOdds(){
       : `<span style="color:#e07b6a;font-size:9px;font-weight:900">❌ -EV</span>`)
     : '';
 
+  // snapshot
   S._potOddsSnapshot = {
     pot, callAmt,
     breakEven: parseFloat(breakEven),
@@ -674,6 +819,7 @@ function renderPotOdds(){
     ...(rs ? {range:{...rs}} : {}),
   };
 
+  // Range selector state
   const tableSize = S.tableSize||6;
   const positions = _POS_BY_SIZE[tableSize]||_POS_BY_SIZE[6];
   const showRange = S._showRangeSelector;
@@ -691,6 +837,10 @@ function renderPotOdds(){
   bar.innerHTML = `
   <div style="background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.22);border-radius:12px;padding:6px 10px;direction:rtl">
 
+    <!-- שורה ראשית — כווץ מ-3 שורות לכרטיס ל-2. גם: תוויות קוצרו כדי שלא יתעגלו
+         לשורה שנייה ויתנגשו עם שורת הערך מתחתן (זה מה שקרה עם "UTG טווח (אוטומטי)" —
+         ארוך מדי לרוחב העמודה) — אינדיקטור ידני/אוטומטי עבר לשורת הערך במקום
+         להיות חלק מהתווית. -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch">
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;padding:0 4px">
         <span style="font-size:8px;color:#8a8799;font-weight:700;letter-spacing:.2px;white-space:nowrap">POT ODDS</span>
@@ -732,12 +882,18 @@ function renderPotOdds(){
       </div>
     </div>
 
+    <!-- בחירת יריב ממוקד ל"EQUITY מול השדה" — לחיצה על שם = מולו בלבד, "כולם" = ברירת מחדל.
+         שורה אחת עם גלילה אופקית (לא flex-wrap) — ראו renderPotOdds להמשך: שומר את
+         מיקום הגלילה על הצ'יפ הנבחר בכל רינדור, בדיוק כמו שתוקן קודם ברשימת השחקנים
+         בסטטיסטיקה, כדי שלא תתאפס בחזרה להתחלה בכל לחיצה. -->
     ${openRangeInfo && openRangeInfo.fieldSeats && openRangeInfo.fieldSeats.length ? `
     <div id="focus-seat-row" style="display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:5px;margin-top:6px;padding-top:6px;padding-bottom:2px;border-top:1px solid rgba(255,255,255,0.06)">
       <button ${!openRangeInfo.focusName?'id="focus-seat-selected"':''} onclick="S._openingFocusSeat=null;renderPotOdds()" style="${chipStyle(!openRangeInfo.focusName,'#7eb8a4')};flex-shrink:0">🌐 כולם</button>
       ${openRangeInfo.fieldSeats.map(fs=>`<button ${openRangeInfo.focusName===fs.name?'id="focus-seat-selected"':''} onclick="S._openingFocusSeat=${fs.seatIdx};renderPotOdds()" style="${chipStyle(openRangeInfo.focusName===fs.name,'#5b9bd5')};flex-shrink:0">${fs.name}</button>`).join('')}
     </div>` : ''}
 
+    <!-- פיצול equity מול טווח ה-call בלבד / טווח ה-3bet בלבד של היריב הממוקד —
+         רק כשמפוקסים על יריב בודד ושני החישובים הצליחו (יש combos בכל אחד) -->
     ${openRangeInfo && openRangeInfo.focusName && (openRangeInfo.fieldEquityCall!==undefined || openRangeInfo.fieldEquity3bet!==undefined) ? `
     <div style="display:flex;gap:6px;justify-content:center;margin-top:5px">
       ${openRangeInfo.fieldEquityCall!==undefined ? `
@@ -752,6 +908,9 @@ function renderPotOdds(){
       </div>` : ''}
     </div>` : ''}
 
+    <!-- סטטיסטיקות אמיתיות (VPIP/LIMP/PFR/3B) של היריב הממוקד — נגזר מ-S.handLog
+         דרך calcPlayerHUD הקיים, לא חישוב נפרד. אותו שומר-סף (n>=3 ידיים) כמו כל
+         שימוש אחר ב-HUD הזה באפליקציה, כדי לא להציג סטטיסטיקה לא-אמינה ממדגם זעיר. -->
     ${(() => {
       if(!openRangeInfo || !openRangeInfo.focusName || !openRangeInfo.focusPlayerId) return '';
       const hud = calcPlayerHUD(openRangeInfo.focusPlayerId);
@@ -766,6 +925,7 @@ function renderPotOdds(){
     </div>`;
     })()}
 
+    <!-- Range selector (מתרחב) -->
     ${showRange ? `
     <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:8px">
 
@@ -808,6 +968,9 @@ function renderPotOdds(){
       </button>
     </div>` : ''}
   </div>`;
+  // בלי זה, כל לחיצה על יריב ממוקד (בונה מחדש את כל ה-HTML) הייתה מאפסת את
+  // גלילת שורת הצ'יפים בחזרה להתחלה — בדיוק אותו דפוס באג שתוקן קודם היום
+  // במעבר בין שחקנים במסך הסטטיסטיקה.
   const focusSeatSelected = document.getElementById('focus-seat-selected');
   if(focusSeatSelected) focusSeatSelected.scrollIntoView({inline:'center', block:'nearest'});
 }
@@ -822,7 +985,9 @@ function renderLiveActions(){
   const typeShortFn = (t,a)=>a?.displayType||(t==='Raise'?'R':t==='Check'?'CH':t==='Call'?'C':t==='All-in'?'AI':t==='Fold'?'F':t);
   const posColFn = p=>p==='BTN'?'#c8a96e':p==='SB'?'#8b7cb8':p==='BB'?'#e07b6a':'#6a8090';
 
+  // Pre-flop order: SB→BB→UTG→...→BTN
   const preflopOrder = ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB'];
+  // Post-flop order: SB→BB→UTG→...→BTN (same, SB acts first)
   const postflopOrder = ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB'];
 
   let html = '';
@@ -847,7 +1012,9 @@ function renderLiveActions(){
     });
     if(!allActs.length) return;
 
+    // Sort by action index (actual order performed)
     allActs.sort((a,b)=>{
+      // SB and BB always first in pre-flop
       if(st==='פרה-פלופ'){
         if(a.type==='SB') return -1;
         if(b.type==='SB') return 1;
@@ -859,6 +1026,7 @@ function renderLiveActions(){
 
     hasAny=true;
 
+    // Street label FIRST (left side)
     html+=`<div style="display:inline-flex;align-items:stretch;gap:0;flex-shrink:0">`;
     html+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);border-radius:6px 0 0 6px;padding:3px 7px;min-width:34px;flex-shrink:0">
       <span style="font-size:9px;font-weight:800;color:#8a8090">${streetLabels[st]}</span>
@@ -881,6 +1049,7 @@ function renderLiveActions(){
   });
 
   bar.style.display='block';
+  // Scroll to end (latest action) after render
   setTimeout(()=>{ bar.scrollLeft = bar.scrollWidth; },50);
   bar.innerHTML=hasAny?html:'<div style="font-size:11px;color:#3a3650;padding:4px 6px">אין פעולות עדיין</div>';
   setTimeout(()=>{ bar.scrollLeft = bar.scrollWidth; },50);
@@ -895,13 +1064,15 @@ function startBlindTimer(){
   if(_timerInterval) clearInterval(_timerInterval);
   _timerInterval = setInterval(()=>{
     if(!S.blindTimer.running){ clearInterval(_timerInterval); _timerInterval=null; return; }
-    if(!isAdmin()) return;
+    if(!isAdmin()) return; // only admin controls the real timer
     S.blindTimer.secondsLeft--;
 
     if(S.blindTimer.secondsLeft <= 0){
+      // Auto advance to next level
       nextBlindLevel(true);
     }
     updateTimerDisplay();
+    // Warning at 60 seconds
     if(S.blindTimer.secondsLeft === 60){
       notify('⚠️ דקה אחרונה לרמה '+(S.blindLevel+1));
     }
@@ -911,9 +1082,11 @@ function startBlindTimer(){
 function toggleBlindTimer(){
   S.blindTimer.running = !S.blindTimer.running;
   if(S.blindTimer.running){
+    // Record when we started (for viewer timestamp calculation)
     S.blindTimer.startedAt = Date.now();
-    S.blindTimer.pausedAt = S.blindTimer.secondsLeft;
+    S.blindTimer.pausedAt = S.blindTimer.secondsLeft; // seconds remaining when started
   } else {
+    // Save current remaining time
     const elapsed = S.blindTimer.startedAt ? Math.floor((Date.now()-S.blindTimer.startedAt)/1000) : 0;
     S.blindTimer.secondsLeft = Math.max(0, (S.blindTimer.pausedAt||S.blindTimer.secondsLeft) - elapsed);
     S.blindTimer.startedAt = null;
@@ -933,6 +1106,10 @@ function exportHandsToCSV(){
     if(!h.seats?.length){ rows.push([h.date,h.blinds,board,'','','','']); return; }
     h.seats.forEach(s=>{
       const acts = (s.actions||[]).map(a=>a.type+(a.amount?'('+a.amount+')':'')).join(', ');
+      // תוצאה פר-שחקן (לא פר-יד — כל שחקן באותה יד יכול היה להרוויח/להפסיד סכום שונה):
+      // סה"כ הושקע (סכימת actions[].amount, כולל בליינדים) מול מה שהתקבל בפועל אם ניצח
+      // (winners[].amount — נוסף כרגע ל-awardPot, קודם היה תמיד חסר). ליריב שהפסיד:
+      // amount=0 ממילא, אז התוצאה היא פשוט מינוס ההשקעה.
       const totalInvested = (s.actions||[]).reduce((sum,a)=>sum+(Number(a.amount)||0),0);
       const won = (h.winners||[]).find(w=>w.playerId===s.playerId);
       const net = (won?.amount||0) - totalInvested;
@@ -948,6 +1125,7 @@ function exportTournsToCSV(){
     rows.push([t.date, t.name||'', t.buyinCost, t.totalBuyins, t.totalRebuys,
       t.totalEntries, t.prizePool, t.place1||'', t.place2||'', t.place3||'']);
   });
+  // Add finish order per tournament
   (S.tournLog||[]).forEach(t=>{
     if(t.finishOrder?.length){
       rows.push([]);
@@ -986,6 +1164,7 @@ function announceBlindLevel(level, sb, bb){
   utter.lang = 'en-US';
   utter.rate = 0.85;
   utter.pitch = 1;
+  // Prefer a clear English voice
   const voices = speechSynthesis.getVoices();
   const preferred = voices.find(v=>v.lang==='en-US'&&v.name.includes('Samantha'))
     || voices.find(v=>v.lang==='en-US')
@@ -998,9 +1177,11 @@ function nextBlindLevel(auto=false){
   const next = S.blindLevel + 1;
   if(next >= BLIND_LEVELS.length){ notify('הגעת לרמה האחרונה'); return; }
   S.blindLevel = next;
-  S.customBlinds = null;
+  S.customBlinds = null; // אחרת הרמה מתקדמת ויזואלית אבל הבליינד שמוצג בפועל נשאר תקוע על הערך הידני הישן (customBlinds גובר תמיד ב-getBlinds())
   S.blindTimer.secondsLeft = getLevelDuration(next);
+  // Update timestamp for new level
   if(S.blindTimer.running){ S.blindTimer.startedAt=Date.now(); S.blindTimer.pausedAt=getLevelDuration(next); }
+  // Flash animation on blind-up
   const bar = document.getElementById('blind-timer-bar');
   if(bar){
     bar.style.transition='background 0.3s';
@@ -1015,6 +1196,7 @@ function nextBlindLevel(auto=false){
   persist();
   notify('רמה '+(next+1)+': '+BLIND_LEVELS[next].sb.toLocaleString()+'/'+BLIND_LEVELS[next].bb.toLocaleString());
   persist(); syncToSheets(true);
+  // Announce new blinds
   const nb = BLIND_LEVELS[next];
   setTimeout(()=>announceBlindLevel(next+1, nb.sb, nb.bb), 500);
 }
@@ -1034,15 +1216,18 @@ function updateTimerDisplay(){
   const bl = document.getElementById('timer-blinds');
   if(bl) bl.textContent = b.sb.toLocaleString()+' / '+b.bb.toLocaleString()+(b.ante?' · ante '+b.ante.toLocaleString():'');
 
+  // Next level
   const nextB = BLIND_LEVELS[S.blindLevel+1];
   const nextEl = document.getElementById('timer-next');
   if(nextEl) nextEl.textContent = nextB ? 'הבא: '+nextB.sb.toLocaleString()+' / '+nextB.bb.toLocaleString() : 'רמה אחרונה';
 
+  // Progress bar
   const dur = getLevelDuration(S.blindLevel);
   const pct = dur>0 ? Math.max(0,(s/dur)*100) : 0;
   const prog = document.getElementById('timer-progress');
   if(prog){ prog.style.width=pct+'%'; prog.style.background=s<=60?'#e07b6a':s<=120?'#FFB347':'#c8a96e'; }
 
+  // Prize & active
   const prizeEl = document.getElementById('timer-prize');
   if(prizeEl) prizeEl.textContent = '₪'+(prizePool()||0).toLocaleString();
   const activeEl = document.getElementById('timer-active');
@@ -1091,6 +1276,7 @@ function parseBlindCSV(text){
   const lines = text.trim().split(/\r?\n/);
   const result = [];
   lines.forEach((line,i)=>{
+    // Skip header row
     if(i===0 && isNaN(parseFloat(line.split(/[,\t]/)[0]))) return;
     const parts = line.split(/[,\t]/).map(p=>p.trim().replace(/[^0-9.]/g,''));
     if(parts.length<2) return;
@@ -1108,12 +1294,12 @@ function showStructureEditor(){
   const overlay = document.createElement('div');
   overlay.id = 'structure-editor-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);overflow-y:auto';
-
+  
   const struct = S.blindStructure || BLIND_LEVELS.map(b=>({...b, duration:S.blindTimer.levelDuration}));
-
+  
   const box = document.createElement('div');
   box.style.cssText = 'margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:14px;padding:16px;max-width:400px';
-
+  
   const title = document.createElement('div');
   title.style.cssText = 'font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center';
   title.textContent = '📋 מבנה בליינדים';
@@ -1122,17 +1308,18 @@ function showStructureEditor(){
   closeX.textContent = '✕';
   closeX.onclick = ()=>overlay.remove();
   title.appendChild(closeX);
-
+  
+  // Build rows
   const rows = document.createElement('div');
   rows.id = 'struct-rows';
-
+  
   function buildRows(){
     rows.innerHTML = '';
     struct.forEach((lvl,idx)=>{
       const row = document.createElement('div');
       row.style.cssText = 'display:grid;grid-template-columns:24px 1fr 1fr 1fr 80px 28px;gap:4px;align-items:center;margin-bottom:6px';
       const durMins = Math.round((lvl.duration||S.blindTimer.levelDuration)/60);
-      row.innerHTML =
+      row.innerHTML = 
         '<span style="font-size:11px;color:#8a8799;text-align:center">'+(idx+1)+'</span>'+
         '<input type="number" value="'+lvl.sb+'" placeholder="SB" data-field="sb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
         '<input type="number" value="'+lvl.bb+'" placeholder="BB" data-field="bb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
@@ -1141,6 +1328,7 @@ function showStructureEditor(){
         '<button data-del="'+idx+'" style="padding:4px;border-radius:6px;border:none;background:rgba(224,123,106,0.2);color:#e07b6a;font-size:14px;cursor:pointer;width:100%">✕</button>';
       rows.appendChild(row);
     });
+    // Input change handlers
     rows.querySelectorAll('input').forEach(inp=>{
       inp.oninput = ()=>{
         const i=+inp.dataset.idx, f=inp.dataset.field;
@@ -1152,16 +1340,19 @@ function showStructureEditor(){
     });
   }
   buildRows();
-
+  
+  // Header
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:grid;grid-template-columns:24px 1fr 1fr 1fr 80px 28px;gap:4px;margin-bottom:4px';
   hdr.innerHTML = '<span></span><span style="font-size:10px;color:#8a8799;text-align:center">SB</span><span style="font-size:10px;color:#8a8799;text-align:center">BB</span><span style="font-size:10px;color:#8a8799;text-align:center">Ante</span><span style="font-size:10px;color:#c8a96e;text-align:center">דק׳</span><span></span>';
-
+  
+  // Add level button
   const addBtn = document.createElement('button');
   addBtn.style.cssText = 'width:100%;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:#8a8799;font-size:13px;cursor:pointer;margin-top:6px';
   addBtn.textContent = '+ הוסף רמה';
   addBtn.onclick = ()=>{ const last=struct[struct.length-1]||{sb:500,bb:1000,ante:0}; struct.push({sb:last.sb*2,bb:last.bb*2,ante:last.ante,duration:S.blindTimer.levelDuration}); buildRows(); };
-
+  
+  // Import from CSV/Excel button
   const importBtn = document.createElement('button');
   importBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px';
   importBtn.textContent = '📂 ייבא מ-Excel/CSV';
@@ -1175,8 +1366,10 @@ function showStructureEditor(){
       const text = await file.text();
       const imported = parseBlindCSV(text);
       if(!imported.length){ notify('לא נמצאו נתונים תקינים'); return; }
+      // Update struct array
       struct.length = 0;
       imported.forEach(r=>struct.push(r));
+      // Re-render rows
       rowsContainer.innerHTML = '';
       struct.forEach((_,idx2)=>rowsContainer.appendChild(buildRow(idx2)));
       notify('✓ יובאו '+imported.length+' רמות');
@@ -1185,6 +1378,7 @@ function showStructureEditor(){
   };
   box.appendChild(importBtn);
 
+  // Download template button
   const templateBtn = document.createElement('button');
   templateBtn.style.cssText = 'width:100%;padding:8px;border-radius:10px;border:1px solid rgba(91,155,213,0.3);background:rgba(91,155,213,0.08);color:#5b9bd5;font-size:12px;cursor:pointer;margin-top:6px';
   templateBtn.textContent = '⬇️ הורד תבנית CSV';
@@ -1198,24 +1392,26 @@ function showStructureEditor(){
   };
   box.appendChild(templateBtn);
 
+  // Save button
   const saveBtn = document.createElement('button');
   saveBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-top:10px';
   saveBtn.textContent = '💾 שמור מבנה';
   saveBtn.onclick = ()=>{
     S.blindStructure = struct.map(l=>({sb:l.sb,bb:l.bb,ante:l.ante||0,duration:l.duration||S.blindTimer.levelDuration}));
     BLIND_LEVELS = [...S.blindStructure];
-    S.customBlinds = null;
+    S.customBlinds = null; // clear manual override so structure takes effect
     persist();
     overlay.remove();
     renderTimerBar();
     notify('מבנה נשמר ✓');
   };
-
+  
+  // Reset button
   const resetBtn = document.createElement('button');
   resetBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:13px;cursor:pointer;margin-top:6px';
   resetBtn.textContent = 'איפוס למבנה ברירת מחדל';
   resetBtn.onclick = ()=>{ S.blindStructure=null; BLIND_LEVELS=[...DEF_BLINDS]; persist(); overlay.remove(); notify('מבנה אופס'); };
-
+  
   box.appendChild(title); box.appendChild(hdr); box.appendChild(rows);
   box.appendChild(addBtn); box.appendChild(saveBtn); box.appendChild(resetBtn);
   overlay.appendChild(box);
@@ -1227,39 +1423,49 @@ function closeICM(){ document.getElementById('icm-overlay')?.remove(); }
 function calcPlayerHUD(playerId){
   const hands = S.handLog||[];
   if(!hands.length) return null;
-
+  
   const playerHands = hands.filter(h=>(h.seats||[]).some(s=>s.playerId===playerId));
   if(playerHands.length < 3) return null;
-
+  
   let vpip=0, pfr=0, limp=0, raises=0, calls=0, checks=0, bet3=0, wtsd=0, won=0;
-
+  
   playerHands.forEach(h=>{
     const seat = (h.seats||[]).find(s=>s.playerId===playerId);
     if(!seat) return;
     const acts = seat.actions||[];
-
+    
+    // VPIP: entered pot preflop (call or raise)
     const preflopActs = acts.filter(a=>a.street==='פרה-פלופ'&&a.type!=='SB'&&a.type!=='BB');
     if(preflopActs.some(a=>['Call','Raise','Open','3bet','4bet','All-in'].includes(a.type))) vpip++;
-
+    
+    // PFR: raised preflop
     if(preflopActs.some(a=>['Raise','Open','3bet','4bet','All-in'].includes(a.type))) pfr++;
-
+    
+    // LIMP: הפעולה הראשונה בפרה-פלופ היא Call כש-raiseRound===0 (אף אחד עוד לא
+    // העלה) — אותה הגדרה בדיוק כמו _getEmpiricalLimpHands (ranges.js), לא
+    // המצאה נפרדת, כדי ששני המקומות תמיד יסכימו על מה נחשב "לימפ".
     const firstPF = preflopActs[0];
     if(firstPF && firstPF.type==='Call' && (firstPF.raiseRound||0)===0) limp++;
-
+    
+    // 3bet: re-raised preflop
     if(preflopActs.some(a=>['3bet','4bet'].includes(a.type)||a.displayType==='3b'||a.displayType==='4b')) bet3++;
-
+    
+    // All actions for AF
     const allActs = acts.filter(a=>a.type!=='SB'&&a.type!=='BB');
     raises += allActs.filter(a=>['Raise','Open','3bet','4bet','All-in'].includes(a.type)).length;
     calls  += allActs.filter(a=>a.type==='Call').length;
     checks += allActs.filter(a=>a.type==='Check').length;
-
+    
+    // WTSD: made it to showdown (not folded + has river or all-in)
     if(!seat.folded&&(h.board||[]).filter(Boolean).length===5) wtsd++;
-
+    
+    // Won
     if((h.winners||[]).some(w=>w.playerId===playerId)) won++;
   });
-
+  
   const n = playerHands.length;
-
+  
+  // Trend: last 10 vs previous 10
   const recent = playerHands.slice(0,10);
   const older = playerHands.slice(10,20);
   let trend = '→';
@@ -1274,7 +1480,7 @@ function calcPlayerHUD(playerId){
     }).length/older.length;
     trend = recentAgg > olderAgg+0.1 ? '↑' : recentAgg < olderAgg-0.1 ? '↓' : '→';
   }
-
+  
   return {
     n,
     vpip: Math.round(vpip/n*100),
@@ -1292,6 +1498,7 @@ function closeHUD(){ document.getElementById('hud-overlay')?.remove(); }
 
 function closeAnalyze(){ document.getElementById('analyze-overlay')?.remove(); }
 async function analyzeHand(h){
+  // Permission check
   if(currentUser?.role==='local'||currentUser?.role==='viewer'){
     notify('🔍 ניתוח יד חסום'); return;
   }
@@ -1300,15 +1507,18 @@ async function analyzeHand(h){
   }
   const token = currentUser?.token||localStorage.getItem('auth_token')||'';
   if(!token){ notify('נדרשת כניסה כמנהל'); return; }
-
+  
+  // Build context for Claude
   const board = (h.board||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' ');
   const blinds = h.blinds||'';
-
+  
+  // My seat
   const myName = currentUser?.name||'';
   const mySeat = (h.seats||[]).find(s=>s.playerName===myName);
   const myCards = mySeat?(mySeat.cards||[]).filter(Boolean).map(c=>c.rank+c.suit).join(' '):'לא ידוע';
   const myPos = mySeat?.pos||'לא ידוע';
-
+  
+  // Build street-by-street actions
   const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
   const streetActions = streets.map(st=>{
     const acts = (h.seats||[]).flatMap(s=>
@@ -1319,6 +1529,7 @@ async function analyzeHand(h){
     return acts.length ? st+': '+acts.join(', ') : null;
   }).filter(Boolean).join('\n');
 
+  // HUD data for opponents
   const opponents = (h.seats||[]).filter(s=>s.playerName!==myName&&s.playerName);
   const hudInfo = opponents.map(s=>{
     const hud = calcPlayerHUD(s.playerId);
@@ -1340,25 +1551,26 @@ async function analyzeHand(h){
     '3. המלצה לסיטואציות דומות\n\n'+
     'ענה בעברית, בצורה ממוקדת ומעשית.';
 
+  // Show loading
   document.getElementById('analyze-overlay')?.remove();
   const aOverlay = document.createElement('div');
   aOverlay.id = 'analyze-overlay';
   aOverlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
   aOverlay.onclick = e=>{ if(e.target===aOverlay) aOverlay.remove(); };
-
+  
   const aBox = document.createElement('div');
   aBox.style.cssText = 'max-width:480px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:18px';
   aBox.onclick = e=>e.stopPropagation();
-
+  
   const aHdr = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
     '<span style="font-size:15px;font-weight:800;color:#c8a96e">🔍 ניתוח יד</span>'+
     '<button onclick="closeAnalyze()" style="background:none;border:none;color:#8a8799;font-size:20px;cursor:pointer">✕</button></div>';
-
+  
   const aContent = document.createElement('div');
   aContent.id = 'analyze-content';
   aContent.style.cssText = 'font-size:13px;color:#e2ddd4;line-height:1.7;white-space:pre-wrap';
   aContent.textContent = '⏳ מנתח יד...';
-
+  
   aBox.innerHTML = aHdr;
   aBox.appendChild(aContent);
   aOverlay.appendChild(aBox);
@@ -1381,10 +1593,11 @@ async function analyzeHand(h){
     try { data = JSON.parse(text2); } catch(e){ throw new Error('תגובה לא תקינה: '+text2.substring(0,50)); }
     if(!data.ok) throw new Error(data.error||'שגיאה');
     aContent.textContent = data.text;
-
+    
+    // Add copy + save buttons after result
     const btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;gap:8px;margin-top:14px';
-
+    
     const copyBtn = document.createElement('button');
     copyBtn.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#e2ddd4;font-size:13px;font-weight:700;cursor:pointer';
     copyBtn.textContent = '📋 העתק';
@@ -1394,7 +1607,7 @@ async function analyzeHand(h){
         setTimeout(()=>copyBtn.textContent='📋 העתק', 2000);
       });
     };
-
+    
     const saveBtn2 = document.createElement('button');
     saveBtn2.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
     saveBtn2.textContent = '💾 שמור ביד';
@@ -1410,6 +1623,7 @@ async function analyzeHand(h){
         saveBtn2.disabled = true;
         notify('ניתוח נשמר ✓');
 
+        // Auto-generate notes per player
         const token2 = currentUser?.token||localStorage.getItem('auth_token')||'';
         const playerNames = (h.seats||[]).map(s=>s.playerName).filter(Boolean).join(', ');
         try {
@@ -1442,11 +1656,11 @@ async function analyzeHand(h){
         } catch(e){ console.log('Notes error:',e); }
       }
     };
-
+    
     btnRow.appendChild(copyBtn);
     btnRow.appendChild(saveBtn2);
     aBox.appendChild(btnRow);
-
+    
   } catch(e){
     aContent.textContent = 'שגיאה: '+e.message;
   }
@@ -1546,6 +1760,7 @@ function _openCameraInput(onFile){
 }
 async function openCameraForCards(target){
   if(!getGsUrl()){ notify('הגדר Google Sheets URL קודם'); return; }
+  // בדיקת הרשאות — רק superadmin
   requireSuperAdmin(()=>_openCameraForCardsInner(target));
 }
 async function _openCameraForCardsInner(target){
@@ -1558,11 +1773,12 @@ async function _openCameraForCardsInner(target){
         r.onerror = rej;
         r.readAsDataURL(file);
       });
-
+      
       const prompt = target==='board'
         ? 'זהה את קלפי הפוקר בתמונה. החזר JSON בלבד: {"cards":[{"rank":"A","suit":"♥"},...]}'
         : 'זהה את 2 קלפי הפוקר של השחקן בתמונה. החזר JSON בלבד: {"cards":[{"rank":"A","suit":"♥"},{"rank":"K","suit":"♠"}]}';
 
+      // Use Google Apps Script as proxy to avoid CORS
       const resp = await fetch(getGsUrl(), {
         method:'POST',
         redirect:'follow',
@@ -1573,15 +1789,16 @@ async function _openCameraForCardsInner(target){
           prompt: prompt
         })
       });
-
+      
       const data = JSON.parse(await resp.text());
       if(!data.ok) throw new Error(data.error||'שגיאה לא ידועה');
       const cards = data.cards||[];
 
-
+      
       if(!cards.length){ notify('לא זוהו קלפים'); return; }
-
+      
       if(target==='board'){
+        // Fill next empty board slots
         let filled = 0;
         cards.forEach(c=>{
           const slot = S.board.findIndex(b=>!b);
@@ -1591,6 +1808,7 @@ async function _openCameraForCardsInner(target){
         notify('✓ זוהו '+filled+' קלפים');
         document.getElementById('card-picker').classList.remove('open');
       } else {
+        // Fill seat cards (target = seatIdx)
         const seat = S.seats.find(s=>s.seatIdx===parseInt(target));
         if(seat){
           seat.cards = [cards[0]||null, cards[1]||null];
@@ -1601,6 +1819,7 @@ async function _openCameraForCardsInner(target){
       }
     } catch(e){
       const errMsg = e.message||String(e);
+      // Show full error details on screen for debugging
       const errDiv = document.createElement('div');
       errDiv.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;background:#1a0000;border:1px solid #e07b6a;border-radius:10px;padding:12px;font-size:11px;color:#e07b6a;z-index:999;direction:ltr;word-break:break-all';
       errDiv.textContent = 'שגיאה: '+errMsg;
@@ -1798,7 +2017,7 @@ function calcICM(stacks, prizes){
   const total = stacks.reduce((s,v)=>s+v,0);
   const n = stacks.length;
   const ev = new Array(n).fill(0);
-
+  
   function simulate(remaining, prizeIdx, prob){
     if(prizeIdx >= prizes.length || remaining.length===0) return;
     remaining.forEach((stackIdx,i)=>{
@@ -1813,9 +2032,11 @@ function calcICM(stacks, prizes){
 }
 
 function showICM(){
+  // Use tournament active players (not in koOrder, have buyins)
   const activePids = S.playerLib.filter(p=>!S.koOrder.includes(p.id)&&S.buyins[p.id]?.buyin>0);
   if(activePids.length<2){ notify('נדרשים לפחות 2 שחקנים פעילים בטורניר'); return; }
-
+  
+  // Show stack input form first
   showICMStackForm(activePids);
 }
 
@@ -1825,11 +2046,11 @@ function showICMStackForm(activePids){
   overlay.id = 'icm-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
   overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
-
+  
   const box = document.createElement('div');
   box.style.cssText = 'max-width:360px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:16px';
   box.onclick = e=>e.stopPropagation();
-
+  
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:14px';
   hdr.innerHTML = '<span style="font-size:15px;font-weight:800;color:#c8a96e">ICM – הזן ערימות</span>';
@@ -1839,12 +2060,14 @@ function showICMStackForm(activePids){
   closeBtn.onclick = ()=>overlay.remove();
   hdr.appendChild(closeBtn);
   box.appendChild(hdr);
-
+  
+  // Total chips in tournament
   const icmTotalChips = Object.values(S.buyins||{}).reduce((s,b)=>s+(b.buyin||0)+(b.rebuy||0),0)*50000;
   const defaultStack = activePids.length>0 ? Math.round(icmTotalChips/activePids.length) : 50000;
   const stacks = {};
   activePids.forEach(p=>{ stacks[p.id] = defaultStack||50000; });
 
+  // Show total chips
   const totalDiv = document.createElement('div');
   totalDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#0d1120;border-radius:8px;margin-bottom:10px';
   const tl = document.createElement('span'); tl.style.cssText='font-size:11px;color:#8a8799'; tl.textContent='ציפים בטורניר:';
@@ -1852,6 +2075,7 @@ function showICMStackForm(activePids){
   totalDiv.appendChild(tl); totalDiv.appendChild(tv);
   box.appendChild(totalDiv);
 
+  // Status line
   const statusDiv = document.createElement('div');
   statusDiv.id='icm-status';
   statusDiv.style.cssText='font-size:11px;text-align:center;margin-bottom:8px';
@@ -1880,8 +2104,8 @@ function showICMStackForm(activePids){
     box.appendChild(row);
   });
 
-  updateTotal();
-
+  updateTotal(); // show initial status
+  
   const calcBtn = document.createElement('button');
   calcBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px';
   calcBtn.textContent = 'חשב ICM';
@@ -1906,22 +2130,25 @@ function showICMResult(active){
   const p3 = active.length>=3?(S.place3||0):0;
   const prizes = [p1,p2,p3].filter(p=>p>0);
   const icmEV = calcICM(stacks, prizes);
-
+  
+  // Build overlay
   document.getElementById('icm-overlay')?.remove();
   const overlay = document.createElement('div');
   overlay.id = 'icm-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
   overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
-
+  
   const box = document.createElement('div');
   box.style.cssText = 'max-width:420px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:16px';
   box.onclick = e=>e.stopPropagation();
-
+  
+  // Header
   box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
     '<div><div style="font-size:15px;font-weight:800;color:#c8a96e">ICM</div>'+
     '<div style="font-size:11px;color:#8a8799">קופה: ₪'+pp.toLocaleString()+'</div></div>'+
     '<button onclick="closeICM()" style="background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer">✕</button></div>';
-
+  
+  // Prizes row
   const prizesRow = document.createElement('div');
   prizesRow.style.cssText = 'display:flex;gap:6px;margin-bottom:14px';
   prizes.forEach((p,i)=>{
@@ -1930,7 +2157,8 @@ function showICMResult(active){
       '<div style="font-size:13px;font-weight:700;color:#c8a96e">₪'+p.toLocaleString()+'</div></div>';
   });
   box.appendChild(prizesRow);
-
+  
+  // Table
   const table = document.createElement('table');
   table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px';
   table.innerHTML = '<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08)">'+
@@ -1941,10 +2169,10 @@ function showICMResult(active){
     '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">% פרסים</th>'+
     '</tr></thead><tbody id="icm-tbody"></tbody>';
   box.appendChild(table);
-
+  
   overlay.appendChild(box);
   document.body.appendChild(overlay);
-
+  
   const tbody = document.getElementById('icm-tbody');
   active.forEach((seat,i)=>{
     const chipPct = total>0?Math.round(seat.stack/total*1000)/10:0;
@@ -1965,7 +2193,7 @@ function showICMResult(active){
 
 function resetBlindTimer(){
   S.blindLevel = 0;
-  S.customBlinds = null;
+  S.customBlinds = null; // אותה סיבה כמו ב-nextBlindLevel — אחרת האיפוס נראה כאילו קרה אבל הבליינד בפועל נשאר תקוע
   S.blindTimer.running = false;
   S.blindTimer.secondsLeft = getLevelDuration(0);
   const btn = document.getElementById('btn-timer-toggle');
@@ -1987,26 +2215,42 @@ function renderTableShape(){
   const svg = document.getElementById('table-svg');
   if(!wrap || !svg) return;
 
+  // אם יש שדה קלט פעיל כרגע (המשתמש מקליד, למשל בקופסת Raise/Bet) — לא
+  // מרנדרים מחדש את צורת השולחן בכלל. הבדיקה הזו הייתה קיימת עד עכשיו רק
+  // בתוך _handleViewportResize (שמטפל באירוע resize של המקלדת) — אבל
+  // renderTableShape() גם נקראת ללא תנאי מתוך render() הכללי, שרץ כמעט בכל
+  // שינוי מצב באפליקציה (כולל סנכרון רקע כל 10 שניות) — ואם זה קורה בזמן
+  // שהמקלדת פתוחה (visualViewport כבר מכווץ), השולחן היה מתכווץ בכל זאת,
+  // גם אם אירוע ה-resize עצמו כן טופל נכון. מרכזים את הבדיקה כאן במקור,
+  // כדי שהיא תגן בלי קשר איזו נקודת-קריאה גרמה לזה.
   const ae = document.activeElement;
   if(ae && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA')) return;
 
+  // Lovable: max-w-[420px] aspect-[3/4] (portrait) / aspect-[4/3] (landscape)
+  // מדידת שטח זמין אמיתי (במקום הנחת "topBarH=175" קבועה) —
+  // כך זה מתאים את עצמו לכל דפדפן/מכשיר: ספארי עם/בלי סרגלים, כרום, דסקטופ, PWA
   const vw = (window.visualViewport && window.visualViewport.width) || window.innerWidth;
   const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  // מזהים אוריינטציה אמיתית של המסך (לא רק דחיסה של אותה צורה אנכית) —
+  // כשהמכשיר מוטה לרוחב, השולחן עצמו הופך לאליפסה רחבה, לא רק מוקטן
   _tableLandscape = vw > vh;
 
   let usedTop = 0;
   ['viewer-banner','topbar','live-actions-bar','table-size-bar'].forEach(id=>{
     const el = document.getElementById(id);
+    // offsetParent===null means the element is display:none ולא תופס מקום בפועל
     if(el && el.offsetParent !== null){
       usedTop += el.getBoundingClientRect().height;
     }
   });
 
-  const seatOverflowMargin = _tableLandscape ? 60 : 110;
+  const seatOverflowMargin = _tableLandscape ? 60 : 110; // בלרוחב הגובה הזמין מוגבל מלכתחילה, אז שומרים פחות מרווח
   const maxW = Math.min(vw - 40, _tableLandscape ? 640 : 360);
-  const maxH = Math.max(vh - usedTop - seatOverflowMargin, 180);
+  const maxH = Math.max(vh - usedTop - seatOverflowMargin, 180); // 180 = רצפת ביטחון שהשולחן לא ייעלם
   let w, h;
   if(_tableLandscape){
+    // בלרוחב הגובה הוא המשאב המוגבל — ממלאים אותו במלואו, אבל בלי למתוח את הרוחב
+    // ליחס לא-טבעי (אליפסה שטוחה מדי) — מגבילים יחס מקסימלי סביר לשולחן פוקר
     w = maxW; h = maxH;
     const maxRatio = 1.55;
     if(w / h > maxRatio) w = h * maxRatio;
@@ -2015,6 +2259,7 @@ function renderTableShape(){
     if(h > maxH){ h = maxH; w = h * 3/4; }
   }
   w = Math.round(w); h = Math.round(h);
+  // גורם הקטנה למושבים כששטח השולחן קומפקטי (בעיקר בלרוחב) — מונע חפיפה בין כרטיסי מושב
   _seatScale = Math.max(0.62, Math.min(1, h / 420));
 
   wrap.style.width = w + 'px';
@@ -2022,6 +2267,7 @@ function renderTableShape(){
   wrap.style.borderRadius = '50%';
   wrap.style.overflow = 'visible';
 
+  // viewBox ופרמטרי האליפסה — מוחלפים (rx<->ry, מרכז) בין אנכי לאופקי
   const vbW = _tableLandscape ? 400 : 300;
   const vbH = _tableLandscape ? 300 : 400;
   const cx = vbW/2, cy = vbH/2;
@@ -2041,20 +2287,28 @@ function renderTableShape(){
       <stop offset="100%" stop-color="oklch(0.22 0.05 150)"/>
     </linearGradient>
   </defs>
+  <!-- outer rail: inset 8% -->
   <ellipse cx="${cx}" cy="${cy}" rx="${railR.rx}" ry="${railR.ry}" fill="url(#gRail)" filter="drop-shadow(0 20px 40px rgba(0,0,0,0.7))"/>
   <ellipse cx="${cx}" cy="${cy}" rx="${railR.rx}" ry="${railR.ry}" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+  <!-- felt: inset 13% -->
   <ellipse cx="${cx}" cy="${cy}" rx="${feltR.rx}" ry="${feltR.ry}" fill="url(#gFelt)" filter="drop-shadow(inset 0 0 40px rgba(0,0,0,0.5))"/>
+  <!-- inner highlight -->
   <ellipse cx="${cx}" cy="${cy}" rx="${hiR.rx}" ry="${hiR.ry}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+  <!-- gold ring -->
   <ellipse cx="${cx}" cy="${cy}" rx="${goldR.rx}" ry="${goldR.ry}" fill="none" stroke="rgba(200,169,110,0.08)" stroke-width="0.8"/>`;
 
+  // עדכן כפתור orientation  // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
+  // Show/hide viewer banner
   const vb = document.getElementById('viewer-banner');
   if(vb) vb.style.display = isViewer()?'flex':'none';
+  // Hide tabs not available for viewers
   ['tab-table','tab-hands'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
+  // Check current active tab and apply hide logic
   const curTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','') || 'table';
   const timerCtrl = document.getElementById('timer-controls');
   if(timerCtrl) timerCtrl.style.display = isViewer() ? 'none' : 'flex';
@@ -2064,14 +2318,23 @@ function renderTableShape(){
   if(lb2) lb2.style.display = curTab==='table' ? 'block' : 'none';
   const ab2 = document.getElementById('btn-active');
   if(ab2) ab2.style.display = (curTab==='table'||curTab==='hands'||isViewer()) ? 'none' : '';
+  // Show refresh button only for viewers
   const vRefresh = document.getElementById('btn-viewer-refresh');
   if(vRefresh) vRefresh.style.display = isViewer()?'':'none';
-  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row','btn-save-tourn','btn-reset-tourn'].forEach(id=>{
+  // Hide action buttons for viewers
+  // הערה: sbox-tablesize הוסר מרשימה זו בכוונה — הנראות שלו נקבעת אך ורק ע"י showView()
+  // לפי הטאב הפעיל. קודם היה כאן, וכל render() (כולל סנכרון תקופתי) היה מאפס אותו
+  // בחזרה ל-display:'' עבור אדמין, "מחייה" אותו מחדש בטאבים שבהם הוא אמור להיות מוסתר.
+  // הערה: 'btn-save-tourn'/'btn-reset-tourn' הוסרו מהרשימה הזו (2026-08-16)
+  // יחד עם הכפתורים עצמם ב-index.html — היו כפילות מיותרת של אותם כפתורים
+  // שכבר קיימים בכרטיס "טורניר נוכחי" (openSaveTournBox/resetTournament).
+  ['btn-settings','btn-newhand','btn-savehand','btn-resethand','sbox-buyincost','btn-export','btn-restore','btn-addplayer','add-player-row'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = isViewer()?'none':'';
   });
 }
 function render(){
+  // Safety: if currentActor is set and hand is active, ensure bettingClosed is correct
   if(S.btnLocked && S.currentActor!==null && S.bettingClosed){
     const boardCount = S.board.filter(Boolean).length;
     const street = boardCount===0?'פרה-פלופ':boardCount<=3?'פלופ':boardCount===4?'טורן':'ריבר';
@@ -2080,8 +2343,10 @@ function render(){
   }
   renderTableShape();
   renderStats(); renderSeats(); renderBoard(); renderBlindsBtn(); renderPotOdds();
+  // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
+  // Show/hide viewer banner
   const vb = document.getElementById('viewer-banner');
   if(vb) vb.style.display = isViewer()?'flex':'none';
   ['tab-table','tab-hands'].forEach(id=>{
@@ -2109,6 +2374,8 @@ function renderStats(){
   }
   document.getElementById('stat-active').textContent=`${activeTournPlayers().length}/${totalEntries()}`;
   document.getElementById('stat-prize').textContent=`₪${prizePool().toLocaleString()}`;
+  // "הפתעות" מצטבר: סכום מכל הטורנירים השמורים בהיסטוריה + הטורניר הנוכחי
+  // (עוד לפני שנשמר) — לא רק הערך הבודד של הטורניר הפעיל.
   const surprisesTotal = (S.tournLog||[]).reduce((s,t)=>s+(t.surprisesAmount||0), 0) + (S.surprisesAmount||0);
   const sboxSurprises = document.getElementById('sbox-surprises');
   if(sboxSurprises){
@@ -2120,8 +2387,10 @@ function renderStats(){
   document.getElementById('sel-table-size').value=S.tableSize;
 }
 function renderSeats(){
+  // אל תרנדר מחדש כשcard-picker פתוח
   if(document.getElementById('card-picker')?.classList.contains('open')) return;
   const cont=document.getElementById('seats-container'); cont.innerHTML='';
+  // class לאפקט scale
   const hasActor = S.btnLocked && !S.bettingClosed && S.currentActor!==null;
   cont.classList.toggle('seats-has-actor', hasActor);
   const swp=assignPos();
@@ -2131,7 +2400,7 @@ function renderSeats(){
       const cx=50,cy=50;
       const angle=(Math.PI/2)+(2*Math.PI*i/S.tableSize);
       const d=window._tunerSeatDist*100;
-      const horiz=false;
+      const horiz=false; // תמיד אנכי
       x=cx+(horiz?d*1.25:d*0.82)*Math.cos(angle);
       y=cy+(horiz?d*0.82:d)*Math.sin(angle);
     }
@@ -2186,14 +2455,20 @@ function renderSeats(){
     `:'')+(showUndo?`<button onclick="event.stopPropagation();undoLastAction(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid #e07b6a;background:#7a2020;color:#ffaaaa;font-size:10px;font-weight:900;cursor:pointer;width:100%;opacity:1!important;position:relative;z-index:5">↩ בטל</button>`:'');})()}
       `:`<div style="font-size:16px;color:rgba(255,255,255,0.12)">+</div>`}
     </div>`;
+    // Add action buttons arc above occupied seats
     if(S.btnLocked && !S.bettingClosed && S.currentActor!==null && S.currentActor!==i && seat?.playerId && !seat?.folded && !seat?.allin){
+      // Debug: log why this seat is not the actor
+      // console.log('Seat',i,'not actor. currentActor=',S.currentActor);
     }
     if(seat?.playerId && !seat?.folded && !seat?.allin && isCurActor){
       const btns = document.createElement('div');
       btns.id = 'seat-actions-'+i;
       btns.style.cssText = 'position:absolute;top:50%;left:50%;width:0;height:0;pointer-events:all;z-index:20';
+      // Place buttons in arc around the seat circle
+      // F, CH = above seat | C, R, AI = below seat
       const sw=88, sh=68, bSize=26, gap=4;
       btns.style.cssText = 'position:absolute;top:0;left:0;width:'+sw+'px;height:'+sh+'px;pointer-events:none;z-index:20';
+      // TOP: F, CH above seat
       const seatI=i;
       const canCheck = getCallAmount(seatI)===0;
       const topDefs=[];
@@ -2221,9 +2496,11 @@ function renderSeats(){
             didLongPress = false;
           }
           function cancelPress(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } didLongPress=false; }
+          // Touch (mobile)
           btn.addEventListener('touchstart', startPress, {passive:true});
           btn.addEventListener('touchend', endPress);
           btn.addEventListener('touchcancel', cancelPress);
+          // Mouse (desktop)
           btn.addEventListener('mousedown', startPress);
           btn.addEventListener('mouseup', endPress);
           btn.addEventListener('mouseleave', cancelPress);
@@ -2232,6 +2509,7 @@ function renderSeats(){
         btns.appendChild(btn);
 
       });
+      // BOTTOM: C, R, AI below seat
       const botDefs=[];
       const callAmt = getCallAmount(seatI);
       if(callAmt > 0) botDefs.push({lbl:'C', cb:function(){quickAction(seatI,'Call');}, bg:'rgba(40,80,160,0.95)', help:'Call'});
@@ -2259,9 +2537,11 @@ function renderSeats(){
             didLongPress = false;
           }
           function cancelPress(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } didLongPress=false; }
+          // Touch (mobile)
           btn.addEventListener('touchstart', startPress, {passive:true});
           btn.addEventListener('touchend', endPress);
           btn.addEventListener('touchcancel', cancelPress);
+          // Mouse (desktop)
           btn.addEventListener('mousedown', startPress);
           btn.addEventListener('mouseup', endPress);
           btn.addEventListener('mouseleave', cancelPress);
@@ -2271,10 +2551,12 @@ function renderSeats(){
       });
       el.appendChild(btns);
     }
+    // Long press on seat → HUD (mobile support)
     if(seat?.playerId){
       let lpTimer=null, lpFired=false;
       const seatIdx=i;
       el.addEventListener('touchstart',function(e){
+        // בטל אם הלחיצה היא על כפתור פנימי (פעולה, rebuy, וכו')
         if(e.target.tagName==='BUTTON'||e.target.closest('button')) return;
         lpFired=false;
         lpTimer=setTimeout(function(){
@@ -2288,12 +2570,14 @@ function renderSeats(){
       el.addEventListener('touchmove',function(e){
         if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
       });
+      // בטל long press כשפעולה מתבצעת (כפתורי פעולה מפעילים touchstart נפרד)
       el.addEventListener('touchstart',function(e){
         if(e.target.tagName==='BUTTON'||e.target.closest('button')){
           if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; }
         }
       },{passive:true,capture:true});
     }
+    // הדגש מנצח אוטומטי (גם בלי showdown mode — כגון אחרי awardPot)
     if(S._autoWinners && S._autoWinners.includes(i) && seat?.playerId){
       el.style.boxShadow = '0 0 24px rgba(95,196,122,0.9)';
       el.style.border = '2px solid #5fc47a';
@@ -2301,6 +2585,7 @@ function renderSeats(){
     cont.appendChild(el);
   }
 
+  // כיסא דילר קבוע — ימין אמצע
   const oldDealerSeat = document.getElementById('dealer-seat-fixed');
   if(oldDealerSeat) oldDealerSeat.remove();
   {
@@ -2312,6 +2597,7 @@ function renderSeats(){
     cont.appendChild(dealerEl);
   }
 
+  // כפתור "💰 העבר קופה" על השולחן בזמן showdown
   const sdBanner = document.getElementById('showdown-banner');
   if(sdBanner) sdBanner.style.display = S._showdownMode ? 'block' : 'none';
   const existingSDBar = document.getElementById('sd-action-bar');
@@ -2334,11 +2620,13 @@ function renderSeats(){
     cancelBtn.onclick = ()=>{ S._showdownMode=false; renderSeats(); };
     bar.appendChild(potBtn);
     bar.appendChild(cancelBtn);
+    // הצג מתחת לשולחן — לא בתוכו
     const tableView = document.getElementById('table-view');
     if(tableView) tableView.appendChild(bar);
     else{ const sc=document.getElementById('seats-container'); if(sc) sc.appendChild(bar); }
   }
 
+  // Render floating bet chips
   let betsContainer = document.getElementById('bet-chips-container');
   if(!betsContainer){
     betsContainer = document.createElement('div');
@@ -2353,12 +2641,14 @@ function renderSeats(){
     if(!s.playerId) return;
     const seat = S.seats.find(st=>st.seatIdx===s.seatIdx)||{};
     const actions = seat.actions||[];
+    // Sum total invested in current street
     const boardCount2 = S.board.filter(Boolean).length;
     const curSt = boardCount2===0?'פרה-פלופ':boardCount2<=3?'פלופ':boardCount2===4?'טרן':'ריבר';
     const stActs = actions.filter(a=>a.street===curSt);
     const totalInvested = stActs.filter(a=>a.type!=='Fold'&&a.type!=='Check').reduce((sum,a)=>sum+(Number(a.amount)||0),0);
     if(totalInvested===0) return;
     const lastNonPass = stActs.filter(a=>a.type!=='Fold'&&a.type!=='Check').slice(-1)[0];
+    // Get seat position using getSeatXY
     const {x:sx, y:sy} = getSeatXY(s.seatIdx, S.tableSize);
     const cx=50, cy=50;
     const dx = cx - sx, dy = cy - sy;
@@ -2385,6 +2675,9 @@ function renderBoard(){
     btn.onclick=()=>{
 if(i===3&&!S.board[2]){notify('צריך פלופ קודם');return;}
       if(i===4&&!S.board[3]){notify('צריך טרן קודם');return;}
+      // חסום רק כשמנסים לחשוף קלף *חדש* (המשבצת ריקה) לפני שסיבוב ההימורים
+      // הסתיים — לא כשמתקנים טעות בקלף שכבר קיים שם. תיקון קלף קיים לא "מדלג"
+      // על שום סיבוב הימורים, אז אין סיבה לחסום אותו באותו תנאי בכלל.
       if(!card){
         const activeNonAllin = S.seats.filter(s=>s.playerId&&!s.folded&&!s.allin&&(s.stack||0)>0);
         if(S.btnLocked && S.currentActor!==null && !S.bettingClosed && activeNonAllin.length>0){notify('סיים את סיבוב ההימורים קודם');return;}
@@ -2403,6 +2696,7 @@ if(i===3&&!S.board[2]){notify('צריך פלופ קודם');return;}
     clr.textContent='✕ נקה'; clr.onclick=()=>{if(isAdmin()){S.board=[null,null,null,null,null];persist();renderBoard();}};
     cont.appendChild(clr);
   }
+  // Pot
   const pot=calcPot();
   const pd=document.getElementById('pot-display');
   if(pot>0){ pd.style.display='block'; pd.textContent=`Pot: ₪${pot.toLocaleString()}`; }
@@ -2414,6 +2708,7 @@ function renderBlindsBtn(){
   document.getElementById('blinds-btn').textContent=`${fmt(b.sb)}/${fmt(b.bb)}${b.ante?` ante ${fmt(b.ante)}`:''}`;
 }
 
+// When returning to app - recalculate blind timer from timestamp
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && S.blindTimer.running && S.blindTimer.startedAt){
     const elapsed = Math.floor((Date.now() - S.blindTimer.startedAt)/1000);
@@ -2440,8 +2735,13 @@ document.addEventListener('visibilitychange', ()=>{
   }
 });
 
+// רספונסיביות אמיתית: לחשב מחדש את גודל/מיקום השולחן בכל שינוי גובה/רוחב זמין בפועל —
+// מכסה: הופעה/היעלמות סרגלי ספארי, סיבוב מכשיר, שינוי גודל חלון בדסקטופ, כניסה/יציאה מ-PWA
 let _resizeRaf = null;
 function _handleViewportResize(){
+  // אם יש שדה קלט פעיל (המשתמש עורך ערך כרגע) — לא לרנדר מחדש.
+  // באייפון, פתיחת המקלדת הווירטואלית משנה את visualViewport.height בדיוק כמו שינוי מסך אמיתי,
+  // ובלי השורה הזו הרינדור מוחק את שדה העריכה הרגעי (כמו עריכת ערימה) לפני שהמשתמש מספיק להקליד.
   const ae = document.activeElement;
   if(ae && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA')) return;
 
@@ -2457,4 +2757,3 @@ window.addEventListener('orientationchange', _handleViewportResize);
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', _handleViewportResize);
 }
-
