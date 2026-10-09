@@ -1679,8 +1679,13 @@ function renderTournList(){
                  בלי לגעת ב-direction של הטקסט עצמו. כך הטקסט העברי בכל
                  תווית (שם שחקן, מספרים) ממשיך להיות מיושר/מכוון נכון,
                  רק סדר-העמודות מתהפך. -->
-            <div style="display:flex;flex-direction:row-reverse;align-items:flex-end;gap:4px;padding:0 2px;overflow-x:auto">
+            <div style="display:flex;flex-direction:row-reverse;align-items:flex-end;gap:2px;padding:0 2px">
               ${(()=>{
+                // בלי overflow-x:auto: כשיש יותר שחקנים ממה שנכנס ברוחב הכרטיס
+                // (14 שחקנים לעומת ~11) העמודות העודפות נחתכו מחוץ לתצוגה, ו-
+                // html2canvas צילם רק את החלק הנראה — בשיתוף הופיעו 11 מתוך 14.
+                // עכשיו כל עמודה היא flex:1 1 0 (מקסימום 30px) ומתכווצת כדי
+                // שכל השחקנים ייכנסו תמיד.
                 const totalPlayers=(t.finishOrder||[]).length||1;
                 const BAR_MAX=56; const BAR_MIN=6;
                 // מקום + Rebuy יחד בתווית (אופציה 2 שנבחרה) — כולל תמיכה
@@ -1703,8 +1708,9 @@ function renderTournList(){
                   // שהעין תזהה מיד "האם זה top-3 או לא" בלי לפענח גוונים.
                   const placeColorsBold={1:'#FFD966',2:'#D8D8D8',3:'#E0955A'};
                   const placeColor=placeColorsBold[displayPlace]||'#a8a4b5';
-                  const badge=hasFree16?'16✓':hasFree10?'10✓':'';
-                  const rebuyText=f.rebuy>0?`(${f.rebuy}${badge?' '+badge:''})`:'';
+                  // רק מספר ה-Rebuy (בלי תג אבן-דרך 10✓/16✓) — האבן-דרך כבר
+                  // מסומנת בצבע העמודה ובמקרא מתחת לגרף.
+                  const rebuyText=f.rebuy>0?`(${f.rebuy})`:'';
                   // מקום-הסיום בלי נקודה (לא נחוץ — "1" ברור בלי "1."),
                   // 13px, עם קונטור-דק שנותן לו "משקל" חזותי.
                   //
@@ -1715,14 +1721,14 @@ function renderTournList(){
                   // גרסאות שונות של אותו טקסט — גם מפשט את הקוד (בטל את
                   // הצורך ב-onclone/class 'vert-name' לגמרי, ראו
                   // shareTournamentImage).
-                  return `<div style="display:flex;flex-direction:column;align-items:center;width:30px;flex-shrink:0">
+                  return `<div style="display:flex;flex-direction:column;align-items:center;flex:1 1 0;min-width:0;max-width:30px">
                     <div style="margin-bottom:2px;white-space:nowrap;min-height:15px">
                       <span style="font-size:13px;font-weight:900;color:${placeColor};text-shadow:0 1px 2px rgba(0,0,0,0.6);-webkit-text-stroke:0.4px rgba(0,0,0,0.35)">${displayPlace}</span>
                     </div>
-                    <div style="width:16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
+                    <div style="width:min(16px,70%);display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
                       <div style="width:100%;height:${barH}px;background:${barColor};border-radius:2px 2px 0 0"></div>
                     </div>
-                    <div style="margin-top:3px;font-size:9px;font-weight:700;color:#e2ddd4;white-space:nowrap;max-width:34px;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+                    <div style="margin-top:3px;font-size:9px;font-weight:700;color:#e2ddd4;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
                     <div style="font-size:8px;font-weight:600;color:var(--muted);white-space:nowrap;min-height:10px;margin-top:1px">${rebuyText}</div>
                   </div>`;
                 }).join('');
