@@ -185,14 +185,13 @@
       <span id="timer-place1" style="font-size:14px;font-weight:800;color:#c8a96e">₪0</span>
     </div>
   </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <!-- שורה אחת: כותרת + ייצוא ל-Excel (קודם היו שתי שורות נפרדות; 2026-10-15).
+         הכפתורים "שמור טורניר נוכחי" / "אפס טורניר" הוסרו (2026-08-16, שוב 2026-10-15):
+         כפילות של "💾 שמור" / "אפס" בכרטיס "טורניר נוכחי" (openSaveTournBox / resetTournament). -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;margin-bottom:6px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05)">
       <div style="font-size:14px;font-weight:800;color:var(--gold)">🏆 טורנירים</div>
-      <!-- הכפתורים "שמור טורניר נוכחי" / "אפס טורניר" הוסרו (2026-08-16, הוסרו שוב 2026-10-15):
-           היו כפילות של "💾 שמור" / "אפס" בכרטיס "טורניר נוכחי" (openSaveTournBox / resetTournament). -->
+      <button onclick="exportTournsToCSV()" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer">📥 ייצוא לExcel</button>
     </div>
-    <div style="display:flex;justify-content:flex-end;padding:6px 12px;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.05)">
-    <button onclick="exportTournsToCSV()" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer">📥 ייצוא לExcel</button>
-  </div>
   <div id="tourn-list"></div>
   </div>
   <!-- PLAYERS -->
