@@ -22,7 +22,7 @@ function showActivePlayers(){
         const rb = (S.buyins[pid]||{}).rebuy||0;
         html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,0.05);border-radius:${isW?'8px':'0'};background:${isW?'rgba(255,215,0,0.06)':'transparent'}">
           ${isW?`<span style="font-size:18px">🥇</span>`:`<span style="font-size:10px;font-weight:700;color:${PC[s.pos]||'var(--gold)'};background:${PC[s.pos]||'var(--gold)'}18;border-radius:4px;padding:1px 6px;min-width:36px;text-align:center">${s.pos||'-'}</span>`}
-          <span style="font-size:${isW?'15':'13'}px;font-weight:${isW?'800':'700'};flex:1;color:${isW?'#FFD700':'#e2ddd4'}">${playerName}${isW?' 🏆':''}</span>
+          <span style="font-size:${isW?'15':'13'}px;font-weight:${isW?'800':'700'};flex:1;color:${isW?'#FFD700':'#f1ebdd'}">${playerName}${isW?' 🏆':''}</span>
           ${rb>0?`<span style="font-size:10px;color:var(--muted)">R:${rb}</span>`:''}
           ${s.stack?`<span style="font-size:11px;color:var(--muted)">${s.stack.toLocaleString()}</span>`:''}
         </div>`;
@@ -59,7 +59,7 @@ function openBlindsPanel(){
   openPanel('blinds-panel');
 }
 function _blInputStyle(gold){
-  return 'width:100%;padding:6px 4px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:'+(gold?'var(--gold)':'#e2ddd4')+';font-size:12px;outline:none;text-align:center;direction:ltr;box-sizing:border-box';
+  return 'width:100%;padding:6px 4px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:'+(gold?'var(--gold)':'#f1ebdd')+';font-size:12px;outline:none;text-align:center;direction:ltr;box-sizing:border-box';
 }
 function renderBlindsBody(){
   const b=getBlinds();
@@ -71,12 +71,12 @@ function renderBlindsBody(){
 
   const rowsHtml = working.map((l,i)=>{
     const isActive = S.blindLevel===i && !S.customBlinds;
-    return `<div style="display:grid;grid-template-columns:20px 1fr 1fr 1fr 52px 24px;gap:4px;align-items:center;margin-bottom:5px;${isActive?'background:rgba(200,169,110,0.1);border-radius:8px;padding:3px 2px':''}">
+    return `<div style="display:grid;grid-template-columns:20px 1fr 1fr 1fr 52px 24px;gap:4px;align-items:center;margin-bottom:5px;${isActive?'background:rgba(201,164,92,0.1);border-radius:8px;padding:3px 2px':''}">
       <span style="font-size:10px;color:var(--muted);text-align:center">${i+1}</span>
       <input type="number" value="${l.sb}" data-field="sb" data-idx="${i}" style="${_blInputStyle(false)}">
       <input type="number" value="${l.bb}" data-field="bb" data-idx="${i}" style="${_blInputStyle(false)}">
       <input type="number" value="${l.ante||0}" data-field="ante" data-idx="${i}" style="${_blInputStyle(true)}">
-      <button onclick="activateTableBlind(${i})" style="padding:5px 2px;border-radius:7px;border:1px solid ${isActive?'rgba(95,196,122,0.5)':'rgba(200,169,110,0.35)'};background:${isActive?'rgba(95,196,122,0.15)':'rgba(200,169,110,0.1)'};color:${isActive?'#5fc47a':'#c8a96e'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">${isActive?'✓ פעיל':'▶ הפעל'}</button>
+      <button onclick="activateTableBlind(${i})" style="padding:5px 2px;border-radius:7px;border:1px solid ${isActive?'rgba(95,196,122,0.5)':'rgba(201,164,92,0.35)'};background:${isActive?'rgba(95,196,122,0.15)':'rgba(201,164,92,0.1)'};color:${isActive?'#5fc47a':'#c9a45c'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">${isActive?'✓ פעיל':'▶ הפעל'}</button>
       <button onclick="delTableBlindRow(${i})" style="padding:5px 2px;border-radius:7px;border:none;background:rgba(224,123,106,0.15);color:#e07b6a;font-size:12px;cursor:pointer">✕</button>
     </div>`;
   }).join('');
@@ -102,7 +102,7 @@ function renderBlindsBody(){
     </div>
     <div id="table-bl-rows">${rowsHtml}</div>
     <button onclick="addTableBlindRow()" style="width:100%;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;margin-top:6px">+ הוסף רמה</button>
-    <button onclick="saveTableBlindLevels()" style="width:100%;padding:11px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer;margin-top:10px">💾 שמור רמות</button>
+    <button onclick="saveTableBlindLevels()" style="width:100%;padding:11px;border-radius:10px;border:none;background:#c9a45c;color:#0a0d14;font-weight:800;font-size:13px;cursor:pointer;margin-top:10px">💾 שמור רמות</button>
     <button onclick="resetTableBlindLevels()" style="width:100%;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;margin-top:6px">איפוס לברירת מחדל</button>`;
 
   document.querySelectorAll('#table-bl-rows input').forEach(inp=>{
@@ -446,9 +446,9 @@ function showHandReplayer(hid){
 
   const hdrTop = document.createElement('div');
   hdrTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
-  hdrTop.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c8a96e">▶️ Replayer — ${h.date}</div>`;
+  hdrTop.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c9a45c">▶️ Replayer — ${h.date}</div>`;
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
+  closeBtn.style.cssText = 'background:none;border:none;color:#a39a88;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
   closeBtn.onclick = ()=>{
     if(_replayerTimer) clearInterval(_replayerTimer);
@@ -456,7 +456,7 @@ function showHandReplayer(hid){
       // מציגים את ההודעה *לפני* הסגירה, לא ביחד — אחרת ב-דפדפנים שבהם
       // window.close() כן מצליח (מסתבר שכן, לא תמיד נחסם כמו שחשבתי), הטאב
       // נסגר כמעט מיידית ואף אחד לא מספיק לראות את ההודעה בכלל.
-      document.body.innerHTML = '<div style="position:fixed;inset:0;background:#0a0d14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#e2ddd4;font-size:15px;font-weight:700;direction:rtl;text-align:center;padding:20px"><div>היד תועדה באמצעות <span style="color:#c8a96e">Poker-Suite</span></div><div style="color:#8a8799;font-size:13px;font-weight:400">תודה שצפית</div></div>';
+      document.body.innerHTML = '<div style="position:fixed;inset:0;background:#0a0d14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#f1ebdd;font-size:15px;font-weight:700;direction:rtl;text-align:center;padding:20px"><div>היד תועדה באמצעות <span style="color:#c9a45c">Poker-Suite</span></div><div style="color:#a39a88;font-size:13px;font-weight:400">תודה שצפית</div></div>';
       setTimeout(()=>{ window.close(); }, 2000);
       return;
     }
@@ -478,7 +478,7 @@ function showHandReplayer(hid){
     shareVidBtn.onclick = shareReplayerAsGif;
     const shareLinkBtn = document.createElement('button');
     shareLinkBtn.id = 'replayer-share-link-btn';
-    shareLinkBtn.style.cssText = 'flex:1;background:rgba(200,169,110,0.12);border:1px solid rgba(200,169,110,0.4);color:#c8a96e;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
+    shareLinkBtn.style.cssText = 'flex:1;background:rgba(201,164,92,0.12);border:1px solid rgba(201,164,92,0.4);color:#c9a45c;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
     shareLinkBtn.textContent = '🔗 שתף כלינק';
     shareLinkBtn.onclick = shareReplayerAsLink;
     hdrRow2.appendChild(shareVidBtn);
@@ -499,11 +499,11 @@ function showHandReplayer(hid){
   const controls = document.createElement('div');
   controls.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;direction:ltr';
   controls.innerHTML = `
-    <button onclick="_replayerGo(0)" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">⏮</button>
-    <button onclick="_replayerStep(-1)" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">◀</button>
-    <button id="replayer-play-btn" onclick="_replayerTogglePlay()" style="background:rgba(200,169,110,0.15);border:1px solid rgba(200,169,110,0.4);color:#c8a96e;font-size:16px;border-radius:8px;padding:8px 16px;cursor:pointer;min-width:52px">▶️</button>
-    <button onclick="_replayerStep(1)" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">▶</button>
-    <button onclick="_replayerGo(${_replayerSteps.length-1})" style="background:rgba(255,255,255,0.06);border:none;color:#e2ddd4;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">⏭</button>
+    <button onclick="_replayerGo(0)" style="background:rgba(255,255,255,0.06);border:none;color:#f1ebdd;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">⏮</button>
+    <button onclick="_replayerStep(-1)" style="background:rgba(255,255,255,0.06);border:none;color:#f1ebdd;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">◀</button>
+    <button id="replayer-play-btn" onclick="_replayerTogglePlay()" style="background:rgba(201,164,92,0.15);border:1px solid rgba(201,164,92,0.4);color:#c9a45c;font-size:16px;border-radius:8px;padding:8px 16px;cursor:pointer;min-width:52px">▶️</button>
+    <button onclick="_replayerStep(1)" style="background:rgba(255,255,255,0.06);border:none;color:#f1ebdd;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">▶</button>
+    <button onclick="_replayerGo(${_replayerSteps.length-1})" style="background:rgba(255,255,255,0.06);border:none;color:#f1ebdd;font-size:16px;border-radius:8px;padding:8px 10px;cursor:pointer">⏭</button>
   `;
   box.appendChild(controls);
 
@@ -566,7 +566,7 @@ function _renderReplayerFrame(){
   });
   center.appendChild(brow);
   const potLbl = document.createElement('div');
-  potLbl.style.cssText = 'font-size:11px;font-weight:800;color:#c8a96e;background:rgba(0,0,0,0.55);padding:3px 9px;border-radius:7px';
+  potLbl.style.cssText = 'font-size:11px;font-weight:800;color:#c9a45c;background:rgba(0,0,0,0.55);padding:3px 9px;border-radius:7px';
   potLbl.textContent = 'Pot: '+step.pot.toLocaleString();
   center.appendChild(potLbl);
   wrap.appendChild(center);
@@ -600,18 +600,18 @@ function _renderReplayerFrame(){
     }
 
     const box2 = document.createElement('div');
-    box2.style.cssText = `background:#121824;border:1.5px solid ${isWinner?'#5fc47a':isActing?'#c8a96e':'rgba(255,255,255,0.12)'};border-radius:8px;padding:4px 7px;text-align:center;min-width:58px;${isWinner?'box-shadow:0 0 8px rgba(95,196,122,0.5)':isActing?'box-shadow:0 0 8px rgba(200,169,110,0.5)':''}`;
+    box2.style.cssText = `background:#181714;border:1.5px solid ${isWinner?'#5fc47a':isActing?'#c9a45c':'rgba(255,255,255,0.12)'};border-radius:8px;padding:4px 7px;text-align:center;min-width:58px;${isWinner?'box-shadow:0 0 8px rgba(95,196,122,0.5)':isActing?'box-shadow:0 0 8px rgba(201,164,92,0.5)':''}`;
     const stackVal = step.stacks[s.playerName]!==undefined ? step.stacks[s.playerName] : (s.stack||0);
-    box2.innerHTML = `<div style="font-size:9px;font-weight:800;color:${s.pos==='BTN'?'#c8a96e':s.pos==='SB'?'#8b7cb8':s.pos==='BB'?'#e07b6a':'#6a8090'}">${s.pos||''}</div>
-      <div style="font-size:10px;font-weight:700;color:#e2ddd4;white-space:nowrap">${(s.playerName||'').slice(0,9)}</div>
-      <div style="font-size:9px;color:#8a8799">${stackVal.toLocaleString()}${isWinner?' 🏆':''}</div>`;
+    box2.innerHTML = `<div style="font-size:9px;font-weight:800;color:${s.pos==='BTN'?'#c9a45c':s.pos==='SB'?'#8b7cb8':s.pos==='BB'?'#e07b6a':'#6a8090'}">${s.pos||''}</div>
+      <div style="font-size:10px;font-weight:700;color:#f1ebdd;white-space:nowrap">${(s.playerName||'').slice(0,9)}</div>
+      <div style="font-size:9px;color:#a39a88">${stackVal.toLocaleString()}${isWinner?' 🏆':''}</div>`;
     seatEl.appendChild(box2);
 
     // תג הפעולה עצמה (לא רק הסכום) — Check/Fold/Call/Raise וכו', צמוד למושב
     // שפועל כרגע, לא רק בבאנר הטקסט למטה. צבע לפי סוג: אדום=Fold, ירוק=
     // Check/Call (פסיבי), זהב=הכל השאר (הימור/ריי/all-in/בליינד).
     if(isActing && step.actionLabel){
-      const actColor = step.actionLabel==='Fold' ? '#e07b6a' : (step.actionLabel==='Check'||step.actionLabel==='Call') ? '#5fc47a' : '#c8a96e';
+      const actColor = step.actionLabel==='Fold' ? '#e07b6a' : (step.actionLabel==='Check'||step.actionLabel==='Call') ? '#5fc47a' : '#c9a45c';
       const actBadge = document.createElement('div');
       actBadge.style.cssText = `background:${actColor};color:#0a0d14;font-size:9px;font-weight:900;padding:2px 7px;border-radius:8px;margin-top:2px;white-space:nowrap`;
       actBadge.textContent = step.actionLabel;
@@ -627,7 +627,7 @@ function _renderReplayerFrame(){
       const chipPx = cx + (px-cx)*0.55;
       const chipPy = cy + (py-cy)*0.55;
       const chipEl = document.createElement('div');
-      chipEl.style.cssText = `position:absolute;left:${chipPx}%;top:${chipPy}%;transform:translate(-50%,-50%);background:rgba(200,169,110,0.9);color:#0a0d14;font-size:10px;font-weight:900;padding:3px 8px;border-radius:11px;box-shadow:0 2px 5px rgba(0,0,0,0.5);white-space:nowrap;z-index:6`;
+      chipEl.style.cssText = `position:absolute;left:${chipPx}%;top:${chipPy}%;transform:translate(-50%,-50%);background:rgba(201,164,92,0.9);color:#0a0d14;font-size:10px;font-weight:900;padding:3px 8px;border-radius:11px;box-shadow:0 2px 5px rgba(0,0,0,0.5);white-space:nowrap;z-index:6`;
       chipEl.textContent = chipAmt.toLocaleString();
       wrap.appendChild(chipEl);
     }
@@ -638,7 +638,7 @@ function _renderReplayerFrame(){
     frame.innerHTML = '';
     frame.appendChild(wrap);
     const actionBox = document.createElement('div');
-    actionBox.style.cssText = 'text-align:center;font-size:13px;font-weight:700;color:'+(step.isWin?'#5fc47a':'#e2ddd4')+';background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-top:4px';
+    actionBox.style.cssText = 'text-align:center;font-size:13px;font-weight:700;color:'+(step.isWin?'#5fc47a':'#f1ebdd')+';background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-top:4px';
     actionBox.textContent = step.text;
     frame.appendChild(actionBox);
   }
@@ -660,16 +660,16 @@ function showHandDetail(hid){
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
   const winnerNames = (h.winners||[]).map(w=>w.name).join(' + ');
-  hdr.innerHTML = '<div><div style="font-size:14px;font-weight:800;color:#c8a96e">'+h.date+'</div><div style="font-size:11px;color:#8a8799">'+h.blinds+(h.anteStr?' · '+h.anteStr:'')+(h.label?' · '+h.label:'')+'</div>'+(winnerNames?'<div style="font-size:12px;font-weight:700;color:#5fc47a;margin-top:3px">🏆 '+winnerNames+'</div>':'')+'</div>';
+  hdr.innerHTML = '<div><div style="font-size:14px;font-weight:800;color:#c9a45c">'+h.date+'</div><div style="font-size:11px;color:#a39a88">'+h.blinds+(h.anteStr?' · '+h.anteStr:'')+(h.label?' · '+h.label:'')+'</div>'+(winnerNames?'<div style="font-size:12px;font-weight:700;color:#5fc47a;margin-top:3px">🏆 '+winnerNames+'</div>':'')+'</div>';
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
+  closeBtn.style.cssText = 'background:none;border:none;color:#a39a88;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
   closeBtn.onclick = ()=>overlay.remove();
   
   // Analyze button
   const analyzeBtn = document.createElement('button');
   analyzeBtn.className = 'share-hide';
-  analyzeBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+  analyzeBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.1);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
   analyzeBtn.textContent = '🔍 נתח יד';
   analyzeBtn.onclick = ()=>analyzeHand(h);
 
@@ -683,7 +683,7 @@ function showHandDetail(hid){
   // Replay button
   const replayBtn = document.createElement('button');
   replayBtn.className = 'share-hide';
-  replayBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+  replayBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.1);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
   replayBtn.textContent = '▶️ Replay';
   replayBtn.onclick = ()=>showHandReplayer(h.id);
 
@@ -741,7 +741,7 @@ function showHandDetail(hid){
     
     const isMe = s.playerName===myNameDet2||(s.playerId&&pName(s.playerId)===myNameDet2);
     const hasWon = (h.winners||[]).some(w=>w.seatIdx===s.seatIdx||w.playerId===s.playerId);
-    const posColor = s.pos==='BTN'?'#c8a96e':s.pos==='SB'?'#8b7cb8':s.pos==='BB'?'#e07b6a':'#6a8090';
+    const posColor = s.pos==='BTN'?'#c9a45c':s.pos==='SB'?'#8b7cb8':s.pos==='BB'?'#e07b6a':'#6a8090';
     const seatCards = (s.cards||[]).filter(Boolean);
     const hasCards = seatCards.length>0;
 
@@ -765,16 +765,16 @@ function showHandDetail(hid){
       seatEl.appendChild(cardsRow);
 
       const nameEl=document.createElement('div');
-      nameEl.style.cssText='font-size:9px;font-weight:700;color:'+(isMe?'#c8a96e':'#e2ddd4')+';line-height:1.1;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:5px;white-space:nowrap';
+      nameEl.style.cssText='font-size:9px;font-weight:700;color:'+(isMe?'#c9a45c':'#f1ebdd')+';line-height:1.1;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:5px;white-space:nowrap';
       nameEl.textContent=(s.playerName||'').slice(0,8);
       seatEl.appendChild(nameEl);
     } else {
       // אין קלפים גלויים — תיבה קומפקטית עם עמדה+שם בלבד
       const circle = document.createElement('div');
       const sz = 50;
-      circle.style.cssText = 'width:'+sz+'px;min-height:'+sz+'px;border-radius:8px;background:#121824;border:1.5px solid '+(s.folded?'rgba(255,255,255,0.06)':hasWon?'#5fc47a':'rgba(255,255,255,0.12)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3px 2px;opacity:'+(s.folded?0.4:1)+';'+(hasWon?'box-shadow:0 0 6px rgba(95,196,122,0.4)':'');
+      circle.style.cssText = 'width:'+sz+'px;min-height:'+sz+'px;border-radius:8px;background:#181714;border:1.5px solid '+(s.folded?'rgba(255,255,255,0.06)':hasWon?'#5fc47a':'rgba(255,255,255,0.12)')+';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3px 2px;opacity:'+(s.folded?0.4:1)+';'+(hasWon?'box-shadow:0 0 6px rgba(95,196,122,0.4)':'');
       const nameEl=document.createElement('div');
-      nameEl.style.cssText='font-size:9px;font-weight:700;color:'+(isMe?'#c8a96e':'#e2ddd4')+';line-height:1.1';
+      nameEl.style.cssText='font-size:9px;font-weight:700;color:'+(isMe?'#c9a45c':'#f1ebdd')+';line-height:1.1';
       nameEl.textContent=(s.playerName||'').slice(0,5);
       circle.appendChild(nameEl);
       seatEl.appendChild(circle);
@@ -801,7 +801,7 @@ function showHandDetail(hid){
   // Streets - column layout like poker client
   const streets = ['פרה-פלופ','פלופ','טורן','ריבר'];
   const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טורן':'Turn','ריבר':'River'};
-  const actionColors = {Fold:'#666',Check:'#5fc47a',Call:'#5b9bd5',Raise:'#c8a96e','3bet':'#e0a030','4bet':'#e07b6a','All-in':'#e05555',BB:'#e07b6a',SB:'#8b7cb8',Bet:'#c8a96e',Open:'#c8a96e'};
+  const actionColors = {Fold:'#666',Check:'#5fc47a',Call:'#5b9bd5',Raise:'#c9a45c','3bet':'#e0a030','4bet':'#e07b6a','All-in':'#e05555',BB:'#e07b6a',SB:'#8b7cb8',Bet:'#c9a45c',Open:'#c9a45c'};
 
 
 
@@ -833,7 +833,7 @@ function showHandDetail(hid){
       const blindsCol = document.createElement('div');
       blindsCol.style.cssText = 'background:#0d1120;min-width:0';
       const blindsHdr = document.createElement('div');
-      blindsHdr.style.cssText = 'padding:5px 6px;background:#141824;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06)';
+      blindsHdr.style.cssText = 'padding:5px 6px;background:#181714;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06)';
       blindsHdr.innerHTML = '<div style="font-size:10px;font-weight:800;color:#8b7cb8">Blinds</div>';
       blindsCol.appendChild(blindsHdr);
       blindActs.forEach(a=>{
@@ -841,10 +841,10 @@ function showHandDetail(hid){
         row.style.cssText = 'padding:5px 6px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center';
         const c = a.type==='SB'?'#8b7cb8':'#e07b6a';
         row.innerHTML =
-          '<div style="font-size:9px;color:#8a8799">'+(a.pos||a.type)+'</div>'+
-          '<div style="font-size:10px;font-weight:700;color:#e2ddd4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+a.playerName+'</div>'+
+          '<div style="font-size:9px;color:#a39a88">'+(a.pos||a.type)+'</div>'+
+          '<div style="font-size:10px;font-weight:700;color:#f1ebdd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+a.playerName+'</div>'+
           '<div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:5px;background:'+c+'22;color:'+c+';font-size:9px;font-weight:800">'+a.type+'</div>'+
-          (a.amount?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">'+Number(a.amount).toLocaleString()+'</div>':'');
+          (a.amount?'<div style="font-size:10px;font-weight:700;color:#f1ebdd">'+Number(a.amount).toLocaleString()+'</div>':'');
         blindsCol.appendChild(row);
       });
       grid.appendChild(blindsCol);
@@ -876,8 +876,8 @@ function showHandDetail(hid){
       })();
 
       const hdr = document.createElement('div');
-      hdr.style.cssText = 'padding:5px 6px;background:#141824;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06)';
-      hdr.innerHTML = '<div style="font-size:10px;font-weight:800;color:#c8a96e">'+streetLabels[street]+'</div>'+
+      hdr.style.cssText = 'padding:5px 6px;background:#181714;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06)';
+      hdr.innerHTML = '<div style="font-size:10px;font-weight:800;color:#c9a45c">'+streetLabels[street]+'</div>'+
         (potAtStreet?'<div style="font-size:9px;color:#5fc47a">₪'+potAtStreet.toLocaleString()+'</div>':'');
       col.appendChild(hdr);
 
@@ -899,7 +899,7 @@ function showHandDetail(hid){
       allActs.forEach(a=>{
         const row = document.createElement('div');
         row.style.cssText = 'padding:5px 6px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center';
-        const c = actionColors[a.type]||'#e2ddd4';
+        const c = actionColors[a.type]||'#f1ebdd';
         const isFold = a.type==='Fold';
         const myOdds = oddsByKey[street+'|'+a.seatIdx];
         const oddsKey = street+'|'+a.seatIdx;
@@ -907,13 +907,13 @@ function showHandDetail(hid){
         if(isMyOddsRow) _usedOddsKeys.add(oddsKey);
         const ev = isMyOddsRow && myOdds.equityPct!==null ? (myOdds.equityPct - myOdds.breakEven) : null;
         row.innerHTML =
-          '<div style="font-size:9px;color:#8a8799;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+
-          '<div style="font-size:10px;font-weight:700;color:'+(isFold?'#555':'#e2ddd4')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.playerName+'</div>'+
+          '<div style="font-size:9px;color:#a39a88;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.pos||'')+'</div>'+
+          '<div style="font-size:10px;font-weight:700;color:'+(isFold?'#555':'#f1ebdd')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.playerName+'</div>'+
           '<div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:5px;background:'+c+'22;color:'+c+';font-size:9px;font-weight:800">'+a.type+'</div>'+
-          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#e2ddd4">₪'+Number(a.amount).toLocaleString()+'</div>':'')+
+          (a.amount&&!isFold?'<div style="font-size:10px;font-weight:700;color:#f1ebdd">₪'+Number(a.amount).toLocaleString()+'</div>':'')+
           (isMyOddsRow?
             '<div style="margin-top:3px;padding-top:3px;border-top:1px dashed rgba(255,255,255,0.08)">'+
-            '<div style="font-size:10px;color:#8a8799">BE '+myOdds.breakEven.toFixed(0)+'%</div>'+
+            '<div style="font-size:10px;color:#a39a88">BE '+myOdds.breakEven.toFixed(0)+'%</div>'+
             (myOdds.equityPct!==null
               ? '<div style="font-size:12px;font-weight:900;color:#7eb8a4">'+myOdds.equityPct.toFixed(1)+'%</div>'+
                 '<div style="font-size:10px;font-weight:800;color:'+(ev>=0?'#5fc47a':'#e07b6a')+'">'+(ev>=0?'✅ +EV':'❌ -EV')+'</div>'
@@ -1101,27 +1101,27 @@ function renderHandList(){
     
     const raisesByStreet = streets.map(st=>allActions.filter(a=>a.street===st&&(a.type==='Raise'||a.type==='Open'||a.type==='3bet'||a.type==='4bet'||a.type==='All-in')).length);
 
-    const statCell = (label,val,color='#e2ddd4',sub='')=>
+    const statCell = (label,val,color='#f1ebdd',sub='')=>
       `<div style="flex:1;padding:6px 8px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)">
-        <div style="font-size:9px;color:#8a8799;margin-bottom:2px">${label}</div>
+        <div style="font-size:9px;color:#a39a88;margin-bottom:2px">${label}</div>
         <div style="font-size:15px;font-weight:800;color:${color}">${val}</div>
-        ${sub?`<div style="font-size:9px;color:#8a8799">${sub}</div>`:''}
+        ${sub?`<div style="font-size:9px;color:#a39a88">${sub}</div>`:''}
       </div>`;
 
     statsBar.innerHTML =
       statCell('ידיים', total)+
       statCell('ניצחונות', wins, '#5fc47a', pct+'%')+
-      statCell('VPIP', total>0?Math.round(vpip/total*100)+'%':'–', '#c8a96e')+
+      statCell('VPIP', total>0?Math.round(vpip/total*100)+'%':'–', '#c9a45c')+
       statCell('PFR', total>0?Math.round(pfr/total*100)+'%':'–', '#5b9bd5')+
       statCell('AF', af, '#FFB347');
 
     // Street raises breakdown
     const streetBar = document.createElement('div');
-    streetBar.style.cssText = 'display:flex;background:#080b12;border-bottom:1px solid rgba(255,255,255,0.06)';
+    streetBar.style.cssText = 'display:flex;background:#0f0e0c;border-bottom:1px solid rgba(255,255,255,0.06)';
     streetBar.innerHTML = streets.map((st,i)=>
       `<div style="flex:1;padding:5px 8px;text-align:center;border-left:1px solid rgba(255,255,255,0.06)">
-        <div style="font-size:9px;color:#8a8799">${st.slice(0,2)} רייז</div>
-        <div style="font-size:13px;font-weight:700;color:#e2ddd4">${raisesByStreet[i]}</div>
+        <div style="font-size:9px;color:#a39a88">${st.slice(0,2)} רייז</div>
+        <div style="font-size:13px;font-weight:700;color:#f1ebdd">${raisesByStreet[i]}</div>
       </div>`
     ).join('');
     statsBar.style.display='flex';
@@ -1154,15 +1154,15 @@ function renderHandList(){
     return`<div class="card-item" onclick="showHandDetail('${h.id}')" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div>
-          <div style="font-size:11px;font-weight:700;color:#e2ddd4">${h.label||h.blinds}</div>
+          <div style="font-size:11px;font-weight:700;color:#f1ebdd">${h.label||h.blinds}</div>
           ${(h.winners||[]).length?`<div style="font-size:10px;color:#5fc47a">🏆 ${h.winners.map(w=>w.name).join(' + ')}</div>`:'' }
           <div style="font-size:10px;color:var(--muted)">${h.date} · ${h.blinds}</div>
         </div>
         <button class="btn btn-red btn-xs" onclick="event.stopPropagation();deleteHand(${hi})">✕</button>
       </div>
       ${(winnerGroupsHtml||myCardsHtml)?`<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
-        ${winnerGroupsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#8a8799">🏆</span>${winnerGroupsHtml}</div>`:''}
-        ${myCardsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#8a8799">שלי</span><div style="display:flex;direction:ltr">${myCardsHtml}</div></div>`:''}
+        ${winnerGroupsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#a39a88">🏆</span>${winnerGroupsHtml}</div>`:''}
+        ${myCardsHtml?`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:9px;color:#a39a88">שלי</span><div style="display:flex;direction:ltr">${myCardsHtml}</div></div>`:''}
       </div>`:''}
       ${boardCards.length?`<div style="display:flex;gap:3px;direction:ltr">${boardCards.map(c=>_hlCard(c,false)).join('')}</div>`:``}
     </div>`;
@@ -1216,9 +1216,9 @@ function showSaveTournDialog(){
     if(activePids.length>=2){
       const names = activePids.map(pid=>pName(pid)||'?').join(' / ');
       tieBox.innerHTML = `
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 10px;margin-bottom:12px;border-radius:9px;background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.3);cursor:pointer">
-          <input id="save-tourn-tie-chk" type="checkbox" style="width:16px;height:16px;accent-color:#c8a96e">
-          <span style="font-size:12px;color:#e2ddd4">🤝 <b>${names}</b> התחלקו — תן ניקוד שווה (הפרס הכספי נקבע בנפרד)</span>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 10px;margin-bottom:12px;border-radius:9px;background:rgba(201,164,92,0.08);border:1px solid rgba(201,164,92,0.3);cursor:pointer">
+          <input id="save-tourn-tie-chk" type="checkbox" style="width:16px;height:16px;accent-color:#c9a45c">
+          <span style="font-size:12px;color:#f1ebdd">🤝 <b>${names}</b> התחלקו — תן ניקוד שווה (הפרס הכספי נקבע בנפרד)</span>
         </label>`;
     } else {
       tieBox.innerHTML = '';
@@ -1278,9 +1278,9 @@ function resetTournament(){if(isViewer()){notify('צופה בלבד');return;}
   // תיקו, כי doSaveAndReset() קרא ל-saveTournament בלי הדגל).
   const activePidsForTie = Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid));
   const tieHtml = activePidsForTie.length>=2
-    ? `<label style="display:flex;align-items:center;gap:8px;padding:9px 10px;margin-bottom:10px;border-radius:9px;background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.3);cursor:pointer">
-        <input id="reset-tourn-tie-chk" type="checkbox" style="width:16px;height:16px;accent-color:#c8a96e">
-        <span style="font-size:12px;color:#e2ddd4">🤝 <b>${activePidsForTie.map(pid=>pName(pid)||'?').join(' / ')}</b> התחלקו — תן ניקוד שווה</span>
+    ? `<label style="display:flex;align-items:center;gap:8px;padding:9px 10px;margin-bottom:10px;border-radius:9px;background:rgba(201,164,92,0.08);border:1px solid rgba(201,164,92,0.3);cursor:pointer">
+        <input id="reset-tourn-tie-chk" type="checkbox" style="width:16px;height:16px;accent-color:#c9a45c">
+        <span style="font-size:12px;color:#f1ebdd">🤝 <b>${activePidsForTie.map(pid=>pName(pid)||'?').join(' / ')}</b> התחלקו — תן ניקוד שווה</span>
       </label>`
     : '';
   cont.insertAdjacentHTML('afterbegin', `
@@ -1288,7 +1288,7 @@ function resetTournament(){if(isViewer()){notify('צופה בלבד');return;}
       <div style="font-size:14px;font-weight:700;color:#e07b6a;margin-bottom:6px;text-align:center">לאפס את כל נתוני הטורניר?</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px;text-align:center">פעולה זו תמחק BuyIn, Rebuy, סדר הדחה וכל נתוני השולחן</div>
       <input id="reset-tourn-name" type="text" placeholder="שם הטורניר לשמירה (אופציונלי)..."
-        style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;direction:rtl;box-sizing:border-box;margin-bottom:10px">
+        style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#14130f;color:#f1ebdd;font-size:13px;outline:none;direction:rtl;box-sizing:border-box;margin-bottom:10px">
       ${tieHtml}
       <div style="display:flex;gap:8px">
         <button class="btn btn-gold" style="flex:2" onclick="doSaveAndReset()">💾 שמור ואפס</button>
@@ -1306,6 +1306,7 @@ function doSaveAndReset(){
 }
 
 function doResetTournament(){
+  if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
   // Reset blind timer
   S.blindLevel = 0;
   S.blindTimer.running = false;
@@ -1332,7 +1333,7 @@ function editTournName(ti){
   inp.id = 'edit-tourn-name-'+ti;
   inp.value = t.name||'';
   inp.placeholder = 'שם הטורניר...';
-  inp.style.cssText = 'padding:4px 8px;border-radius:7px;border:1px solid rgba(200,169,110,0.5);background:#0a0e18;color:#e2ddd4;font-size:13px;outline:none;direction:rtl;width:140px';
+  inp.style.cssText = 'padding:4px 8px;border-radius:7px;border:1px solid rgba(201,164,92,0.5);background:#14130f;color:#f1ebdd;font-size:13px;outline:none;direction:rtl;width:140px';
   inp.onkeydown = (e)=>{
     if(e.key==='Enter'){ saveTournName(ti, inp.value); inp.remove(); renderTournList(); }
     if(e.key==='Escape'){ inp.remove(); }
@@ -1343,11 +1344,14 @@ function editTournName(ti){
 }
 
 function saveTournName(ti, name){
+  if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
   if(S.tournLog[ti]) S.tournLog[ti].name = name.trim();
   persist();
 }
 
 function deleteTournament(ti){
+  // מחיקה — אדמין בלבד (2026-10-15: קודם גם צופה יכל למחוק, רק בזיכרון המקומי שלו)
+  if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
   markDeleted('tourns',S.tournLog[ti]?.id);
   S.tournLog.splice(ti,1); persist(); renderTournList();
 }
@@ -1361,6 +1365,7 @@ function deleteTournament(ti){
 // finishOrder) הוא גם המקור היחיד ל-Leaderboard (computeLeaderboard ב-
 // state.js), אז תיקון כאן מתעדכן שם אוטומטית גם כן, בלי מקום נוסף לתקן.
 function toggleEditFinishOrder(ti){
+  if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
   const existing = document.getElementById('edit-finish-'+ti);
   if(existing){ existing.remove(); return; }
   const t = S.tournLog[ti];
@@ -1369,7 +1374,7 @@ function toggleEditFinishOrder(ti){
   if(!card) return;
   const box = document.createElement('div');
   box.id = 'edit-finish-'+ti;
-  box.style.cssText = 'margin-top:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(200,169,110,0.25)';
+  box.style.cssText = 'margin-top:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(201,164,92,0.25)';
   box.innerHTML = renderEditFinishOrderHTML(ti);
   card.appendChild(box);
 }
@@ -1379,7 +1384,7 @@ function renderEditFinishOrderHTML(ti){
   const finish = (t.finishOrder||[]).slice().sort((a,b)=>a.place-b.place);
   const tieKey = f => f.tieGroup ? f.tieGroup.join(',') : null;
   return `
-    <div style="font-size:11px;font-weight:800;color:#c8a96e;margin-bottom:6px">✏️ עריכת סדר-סיום</div>
+    <div style="font-size:11px;font-weight:800;color:#c9a45c;margin-bottom:6px">✏️ עריכת סדר-סיום</div>
     ${finish.map((f,idx)=>{
       const next = finish[idx+1];
       const isTiedWithNext = next && tieKey(f) && tieKey(f)===tieKey(next);
@@ -1387,13 +1392,13 @@ function renderEditFinishOrderHTML(ti){
       return `
       <div style="display:flex;align-items:center;gap:6px;padding:4px 0;${isTiedWithNext?'':'border-bottom:1px solid rgba(255,255,255,0.05)'}">
         <span style="width:34px;font-size:12px;font-weight:800;color:var(--gold)">${placeLabel}.</span>
-        <span style="flex:1;font-size:13px;color:#e2ddd4">${f.name||'?'}${f.tieGroup?' <span style="color:#c8a96e;font-size:11px">🤝 תיקו</span>':''}${f.rebuy>0?` <span style="color:var(--muted);font-size:11px">(rebuy ${f.rebuy})</span>`:''}</span>
-        <button onclick="swapTournFinishPlace(${ti},${idx},-1)" ${idx===0?'disabled':''} style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:2px 8px;color:#e2ddd4;cursor:pointer;${idx===0?'opacity:0.25;cursor:default':''}">⬆️</button>
-        <button onclick="swapTournFinishPlace(${ti},${idx},1)" ${idx===finish.length-1?'disabled':''} style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:2px 8px;color:#e2ddd4;cursor:pointer;${idx===finish.length-1?'opacity:0.25;cursor:default':''}">⬇️</button>
+        <span style="flex:1;font-size:13px;color:#f1ebdd">${f.name||'?'}${f.tieGroup?' <span style="color:#c9a45c;font-size:11px">🤝 תיקו</span>':''}${f.rebuy>0?` <span style="color:var(--muted);font-size:11px">(rebuy ${f.rebuy})</span>`:''}</span>
+        <button onclick="swapTournFinishPlace(${ti},${idx},-1)" ${idx===0?'disabled':''} style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:2px 8px;color:#f1ebdd;cursor:pointer;${idx===0?'opacity:0.25;cursor:default':''}">⬆️</button>
+        <button onclick="swapTournFinishPlace(${ti},${idx},1)" ${idx===finish.length-1?'disabled':''} style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:2px 8px;color:#f1ebdd;cursor:pointer;${idx===finish.length-1?'opacity:0.25;cursor:default':''}">⬇️</button>
       </div>
       ${next?`
       <div style="display:flex;justify-content:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
-        <button onclick="toggleTiePlaces(${ti},${idx})" style="font-size:10px;padding:2px 10px;border-radius:8px;cursor:pointer;${isTiedWithNext?'background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.5);color:#c8a96e;font-weight:800':'background:none;border:1px dashed rgba(255,255,255,0.15);color:var(--muted)'}">🤝 ${isTiedWithNext?'תיקו (לחץ לביטול)':'סמן תיקו עם השחקן הבא'}</button>
+        <button onclick="toggleTiePlaces(${ti},${idx})" style="font-size:10px;padding:2px 10px;border-radius:8px;cursor:pointer;${isTiedWithNext?'background:rgba(201,164,92,0.18);border:1px solid rgba(201,164,92,0.5);color:#c9a45c;font-weight:800':'background:none;border:1px dashed rgba(255,255,255,0.15);color:var(--muted)'}">🤝 ${isTiedWithNext?'תיקו (לחץ לביטול)':'סמן תיקו עם השחקן הבא'}</button>
       </div>`:''}
     `;}).join('')}
     <div style="font-size:10px;color:var(--muted);margin-top:6px">שינוי סדר-הסיום מעדכן אוטומטית גם את הפרסים (לפי מקום) וגם את ה-Leaderboard. תיקו נותן לשני השחקנים ניקוד ממוצע (לא ממוצע-המקום) — הפרס הכספי לא משתנה אוטומטית, תוכל לקבוע סכום שווה ידנית דרך override הפרסים בהגדרות הטורניר אם תרצה.</div>
@@ -1401,6 +1406,7 @@ function renderEditFinishOrderHTML(ti){
 }
 
 function swapTournFinishPlace(ti, idx, dir){
+  if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
   const t = S.tournLog[ti];
   if(!t || !t.finishOrder) return;
   const finish = t.finishOrder.slice().sort((a,b)=>a.place-b.place); // same object refs as t.finishOrder
@@ -1419,6 +1425,7 @@ function swapTournFinishPlace(ti, idx, dir){
 // — רק tieGroup משותף נוסף/מוסר, ש-computeLeaderboard (state.js) קורא כדי
 // לתת ניקוד ממוצע לשניהם במקום ניקוד-לפי-מקום נפרד.
 function toggleTiePlaces(ti, idx){
+  if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
   const t = S.tournLog[ti];
   if(!t || !t.finishOrder) return;
   const finish = t.finishOrder.slice().sort((a,b)=>a.place-b.place);
@@ -1463,7 +1470,7 @@ function renderTournList(){
   const activeCnt2 = Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid)).length;
   const showWinners = activeCnt2 <= 1;
 
-  let html = `<div class="card-item" style="border-color:rgba(200,169,110,0.3);margin-bottom:14px">
+  let html = `<div class="card-item" style="border-color:rgba(201,164,92,0.3);margin-bottom:14px">
     <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px">טורניר נוכחי</div>
 
     <!-- BUYIN + REBUY BAR CHART - shown whenever there are players with buyin -->
@@ -1481,7 +1488,7 @@ function renderTournList(){
               const rebuyH = b.rebuy>0 ? Math.max(Math.round((b.rebuy/maxRebuy)*BAR_MAX), 6) : 0;
               const hasFree16 = b.rebuy>=16;
               const hasFree10 = b.rebuy>=10;
-              const rebuyColor = hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
+              const rebuyColor = hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(201,164,92,0.85)';
               const badge = hasFree16?'16✓':hasFree10?'10✓':'';
               const name = pName(pid)||'?';
               const isKO = S.koOrder.includes(pid);
@@ -1492,7 +1499,7 @@ function renderTournList(){
                   <div style="width:100%;height:${BUYIN_H}px;background:rgba(95,196,122,0.75);border-radius:${rebuyH>0?'0':'3px 3px 0 0'}"></div>
                 </div>
                 <div style="height:52px;display:flex;align-items:flex-start;justify-content:center;margin-top:3px">
-                  <span style="font-size:13px;font-weight:700;color:${isKO?'var(--muted)':'#e2ddd4'};writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;line-height:1;letter-spacing:2px">${name}</span>
+                  <span style="font-size:13px;font-weight:700;color:${isKO?'var(--muted)':'#f1ebdd'};writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);white-space:nowrap;line-height:1;letter-spacing:2px">${name}</span>
                 </div>
               </div>`;
             }).join('');
@@ -1501,7 +1508,7 @@ function renderTournList(){
       </div>
       <div style="display:flex;gap:10px;margin-top:4px">
         <span style="font-size:9px;color:rgba(95,196,122,0.8)">■ כניסה</span>
-        ${Object.values(S.buyins).some(b=>b.rebuy>0)?`<span style="font-size:9px;color:rgba(200,169,110,0.8)">■ Rebuy</span>`:''}
+        ${Object.values(S.buyins).some(b=>b.rebuy>0)?`<span style="font-size:9px;color:rgba(201,164,92,0.8)">■ Rebuy</span>`:''}
       </div>
     </div>
     <div style="height:1px;background:rgba(255,255,255,0.06);margin-bottom:10px"></div>
@@ -1523,7 +1530,7 @@ function renderTournList(){
               <div style="font-size:9px;font-weight:800;color:${m.c}">מקום ${r.place}</div>
             </div>
             <div style="flex:1">
-              <div style="font-size:14px;font-weight:800;color:#e2ddd4">${name}</div>
+              <div style="font-size:14px;font-weight:800;color:#f1ebdd">${name}</div>
               ${rb>0?`<div style="font-size:11px;color:var(--muted)">Rebuy: ${rb}</div>`:'<div style="font-size:11px;color:var(--muted2)">ללא Rebuy</div>'}
             </div>
             ${prize?`<div style="font-size:15px;font-weight:900;color:${r.place===1?'#5fc47a':'var(--gold)'}">₪${prize.toLocaleString()}</div>`:''}
@@ -1534,7 +1541,7 @@ function renderTournList(){
               <div style="font-size:13px;color:var(--muted);font-weight:700">מקום 4</div>
             </div>
             <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:#e2ddd4">${name}</div>
+              <div style="font-size:13px;font-weight:700;color:#f1ebdd">${name}</div>
               ${rb>0?`<div style="font-size:11px;color:var(--muted)">Rebuy: ${rb}</div>`:'<div style="font-size:11px;color:var(--muted2)">ללא Rebuy</div>'}
             </div>
             ${prize?`<div style="font-size:13px;font-weight:800;color:var(--gold)">₪${prize.toLocaleString()}</div>`:''}
@@ -1594,7 +1601,7 @@ function renderTournList(){
     </div>
     ${isAdmin()?`
     <div style="display:flex;gap:6px;margin-top:12px">
-      <button onclick="openSaveTournBox()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.1);color:#c8a96e;font-size:11px;font-weight:800;cursor:pointer">💾 שמור</button>
+      <button onclick="openSaveTournBox()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.1);color:#c9a45c;font-size:11px;font-weight:800;cursor:pointer">💾 שמור</button>
       <button onclick="resetTournament()" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(224,123,106,0.4);background:rgba(224,123,106,0.08);color:#e07b6a;font-size:11px;font-weight:800;cursor:pointer">🗑 אפס</button>
     </div>`:''}
   </div>`;
@@ -1604,8 +1611,8 @@ function renderTournList(){
     html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:12px;font-weight:700;color:var(--gold)">היסטוריה (${S.tournLog.length})</div>
       <div style="display:flex;gap:6px">
-        <button onclick="showLeaderboard()" style="font-size:10px;color:#c8a96e;background:rgba(200,169,110,0.1);border:1px solid rgba(200,169,110,0.4);border-radius:7px;padding:3px 8px;cursor:pointer;font-weight:800">🏆 Leaderboard</button>
-        ${isAdmin()?`<button onclick="exportToExcel()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>`:''}
+        <button onclick="showLeaderboard()" style="font-size:10px;color:#c9a45c;background:rgba(201,164,92,0.1);border:1px solid rgba(201,164,92,0.4);border-radius:7px;padding:3px 8px;cursor:pointer;font-weight:800">🏆 Leaderboard</button>
+        ${isAdmin()?`<button onclick="exportToExcel()" style="font-size:10px;color:#a39a88;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>`:''}
       </div>
     </div>`;
     html += S.tournLog.map((t,ti)=>{
@@ -1617,7 +1624,7 @@ function renderTournList(){
           <div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
               <span style="font-size:13px;color:#b0a8a0">${t.date}</span>
-              ${isAdmin()?`<span style="font-size:15px;font-weight:800;color:#f0ece4;cursor:pointer;border-bottom:1px dashed rgba(200,169,110,0.4)" 
+              ${isAdmin()?`<span style="font-size:15px;font-weight:800;color:#f0ece4;cursor:pointer;border-bottom:1px dashed rgba(201,164,92,0.4)" 
               onclick="editTournName(${ti})" title="לחץ לעריכת שם">${t.name||'+ הוסף שם'}</span>`
               :t.name?`<span style="font-size:15px;font-weight:800;color:#f0ece4">${t.name}</span>`:''}
             </div>
@@ -1625,8 +1632,8 @@ function renderTournList(){
           </div>
           <div class="share-hide" style="display:flex;gap:6px">
             <button class="btn btn-xs" style="background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.4);color:#5b9bd5" onclick="shareTournamentImage(${ti})" title="שתף כתמונה">📤</button>
-            ${isAdmin()?`<button class="btn btn-xs" style="background:rgba(200,169,110,0.12);border:1px solid rgba(200,169,110,0.4);color:#c8a96e" onclick="toggleEditFinishOrder(${ti})" title="ערוך סדר-סיום">✏️</button>`:''}
-            <button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>
+            ${isAdmin()?`<button class="btn btn-xs" style="background:rgba(201,164,92,0.12);border:1px solid rgba(201,164,92,0.4);color:#c9a45c" onclick="toggleEditFinishOrder(${ti})" title="ערוך סדר-סיום">✏️</button>`:''}
+            ${isAdmin()?`<button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>`:''}
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">
@@ -1638,8 +1645,8 @@ function renderTournList(){
             <div style="font-size:10px;color:#9b6fd4;margin-bottom:1px">Rebuy</div>
             <div style="font-size:18px;font-weight:900;color:#e2c4ff">${t.totalRebuys}</div>
           </div>
-          <div style="background:rgba(200,169,110,0.1);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
-            <div style="font-size:10px;color:#c8a96e;margin-bottom:1px">כניסות${t.freeRebuys?` <span style="color:#5b9bd5">(${t.freeRebuys}🎁)</span>`:''}</div>
+          <div style="background:rgba(201,164,92,0.1);border:1px solid rgba(201,164,92,0.25);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
+            <div style="font-size:10px;color:#c9a45c;margin-bottom:1px">כניסות${t.freeRebuys?` <span style="color:#5b9bd5">(${t.freeRebuys}🎁)</span>`:''}</div>
             <div style="font-size:18px;font-weight:900;color:#f0ece4">${t.paidEntries||t.totalEntries}</div>
           </div>
           ${t.surprisesAmount?`
@@ -1666,7 +1673,7 @@ function renderTournList(){
               const color = colors[displayPlace]||'var(--gold)';
               return `<div style="display:flex;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
                 <span style="font-size:${displayPlace<=3?'14':'12'}px;flex-shrink:0;margin-left:4px">${medal||displayPlace+'.'}</span>
-                <span style="font-size:13px;font-weight:700;color:#e2ddd4;flex:1">${f.name||'?'}${rb>0?` <span style="font-size:12px;font-weight:900;color:var(--gold)">(${rb})</span>`:''}</span>
+                <span style="font-size:13px;font-weight:700;color:#f1ebdd;flex:1">${f.name||'?'}${rb>0?` <span style="font-size:12px;font-weight:900;color:var(--gold)">(${rb})</span>`:''}</span>
                 ${prize?`<span style="font-size:13px;font-weight:800;color:${color};flex-shrink:0">₪${prize.toLocaleString()}</span>`:''}
               </div>`;
             }).join('')}
@@ -1700,7 +1707,7 @@ function renderTournList(){
                   // כדי לשמר את האינדיקציה החזותית המהירה של אבן-דרך-
                   // rebuy, גם כשהגובה עצמו כבר לא מייצג אותה.
                   const displayPlace=f.tieGroup?Math.min(...f.tieGroup):f.place;
-                  const barColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(200,169,110,0.85)';
+                  const barColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(201,164,92,0.85)';
                   const barH=Math.max(Math.round(BAR_MAX*(totalPlayers-displayPlace+1)/totalPlayers), BAR_MIN);
                   // מקומות 1/2/3 צבע-מדליה ייחודי לכל אחד (מוגברים מעט
                   // לבולטות — gold בהיר יותר, silver/bronze מוארים); כל
@@ -1728,7 +1735,7 @@ function renderTournList(){
                     <div style="width:min(16px,70%);display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
                       <div style="width:100%;height:${barH}px;background:${barColor};border-radius:2px 2px 0 0"></div>
                     </div>
-                    <div style="margin-top:3px;font-size:9px;font-weight:700;color:#e2ddd4;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+                    <div style="margin-top:3px;font-size:9px;font-weight:700;color:#f1ebdd;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
                     <div style="font-size:8px;font-weight:600;color:var(--muted);white-space:nowrap;min-height:10px;margin-top:1px">${rebuyText}</div>
                   </div>`;
                 }).join('');
@@ -1757,7 +1764,7 @@ function renderTournList(){
 // ═══════════════════════════════════════════════════════
 const PLAYER_TYPES = {
   TAG:  {label:'TAG',  color:'#5b9bd5', desc:'Tight Aggressive'},
-  LAG:  {label:'LAG',  color:'#c8a96e', desc:'Loose Aggressive'},
+  LAG:  {label:'LAG',  color:'#c9a45c', desc:'Loose Aggressive'},
   Nit:  {label:'Nit',  color:'#7eb8a4', desc:'Tight Passive'},
   Station:{label:'Station',color:'#e07b6a',desc:'Calling Station'},
   Fish: {label:'Fish', color:'#9b7eb8', desc:'Unpredictable'},
@@ -1794,7 +1801,7 @@ function setPlayerType(pid, type){
     if(t){
       el.style.background = el.dataset.ptypeVal===type ? t.color+'33' : 'rgba(255,255,255,0.04)';
       el.style.borderColor = el.dataset.ptypeVal===type ? t.color+'88' : 'rgba(255,255,255,0.1)';
-      el.style.color = el.dataset.ptypeVal===type ? t.color : '#8a8799';
+      el.style.color = el.dataset.ptypeVal===type ? t.color : '#a39a88';
     }
   });
 }
@@ -1810,7 +1817,7 @@ function showLeaderboard(){
   // רקע אטום לגמרי (לא rgba עם שקיפות) — בגרסה הקודמת rgba(0,0,0,0.94) גרם
   // ל"רפאים" של התוכן שמאחורי ה-overlay (טאבים/כרטיס-טורניר) לחלחל דרך,
   // מה שפגע בקריאות של כל הטקסט העמום, במיוחד ההערה בתחתית הטבלה.
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:450;background:#080b12;overflow-y:auto;direction:rtl';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:450;background:#0f0e0c;overflow-y:auto;direction:rtl';
   const box = document.createElement('div');
   box.style.cssText = 'max-width:480px;margin:0 auto;padding:12px';
   overlay.appendChild(box);
@@ -1818,9 +1825,9 @@ function showLeaderboard(){
 
   const hdrTop = document.createElement('div');
   hdrTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
-  hdrTop.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c8a96e">🏆 Leaderboard (${S.tournLog.length} טורנירים)</div>`;
+  hdrTop.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c9a45c">🏆 Leaderboard (${S.tournLog.length} טורנירים)</div>`;
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer;padding:4px';
+  closeBtn.style.cssText = 'background:none;border:none;color:#a39a88;font-size:22px;cursor:pointer;padding:4px';
   closeBtn.textContent = '✕';
   closeBtn.className = 'share-hide';
   closeBtn.onclick = ()=>overlay.remove();
@@ -1838,13 +1845,13 @@ function showLeaderboard(){
 
   const shareBtn = document.createElement('button');
   shareBtn.textContent = '📤 שתף';
-  shareBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:12px;font-weight:800;cursor:pointer';
+  shareBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#f1ebdd;font-size:12px;font-weight:800;cursor:pointer';
   shareBtn.onclick = ()=>shareLeaderboardImage(box);
   btnRow.appendChild(shareBtn);
 
   const exportBtn = document.createElement('button');
   exportBtn.textContent = '📊 ייצוא ל-Excel';
-  exportBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1px solid rgba(200,169,110,0.4);background:rgba(200,169,110,0.08);color:#c8a96e;font-size:12px;font-weight:800;cursor:pointer';
+  exportBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.08);color:#c9a45c;font-size:12px;font-weight:800;cursor:pointer';
   exportBtn.onclick = exportLeaderboardToCSV;
   btnRow.appendChild(exportBtn);
 
@@ -1857,10 +1864,10 @@ function showLeaderboard(){
       <div>#</div><div>שחקן</div><div style="text-align:center">נקודות</div><div style="text-align:center">משחקים</div><div style="text-align:center">נצחונות</div>
     </div>
     ${lb.map((p,i)=>`
-      <div style="display:grid;grid-template-columns:28px 1fr 60px 55px 60px;gap:4px;padding:8px 10px;font-size:12px;border-top:1px solid rgba(255,255,255,0.05);${i<3?'background:rgba(200,169,110,0.06)':''}">
-        <div style="font-weight:800;color:${i===0?'#c8a96e':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--muted)'}">${i+1}</div>
+      <div style="display:grid;grid-template-columns:28px 1fr 60px 55px 60px;gap:4px;padding:8px 10px;font-size:12px;border-top:1px solid rgba(255,255,255,0.05);${i<3?'background:rgba(201,164,92,0.06)':''}">
+        <div style="font-weight:800;color:${i===0?'#c9a45c':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--muted)'}">${i+1}</div>
         <div style="font-weight:700;color:#f0ece4">${p.name}</div>
-        <div style="text-align:center;font-weight:800;color:#c8a96e">${p.points.toFixed(2)}</div>
+        <div style="text-align:center;font-weight:800;color:#c9a45c">${p.points.toFixed(2)}</div>
         <div style="text-align:center;color:var(--muted)">${p.nights}</div>
         <div style="text-align:center;color:var(--muted)">${p.wins}</div>
       </div>
@@ -1872,7 +1879,7 @@ function showLeaderboard(){
   // צבע קבוע-מפורש, לא var(--muted2) — יש כמה הגדרות שונות למשתנה הזה
   // בקובץ ה-CSS לפי הקשר, ואחת מהן (#3a3650) כהה כמעט-שחור וגרמה לטקסט
   // הזה להיות בלתי-קריא לגמרי על הרקע השחור.
-  note.style.cssText = 'font-size:11px;color:#8a8799;margin-top:10px;text-align:center;line-height:1.5';
+  note.style.cssText = 'font-size:11px;color:#a39a88;margin-top:10px;text-align:center;line-height:1.5';
   note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו משחק) ÷ מקום-סיום';
   box.appendChild(note);
 }
@@ -2278,37 +2285,37 @@ function showPTExportModal(){
 
 function _renderPTExportModal(){
   const hands = [...(S.handLog||[])].sort((a,b)=>handTs(b)-handTs(a));
-  const tabBtn = (mode, label) => `<button onclick="_ptExportMode='${mode}';_renderPTExportModal()" style="flex:1;padding:7px;border-radius:8px;border:1px solid ${_ptExportMode===mode?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};background:${_ptExportMode===mode?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};color:${_ptExportMode===mode?'#c8a96e':'#8a8799'};font-size:12px;font-weight:700;cursor:pointer">${label}</button>`;
+  const tabBtn = (mode, label) => `<button onclick="_ptExportMode='${mode}';_renderPTExportModal()" style="flex:1;padding:7px;border-radius:8px;border:1px solid ${_ptExportMode===mode?'rgba(201,164,92,0.5)':'rgba(255,255,255,0.1)'};background:${_ptExportMode===mode?'rgba(201,164,92,0.15)':'rgba(255,255,255,0.04)'};color:${_ptExportMode===mode?'#c9a45c':'#a39a88'};font-size:12px;font-weight:700;cursor:pointer">${label}</button>`;
 
   let bodyHtml = '';
   if(_ptExportMode==='manual'){
     bodyHtml = `
       <div style="display:flex;gap:6px;margin-bottom:8px">
         <button onclick="_ptExportSelectedIds=new Set(${JSON.stringify(hands.map(h=>h.id))});_renderPTExportModal()" style="font-size:10px;color:#5b9bd5;background:none;border:1px solid rgba(91,155,213,0.3);border-radius:6px;padding:3px 8px;cursor:pointer">בחר הכל</button>
-        <button onclick="_ptExportSelectedIds=new Set();_renderPTExportModal()" style="font-size:10px;color:#8a8799;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 8px;cursor:pointer">נקה הכל</button>
+        <button onclick="_ptExportSelectedIds=new Set();_renderPTExportModal()" style="font-size:10px;color:#a39a88;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 8px;cursor:pointer">נקה הכל</button>
       </div>
       <div style="max-height:320px;overflow-y:auto;border:1px solid rgba(255,255,255,0.06);border-radius:8px">
         ${hands.length ? hands.map(h=>{
           const checked = _ptExportSelectedIds.has(h.id);
-          return `<div onclick="_ptToggleHand('${h.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;background:${checked?'rgba(200,169,110,0.08)':'transparent'}">
+          return `<div onclick="_ptToggleHand('${h.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;background:${checked?'rgba(201,164,92,0.08)':'transparent'}">
             <span style="font-size:14px">${checked?'☑️':'⬜'}</span>
-            <span style="font-size:11px;color:#8a8799;flex-shrink:0">${h.date||''}</span>
-            <span style="font-size:12px;color:#e2ddd4;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.label||'יד'}</span>
-            <span style="font-size:11px;color:#c8a96e;flex-shrink:0">₪${(h.finalPot||0).toLocaleString()}</span>
+            <span style="font-size:11px;color:#a39a88;flex-shrink:0">${h.date||''}</span>
+            <span style="font-size:12px;color:#f1ebdd;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.label||'יד'}</span>
+            <span style="font-size:11px;color:#c9a45c;flex-shrink:0">₪${(h.finalPot||0).toLocaleString()}</span>
           </div>`;
         }).join('') : '<div style="padding:20px;text-align:center;color:#5a5870;font-size:12px">אין ידיים בהיסטוריה</div>'}
       </div>
-      <div style="font-size:11px;color:#8a8799;margin-top:8px;text-align:center">${_ptExportSelectedIds.size} ידיים נבחרו</div>`;
+      <div style="font-size:11px;color:#a39a88;margin-top:8px;text-align:center">${_ptExportSelectedIds.size} ידיים נבחרו</div>`;
   } else {
     bodyHtml = `
       <div style="display:flex;flex-direction:column;gap:10px">
         <div>
-          <label style="font-size:11px;color:#8a8799;display:block;margin-bottom:4px">מתאריך</label>
-          <input type="date" id="pt-export-date-from" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:13px;box-sizing:border-box">
+          <label style="font-size:11px;color:#a39a88;display:block;margin-bottom:4px">מתאריך</label>
+          <input type="date" id="pt-export-date-from" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#181714;color:#f1ebdd;font-size:13px;box-sizing:border-box">
         </div>
         <div>
-          <label style="font-size:11px;color:#8a8799;display:block;margin-bottom:4px">עד תאריך</label>
-          <input type="date" id="pt-export-date-to" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#141824;color:#e2ddd4;font-size:13px;box-sizing:border-box">
+          <label style="font-size:11px;color:#a39a88;display:block;margin-bottom:4px">עד תאריך</label>
+          <input type="date" id="pt-export-date-to" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#181714;color:#f1ebdd;font-size:13px;box-sizing:border-box">
         </div>
       </div>`;
   }
@@ -2323,7 +2330,7 @@ function _renderPTExportModal(){
       פורמט טקסט של PokerStars (תואם ייבוא ל-PT4/PT5). מומלץ לבדוק עם כמה ידיים לפני ייצוא גדול —
       אין תיאור-יד מילולי ב-showdown, ופיצול pot במצבי all-in מרובים מפושט.
     </div>
-    <button onclick="_confirmPTExport()" style="width:100%;margin-top:12px;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#c8a96e,#a68a50);color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer">📥 ייצא</button>`;
+    <button onclick="_confirmPTExport()" style="width:100%;margin-top:12px;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#c9a45c,#a68a50);color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer">📥 ייצא</button>`;
 }
 
 function _ptToggleHand(id){
@@ -2395,12 +2402,12 @@ function renderPlayerList(){
         const afNum=parseFloat(hud.af)||0;
         const afStr=!isFinite(afNum)||afNum>9?'∞':afNum.toFixed(1);
         hudHtml=`<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-          <span style="font-size:9px;color:#8a8799">VPIP <b style="color:#c8a96e">${hud.vpip}%</b></span>
-          <span style="font-size:9px;color:#8a8799">LIMP <b style="color:#b47eea">${hud.limp}%</b></span>
-          <span style="font-size:9px;color:#8a8799">PFR <b style="color:#5b9bd5">${hud.pfr}%</b></span>
-          <span style="font-size:9px;color:#8a8799">3B <b style="color:#7eb8a4">${hud.bet3}%</b></span>
-          <span style="font-size:9px;color:#8a8799">AF <b style="color:#e07b6a">${afStr}</b></span>
-          <span style="font-size:9px;color:#8a8799">W <b style="color:#5fc47a">${hud.won}%</b></span>
+          <span style="font-size:9px;color:#a39a88">VPIP <b style="color:#c9a45c">${hud.vpip}%</b></span>
+          <span style="font-size:9px;color:#a39a88">LIMP <b style="color:#b47eea">${hud.limp}%</b></span>
+          <span style="font-size:9px;color:#a39a88">PFR <b style="color:#5b9bd5">${hud.pfr}%</b></span>
+          <span style="font-size:9px;color:#a39a88">3B <b style="color:#7eb8a4">${hud.bet3}%</b></span>
+          <span style="font-size:9px;color:#a39a88">AF <b style="color:#e07b6a">${afStr}</b></span>
+          <span style="font-size:9px;color:#a39a88">W <b style="color:#5fc47a">${hud.won}%</b></span>
           <span style="font-size:9px;color:#3a3850">${hud.n} ידיים</span>
         </div>`;
       }
@@ -2410,36 +2417,36 @@ function renderPlayerList(){
     const profileHtml = isExpanded ? `
     <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:10px">
       <div>
-        <div style="font-size:9px;color:#8a8799;font-weight:700;margin-bottom:4px">שם</div>
-        <input id="edit-name-${p.id}" value="${p.name}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2ddd4;font-size:13px;direction:rtl">
+        <div style="font-size:9px;color:#a39a88;font-weight:700;margin-bottom:4px">שם</div>
+        <input id="edit-name-${p.id}" value="${p.name}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#f1ebdd;font-size:13px;direction:rtl">
       </div>
       <div>
-        <div style="font-size:9px;color:#8a8799;font-weight:700;margin-bottom:4px">סוג שחקן</div>
+        <div style="font-size:9px;color:#a39a88;font-weight:700;margin-bottom:4px">סוג שחקן</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
           ${Object.entries(PLAYER_TYPES).map(([key,t])=>{
             const isActive=p.playerType===key;
             return`<button data-ptype="${p.id}" data-ptype-val="${key}"
               class="ptype-btn${isActive?' ptype-active':''}"
               onclick="setPlayerType('${p.id}','${key}')"
-              style="padding:4px 10px;border-radius:14px;border:1px solid ${isActive?t.color+'88':'rgba(255,255,255,0.1)'};background:${isActive?t.color+'33':'rgba(255,255,255,0.04)'};color:${isActive?t.color:'#8a8799'};font-size:10px;font-weight:700;cursor:pointer"
+              style="padding:4px 10px;border-radius:14px;border:1px solid ${isActive?t.color+'88':'rgba(255,255,255,0.1)'};background:${isActive?t.color+'33':'rgba(255,255,255,0.04)'};color:${isActive?t.color:'#a39a88'};font-size:10px;font-weight:700;cursor:pointer"
               title="${t.desc}">${t.label}</button>`;
           }).join('')}
         </div>
       </div>
       <div>
-        <div style="font-size:9px;color:#8a8799;font-weight:700;margin-bottom:4px">הערות</div>
-        <textarea id="edit-notes-${p.id}" rows="2" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2ddd4;font-size:12px;direction:rtl;resize:none">${(S.playerNotes||{})[p.id]||''}</textarea>
+        <div style="font-size:9px;color:#a39a88;font-weight:700;margin-bottom:4px">הערות</div>
+        <textarea id="edit-notes-${p.id}" rows="2" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#f1ebdd;font-size:12px;direction:rtl;resize:none">${(S.playerNotes||{})[p.id]||''}</textarea>
       </div>
       ${hudHtml}
       <div style="display:flex;gap:6px">
         <button onclick="savePlayerProfile('${p.id}')" style="flex:1;padding:8px;border-radius:8px;border:none;background:rgba(95,196,122,0.2);color:#5fc47a;font-size:12px;font-weight:800;cursor:pointer">✓ שמור</button>
-        <button onclick="togglePlayerProfile('${p.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:12px;cursor:pointer">סגור</button>
+        <button onclick="togglePlayerProfile('${p.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#a39a88;font-size:12px;cursor:pointer">סגור</button>
       </div>
     </div>` : '';
 
     return`<div class="card-item" style="${inGame?'border-color:rgba(95,196,122,0.25)':''}">
       <div style="display:flex;align-items:center;gap:9px" onclick="togglePlayerProfile('${p.id}')" style="cursor:pointer">
-        <div style="width:34px;height:34px;border-radius:17px;background:rgba(200,169,110,0.18);border:1px solid rgba(200,169,110,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0;cursor:pointer">${p.name[0].toUpperCase()}</div>
+        <div style="width:34px;height:34px;border-radius:17px;background:rgba(201,164,92,0.18);border:1px solid rgba(201,164,92,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--gold);flex-shrink:0;cursor:pointer">${p.name[0].toUpperCase()}</div>
         <div style="flex:1;min-width:0;cursor:pointer">
           <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             ${isWinner?'🥇 ':''}
@@ -2451,7 +2458,7 @@ function renderPlayerList(){
             ${S.koOrder.includes(p.id)?`<span style="font-size:9px;color:#e07b6a;background:rgba(224,85,85,0.12);border-radius:10px;padding:1px 6px">💀 הודח</span>`:''}
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:1px">
-            ${(()=>{ const n=(S.playerNotes||{})[p.id]||''; return n?`<span style="color:#8a8799">${n.slice(0,30)}${n.length>30?'...':''}</span>`:b.buyin?'BuyIn':'לא נרשם'; })()}
+            ${(()=>{ const n=(S.playerNotes||{})[p.id]||''; return n?`<span style="color:#a39a88">${n.slice(0,30)}${n.length>30?'...':''}</span>`:b.buyin?'BuyIn':'לא נרשם'; })()}
           </div>
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end" onclick="event.stopPropagation()">

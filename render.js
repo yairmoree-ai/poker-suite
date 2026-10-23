@@ -430,9 +430,9 @@ function _rangeEditorGridHtml(){
       // מאיזה חלק של הטווח הוא הגיע. זהב לזוגות נשאר רק כברירת מחדל כשאין בכלל
       // מידע קטגוריה (RFI רגיל, טווח ידני, תצוגת לימפים).
       const bg = on
-        ? (is3bet ? '#e07b6a' : (_rangeEditUnionContext ? '#5b9bd5' : (isPair?'#c8a96e':'#5b9bd5')))
+        ? (is3bet ? '#e07b6a' : (_rangeEditUnionContext ? '#5b9bd5' : (isPair?'#c9a45c':'#5b9bd5')))
         : 'rgba(255,255,255,0.04)';
-      const fg = on ? '#0a0d14' : (isPair?'#8a8799':'#8a8799');
+      const fg = on ? '#0a0d14' : (isPair?'#a39a88':'#a39a88');
       const limpCount = limpTally[hand]||0;
       const border = limpCount ? '2px solid #b47eea' : '1px solid transparent';
       cells += `<div onclick="_toggleRangeCell('${hand}')" title="${limpCount?limpCount+' לימפ/ים ידועים':(is3bet?'3bet/4bet':'')}" style="flex:1;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${bg};color:${fg};font-size:6.5px;font-weight:800;border-radius:2px;border:${border};box-sizing:border-box;cursor:pointer;user-select:none;min-width:0;overflow:hidden">${hand}</div>`;
@@ -516,31 +516,31 @@ function _rangeEditorPanelHtml(){
   const limpTally = _rangeEditPid ? _getEmpiricalLimpHands(_rangeEditPid) : {};
   const limpHands = Object.keys(limpTally);
   const limpTotal = limpHands.reduce((n,h)=>n+limpTally[h],0);
-  const tabBtn = (onclick,label,active)=>`<button onclick="${onclick}" style="flex:1;padding:6px 4px;border-radius:7px;border:1px solid ${active?'#c8a96e':'rgba(255,255,255,0.12)'};background:${active?'rgba(200,169,110,0.18)':'rgba(255,255,255,0.03)'};color:${active?'#c8a96e':'#8a8799'};font-weight:800;font-size:9px;cursor:pointer;white-space:nowrap">${label}</button>`;
+  const tabBtn = (onclick,label,active)=>`<button onclick="${onclick}" style="flex:1;padding:6px 4px;border-radius:7px;border:1px solid ${active?'#c9a45c':'rgba(255,255,255,0.12)'};background:${active?'rgba(201,164,92,0.18)':'rgba(255,255,255,0.03)'};color:${active?'#c9a45c':'#a39a88'};font-weight:800;font-size:9px;cursor:pointer;white-space:nowrap">${label}</button>`;
   const toggleLabel = _rangeEditActiveView==='limp' ? '↩️ המקורי' : (limpHands.length ? `🃏 לימפים (${limpTotal})` : '↩️ המקורי');
   const toggleActive = _rangeEditActiveView==='original' || _rangeEditActiveView==='limp';
-  return `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,169,110,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px;margin-top:8px">
+  return `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(201,164,92,0.25);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:7px;margin-top:8px">
     <div style="display:flex;gap:5px">
       ${tabBtn("_setRangeEditorView('auto')",'🎯 אוטומטי', _rangeEditActiveView==='auto')}
       ${tabBtn('_toggleOriginalLimpView()', toggleLabel, toggleActive)}
     </div>
     <div style="display:flex;justify-content:flex-end">
-      <span id="range-editor-count" style="font-size:9px;color:#8a8799">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
+      <span id="range-editor-count" style="font-size:9px;color:#a39a88">${_rangeEditorSelCombos()} combos · ${(_rangeEditorSelCombos()/1326*100).toFixed(1)}%</span>
     </div>
     ${limpHands.length ? `
     <div style="background:rgba(180,126,234,0.08);border:1px solid rgba(180,126,234,0.3);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:5px">
       <div style="font-size:10px;color:#b47eea;font-weight:800">🃏 ${limpTotal} לימפ/ים ידועים (מסומן במסגרת סגולה בגריד) · ${limpHands.map(h=>h+(limpTally[h]>1?'×'+limpTally[h]:'')).join(', ')}</div>
-      <div style="font-size:9px;color:#8a8799">מבוסס רק על ידיים שבהן הוזנו קלפים (בד"כ showdown) — ייתכן הטיה כלפי ידיים חזקות</div>
+      <div style="font-size:9px;color:#a39a88">מבוסס רק על ידיים שבהן הוזנו קלפים (בד"כ showdown) — ייתכן הטיה כלפי ידיים חזקות</div>
     </div>` : ''}
     <div id="range-editor-grid">${_rangeEditorGridHtml()}</div>
     <div style="display:flex;align-items:center;gap:7px;direction:ltr">
-      <span style="font-size:10px;color:#8a8799;white-space:nowrap">Top %</span>
+      <span style="font-size:10px;color:#a39a88;white-space:nowrap">Top %</span>
       <input id="range-editor-slider" type="range" min="0" max="100" step="1" value="${Math.round(_rangeEditorSelCombos()/1326*100)}"
-        style="flex:1;accent-color:#c8a96e;direction:ltr" oninput="_rangeEditorApplyTopPct(this.value)">
+        style="flex:1;accent-color:#c9a45c;direction:ltr" oninput="_rangeEditorApplyTopPct(this.value)">
     </div>
     <div style="display:flex;gap:6px">
-      <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>
-      <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:11px;cursor:pointer">ביטול</button>
+      <button onclick="_saveRangeEditor()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#c9a45c;color:#0a0d14;font-weight:800;font-size:11px;cursor:pointer">💾 שמור</button>
+      <button onclick="_closeRangeEditor()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#a39a88;font-size:11px;cursor:pointer">ביטול</button>
     </div>
     <div style="font-size:9px;color:#3a3850;text-align:center">שינויים כאן זמניים עד ✕/ביטול — שום דבר לא נשמר עד 💾</div>
   </div>`;
@@ -569,13 +569,13 @@ function renderPotOdds(){
         const afStr = hud.af===Infinity||hud.af>9 ? '∞' : hud.af.toFixed(1);
         bar.style.display='block';
         bar.innerHTML=`<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:7px 12px;direction:rtl;display:flex;align-items:center;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
-          <span style="font-size:11px;font-weight:800;color:#e2ddd4;white-space:nowrap;flex-shrink:0">${pName(seat.playerId)||'?'}</span>
+          <span style="font-size:11px;font-weight:800;color:#f1ebdd;white-space:nowrap;flex-shrink:0">${pName(seat.playerId)||'?'}</span>
           <span style="color:rgba(255,255,255,0.15);flex-shrink:0">|</span>
-          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">VPIP <span style="color:#c8a96e;font-weight:800">${hud.vpip}%</span></span>
-          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">PFR <span style="color:#5b9bd5;font-weight:800">${hud.pfr}%</span></span>
-          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">3B <span style="color:#7eb8a4;font-weight:800">${hud.bet3}%</span></span>
-          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">AF <span style="color:#e07b6a;font-weight:800">${afStr}</span></span>
-          <span style="font-size:9px;color:#8a8799;white-space:nowrap;flex-shrink:0">W <span style="color:#5fc47a;font-weight:800">${hud.won}%</span></span>
+          <span style="font-size:9px;color:#a39a88;white-space:nowrap;flex-shrink:0">VPIP <span style="color:#c9a45c;font-weight:800">${hud.vpip}%</span></span>
+          <span style="font-size:9px;color:#a39a88;white-space:nowrap;flex-shrink:0">PFR <span style="color:#5b9bd5;font-weight:800">${hud.pfr}%</span></span>
+          <span style="font-size:9px;color:#a39a88;white-space:nowrap;flex-shrink:0">3B <span style="color:#7eb8a4;font-weight:800">${hud.bet3}%</span></span>
+          <span style="font-size:9px;color:#a39a88;white-space:nowrap;flex-shrink:0">AF <span style="color:#e07b6a;font-weight:800">${afStr}</span></span>
+          <span style="font-size:9px;color:#a39a88;white-space:nowrap;flex-shrink:0">W <span style="color:#5fc47a;font-weight:800">${hud.won}%</span></span>
           <span style="color:rgba(255,255,255,0.1);flex-shrink:0">·</span>
           <span style="font-size:9px;color:#3a3850;white-space:nowrap;flex-shrink:0">${hud.n} ידיים</span>
         </div>`;
@@ -829,9 +829,9 @@ function renderPotOdds(){
   const combos = _countCombos(rangeStr);
   const pct = combos ? (combos/1326*100).toFixed(0) : 0;
 
-  const chipStyle = (active,color='#c8a96e') => active
+  const chipStyle = (active,color='#c9a45c') => active
     ? `padding:4px 9px;border-radius:14px;border:1px solid ${color}88;background:${color}22;color:${color};font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap`
-    : `padding:4px 9px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#8a8799;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap`;
+    : `padding:4px 9px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#a39a88;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap`;
 
   bar.style.display = 'block';
   bar.innerHTML = `
@@ -843,38 +843,38 @@ function renderPotOdds(){
          להיות חלק מהתווית. -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch">
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;padding:0 4px">
-        <span style="font-size:8px;color:#8a8799;font-weight:700;letter-spacing:.2px;white-space:nowrap">POT ODDS</span>
-        <span style="font-size:12px;font-weight:900;color:#5b9bd5;line-height:1.3;white-space:nowrap">${ratioStr} <span style="font-size:8px;font-weight:700;color:#8a8799">· ${fmt(callAmt)}</span></span>
+        <span style="font-size:8px;color:#a39a88;font-weight:700;letter-spacing:.2px;white-space:nowrap">POT ODDS</span>
+        <span style="font-size:12px;font-weight:900;color:#5b9bd5;line-height:1.3;white-space:nowrap">${ratioStr} <span style="font-size:8px;font-weight:700;color:#a39a88">· ${fmt(callAmt)}</span></span>
       </div>
       <div style="width:2px;align-self:stretch;background:rgba(255,255,255,0.16);border-radius:1px;flex-shrink:0"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;padding:0 4px">
-        <span style="font-size:8px;color:#8a8799;font-weight:700;letter-spacing:.2px;white-space:nowrap">BREAK-EVEN</span>
-        <span style="font-size:12px;font-weight:900;color:#c8a96e;line-height:1.3;white-space:nowrap">${breakEven}%</span>
+        <span style="font-size:8px;color:#a39a88;font-weight:700;letter-spacing:.2px;white-space:nowrap">BREAK-EVEN</span>
+        <span style="font-size:12px;font-weight:900;color:#c9a45c;line-height:1.3;white-space:nowrap">${breakEven}%</span>
       </div>
       <div style="width:2px;align-self:stretch;background:rgba(255,255,255,0.16);border-radius:1px;flex-shrink:0"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;padding:0 4px">
-        <span style="font-size:8px;color:#8a8799;font-weight:700;letter-spacing:.2px;white-space:nowrap">${openRangeInfo?(openRangeInfo.isRangeMode?'טווח '+openRangeInfo.pos:'RFI '+openRangeInfo.pos):'EQUITY'}</span>
+        <span style="font-size:8px;color:#a39a88;font-weight:700;letter-spacing:.2px;white-space:nowrap">${openRangeInfo?(openRangeInfo.isRangeMode?'טווח '+openRangeInfo.pos:'RFI '+openRangeInfo.pos):'EQUITY'}</span>
         ${openRangeInfo
           ? (openRangeInfo.isRangeMode
-              ? `<span style="font-size:12px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${openRangeInfo.combosCount} <span style="font-size:8px;font-weight:700;color:#8a8799">combos · ${(openRangeInfo.combosCount/1326*100).toFixed(1)}%${openRangeInfo.isManual?' · ידני':''}</span></span>`
-              : `<span style="font-size:12px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.3;white-space:nowrap">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ'} <span style="font-size:8px;font-weight:700;color:#8a8799">${openRangeInfo.hand}${openRangeInfo.isManual?' · ידני':''}</span></span>`)
+              ? `<span style="font-size:12px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${openRangeInfo.combosCount} <span style="font-size:8px;font-weight:700;color:#a39a88">combos · ${(openRangeInfo.combosCount/1326*100).toFixed(1)}%${openRangeInfo.isManual?' · ידני':''}</span></span>`
+              : `<span style="font-size:12px;font-weight:900;color:${openRangeInfo.inRange?'#5fc47a':'#e07b6a'};line-height:1.3;white-space:nowrap">${openRangeInfo.inRange?'✓ בטווח':'✗ מחוץ'} <span style="font-size:8px;font-weight:700;color:#a39a88">${openRangeInfo.hand}${openRangeInfo.isManual?' · ידני':''}</span></span>`)
           : equityPct!==null
             ? `<span style="font-size:12px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${equityPct.toFixed(1)}%${evHtml}${hasKnownOpp?` <span style="font-size:8px;color:#e0a030;font-weight:800">vs ידועה</span>`:''}${heroRangeMode?` <span style="font-size:8px;color:#5b9bd5;font-weight:800">${heroRangeIsAuto?'אוטו׳':'טווח'}</span>`:''}</span>`
             : equityComputing
-              ? `<span style="font-size:9px;color:#8a8799">מחשב…</span>`
+              ? `<span style="font-size:9px;color:#a39a88">מחשב…</span>`
               : `<span style="font-size:9px;color:#3a3850">${(_curStreetName==='פרה-פלופ' && oppSeats.length===0 && holeCards.length<2)?'פתיחה — הזן קלפים':!_hasOppInCalc?'ממתין ליריב':holeCards.length<2?'הזן קלפים':'בחר range'}</span>`}
       </div>
       ${openRangeInfo && openRangeInfo.fieldEquity!==undefined ? `
       <div style="width:2px;align-self:stretch;background:rgba(255,255,255,0.16);border-radius:1px;flex-shrink:0"></div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:0px;padding:0 4px">
-        <span style="font-size:8px;color:#8a8799;font-weight:700;letter-spacing:.2px;white-space:nowrap">מול ${openRangeInfo.focusName?openRangeInfo.focusName:'השדה'}</span>
-        <span style="font-size:12px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${openRangeInfo.fieldEquity.toFixed(1)}% <span style="font-size:8px;font-weight:700;color:#8a8799">${openRangeInfo.focusName?'(היפותטי)':'(כולם, היפותטי)'}</span></span>
+        <span style="font-size:8px;color:#a39a88;font-weight:700;letter-spacing:.2px;white-space:nowrap">מול ${openRangeInfo.focusName?openRangeInfo.focusName:'השדה'}</span>
+        <span style="font-size:12px;font-weight:900;color:#7eb8a4;line-height:1.3;white-space:nowrap">${openRangeInfo.fieldEquity.toFixed(1)}% <span style="font-size:8px;font-weight:700;color:#a39a88">${openRangeInfo.focusName?'(היפותטי)':'(כולם, היפותטי)'}</span></span>
       </div>` : ''}
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <button onclick="S.showPotOdds=false;persist();renderPotOdds()" style="background:none;border:none;color:#3a3850;font-size:13px;cursor:pointer;padding:0;line-height:1">✕</button>
         <div style="display:flex;align-items:center;gap:3px">
           <button onclick="S._showRangeSelector=!S._showRangeSelector;renderPotOdds()"
-            style="background:${showRange?'rgba(200,169,110,0.15)':'rgba(255,255,255,0.04)'};border:1px solid ${showRange?'rgba(200,169,110,0.5)':'rgba(255,255,255,0.1)'};border-radius:7px;color:${showRange?'#c8a96e':'#8a8799'};font-size:10px;font-weight:800;cursor:pointer;padding:3px 7px;white-space:nowrap">
+            style="background:${showRange?'rgba(201,164,92,0.15)':'rgba(255,255,255,0.04)'};border:1px solid ${showRange?'rgba(201,164,92,0.5)':'rgba(255,255,255,0.1)'};border-radius:7px;color:${showRange?'#c9a45c':'#a39a88'};font-size:10px;font-weight:800;cursor:pointer;padding:3px 7px;white-space:nowrap">
             Range${rs?' ✓':''}
           </button>
           ${rs ? `<button onclick="S._rangeSelection=null;renderPotOdds()" title="נקה בחירת טווח גלובלית (חוסמת את מצב הפתיחה)" style="background:rgba(224,123,106,0.12);border:1px solid rgba(224,123,106,0.4);border-radius:7px;color:#e07b6a;font-size:10px;font-weight:800;cursor:pointer;padding:3px 6px;line-height:1">✕</button>` : ''}
@@ -898,12 +898,12 @@ function renderPotOdds(){
     <div style="display:flex;gap:6px;justify-content:center;margin-top:5px">
       ${openRangeInfo.fieldEquityCall!==undefined ? `
       <div style="flex:1;max-width:130px;background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.3);border-radius:8px;padding:4px 8px;text-align:center">
-        <div style="font-size:9px;color:#8a8799;font-weight:700">CALL בלבד</div>
+        <div style="font-size:9px;color:#a39a88;font-weight:700">CALL בלבד</div>
         <div style="font-size:13px;font-weight:900;color:#5b9bd5">${openRangeInfo.fieldEquityCall.toFixed(1)}%</div>
       </div>` : ''}
       ${openRangeInfo.fieldEquity3bet!==undefined ? `
       <div style="flex:1;max-width:130px;background:rgba(224,123,106,0.08);border:1px solid rgba(224,123,106,0.3);border-radius:8px;padding:4px 8px;text-align:center">
-        <div style="font-size:9px;color:#8a8799;font-weight:700">3BET בלבד</div>
+        <div style="font-size:9px;color:#a39a88;font-weight:700">3BET בלבד</div>
         <div style="font-size:13px;font-weight:900;color:#e07b6a">${openRangeInfo.fieldEquity3bet.toFixed(1)}%</div>
       </div>` : ''}
     </div>` : ''}
@@ -917,10 +917,10 @@ function renderPotOdds(){
       if(!hud) return '';
       return `
     <div style="display:flex;justify-content:center;gap:10px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">
-      <span style="font-size:9px;color:#8a8799;white-space:nowrap">VPIP <span style="color:#c8a96e;font-weight:800">${hud.vpip}%</span></span>
-      <span style="font-size:9px;color:#8a8799;white-space:nowrap">LIMP <span style="color:#b47eea;font-weight:800">${hud.limp}%</span></span>
-      <span style="font-size:9px;color:#8a8799;white-space:nowrap">PFR <span style="color:#5b9bd5;font-weight:800">${hud.pfr}%</span></span>
-      <span style="font-size:9px;color:#8a8799;white-space:nowrap">3B <span style="color:#7eb8a4;font-weight:800">${hud.bet3}%</span></span>
+      <span style="font-size:9px;color:#a39a88;white-space:nowrap">VPIP <span style="color:#c9a45c;font-weight:800">${hud.vpip}%</span></span>
+      <span style="font-size:9px;color:#a39a88;white-space:nowrap">LIMP <span style="color:#b47eea;font-weight:800">${hud.limp}%</span></span>
+      <span style="font-size:9px;color:#a39a88;white-space:nowrap">PFR <span style="color:#5b9bd5;font-weight:800">${hud.pfr}%</span></span>
+      <span style="font-size:9px;color:#a39a88;white-space:nowrap">3B <span style="color:#7eb8a4;font-weight:800">${hud.bet3}%</span></span>
       <span style="font-size:9px;color:#3a3850;white-space:nowrap">(${hud.n} ידיים)</span>
     </div>`;
     })()}
@@ -929,24 +929,24 @@ function renderPotOdds(){
     ${showRange ? `
     <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;display:flex;flex-direction:column;gap:8px">
 
-      <div style="font-size:9px;color:#8a8799;text-align:center;padding:2px 0">
+      <div style="font-size:9px;color:#a39a88;text-align:center;padding:2px 0">
         💡 לעריכת טווח ידני לשחקן — לחץ על המושב שלו בשולחן
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:9px;color:#8a8799;font-weight:700;letter-spacing:.4px">EFFECTIVE STACK</span>
-        <span style="font-size:10px;color:#c8a96e;font-weight:800">${({deep:'75BB+ עמוק',mid:'35-74BB בינוני',short:'20-34BB קצר',push:'<20BB Push/Fold'})[_eqDepth]||_eqDepth}</span>
+        <span style="font-size:9px;color:#a39a88;font-weight:700;letter-spacing:.4px">EFFECTIVE STACK</span>
+        <span style="font-size:10px;color:#c9a45c;font-weight:800">${({deep:'75BB+ עמוק',mid:'35-74BB בינוני',short:'20-34BB קצר',push:'<20BB Push/Fold'})[_eqDepth]||_eqDepth}</span>
       </div>
 
       <div>
-        <div style="font-size:10px;color:#8a8799;font-weight:700;letter-spacing:.5px;margin-bottom:5px">עמדת היריב</div>
+        <div style="font-size:10px;color:#a39a88;font-weight:700;letter-spacing:.5px;margin-bottom:5px">עמדת היריב</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px">
           ${positions.map(p=>`<button style="${chipStyle(p===selPos,'#5b9bd5')}" onclick="S._rangeSelection={pos:'${p}',action:'${selAction}'};renderPotOdds()">${p}</button>`).join('')}
         </div>
       </div>
 
       <div>
-        <div style="font-size:10px;color:#8a8799;font-weight:700;letter-spacing:.5px;margin-bottom:5px">פעולתו</div>
+        <div style="font-size:10px;color:#a39a88;font-weight:700;letter-spacing:.5px;margin-bottom:5px">פעולתו</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px">
           ${Object.entries(_ACTIONS_LABELS).map(([a,lbl])=>`<button style="${chipStyle(a===selAction,'#7eb8a4')}" onclick="S._rangeSelection={pos:'${selPos}',action:'${a}'};renderPotOdds()">${lbl}</button>`).join('')}
         </div>
@@ -954,16 +954,16 @@ function renderPotOdds(){
 
       ${rangeStr ? `
       <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:10px;color:#8a8799">${selPos} ${_ACTIONS_LABELS[selAction]||selAction}</span>
-        <span style="font-size:10px;color:#c8a96e;font-weight:800">${combos} combos · ${pct}%</span>
+        <span style="font-size:10px;color:#a39a88">${selPos} ${_ACTIONS_LABELS[selAction]||selAction}</span>
+        <span style="font-size:10px;color:#c9a45c;font-weight:800">${combos} combos · ${pct}%</span>
         ${holeCards.length===2
-          ? `<span style="font-size:10px;font-weight:800;color:${equityPct!==null?(ev>=0?'#5fc47a':'#e07b6a'):'#8a8799'}">${equityPct!==null?equityPct.toFixed(1)+'%':'...'}</span>`
+          ? `<span style="font-size:10px;font-weight:800;color:${equityPct!==null?(ev>=0?'#5fc47a':'#e07b6a'):'#a39a88'}">${equityPct!==null?equityPct.toFixed(1)+'%':'...'}</span>`
           : `<span style="font-size:9px;color:#3a3850">הזן קלפים</span>`}
       </div>` : `
       <div style="font-size:10px;color:#3a3850;text-align:center;padding:4px">אין range לבחירה זו</div>`}
 
       <button onclick="S._rangeSelection=null;S._showRangeSelector=false;renderPotOdds()"
-        style="font-size:10px;color:#8a8799;background:none;border:none;cursor:pointer;text-align:right;padding:0">
+        style="font-size:10px;color:#a39a88;background:none;border:none;cursor:pointer;text-align:right;padding:0">
         ✕ נקה range
       </button>
     </div>` : ''}
@@ -981,9 +981,9 @@ function renderLiveActions(){
   const swp = assignPos();
   const streets = ['פרה-פלופ','פלופ','טרן','ריבר'];
   const streetLabels = {'פרה-פלופ':'Pre','פלופ':'Flop','טרן':'Turn','ריבר':'River'};
-  const colFn = t=>t==='Fold'?'#555':t==='SB'?'#8b7cb8':t==='BB'?'#e07b6a':t==='Check'?'#5fc47a':t==='Call'?'#5b9bd5':t==='All-in'?'#e05555':'#c8a96e';
+  const colFn = t=>t==='Fold'?'#555':t==='SB'?'#8b7cb8':t==='BB'?'#e07b6a':t==='Check'?'#5fc47a':t==='Call'?'#5b9bd5':t==='All-in'?'#e05555':'#c9a45c';
   const typeShortFn = (t,a)=>a?.displayType||(t==='Raise'?'R':t==='Check'?'CH':t==='Call'?'C':t==='All-in'?'AI':t==='Fold'?'F':t);
-  const posColFn = p=>p==='BTN'?'#c8a96e':p==='SB'?'#8b7cb8':p==='BB'?'#e07b6a':'#6a8090';
+  const posColFn = p=>p==='BTN'?'#c9a45c':p==='SB'?'#8b7cb8':p==='BB'?'#e07b6a':'#6a8090';
 
   // Pre-flop order: SB→BB→UTG→...→BTN
   const preflopOrder = ['SB','BB','UTG','UTG+1','UTG+2','LJ','MP','MP+1','HJ','CO','BTN','BTN/SB'];
@@ -1040,7 +1040,7 @@ function renderLiveActions(){
       const posCol=posColFn(item.pos);
       html+=`<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);border-right:1px solid rgba(255,255,255,0.06);padding:3px 8px;flex-shrink:0;min-width:46px;border-top:2px solid ${col}">
         <span style="font-size:10px;font-weight:800;color:${posCol};white-space:nowrap">${item.pos||''}</span>
-        <span style="font-size:10px;font-weight:700;color:#e2ddd4;white-space:nowrap">${item.name}</span>
+        <span style="font-size:10px;font-weight:700;color:#f1ebdd;white-space:nowrap">${item.name}</span>
         <span style="font-size:10px;font-weight:900;color:${col};white-space:nowrap">${typeShort}${amt?' '+amt:''}</span>
       </div>`;
     });
@@ -1185,8 +1185,8 @@ function nextBlindLevel(auto=false){
   const bar = document.getElementById('blind-timer-bar');
   if(bar){
     bar.style.transition='background 0.3s';
-    bar.style.background='rgba(200,169,110,0.2)';
-    setTimeout(()=>{ bar.style.background='#0a0e18'; },800);
+    bar.style.background='rgba(201,164,92,0.2)';
+    setTimeout(()=>{ bar.style.background='#14130f'; },800);
   }
   if(!auto) S.blindTimer.running = false;
   const btn = document.getElementById('btn-timer-toggle');
@@ -1225,7 +1225,7 @@ function updateTimerDisplay(){
   const dur = getLevelDuration(S.blindLevel);
   const pct = dur>0 ? Math.max(0,(s/dur)*100) : 0;
   const prog = document.getElementById('timer-progress');
-  if(prog){ prog.style.width=pct+'%'; prog.style.background=s<=60?'#e07b6a':s<=120?'#FFB347':'#c8a96e'; }
+  if(prog){ prog.style.width=pct+'%'; prog.style.background=s<=60?'#e07b6a':s<=120?'#FFB347':'#c9a45c'; }
 
   // Prize & active
   const prizeEl = document.getElementById('timer-prize');
@@ -1248,23 +1248,23 @@ function showTimerSettings(){
   overlay.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7)';
   overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
   const box = document.createElement('div');
-  box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:14px;padding:18px;width:260px';
+  box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#181714;border:1px solid rgba(201,164,92,0.4);border-radius:14px;padding:18px;width:260px';
   box.onclick = e=>e.stopPropagation();
   const opts = [5,10,15,20,25,30].map(m=>{
     const btn2 = document.createElement('button');
-    btn2.style.cssText = 'padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:'+(mins===m?'#c8a96e':'rgba(255,255,255,0.05)')+';color:'+(mins===m?'#0a0d14':'#e2ddd4')+';font-size:13px;font-weight:700;cursor:pointer';
+    btn2.style.cssText = 'padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:'+(mins===m?'#c9a45c':'rgba(255,255,255,0.05)')+';color:'+(mins===m?'#0a0d14':'#f1ebdd')+';font-size:13px;font-weight:700;cursor:pointer';
     btn2.textContent = m+" דק'";
     btn2.onclick = ()=>{ setLevelDuration(m*60); overlay.remove(); };
     return btn2.outerHTML;
   }).join('');
   const title2 = document.createElement('div');
-  title2.style.cssText = 'font-size:14px;font-weight:800;color:#c8a96e;margin-bottom:12px;text-align:center';
+  title2.style.cssText = 'font-size:14px;font-weight:800;color:#c9a45c;margin-bottom:12px;text-align:center';
   title2.textContent = 'משך כל רמה';
   const grid = document.createElement('div');
   grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px';
   grid.innerHTML = opts;
   const closeBtn2 = document.createElement('button');
-  closeBtn2.style.cssText = 'width:100%;padding:10px;border-radius:9px;border:none;background:rgba(255,255,255,0.08);color:#8a8799;cursor:pointer';
+  closeBtn2.style.cssText = 'width:100%;padding:10px;border-radius:9px;border:none;background:rgba(255,255,255,0.08);color:#a39a88;cursor:pointer';
   closeBtn2.textContent = 'סגור';
   closeBtn2.onclick = ()=>overlay.remove();
   box.appendChild(title2); box.appendChild(grid); box.appendChild(closeBtn2);
@@ -1298,13 +1298,13 @@ function showStructureEditor(){
   const struct = S.blindStructure || BLIND_LEVELS.map(b=>({...b, duration:S.blindTimer.levelDuration}));
   
   const box = document.createElement('div');
-  box.style.cssText = 'margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:14px;padding:16px;max-width:400px';
+  box.style.cssText = 'margin:20px auto;background:#181714;border:1px solid rgba(201,164,92,0.3);border-radius:14px;padding:16px;max-width:400px';
   
   const title = document.createElement('div');
-  title.style.cssText = 'font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center';
+  title.style.cssText = 'font-size:15px;font-weight:800;color:#c9a45c;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center';
   title.textContent = '📋 מבנה בליינדים';
   const closeX = document.createElement('button');
-  closeX.style.cssText = 'background:none;border:none;color:#8a8799;font-size:18px;cursor:pointer';
+  closeX.style.cssText = 'background:none;border:none;color:#a39a88;font-size:18px;cursor:pointer';
   closeX.textContent = '✕';
   closeX.onclick = ()=>overlay.remove();
   title.appendChild(closeX);
@@ -1320,11 +1320,11 @@ function showStructureEditor(){
       row.style.cssText = 'display:grid;grid-template-columns:24px 1fr 1fr 1fr 80px 28px;gap:4px;align-items:center;margin-bottom:6px';
       const durMins = Math.round((lvl.duration||S.blindTimer.levelDuration)/60);
       row.innerHTML = 
-        '<span style="font-size:11px;color:#8a8799;text-align:center">'+(idx+1)+'</span>'+
-        '<input type="number" value="'+lvl.sb+'" placeholder="SB" data-field="sb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
-        '<input type="number" value="'+lvl.bb+'" placeholder="BB" data-field="bb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
-        '<input type="number" value="'+(lvl.ante||0)+'" placeholder="Ante" data-field="ante" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#0a0e18;color:#e2ddd4;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
-        '<input type="number" value="'+durMins+'" placeholder="דק׳" data-field="duration" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(200,169,110,0.3);background:#0a0e18;color:#c8a96e;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
+        '<span style="font-size:11px;color:#a39a88;text-align:center">'+(idx+1)+'</span>'+
+        '<input type="number" value="'+lvl.sb+'" placeholder="SB" data-field="sb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#14130f;color:#f1ebdd;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
+        '<input type="number" value="'+lvl.bb+'" placeholder="BB" data-field="bb" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#14130f;color:#f1ebdd;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
+        '<input type="number" value="'+(lvl.ante||0)+'" placeholder="Ante" data-field="ante" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#14130f;color:#f1ebdd;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
+        '<input type="number" value="'+durMins+'" placeholder="דק׳" data-field="duration" data-idx="'+idx+'" style="padding:5px;border-radius:6px;border:1px solid rgba(201,164,92,0.3);background:#14130f;color:#c9a45c;font-size:12px;text-align:center;outline:none;width:100%;box-sizing:border-box">'+
         '<button data-del="'+idx+'" style="padding:4px;border-radius:6px;border:none;background:rgba(224,123,106,0.2);color:#e07b6a;font-size:14px;cursor:pointer;width:100%">✕</button>';
       rows.appendChild(row);
     });
@@ -1344,11 +1344,11 @@ function showStructureEditor(){
   // Header
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:grid;grid-template-columns:24px 1fr 1fr 1fr 80px 28px;gap:4px;margin-bottom:4px';
-  hdr.innerHTML = '<span></span><span style="font-size:10px;color:#8a8799;text-align:center">SB</span><span style="font-size:10px;color:#8a8799;text-align:center">BB</span><span style="font-size:10px;color:#8a8799;text-align:center">Ante</span><span style="font-size:10px;color:#c8a96e;text-align:center">דק׳</span><span></span>';
+  hdr.innerHTML = '<span></span><span style="font-size:10px;color:#a39a88;text-align:center">SB</span><span style="font-size:10px;color:#a39a88;text-align:center">BB</span><span style="font-size:10px;color:#a39a88;text-align:center">Ante</span><span style="font-size:10px;color:#c9a45c;text-align:center">דק׳</span><span></span>';
   
   // Add level button
   const addBtn = document.createElement('button');
-  addBtn.style.cssText = 'width:100%;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:#8a8799;font-size:13px;cursor:pointer;margin-top:6px';
+  addBtn.style.cssText = 'width:100%;padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:#a39a88;font-size:13px;cursor:pointer;margin-top:6px';
   addBtn.textContent = '+ הוסף רמה';
   addBtn.onclick = ()=>{ const last=struct[struct.length-1]||{sb:500,bb:1000,ante:0}; struct.push({sb:last.sb*2,bb:last.bb*2,ante:last.ante,duration:S.blindTimer.levelDuration}); buildRows(); };
   
@@ -1394,7 +1394,7 @@ function showStructureEditor(){
 
   // Save button
   const saveBtn = document.createElement('button');
-  saveBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-top:10px';
+  saveBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c9a45c;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-top:10px';
   saveBtn.textContent = '💾 שמור מבנה';
   saveBtn.onclick = ()=>{
     S.blindStructure = struct.map(l=>({sb:l.sb,bb:l.bb,ante:l.ante||0,duration:l.duration||S.blindTimer.levelDuration}));
@@ -1408,7 +1408,7 @@ function showStructureEditor(){
   
   // Reset button
   const resetBtn = document.createElement('button');
-  resetBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8a8799;font-size:13px;cursor:pointer;margin-top:6px';
+  resetBtn.style.cssText = 'width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#a39a88;font-size:13px;cursor:pointer;margin-top:6px';
   resetBtn.textContent = 'איפוס למבנה ברירת מחדל';
   resetBtn.onclick = ()=>{ S.blindStructure=null; BLIND_LEVELS=[...DEF_BLINDS]; persist(); overlay.remove(); notify('מבנה אופס'); };
   
@@ -1559,16 +1559,16 @@ async function analyzeHand(h){
   aOverlay.onclick = e=>{ if(e.target===aOverlay) aOverlay.remove(); };
   
   const aBox = document.createElement('div');
-  aBox.style.cssText = 'max-width:480px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:18px';
+  aBox.style.cssText = 'max-width:480px;margin:20px auto;background:#181714;border:1px solid rgba(201,164,92,0.3);border-radius:16px;padding:18px';
   aBox.onclick = e=>e.stopPropagation();
   
   const aHdr = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-    '<span style="font-size:15px;font-weight:800;color:#c8a96e">🔍 ניתוח יד</span>'+
-    '<button onclick="closeAnalyze()" style="background:none;border:none;color:#8a8799;font-size:20px;cursor:pointer">✕</button></div>';
+    '<span style="font-size:15px;font-weight:800;color:#c9a45c">🔍 ניתוח יד</span>'+
+    '<button onclick="closeAnalyze()" style="background:none;border:none;color:#a39a88;font-size:20px;cursor:pointer">✕</button></div>';
   
   const aContent = document.createElement('div');
   aContent.id = 'analyze-content';
-  aContent.style.cssText = 'font-size:13px;color:#e2ddd4;line-height:1.7;white-space:pre-wrap';
+  aContent.style.cssText = 'font-size:13px;color:#f1ebdd;line-height:1.7;white-space:pre-wrap';
   aContent.textContent = '⏳ מנתח יד...';
   
   aBox.innerHTML = aHdr;
@@ -1599,7 +1599,7 @@ async function analyzeHand(h){
     btnRow.style.cssText = 'display:flex;gap:8px;margin-top:14px';
     
     const copyBtn = document.createElement('button');
-    copyBtn.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#e2ddd4;font-size:13px;font-weight:700;cursor:pointer';
+    copyBtn.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#f1ebdd;font-size:13px;font-weight:700;cursor:pointer';
     copyBtn.textContent = '📋 העתק';
     copyBtn.onclick = ()=>{
       navigator.clipboard.writeText(data.text).then(()=>{
@@ -1609,7 +1609,7 @@ async function analyzeHand(h){
     };
     
     const saveBtn2 = document.createElement('button');
-    saveBtn2.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c8a96e;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
+    saveBtn2.style.cssText = 'flex:1;padding:10px;border-radius:9px;border:none;background:#c9a45c;color:#0a0d14;font-size:13px;font-weight:800;cursor:pointer';
     saveBtn2.textContent = '💾 שמור ביד';
     saveBtn2.onclick = async ()=>{
       const handIdx = (S.handLog||[]).findIndex(x=>x.id===h.id);
@@ -1680,16 +1680,16 @@ function _renderHUDOverlay(name, hud){
   overlay.onclick = ()=>overlay.remove();
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:340px';
+  box.style.cssText = 'background:#181714;border:1px solid rgba(201,164,92,0.4);border-radius:16px;padding:16px;width:100%;max-width:340px';
   box.onclick = e=>e.stopPropagation();
 
   const statColor = (val, low, high) => val>=high?'#5fc47a':val>=low?'#FFB347':'#e07b6a';
 
   box.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-    '<div><div style="font-size:15px;font-weight:800;color:#c8a96e">📊 '+name+'</div>'+
-    '<div style="font-size:10px;color:#8a8799">'+hud.n+' ידיים · Trend '+hud.trend+'</div></div>'+
-    '<button onclick="closeHUD()" style="background:none;border:none;color:#8a8799;font-size:20px;cursor:pointer">✕</button></div>'+
+    '<div><div style="font-size:15px;font-weight:800;color:#c9a45c">📊 '+name+'</div>'+
+    '<div style="font-size:10px;color:#a39a88">'+hud.n+' ידיים · Trend '+hud.trend+'</div></div>'+
+    '<button onclick="closeHUD()" style="background:none;border:none;color:#a39a88;font-size:20px;cursor:pointer">✕</button></div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
     hudStat('VPIP', hud.vpip+'%', statColor(hud.vpip,20,40), 'נכנס לקופה')+
     hudStat('LIMP', hud.limp+'%', statColor(100-hud.limp,60,80), 'נכנס בקריאה')+
@@ -1716,9 +1716,9 @@ function showPlayerHUD(seatIdx){
     overlay.style.cssText='position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl';
     overlay.onclick=()=>overlay.remove();
     const box=document.createElement('div');
-    box.style.cssText='background:#121824;border:1px solid rgba(200,169,110,0.4);border-radius:16px;padding:16px;width:100%;max-width:340px';
+    box.style.cssText='background:#181714;border:1px solid rgba(201,164,92,0.4);border-radius:16px;padding:16px;width:100%;max-width:340px';
     box.onclick=e=>e.stopPropagation();
-    box.innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:15px;font-weight:800;color:#c8a96e;margin-bottom:8px">📊 '+name+'</div><div style="color:#8a8799;font-size:12px">נדרשות לפחות 3 ידיים לחישוב HUD</div></div>';
+    box.innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:15px;font-weight:800;color:#c9a45c;margin-bottom:8px">📊 '+name+'</div><div style="color:#a39a88;font-size:12px">נדרשות לפחות 3 ידיים לחישוב HUD</div></div>';
     overlay.appendChild(box); document.body.appendChild(overlay); return;
   }
   _renderHUDOverlay(name, hud);
@@ -1726,9 +1726,9 @@ function showPlayerHUD(seatIdx){
 
 function hudStat(label, value, color, desc){
   return '<div style="background:#0d1120;border-radius:10px;padding:10px;text-align:center">'+
-    '<div style="font-size:10px;color:#8a8799;margin-bottom:4px">'+label+'</div>'+
+    '<div style="font-size:10px;color:#a39a88;margin-bottom:4px">'+label+'</div>'+
     '<div style="font-size:20px;font-weight:900;color:'+color+'">'+value+'</div>'+
-    '<div style="font-size:9px;color:#8a8799;margin-top:2px">'+desc+'</div>'+
+    '<div style="font-size:9px;color:#a39a88;margin-top:2px">'+desc+'</div>'+
     '</div>';
 }
 
@@ -1849,16 +1849,16 @@ function renderChipCounter(){
   const defs = S.chipDefs||[];
   const defsHtml = defs.map(d=>`
     <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border-radius:10px;padding:8px;margin-bottom:8px">
-      <button onclick="captureChipDefPhoto('${d.id}')" title="צלם תמונת ייחוס" style="width:46px;height:46px;border-radius:8px;border:1px dashed rgba(200,169,110,0.4);background:${d.image?`center/cover no-repeat url(${d.image})`:'rgba(255,255,255,0.06)'};cursor:pointer;flex-shrink:0;font-size:16px;color:#c8a96e">${d.image?'':'📷'}</button>
-      <input value="${d.name||''}" placeholder="שם (למשל: אדום)" oninput="updateChipDefField('${d.id}','name',this.value)" style="flex:1;min-width:0;padding:7px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#e2ddd4;font-size:12px;outline:none;direction:rtl">
-      <input type="number" value="${d.value||''}" placeholder="ערך ₪" oninput="updateChipDefField('${d.id}','value',this.value)" style="width:70px;padding:7px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#c8a96e;font-size:12px;outline:none;text-align:center">
+      <button onclick="captureChipDefPhoto('${d.id}')" title="צלם תמונת ייחוס" style="width:46px;height:46px;border-radius:8px;border:1px dashed rgba(201,164,92,0.4);background:${d.image?`center/cover no-repeat url(${d.image})`:'rgba(255,255,255,0.06)'};cursor:pointer;flex-shrink:0;font-size:16px;color:#c9a45c">${d.image?'':'📷'}</button>
+      <input value="${d.name||''}" placeholder="שם (למשל: אדום)" oninput="updateChipDefField('${d.id}','name',this.value)" style="flex:1;min-width:0;padding:7px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#14130f;color:#f1ebdd;font-size:12px;outline:none;direction:rtl">
+      <input type="number" value="${d.value||''}" placeholder="ערך ₪" oninput="updateChipDefField('${d.id}','value',this.value)" style="width:70px;padding:7px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#14130f;color:#c9a45c;font-size:12px;outline:none;text-align:center">
       <button onclick="removeChipDef('${d.id}')" style="background:none;border:none;color:#e07b6a;font-size:15px;cursor:pointer;padding:2px 4px">✕</button>
     </div>`).join('');
   cont.innerHTML = `
-    <div style="font-size:11px;color:#8a8799;margin-bottom:10px">הגדר כל סוג צ'יפ: צלם תמונת ייחוס שלו, תן שם וערך בש"ח. אפשר להוסיף, לערוך או למחוק בכל עת — ההגדרות נשמרות במכשיר הזה.</div>
+    <div style="font-size:11px;color:#a39a88;margin-bottom:10px">הגדר כל סוג צ'יפ: צלם תמונת ייחוס שלו, תן שם וערך בש"ח. אפשר להוסיף, לערוך או למחוק בכל עת — ההגדרות נשמרות במכשיר הזה.</div>
     <div id="chip-defs-list">${defsHtml||'<div style="font-size:11px;color:#3a3850;text-align:center;padding:10px">עדיין לא הוגדרו סוגי צ\'יפים</div>'}</div>
-    <button onclick="addChipDef()" style="width:100%;padding:9px;border-radius:9px;border:1px dashed rgba(200,169,110,0.4);background:transparent;color:#c8a96e;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:12px">+ הוסף סוג צ'יפ</button>
-    <button onclick="countPotChips()" style="width:100%;padding:11px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:900;font-size:13px;cursor:pointer">📷 צלם וספור קופה</button>
+    <button onclick="addChipDef()" style="width:100%;padding:9px;border-radius:9px;border:1px dashed rgba(201,164,92,0.4);background:transparent;color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:12px">+ הוסף סוג צ'יפ</button>
+    <button onclick="countPotChips()" style="width:100%;padding:11px;border-radius:10px;border:none;background:#c9a45c;color:#0a0d14;font-weight:900;font-size:13px;cursor:pointer">📷 צלם וספור קופה</button>
     <div id="chip-count-result" style="margin-top:12px"></div>
   `;
 }
@@ -1952,7 +1952,7 @@ async function countPotChips(){
   if(!defs.length){ notify('הגדר לפחות סוג צ\'יפ אחד עם תמונה, שם וערך'); return; }
   _openCameraInput(async (file)=>{
     const resultBox = document.getElementById('chip-count-result');
-    if(resultBox) resultBox.innerHTML = '<div style="text-align:center;padding:10px;color:#8a8799;font-size:12px">🔍 סופר צ\'יפים...</div>';
+    if(resultBox) resultBox.innerHTML = '<div style="text-align:center;padding:10px;color:#a39a88;font-size:12px">🔍 סופר צ\'יפים...</div>';
     try{
       const rawPotUrl = await new Promise((res,rej)=>{
         const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);
@@ -1987,16 +1987,16 @@ function renderChipCountResult(defs, counts){
   const byName = {}; counts.forEach(c=>byName[c.name]=c.count);
   const rowsHtml = defs.map(d=>`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <span style="flex:1;font-size:12px;color:#e2ddd4">${d.name} <span style="color:#3a3850">(₪${d.value})</span></span>
-      <input type="number" value="${byName[d.name]??0}" data-chip-count="${d.name}" oninput="updateChipCountTotal()" style="width:60px;padding:5px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:#0a0e18;color:#c8a96e;font-size:12px;text-align:center">
+      <span style="flex:1;font-size:12px;color:#f1ebdd">${d.name} <span style="color:#3a3850">(₪${d.value})</span></span>
+      <input type="number" value="${byName[d.name]??0}" data-chip-count="${d.name}" oninput="updateChipCountTotal()" style="width:60px;padding:5px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:#14130f;color:#c9a45c;font-size:12px;text-align:center">
     </div>`).join('');
   resultBox.innerHTML = `
-    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;border:1px solid rgba(200,169,110,0.25)">
-      <div style="font-size:11px;color:#8a8799;margin-bottom:8px">תוצאת זיהוי — אפשר לתקן לפני שסוגרים:</div>
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;border:1px solid rgba(201,164,92,0.25)">
+      <div style="font-size:11px;color:#a39a88;margin-bottom:8px">תוצאת זיהוי — אפשר לתקן לפני שסוגרים:</div>
       ${rowsHtml}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08)">
-        <span style="font-size:12px;color:#8a8799">סה"כ</span>
-        <span id="chip-count-total" style="font-size:18px;font-weight:900;color:#c8a96e">₪0</span>
+        <span style="font-size:12px;color:#a39a88">סה"כ</span>
+        <span id="chip-count-total" style="font-size:18px;font-weight:900;color:#c9a45c">₪0</span>
       </div>
     </div>`;
   window._chipDefsForCount = defs;
@@ -2048,14 +2048,14 @@ function showICMStackForm(activePids){
   overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
   
   const box = document.createElement('div');
-  box.style.cssText = 'max-width:360px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:16px';
+  box.style.cssText = 'max-width:360px;margin:20px auto;background:#181714;border:1px solid rgba(201,164,92,0.3);border-radius:16px;padding:16px';
   box.onclick = e=>e.stopPropagation();
   
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:14px';
-  hdr.innerHTML = '<span style="font-size:15px;font-weight:800;color:#c8a96e">ICM – הזן ערימות</span>';
+  hdr.innerHTML = '<span style="font-size:15px;font-weight:800;color:#c9a45c">ICM – הזן ערימות</span>';
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer';
+  closeBtn.style.cssText = 'background:none;border:none;color:#a39a88;font-size:22px;cursor:pointer';
   closeBtn.textContent = '✕';
   closeBtn.onclick = ()=>overlay.remove();
   hdr.appendChild(closeBtn);
@@ -2070,8 +2070,8 @@ function showICMStackForm(activePids){
   // Show total chips
   const totalDiv = document.createElement('div');
   totalDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#0d1120;border-radius:8px;margin-bottom:10px';
-  const tl = document.createElement('span'); tl.style.cssText='font-size:11px;color:#8a8799'; tl.textContent='ציפים בטורניר:';
-  const tv = document.createElement('span'); tv.style.cssText='font-size:14px;font-weight:800;color:#c8a96e'; tv.textContent=icmTotalChips.toLocaleString();
+  const tl = document.createElement('span'); tl.style.cssText='font-size:11px;color:#a39a88'; tl.textContent='ציפים בטורניר:';
+  const tv = document.createElement('span'); tv.style.cssText='font-size:14px;font-weight:800;color:#c9a45c'; tv.textContent=icmTotalChips.toLocaleString();
   totalDiv.appendChild(tl); totalDiv.appendChild(tv);
   box.appendChild(totalDiv);
 
@@ -2093,12 +2093,12 @@ function showICMStackForm(activePids){
   activePids.forEach(p=>{
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
-    row.innerHTML = '<span style="flex:1;font-size:13px;font-weight:700;color:#e2ddd4">'+p.name+'</span>';
+    row.innerHTML = '<span style="flex:1;font-size:13px;font-weight:700;color:#f1ebdd">'+p.name+'</span>';
     const inp = document.createElement('input');
     inp.type = 'number';
     inp.inputMode = 'numeric';
     inp.value = 50000;
-    inp.style.cssText = 'width:110px;padding:7px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#0a0e18;color:#e2ddd4;font-size:13px;text-align:center;outline:none;-webkit-appearance:none';
+    inp.style.cssText = 'width:110px;padding:7px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:#14130f;color:#f1ebdd;font-size:13px;text-align:center;outline:none;-webkit-appearance:none';
     inp.oninput = ()=>{ stacks[p.id]=parseInt(inp.value)||0; updateTotal(); };
     row.appendChild(inp);
     box.appendChild(row);
@@ -2107,7 +2107,7 @@ function showICMStackForm(activePids){
   updateTotal(); // show initial status
   
   const calcBtn = document.createElement('button');
-  calcBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c8a96e;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px';
+  calcBtn.style.cssText = 'width:100%;padding:12px;border-radius:10px;border:none;background:#c9a45c;color:#0a0d14;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px';
   calcBtn.textContent = 'חשב ICM';
   calcBtn.onclick = ()=>{
     const active = activePids.map(p=>({playerId:p.id, stack:stacks[p.id]||0}));
@@ -2139,22 +2139,22 @@ function showICMResult(active){
   overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
   
   const box = document.createElement('div');
-  box.style.cssText = 'max-width:420px;margin:20px auto;background:#121824;border:1px solid rgba(200,169,110,0.3);border-radius:16px;padding:16px';
+  box.style.cssText = 'max-width:420px;margin:20px auto;background:#181714;border:1px solid rgba(201,164,92,0.3);border-radius:16px;padding:16px';
   box.onclick = e=>e.stopPropagation();
   
   // Header
   box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-    '<div><div style="font-size:15px;font-weight:800;color:#c8a96e">ICM</div>'+
-    '<div style="font-size:11px;color:#8a8799">קופה: ₪'+pp.toLocaleString()+'</div></div>'+
-    '<button onclick="closeICM()" style="background:none;border:none;color:#8a8799;font-size:22px;cursor:pointer">✕</button></div>';
+    '<div><div style="font-size:15px;font-weight:800;color:#c9a45c">ICM</div>'+
+    '<div style="font-size:11px;color:#a39a88">קופה: ₪'+pp.toLocaleString()+'</div></div>'+
+    '<button onclick="closeICM()" style="background:none;border:none;color:#a39a88;font-size:22px;cursor:pointer">✕</button></div>';
   
   // Prizes row
   const prizesRow = document.createElement('div');
   prizesRow.style.cssText = 'display:flex;gap:6px;margin-bottom:14px';
   prizes.forEach((p,i)=>{
     prizesRow.innerHTML += '<div style="flex:1;background:#0d1120;border-radius:8px;padding:6px;text-align:center">'+
-      '<div style="font-size:10px;color:#8a8799">מקום '+(i+1)+'</div>'+
-      '<div style="font-size:13px;font-weight:700;color:#c8a96e">₪'+p.toLocaleString()+'</div></div>';
+      '<div style="font-size:10px;color:#a39a88">מקום '+(i+1)+'</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#c9a45c">₪'+p.toLocaleString()+'</div></div>';
   });
   box.appendChild(prizesRow);
   
@@ -2162,11 +2162,11 @@ function showICMResult(active){
   const table = document.createElement('table');
   table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px';
   table.innerHTML = '<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08)">'+
-    '<th style="padding:6px 8px;text-align:right;color:#8a8799;font-weight:600">שחקן</th>'+
-    '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">ערימה</th>'+
-    '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">% צ יפים</th>'+
-    '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">שווי ICM</th>'+
-    '<th style="padding:6px 8px;text-align:center;color:#8a8799;font-weight:600">% פרסים</th>'+
+    '<th style="padding:6px 8px;text-align:right;color:#a39a88;font-weight:600">שחקן</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#a39a88;font-weight:600">ערימה</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#a39a88;font-weight:600">% צ יפים</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#a39a88;font-weight:600">שווי ICM</th>'+
+    '<th style="padding:6px 8px;text-align:center;color:#a39a88;font-weight:600">% פרסים</th>'+
     '</tr></thead><tbody id="icm-tbody"></tbody>';
   box.appendChild(table);
   
@@ -2179,14 +2179,14 @@ function showICMResult(active){
     const icmVal = Math.round(icmEV[i]);
     const icmPct = pp>0?Math.round(icmEV[i]/pp*1000)/10:0;
     const diff = icmPct - chipPct;
-    const diffColor = diff>0?'#5fc47a':diff<0?'#e07b6a':'#8a8799';
+    const diffColor = diff>0?'#5fc47a':diff<0?'#e07b6a':'#a39a88';
     const row = document.createElement('tr');
     row.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.04)';
-    row.innerHTML = '<td style="padding:8px;font-weight:700;color:#e2ddd4">'+pName(seat.playerId)+'</td>'+
+    row.innerHTML = '<td style="padding:8px;font-weight:700;color:#f1ebdd">'+pName(seat.playerId)+'</td>'+
       '<td style="padding:8px;text-align:center;color:#aaa">'+seat.stack.toLocaleString()+'</td>'+
       '<td style="padding:8px;text-align:center;color:#aaa">'+chipPct+'%</td>'+
       '<td style="padding:8px;text-align:center;font-weight:800;color:#5fc47a">₪'+icmVal.toLocaleString()+'</td>'+
-      '<td style="padding:8px;text-align:center"><span style="font-weight:700;color:#e2ddd4">'+icmPct+'%</span> <span style="font-size:10px;color:'+diffColor+'">'+(diff>0?'+':'')+diff.toFixed(1)+'%</span></td>';
+      '<td style="padding:8px;text-align:center"><span style="font-weight:700;color:#f1ebdd">'+icmPct+'%</span> <span style="font-size:10px;color:'+diffColor+'">'+(diff>0?'+':'')+diff.toFixed(1)+'%</span></td>';
     tbody.appendChild(row);
   });
 }
@@ -2295,7 +2295,7 @@ function renderTableShape(){
   <!-- inner highlight -->
   <ellipse cx="${cx}" cy="${cy}" rx="${hiR.rx}" ry="${hiR.ry}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
   <!-- gold ring -->
-  <ellipse cx="${cx}" cy="${cy}" rx="${goldR.rx}" ry="${goldR.ry}" fill="none" stroke="rgba(200,169,110,0.08)" stroke-width="0.8"/>`;
+  <ellipse cx="${cx}" cy="${cy}" rx="${goldR.rx}" ry="${goldR.ry}" fill="none" stroke="rgba(201,164,92,0.08)" stroke-width="0.8"/>`;
 
   // עדכן כפתור orientation  // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
@@ -2440,7 +2440,7 @@ function renderSeats(){
     el.innerHTML=`<div class="${cls}" style="width:88px;min-height:64px;box-sizing:border-box" onclick="if(event.target.closest('button'))return;clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
       ${seat?.playerId?`
         <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
-          ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c8a96e'}35;color:${PC[seat.pos]||'#c8a96e'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c8a96e'}50">${seat.pos}</span>`:''}
+          ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c9a45c'}35;color:${PC[seat.pos]||'#c9a45c'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c9a45c'}50">${seat.pos}</span>`:''}
         </div>
         <div class="seat-name">${name||'?'}</div>
         ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a6a54;font-size:10px">(${sbb}) </span>`:''}<span style="font-size:9px">${seat.stack.toLocaleString()}</span></div>`:''}
@@ -2448,7 +2448,7 @@ function renderSeats(){
         ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טרן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טרן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
     const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&(seat.folded||seat.sittingOut||!S.btnLocked);
     const isSittingOut = seat.sittingOut||false;
-    return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(200,169,110,0.5);background:rgba(200,169,110,0.15);color:#c8a96e;font-size:10px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')
+    return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(201,164,92,0.5);background:rgba(201,164,92,0.15);color:#c9a45c;font-size:10px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')
     +(showRebuy?`
       <button onclick="event.stopPropagation();doSeatRebuy(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(95,196,122,0.6);background:rgba(95,196,122,0.2);color:#5fc47a;font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">+ Rebuy</button>
       <button onclick="event.stopPropagation();setSittingOut(${seat.seatIdx},${!isSittingOut})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid ${isSittingOut?'rgba(91,155,213,0.6)':'rgba(255,200,50,0.5)'};background:${isSittingOut?'rgba(91,155,213,0.2)':'rgba(255,200,50,0.1)'};color:${isSittingOut?'#5b9bd5':'#FFB347'};font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">${isSittingOut?'▶ חזור':'⏸ Sit Out'}</button>
@@ -2611,13 +2611,13 @@ function renderSeats(){
     const potBtn = document.createElement('button');
     potBtn.textContent = '💰 העבר קופה';
     potBtn.style.cssText = 'flex:1;padding:14px 24px;border-radius:14px;border:none;'
-      +'background:#c8a96e;color:#0a0d14;font-size:15px;font-weight:900;cursor:pointer;'
+      +'background:#c9a45c;color:#0a0d14;font-size:15px;font-weight:900;cursor:pointer;'
       +'box-shadow:0 4px 16px rgba(0,0,0,0.5)';
     potBtn.onclick = ()=>{ S._showdownMode=false; showShowdownPanel(); };
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'ביטול';
     cancelBtn.style.cssText = 'padding:14px 20px;border-radius:14px;border:1px solid rgba(255,255,255,0.15);'
-      +'background:rgba(255,255,255,0.05);color:#e2ddd4;font-size:13px;cursor:pointer';
+      +'background:rgba(255,255,255,0.05);color:#f1ebdd;font-size:13px;cursor:pointer';
     cancelBtn.onclick = ()=>{ S._showdownMode=false; renderSeats(); };
     bar.appendChild(potBtn);
     bar.appendChild(cancelBtn);
