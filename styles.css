@@ -295,3 +295,9 @@ input,select,textarea{font-family:inherit}
 
 .card-red{color:#e62b34}
 .card-black{color:#0b0b0b}
+
+/* TIMER HIDDEN (2026-10-23, claude/design-direction-A.md): הסתרה בתצוגה בלבד — כל פונקציות הטיימר ב-render.js נשארות.
+   !important כי render.js קובע style.display ישירות על #timer-controls. להחזרה: להסיר class="hide-timer" מה-<body>. */
+body.hide-timer .timer-ui{display:none!important}
+body.hide-timer #blind-timer-bar{padding-top:6px;padding-bottom:6px}
+body.hide-timer #timer-prize-row{margin-top:0;padding-top:0;border-top:none}

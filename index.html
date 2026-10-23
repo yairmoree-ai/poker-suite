@@ -13,7 +13,9 @@
 <title>Poker Suite</title>
 <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<!-- hide-timer: הטיימר מוסתר בתצוגה בלבד (2026-10-23, כיוון עיצוב א׳). הלוגיקה ב-render.js נשארת פעילה.
+     להחזרת הטיימר: למחוק את class="hide-timer" מה-body. -->
+<body class="hide-timer">
 <div id="lock-screen" style="position:fixed;inset:0;z-index:999;background:#0f0e0c;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="width:100%;max-width:320px;text-align:center">
     <div style="font-size:48px;margin-bottom:16px">🃏</div>
@@ -156,7 +158,7 @@
   <!-- BLIND TIMER -->
   <div id="blind-timer-bar" style="background:#14130f;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;padding:10px 14px">
     <!-- Admin controls row -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <div class="timer-ui" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <div id="timer-display" style="font-size:32px;font-weight:900;color:#c9a45c;font-variant-numeric:tabular-nums;min-width:80px;letter-spacing:-1px">20:00</div>
       <div style="flex:1">
         <div id="timer-level" style="font-size:11px;color:var(--muted)">רמה 1 / 12</div>
@@ -172,7 +174,7 @@
       </span>
     </div>
     <!-- Progress bar -->
-    <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden">
+    <div class="timer-ui" style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden">
       <div id="timer-progress" style="height:100%;background:#c9a45c;border-radius:2px;transition:width 1s linear;width:100%"></div>
     </div>
     <!-- Prize pool row -->
