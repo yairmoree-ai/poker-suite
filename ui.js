@@ -1695,6 +1695,12 @@ function renderTournList(){
                   // גרסאות שונות של אותו טקסט — גם מפשט את הקוד (בטל את
                   // הצורך ב-onclone/class 'vert-name' לגמרי, ראו
                   // shareTournamentImage).
+                  // שם: בלי overflow:hidden/ellipsis (html2canvas חותך אותם בצורה
+                  // משובשת — "אופר" הפך ל-"!ופר" והשם הארוך דרס את השכן). הפונט
+                  // מתכווץ לפי אורך השם כך שנכנס בעמודה של ~26px (14 שחקנים),
+                  // ו-line-height קבוע כדי שכל השמות ישבו על אותו קו.
+                  // שורת ה-Rebuy בגובה קבוע גם כשריקה (nbsp) — אחרת עמודות בלי
+                  // Rebuy (מיכל, איל) נמוכות ב-2-3px והשם שלהן יושב נמוך.
                   return `<div style="display:flex;flex-direction:column;align-items:center;flex:1 1 0;min-width:0;max-width:30px">
                     <div style="margin-bottom:2px;white-space:nowrap;min-height:15px">
                       <span style="font-family:var(--font-serif);font-size:13px;font-weight:700;color:${placeColor}">${displayPlace}</span>
@@ -1702,8 +1708,8 @@ function renderTournList(){
                     <div style="width:min(16px,70%);display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
                       <div style="width:100%;height:${barH}px;background:${barColor};border-radius:1px 1px 0 0"></div>
                     </div>
-                    <div style="margin-top:3px;font-size:9px;font-weight:700;color:#f1ebdd;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
-                    <div style="font-size:8px;font-weight:600;color:var(--muted);white-space:nowrap;min-height:10px;margin-top:1px">${rebuyText}</div>
+                    <div style="margin-top:3px;font-size:${(()=>{const n=[...String(f.name)].length;return n<=4?9:n===5?8:n===6?7.5:7;})()}px;line-height:11px;height:11px;font-weight:700;color:#f1ebdd;white-space:nowrap;text-align:center">${f.name}</div>
+                    <div style="font-size:8px;line-height:10px;height:10px;font-weight:600;color:var(--muted);white-space:nowrap;margin-top:1px">${rebuyText||'&nbsp;'}</div>
                   </div>`;
                 }).join('');
               })()}
