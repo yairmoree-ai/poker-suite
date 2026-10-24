@@ -1802,7 +1802,7 @@ function showLeaderboard(){
   box.style.cssText = 'max-width:480px;margin:0 auto;padding:0 0 12px';
 
   const hdrTop = document.createElement('div');
-  hdrTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:22px 22px 10px';
+  hdrTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:16px 22px 4px';
   hdrTop.innerHTML = `<div style="font-family:var(--font-serif);font-size:13px;letter-spacing:0.32em;color:#c9a45c;font-weight:500">POKER SUITE</div>`;
   const closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:transparent;border:1px solid rgba(201,164,92,0.5);color:#e2c27d;font-family:var(--font-ui);font-size:13px;padding:8px 14px;min-height:40px;cursor:pointer;border-radius:2px';
@@ -1813,11 +1813,11 @@ function showLeaderboard(){
   box.appendChild(hdrTop);
 
   const title = document.createElement('div');
-  title.style.cssText = 'padding:14px 22px 6px';
+  title.style.cssText = 'padding:6px 22px 4px';
   title.innerHTML = `
     <div style="font-size:12px;letter-spacing:0.22em;color:#a39a88">דירוג עונתי · ${S.tournLog.length} טורנירים</div>
-    <div style="font-family:var(--font-serif);font-size:46px;font-weight:900;color:#e2c27d;line-height:1.05;margin-top:4px;direction:ltr;text-align:right">Leaderboard</div>
-    <div style="height:1px;background:rgba(201,164,92,0.3);margin-top:16px"></div>`;
+    <div style="font-family:var(--font-serif);font-size:46px;font-weight:900;color:#e2c27d;line-height:1.05;margin-top:2px;direction:ltr;text-align:right">Leaderboard</div>
+    <div style="height:1px;background:rgba(201,164,92,0.3);margin-top:10px"></div>`;
   box.appendChild(title);
 
   if(!lb.length){
@@ -1859,29 +1859,30 @@ function showLeaderboard(){
     const nightsTxt = p.nights===1 ? 'טורניר אחד' : `${p.nights} טורנירים`;
     const winsTxt = p.wins===1 ? 'ניצחון אחד' : `${p.wins} ניצחונות`;
     if(!top){
-      // מקום 4+: שורה אחת קומפקטית (בלי קו התקדמות) — עם 20+ שחקנים
-      // התמונה המשותפת הייתה ארוכה מדי.
+      // מקום 4+: שורה אחת קומפקטית (בלי קו התקדמות). הגופנים גדולים
+      // (20px) אבל הריפוד האנכי קטן — קריא בתמונה משותפת, והאורך נשאר קצר.
       return `
-      <div style="display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
-        <div style="width:34px;font-family:var(--font-serif);font-size:16px;font-weight:700;color:${col};line-height:1">${i+1}</div>
+      <div style="display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div style="width:36px;font-family:var(--font-serif);font-size:20px;font-weight:700;color:${col};line-height:1.2">${i+1}</div>
         <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:8px">
-          <span style="font-family:var(--font-serif);font-size:16px;font-weight:700;color:#f1ebdd;white-space:nowrap">${p.name}</span>
-          <span style="font-size:10.5px;color:#a39a88;white-space:nowrap">${nightsTxt}${p.wins>0?' · '+winsTxt:''}</span>
+          <span style="font-family:var(--font-serif);font-size:20px;font-weight:700;color:#f1ebdd;white-space:nowrap;line-height:1.2">${p.name}</span>
+          <span style="font-size:12px;color:#a39a88;white-space:nowrap">${nightsTxt}${p.wins>0?' · '+winsTxt:''}</span>
         </div>
-        <div style="font-family:var(--font-serif);font-size:16px;font-weight:700;color:${col};direction:ltr">${p.points.toFixed(2)}</div>
+        <div style="font-family:var(--font-serif);font-size:20px;font-weight:700;color:${col};direction:ltr;line-height:1.2">${p.points.toFixed(2)}</div>
       </div>`;
     }
+    // top-3: ה-meta (טורנירים · ניצחונות) עבר לשורה אחת ליד השם, במקום מתחתיו.
     return `
-      <div style="padding:16px 0 12px;border-bottom:1px solid rgba(255,255,255,0.06)">
-        <div style="display:flex;align-items:baseline;gap:14px">
-          <div style="width:34px;font-family:var(--font-serif);font-size:30px;font-weight:700;color:${col};line-height:1">${i+1}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-family:var(--font-serif);font-size:24px;font-weight:700;color:#f1ebdd;line-height:1.15">${p.name}</div>
-            <div style="font-size:11.5px;color:#a39a88;margin-top:2px">${nightsTxt} · ${winsTxt}</div>
+      <div style="padding:12px 0 10px;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <div style="width:36px;font-family:var(--font-serif);font-size:32px;font-weight:700;color:${col};line-height:1">${i+1}</div>
+          <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <span style="font-family:var(--font-serif);font-size:28px;font-weight:700;color:#f1ebdd;line-height:1.15;white-space:nowrap">${p.name}</span>
+            <span style="font-size:12px;color:#a39a88;white-space:nowrap">${nightsTxt} · ${winsTxt}</span>
           </div>
-          <div style="font-family:var(--font-serif);font-size:26px;font-weight:700;color:${col};direction:ltr">${p.points.toFixed(2)}</div>
+          <div style="font-family:var(--font-serif);font-size:30px;font-weight:700;color:${col};direction:ltr;line-height:1">${p.points.toFixed(2)}</div>
         </div>
-        <div style="height:2px;background:rgba(255,255,255,0.07);margin-top:9px;margin-right:48px">
+        <div style="height:2px;background:rgba(255,255,255,0.07);margin-top:7px;margin-right:48px">
           <div style="height:2px;width:${pct}%;background:${col}"></div>
         </div>
       </div>`;
