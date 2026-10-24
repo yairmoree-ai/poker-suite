@@ -1470,8 +1470,8 @@ function renderTournList(){
   const activeCnt2 = Object.keys(S.buyins).filter(pid=>S.buyins[pid]?.buyin>0&&!S.koOrder.includes(pid)).length;
   const showWinners = activeCnt2 <= 1;
 
-  let html = `<div class="card-item" style="border-color:rgba(201,164,92,0.3);margin-bottom:14px">
-    <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:10px">טורניר נוכחי</div>
+  let html = `<div class="card-item" style="margin-bottom:14px">
+    <div style="font-family:var(--font-serif);font-size:20px;font-weight:700;color:var(--ivory);margin-bottom:12px">טורניר נוכחי</div>
 
     <!-- BUYIN + REBUY BAR CHART - shown whenever there are players with buyin -->
     ${Object.values(S.buyins).some(b=>b.buyin>0)?`
@@ -1488,7 +1488,7 @@ function renderTournList(){
               const rebuyH = b.rebuy>0 ? Math.max(Math.round((b.rebuy/maxRebuy)*BAR_MAX), 6) : 0;
               const hasFree16 = b.rebuy>=16;
               const hasFree10 = b.rebuy>=10;
-              const rebuyColor = hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(201,164,92,0.85)';
+              const rebuyColor = hasFree16?'#c0463a':hasFree10?'#d08a7a':'rgba(201,164,92,0.85)';
               const badge = hasFree16?'16✓':hasFree10?'10✓':'';
               const name = pName(pid)||'?';
               const isKO = S.koOrder.includes(pid);
@@ -1521,32 +1521,15 @@ function renderTournList(){
         const name = pName(r.pid)||'?';
         const rb = rebuyByPid(r.pid);
         const prize = prizeByPlace[r.place]||0;
-        if(r.place <= 3){
-          const medals = {1:{e:'🏆',c:'#FFD700',s:'24px'},2:{e:'🥈',c:'#C0C0C0',s:'20px'},3:{e:'🥉',c:'#CD7F32',s:'18px'}};
-          const m = medals[r.place];
-          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:7px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid ${m.c}30">
-            <div style="text-align:center;min-width:44px">
-              <div style="font-size:${m.s}">${m.e}</div>
-              <div style="font-size:9px;font-weight:800;color:${m.c}">מקום ${r.place}</div>
-            </div>
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:800;color:#f1ebdd">${name}</div>
-              ${rb>0?`<div style="font-size:11px;color:var(--muted)">Rebuy: ${rb}</div>`:'<div style="font-size:11px;color:var(--muted2)">ללא Rebuy</div>'}
-            </div>
-            ${prize?`<div style="font-size:15px;font-weight:900;color:${r.place===1?'#5fc47a':'var(--gold)'}">₪${prize.toLocaleString()}</div>`:''}
-          </div>`;
-        } else {
-          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:7px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
-            <div style="text-align:center;min-width:44px">
-              <div style="font-size:13px;color:var(--muted);font-weight:700">מקום 4</div>
-            </div>
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:#f1ebdd">${name}</div>
-              ${rb>0?`<div style="font-size:11px;color:var(--muted)">Rebuy: ${rb}</div>`:'<div style="font-size:11px;color:var(--muted2)">ללא Rebuy</div>'}
-            </div>
-            ${prize?`<div style="font-size:13px;font-weight:800;color:var(--gold)">₪${prize.toLocaleString()}</div>`:''}
-          </div>`;
-        }
+        const ringC = ({1:'#e2c27d',2:'#cfc8b8',3:'#c08a5a'})[r.place] || '#a39a88';
+        return `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+          <div style="width:26px;height:26px;border-radius:50%;border:1px solid ${ringC};display:flex;align-items:center;justify-content:center;font-family:var(--font-serif);font-size:14px;font-weight:700;color:${ringC};flex-shrink:0">${r.place}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:16px;color:var(--ivory);font-weight:${r.place===1?700:500}">${name}</div>
+            ${rb>0?`<div style="font-size:11px;color:var(--muted)">Rebuy: ${rb}</div>`:'<div style="font-size:11px;color:var(--muted)">ללא Rebuy</div>'}
+          </div>
+          ${prize?`<div style="font-family:var(--font-serif);font-size:18px;font-weight:700;color:${ringC}">₪${prize.toLocaleString()}</div>`:''}
+        </div>`;
       }).join('')}
     </div>` : ''}
 
@@ -1608,73 +1591,57 @@ function renderTournList(){
 
   // Tournament history
   if(S.tournLog.length){
-    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:12px;font-weight:700;color:var(--gold)">היסטוריה (${S.tournLog.length})</div>
-      <div style="display:flex;gap:6px">
-        <button onclick="showLeaderboard()" style="font-size:10px;color:#c9a45c;background:rgba(201,164,92,0.1);border:1px solid rgba(201,164,92,0.4);border-radius:7px;padding:3px 8px;cursor:pointer;font-weight:800">🏆 Leaderboard</button>
-        ${isAdmin()?`<button onclick="exportToExcel()" style="font-size:10px;color:#a39a88;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:3px 8px;cursor:pointer">📊 Excel</button>`:''}
-      </div>
+    html += `<div style="padding:18px 0 12px;display:flex;align-items:center;gap:12px">
+      <div style="font-family:var(--font-serif);font-size:22px;font-weight:700;color:var(--ivory)">היסטוריה</div>
+      <div style="flex:1;height:1px;background:rgba(201,164,92,0.3)"></div>
+      <div style="font-size:12px;color:var(--muted)">${S.tournLog.length} טורנירים</div>
+    </div>
+    <div style="display:flex;gap:6px;justify-content:flex-start;margin-bottom:10px">
+      <button onclick="showLeaderboard()" style="font-size:12px;color:var(--gold-bright);background:transparent;border:1px solid rgba(201,164,92,0.5);border-radius:2px;padding:6px 12px;cursor:pointer;font-weight:700;min-height:32px">🏆 Leaderboard</button>
+      ${isAdmin()?`<button onclick="exportToExcel()" style="font-size:12px;color:var(--muted);background:none;border:1px solid rgba(255,255,255,0.1);border-radius:2px;padding:6px 12px;cursor:pointer;min-height:32px">📊 Excel</button>`:''}
     </div>`;
     html += S.tournLog.map((t,ti)=>{
       const prizeByPlaceT = {1:Math.round(t.place1||0),2:Math.round(t.place2||0),3:t.place3||0,4:t.place4||0};
       const finishT = (t.finishOrder||[]).slice().sort((a,b)=>a.place-b.place);
       const rebuyT = pid => finishT.find(f=>f.pid===pid)?.rebuy||0;
-      return `<div class="card-item" id="tourn-card-${ti}">
+      return `<div class="card-item" id="tourn-card-${ti}" style="padding:20px 18px 18px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
           <div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-              <span style="font-size:13px;color:#b0a8a0">${t.date}</span>
-              ${isAdmin()?`<span style="font-size:15px;font-weight:800;color:#f0ece4;cursor:pointer;border-bottom:1px dashed rgba(201,164,92,0.4)" 
-              onclick="editTournName(${ti})" title="לחץ לעריכת שם">${t.name||'+ הוסף שם'}</span>`
-              :t.name?`<span style="font-size:15px;font-weight:800;color:#f0ece4">${t.name}</span>`:''}
-            </div>
-            <div style="font-size:20px;font-weight:900;color:var(--gold)">₪${(t.prizePool||0).toLocaleString()}</div>
+            <div style="font-size:12px;color:var(--muted)">${t.date}</div>
+            ${isAdmin()?`<div style="font-family:var(--font-serif);font-size:24px;font-weight:700;color:var(--ivory);margin-top:2px;cursor:pointer;border-bottom:1px dashed rgba(201,164,92,0.4);display:inline-block"
+              onclick="editTournName(${ti})" title="לחץ לעריכת שם">${t.name||'+ הוסף שם'}</div>`
+              :t.name?`<div style="font-family:var(--font-serif);font-size:24px;font-weight:700;color:var(--ivory);margin-top:2px">${t.name}</div>`:''}
           </div>
-          <div class="share-hide" style="display:flex;gap:6px">
-            <button class="btn btn-xs" style="background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.4);color:#5b9bd5" onclick="shareTournamentImage(${ti})" title="שתף כתמונה">📤</button>
-            ${isAdmin()?`<button class="btn btn-xs" style="background:rgba(201,164,92,0.12);border:1px solid rgba(201,164,92,0.4);color:#c9a45c" onclick="toggleEditFinishOrder(${ti})" title="ערוך סדר-סיום">✏️</button>`:''}
-            ${isAdmin()?`<button class="btn btn-red btn-xs" onclick="deleteTournament(${ti})">✕</button>`:''}
+          <div style="text-align:left">
+            <div style="font-size:11px;letter-spacing:0.14em;color:var(--muted)">קופת פרסים</div>
+            <div style="font-family:var(--font-serif);font-size:30px;font-weight:900;color:var(--gold-bright);line-height:1.1">₪${(t.prizePool||0).toLocaleString()}</div>
           </div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">
-          <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
-            <div style="font-size:10px;color:#8a8090;margin-bottom:1px">שחקנים</div>
-            <div style="font-size:18px;font-weight:900;color:#f0ece4">${t.totalBuyins}</div>
-          </div>
-          <div style="background:rgba(90,58,138,0.2);border:1px solid rgba(155,111,212,0.3);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
-            <div style="font-size:10px;color:#9b6fd4;margin-bottom:1px">Rebuy</div>
-            <div style="font-size:18px;font-weight:900;color:#e2c4ff">${t.totalRebuys}</div>
-          </div>
-          <div style="background:rgba(201,164,92,0.1);border:1px solid rgba(201,164,92,0.25);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
-            <div style="font-size:10px;color:#c9a45c;margin-bottom:1px">כניסות${t.freeRebuys?` <span style="color:#5b9bd5">(${t.freeRebuys}🎁)</span>`:''}</div>
-            <div style="font-size:18px;font-weight:900;color:#f0ece4">${t.paidEntries||t.totalEntries}</div>
-          </div>
-          ${t.surprisesAmount?`
-          <div style="background:rgba(224,123,106,0.1);border:1px solid rgba(224,123,106,0.3);border-radius:10px;padding:5px 10px;text-align:center;flex-shrink:0">
-            <div style="font-size:10px;color:#e07b6a;margin-bottom:1px">🎉 הפתעות</div>
-            <div style="font-size:16px;font-weight:900;color:#e07b6a">₪${t.surprisesAmount.toLocaleString()}</div>
-          </div>`:''}
+        <div class="share-hide" style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="btn btn-xs" style="background:transparent;border:1px solid rgba(201,164,92,0.5);color:var(--gold-bright);border-radius:2px" onclick="shareTournamentImage(${ti})" title="שתף כתמונה">📤</button>
+          ${isAdmin()?`<button class="btn btn-xs" style="background:transparent;border:1px solid rgba(201,164,92,0.5);color:var(--gold-bright);border-radius:2px" onclick="toggleEditFinishOrder(${ti})" title="ערוך סדר-סיום">✏️</button>`:''}
+          ${isAdmin()?`<button class="btn btn-red btn-xs" style="border-radius:2px" onclick="deleteTournament(${ti})">✕</button>`:''}
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:6px;font-size:13px;color:var(--muted)">
+          <div>שחקנים <b style="color:var(--ivory);font-weight:700">${t.totalBuyins}</b></div>
+          <div>כניסות${t.freeRebuys?` <span style="color:var(--rose)">(${t.freeRebuys}🎁)</span>`:''} <b style="color:var(--ivory);font-weight:700">${t.paidEntries||t.totalEntries}</b></div>
+          <div>Rebuy <b style="color:var(--ivory);font-weight:700">${t.totalRebuys}</b></div>
+          ${t.surprisesAmount?`<div style="color:var(--rose)">🎉 הפתעות <b style="font-weight:700">₪${t.surprisesAmount.toLocaleString()}</b></div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <!-- Places column -->
-          <div>
+          <div style="margin-top:6px;border-top:1px solid rgba(201,164,92,0.22)">
             ${finishT.filter(f=>f.place<=4).map(f=>{
               const rb = f.rebuy||0;
               const prize = prizeByPlaceT[f.place]||0;
-              // תיקו (#85/#86): שני שחקנים מתויקים באותה קבוצת-place עדיין
-              // שומרים place נפרד (בשביל פרס לפי-מקום, בכוונה לא equalized
-              // אוטומטית) — אבל *התצוגה* כאן משתמשת במקום הטוב ביותר
-              // בקבוצת התיקו (Math.min), כך ששניהם מוצגים עם אותה מדליה.
-              // הפרס עצמו לא משתנה מזה — עדיין נשלף לפי f.place האמיתי.
+              // תיקו (#85/#86): התצוגה משתמשת במקום הטוב ביותר בקבוצת התיקו;
+              // הפרס עצמו נשלף לפי f.place האמיתי (ללא שינוי).
               const displayPlace = f.tieGroup ? Math.min(...f.tieGroup) : f.place;
-              const medals={1:'🏆',2:'🥈',3:'🥉'};
-              const colors={1:'#FFD700',2:'#C0C0C0',3:'#CD7F32'};
-              const medal = medals[displayPlace]||'';
-              const color = colors[displayPlace]||'var(--gold)';
-              return `<div style="display:flex;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-                <span style="font-size:${displayPlace<=3?'14':'12'}px;flex-shrink:0;margin-left:4px">${medal||displayPlace+'.'}</span>
-                <span style="font-size:13px;font-weight:700;color:#f1ebdd;flex:1">${f.name||'?'}${rb>0?` <span style="font-size:12px;font-weight:900;color:var(--gold)">(${rb})</span>`:''}</span>
-                ${prize?`<span style="font-size:13px;font-weight:800;color:${color};flex-shrink:0">₪${prize.toLocaleString()}</span>`:''}
+              const ringC = ({1:'#e2c27d',2:'#cfc8b8',3:'#c08a5a'})[displayPlace] || '#a39a88';
+              return `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+                <div style="width:26px;height:26px;border-radius:50%;border:1px solid ${ringC};display:flex;align-items:center;justify-content:center;font-family:var(--font-serif);font-size:14px;font-weight:700;color:${ringC};flex-shrink:0">${displayPlace}</div>
+                <span style="font-size:16px;color:var(--ivory);font-weight:${displayPlace===1?700:500};flex:1;min-width:0">${f.name||'?'}${rb>0?` <span style="font-size:12px;color:var(--muted)">(${rb})</span>`:''}</span>
+                ${prize?`<span style="font-family:var(--font-serif);font-size:18px;font-weight:700;color:${ringC};flex-shrink:0">₪${prize.toLocaleString()}</span>`:''}
               </div>`;
             }).join('')}
           </div>
@@ -1707,14 +1674,14 @@ function renderTournList(){
                   // כדי לשמר את האינדיקציה החזותית המהירה של אבן-דרך-
                   // rebuy, גם כשהגובה עצמו כבר לא מייצג אותה.
                   const displayPlace=f.tieGroup?Math.min(...f.tieGroup):f.place;
-                  const barColor=hasFree16?'#e07b6a':hasFree10?'#5b9bd5':'rgba(201,164,92,0.85)';
+                  const barColor=hasFree16?'#c0463a':hasFree10?'#d08a7a':'rgba(201,164,92,0.85)';
                   const barH=Math.max(Math.round(BAR_MAX*(totalPlayers-displayPlace+1)/totalPlayers), BAR_MIN);
                   // מקומות 1/2/3 צבע-מדליה ייחודי לכל אחד (מוגברים מעט
                   // לבולטות — gold בהיר יותר, silver/bronze מוארים); כל
                   // השאר צבע אחיד אחד (לא מדורג בין 4 ל-11) — בכוונה, כדי
                   // שהעין תזהה מיד "האם זה top-3 או לא" בלי לפענח גוונים.
-                  const placeColorsBold={1:'#FFD966',2:'#D8D8D8',3:'#E0955A'};
-                  const placeColor=placeColorsBold[displayPlace]||'#a8a4b5';
+                  const placeColorsBold={1:'#e2c27d',2:'#cfc8b8',3:'#c08a5a'};
+                  const placeColor=placeColorsBold[displayPlace]||'#a39a88';
                   // רק מספר ה-Rebuy (בלי תג אבן-דרך 10✓/16✓) — האבן-דרך כבר
                   // מסומנת בצבע העמודה ובמקרא מתחת לגרף.
                   const rebuyText=f.rebuy>0?`(${f.rebuy})`:'';
@@ -1730,10 +1697,10 @@ function renderTournList(){
                   // shareTournamentImage).
                   return `<div style="display:flex;flex-direction:column;align-items:center;flex:1 1 0;min-width:0;max-width:30px">
                     <div style="margin-bottom:2px;white-space:nowrap;min-height:15px">
-                      <span style="font-size:13px;font-weight:900;color:${placeColor};text-shadow:0 1px 2px rgba(0,0,0,0.6);-webkit-text-stroke:0.4px rgba(0,0,0,0.35)">${displayPlace}</span>
+                      <span style="font-family:var(--font-serif);font-size:13px;font-weight:700;color:${placeColor}">${displayPlace}</span>
                     </div>
                     <div style="width:min(16px,70%);display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end">
-                      <div style="width:100%;height:${barH}px;background:${barColor};border-radius:2px 2px 0 0"></div>
+                      <div style="width:100%;height:${barH}px;background:${barColor};border-radius:1px 1px 0 0"></div>
                     </div>
                     <div style="margin-top:3px;font-size:9px;font-weight:700;color:#f1ebdd;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
                     <div style="font-size:8px;font-weight:600;color:var(--muted);white-space:nowrap;min-height:10px;margin-top:1px">${rebuyText}</div>
@@ -1743,8 +1710,8 @@ function renderTournList(){
             </div>
             <div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">
               <span style="font-size:9px;color:var(--muted)">גובה העמודה = מקום-סיום</span>
-              ${(t.finishOrder||[]).some(f=>f.rebuy>=10&&f.rebuy<16)?`<span style="font-size:9px;color:#5b9bd5">■ 10+ rebuy</span>`:''}
-              ${(t.finishOrder||[]).some(f=>f.rebuy>=16)?`<span style="font-size:9px;color:#e07b6a">■ 16+ rebuy</span>`:''}
+              ${(t.finishOrder||[]).some(f=>f.rebuy>=10&&f.rebuy<16)?`<span style="font-size:9px;color:#d08a7a">■ 10+ rebuy</span>`:''}
+              ${(t.finishOrder||[]).some(f=>f.rebuy>=16)?`<span style="font-size:9px;color:#c0463a">■ 16+ rebuy</span>`:''}
             </div>
           </div>`:''}
         </div>
