@@ -1856,15 +1856,30 @@ function showLeaderboard(){
     const top = i<3;
     const col = i===0?'#e2c27d':i===1?'#cfc8b8':i===2?'#c08a5a':'#a39a88';
     const pct = Math.max(2, Math.round(p.points/maxPts*100));
+    const nightsTxt = p.nights===1 ? 'טורניר אחד' : `${p.nights} טורנירים`;
+    const winsTxt = p.wins===1 ? 'ניצחון אחד' : `${p.wins} ניצחונות`;
+    if(!top){
+      // מקום 4+: שורה אחת קומפקטית (בלי קו התקדמות) — עם 20+ שחקנים
+      // התמונה המשותפת הייתה ארוכה מדי.
+      return `
+      <div style="display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div style="width:34px;font-family:var(--font-serif);font-size:16px;font-weight:700;color:${col};line-height:1">${i+1}</div>
+        <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:var(--font-serif);font-size:16px;font-weight:700;color:#f1ebdd;white-space:nowrap">${p.name}</span>
+          <span style="font-size:10.5px;color:#a39a88;white-space:nowrap">${nightsTxt}${p.wins>0?' · '+winsTxt:''}</span>
+        </div>
+        <div style="font-family:var(--font-serif);font-size:16px;font-weight:700;color:${col};direction:ltr">${p.points.toFixed(2)}</div>
+      </div>`;
+    }
     return `
-      <div style="padding:${top?'16px 0 12px':'11px 0 9px'};border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div style="padding:16px 0 12px;border-bottom:1px solid rgba(255,255,255,0.06)">
         <div style="display:flex;align-items:baseline;gap:14px">
-          <div style="width:34px;font-family:var(--font-serif);font-size:${top?30:20}px;font-weight:700;color:${col};line-height:1">${i+1}</div>
+          <div style="width:34px;font-family:var(--font-serif);font-size:30px;font-weight:700;color:${col};line-height:1">${i+1}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-family:var(--font-serif);font-size:${top?24:18}px;font-weight:700;color:#f1ebdd;line-height:1.15">${p.name}</div>
-            <div style="font-size:11.5px;color:#a39a88;margin-top:2px">${p.nights} טורנירים · ${p.wins} ניצחונות</div>
+            <div style="font-family:var(--font-serif);font-size:24px;font-weight:700;color:#f1ebdd;line-height:1.15">${p.name}</div>
+            <div style="font-size:11.5px;color:#a39a88;margin-top:2px">${nightsTxt} · ${winsTxt}</div>
           </div>
-          <div style="font-family:var(--font-serif);font-size:${top?26:18}px;font-weight:700;color:${col};direction:ltr">${p.points.toFixed(2)}</div>
+          <div style="font-family:var(--font-serif);font-size:26px;font-weight:700;color:${col};direction:ltr">${p.points.toFixed(2)}</div>
         </div>
         <div style="height:2px;background:rgba(255,255,255,0.07);margin-top:9px;margin-right:48px">
           <div style="height:2px;width:${pct}%;background:${col}"></div>
@@ -1902,10 +1917,10 @@ async function shareLeaderboardImage(box){
     return;
   }
   const hideEls = box.querySelectorAll('.share-hide');
-  hideEls.forEach(el=>el.style.visibility = 'hidden');
+  hideEls.forEach(el=>{el.dataset.prevDisplay=el.style.display;el.style.display='none';});
   try{
     const canvas = await html2canvas(box, { backgroundColor:'#0f0e0c', scale:2, useCORS:true });
-    hideEls.forEach(el=>el.style.visibility = '');
+    hideEls.forEach(el=>{el.style.display=el.dataset.prevDisplay||'';});
 
     canvas.toBlob(async (blob)=>{
       if(!blob){ notify('שגיאה ביצירת התמונה'); return; }
@@ -1928,7 +1943,7 @@ async function shareLeaderboardImage(box){
       }
     }, 'image/png');
   }catch(err){
-    hideEls.forEach(el=>el.style.visibility = '');
+    hideEls.forEach(el=>{el.style.display=el.dataset.prevDisplay||'';});
     console.error('shareLeaderboardImage error:', err);
     notify('שגיאה בשיתוף הטבלה: '+(err?.message||err?.name||'לא ידוע'));
   }
