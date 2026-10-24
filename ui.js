@@ -1796,64 +1796,89 @@ function showLeaderboard(){
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
+  // ── עיצוב א׳ (קלאסי-יוקרתי): כותרת סריף גדולה, שורות עם דירוג/שם/נקודות
+  // וקו התקדמות דק לפי היחס לראשון. הלוגיקה (computeLeaderboard, שיתוף, CSV)
+  // לא השתנתה. box בלי padding — לכל בלוק padding צדדי משלו (22px).
+  box.style.cssText = 'max-width:480px;margin:0 auto;padding:0 0 12px';
+
   const hdrTop = document.createElement('div');
-  hdrTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
-  hdrTop.innerHTML = `<div style="font-size:14px;font-weight:800;color:#c9a45c">🏆 Leaderboard (${S.tournLog.length} טורנירים)</div>`;
+  hdrTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:22px 22px 10px';
+  hdrTop.innerHTML = `<div style="font-family:var(--font-serif);font-size:13px;letter-spacing:0.32em;color:#c9a45c;font-weight:500">POKER SUITE</div>`;
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:none;border:none;color:#a39a88;font-size:22px;cursor:pointer;padding:4px';
-  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'background:transparent;border:1px solid rgba(201,164,92,0.5);color:#e2c27d;font-family:var(--font-ui);font-size:13px;padding:8px 14px;min-height:40px;cursor:pointer;border-radius:2px';
+  closeBtn.textContent = 'סגור';
   closeBtn.className = 'share-hide';
   closeBtn.onclick = ()=>overlay.remove();
   hdrTop.appendChild(closeBtn);
   box.appendChild(hdrTop);
 
+  const title = document.createElement('div');
+  title.style.cssText = 'padding:14px 22px 6px';
+  title.innerHTML = `
+    <div style="font-size:12px;letter-spacing:0.22em;color:#a39a88">דירוג עונתי · ${S.tournLog.length} טורנירים</div>
+    <div style="font-family:var(--font-serif);font-size:46px;font-weight:900;color:#e2c27d;line-height:1.05;margin-top:4px;direction:ltr;text-align:right">Leaderboard</div>
+    <div style="height:1px;background:rgba(201,164,92,0.3);margin-top:16px"></div>`;
+  box.appendChild(title);
+
   if(!lb.length){
-    box.innerHTML += `<div style="text-align:center;color:var(--muted);font-size:13px;padding:30px 10px">אין עדיין מספיק נתונים (צריך טורנירים שמורים עם סדר-סיום)</div>`;
+    // div חדש ולא innerHTML+= — האחרון בונה מחדש את כל הילדים ומאבד את
+    // ה-onclick של כפתור הסגירה.
+    const empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;color:var(--muted);font-size:13px;padding:30px 22px';
+    empty.textContent = 'אין עדיין מספיק נתונים (צריך טורנירים שמורים עם סדר-סיום)';
+    box.appendChild(empty);
     return;
   }
 
   const btnRow = document.createElement('div');
   btnRow.className = 'share-hide';
-  btnRow.style.cssText = 'display:flex;gap:8px;margin-bottom:10px';
+  btnRow.style.cssText = 'display:flex;gap:8px;padding:12px 22px 4px';
 
   const shareBtn = document.createElement('button');
   shareBtn.textContent = '📤 שתף';
-  shareBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#f1ebdd;font-size:12px;font-weight:800;cursor:pointer';
+  shareBtn.style.cssText = 'flex:1;padding:10px;border-radius:2px;border:1px solid rgba(201,164,92,0.5);background:transparent;color:#e2c27d;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer';
   shareBtn.onclick = ()=>shareLeaderboardImage(box);
   btnRow.appendChild(shareBtn);
 
   const exportBtn = document.createElement('button');
   exportBtn.textContent = '📊 ייצוא ל-Excel';
-  exportBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.08);color:#c9a45c;font-size:12px;font-weight:800;cursor:pointer';
+  exportBtn.style.cssText = 'flex:1;padding:10px;border-radius:2px;border:1px solid rgba(201,164,92,0.22);background:transparent;color:#a39a88;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer';
   exportBtn.onclick = exportLeaderboardToCSV;
   btnRow.appendChild(exportBtn);
 
   box.appendChild(btnRow);
 
-  const table = document.createElement('div');
-  table.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden';
-  table.innerHTML = `
-    <div style="display:grid;grid-template-columns:28px 1fr 60px 55px 60px;gap:4px;padding:8px 10px;background:rgba(255,255,255,0.04);font-size:10px;font-weight:800;color:var(--muted)">
-      <div>#</div><div>שחקן</div><div style="text-align:center">נקודות</div><div style="text-align:center">משחקים</div><div style="text-align:center">נצחונות</div>
-    </div>
-    ${lb.map((p,i)=>`
-      <div style="display:grid;grid-template-columns:28px 1fr 60px 55px 60px;gap:4px;padding:8px 10px;font-size:12px;border-top:1px solid rgba(255,255,255,0.05);${i<3?'background:rgba(201,164,92,0.06)':''}">
-        <div style="font-weight:800;color:${i===0?'#c9a45c':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--muted)'}">${i+1}</div>
-        <div style="font-weight:700;color:#f0ece4">${p.name}</div>
-        <div style="text-align:center;font-weight:800;color:#c9a45c">${p.points.toFixed(2)}</div>
-        <div style="text-align:center;color:var(--muted)">${p.nights}</div>
-        <div style="text-align:center;color:var(--muted)">${p.wins}</div>
-      </div>
-    `).join('')}
-  `;
-  box.appendChild(table);
+  // צבעי מקום: זהב בהיר / כסף / ארד, השאר אפור-חם. top-3 גדולים יותר.
+  const maxPts = Math.max(lb[0].points, 0.0001);
+  const rows = document.createElement('div');
+  rows.style.cssText = 'padding:6px 22px 0';
+  rows.innerHTML = lb.map((p,i)=>{
+    const top = i<3;
+    const col = i===0?'#e2c27d':i===1?'#cfc8b8':i===2?'#c08a5a':'#a39a88';
+    const pct = Math.max(2, Math.round(p.points/maxPts*100));
+    return `
+      <div style="padding:${top?'16px 0 12px':'11px 0 9px'};border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div style="display:flex;align-items:baseline;gap:14px">
+          <div style="width:34px;font-family:var(--font-serif);font-size:${top?30:20}px;font-weight:700;color:${col};line-height:1">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--font-serif);font-size:${top?24:18}px;font-weight:700;color:#f1ebdd;line-height:1.15">${p.name}</div>
+            <div style="font-size:11.5px;color:#a39a88;margin-top:2px">${p.nights} טורנירים · ${p.wins} ניצחונות</div>
+          </div>
+          <div style="font-family:var(--font-serif);font-size:${top?26:18}px;font-weight:700;color:${col};direction:ltr">${p.points.toFixed(2)}</div>
+        </div>
+        <div style="height:2px;background:rgba(255,255,255,0.07);margin-top:9px;margin-right:48px">
+          <div style="height:2px;width:${pct}%;background:${col}"></div>
+        </div>
+      </div>`;
+  }).join('');
+  box.appendChild(rows);
 
   const note = document.createElement('div');
   // צבע קבוע-מפורש, לא var(--muted2) — יש כמה הגדרות שונות למשתנה הזה
   // בקובץ ה-CSS לפי הקשר, ואחת מהן (#3a3650) כהה כמעט-שחור וגרמה לטקסט
   // הזה להיות בלתי-קריא לגמרי על הרקע השחור.
-  note.style.cssText = 'font-size:11px;color:#a39a88;margin-top:10px;text-align:center;line-height:1.5';
-  note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו משחק) ÷ מקום-סיום';
+  note.style.cssText = 'margin:14px 22px 0;padding-top:14px;font-size:11.5px;color:#a39a88;line-height:1.5;border-top:1px solid rgba(201,164,92,0.22)';
+  note.textContent = 'נקודות = √(כניסות × עלות-כניסה, באותו משחק) ÷ מקום-סיום, מסוכם על כל הטורנירים.';
   box.appendChild(note);
 }
 
@@ -1879,7 +1904,7 @@ async function shareLeaderboardImage(box){
   const hideEls = box.querySelectorAll('.share-hide');
   hideEls.forEach(el=>el.style.visibility = 'hidden');
   try{
-    const canvas = await html2canvas(box, { backgroundColor:'#0a0d14', scale:2, useCORS:true });
+    const canvas = await html2canvas(box, { backgroundColor:'#0f0e0c', scale:2, useCORS:true });
     hideEls.forEach(el=>el.style.visibility = '');
 
     canvas.toBlob(async (blob)=>{
