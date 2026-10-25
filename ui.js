@@ -1816,7 +1816,7 @@ function showLeaderboard(){
   title.style.cssText = 'padding:6px 22px 4px';
   title.innerHTML = `
     <div style="font-size:12px;letter-spacing:0.22em;color:#a39a88">דירוג עונתי · ${S.tournLog.length} טורנירים</div>
-    <div style="font-family:var(--font-serif);font-size:46px;font-weight:900;color:#e2c27d;line-height:1.05;margin-top:2px;direction:ltr;text-align:right">Leaderboard</div>
+    <div class="lb-h1" style="font-family:var(--font-serif);font-size:46px;font-weight:900;color:#e2c27d;line-height:1.05;margin-top:2px;direction:ltr;text-align:right">Leaderboard</div>
     <div style="height:1px;background:rgba(201,164,92,0.3);margin-top:10px"></div>`;
   box.appendChild(title);
 
@@ -1862,7 +1862,7 @@ function showLeaderboard(){
       // מקום 4+: שורה אחת קומפקטית (בלי קו התקדמות). הגופנים גדולים
       // (20px) אבל הריפוד האנכי קטן — קריא בתמונה משותפת, והאורך נשאר קצר.
       return `
-      <div style="display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div class="lb-r4" style="display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
         <div style="width:36px;font-family:var(--font-serif);font-size:20px;font-weight:700;color:${col};line-height:1.2">${i+1}</div>
         <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:8px">
           <span style="font-family:var(--font-serif);font-size:20px;font-weight:700;color:#f1ebdd;white-space:nowrap;line-height:1.2">${p.name}</span>
@@ -1873,7 +1873,7 @@ function showLeaderboard(){
     }
     // top-3: ה-meta (טורנירים · ניצחונות) עבר לשורה אחת ליד השם, במקום מתחתיו.
     return `
-      <div style="padding:12px 0 10px;border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div class="lb-r3" style="padding:12px 0 10px;border-bottom:1px solid rgba(255,255,255,0.06)">
         <div style="display:flex;align-items:baseline;gap:12px">
           <div style="width:36px;font-family:var(--font-serif);font-size:32px;font-weight:700;color:${col};line-height:1">${i+1}</div>
           <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
@@ -1919,9 +1919,25 @@ async function shareLeaderboardImage(box){
   }
   const hideEls = box.querySelectorAll('.share-hide');
   hideEls.forEach(el=>{el.dataset.prevDisplay=el.style.display;el.style.display='none';});
+  // מצב קומפקטי רק לצילום: גופנים וריפודים קטנים יותר כדי שתמונת השיתוף
+  // תהיה קצרה (עם 20+ שחקנים). המסך החי נשאר בגדלים הגדולים. !important כי
+  // הגדלים ב-inline style. ה-<style> מוסר בסיום (גם בשגיאה).
+  const compact = document.createElement('style');
+  compact.textContent = `
+    .lb-h1{font-size:36px!important}
+    .lb-r3{padding:8px 0 6px!important}
+    .lb-r3>div:first-child>div:first-child{font-size:24px!important}
+    .lb-r3>div:first-child>div:nth-child(2)>span:first-child{font-size:21px!important}
+    .lb-r3>div:first-child>div:nth-child(2)>span+span{font-size:11px!important}
+    .lb-r3>div:first-child>div:last-child{font-size:23px!important}
+    .lb-r4{padding:3px 0!important}
+    .lb-r4>div:first-child,.lb-r4>div:last-child{font-size:15px!important}
+    .lb-r4>div:nth-child(2)>span:first-child{font-size:15px!important}
+    .lb-r4>div:nth-child(2)>span+span{font-size:10.5px!important}`;
+  box.appendChild(compact);
   try{
     const canvas = await html2canvas(box, { backgroundColor:'#0f0e0c', scale:2, useCORS:true });
-    hideEls.forEach(el=>{el.style.display=el.dataset.prevDisplay||'';});
+    hideEls.forEach(el=>{el.style.display=el.dataset.prevDisplay||'';}); compact.remove();
 
     canvas.toBlob(async (blob)=>{
       if(!blob){ notify('שגיאה ביצירת התמונה'); return; }
@@ -1944,7 +1960,7 @@ async function shareLeaderboardImage(box){
       }
     }, 'image/png');
   }catch(err){
-    hideEls.forEach(el=>{el.style.display=el.dataset.prevDisplay||'';});
+    hideEls.forEach(el=>{el.style.display=el.dataset.prevDisplay||'';}); compact.remove();
     console.error('shareLeaderboardImage error:', err);
     notify('שגיאה בשיתוף הטבלה: '+(err?.message||err?.name||'לא ידוע'));
   }
