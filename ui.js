@@ -2411,6 +2411,70 @@ function fixTournFinishOrders(){
   notify(`✓ תוקנו ${fixed} טורנירים`);
 }
 
+// ── כללי BuyIn / Rebuy / מחיקה / KO במסך השחקנים (2026-10-25) ──
+// כל הכללים כאן כמעטפות סביב הפונקציות ב-game.js/features.js (שלא שונו):
+//  • Rebuy (+R) רק לשחקן שביצע BuyIn.
+//  • ביטול BuyIn: אסור אם יש Rebuy; אחרת — דיאלוג אישור.
+//  • −R, מחיקת שחקן, "בטל KO": דיאלוג אישור עם אפשרות לחזור.
+// נתיבי השולחן (doRebuyActive, חלונית Rebuy במושב) לא עוברים דרכן.
+const _plName = pid => (S.playerLib.find(p=>p.id===pid)||{}).name || 'השחקן';
+
+function addRebuyChecked(pid){
+  if(isViewer()){ notify('צופה בלבד'); return; }
+  const b = S.buyins[pid];
+  if(!b || !(b.buyin>0)){ notify('אפשר להוסיף Rebuy רק לשחקן שביצע BuyIn'); return; }
+  doRebuy(pid,1);
+}
+
+function cancelBuyinChecked(pid){
+  if(isViewer()){ notify('צופה בלבד'); return; }
+  const b = S.buyins[pid]||{};
+  if((b.rebuy||0)>0){ notify(`לא ניתן לבטל BuyIn לשחקן שעשה Rebuy (${b.rebuy}) — בטל קודם את ה-Rebuy`); return; }
+  showConfirmDialog(`לבטל BuyIn של ${_plName(pid)}?`, 'השחקן יסומן כ"לא נרשם".', 'בטל BuyIn', ()=>cancelBuyin(pid));
+}
+
+function deletePlayerConfirm(pid){
+  if(isViewer()){ notify('צופה בלבד'); return; }
+  const b = S.buyins[pid]||{};
+  const sub = (b.buyin>0) ? 'לשחקן יש BuyIn בטורניר הנוכחי. המחיקה תסיר אותו מהרשימה.' : 'השחקן יוסר מהרשימה.';
+  showConfirmDialog(`למחוק את ${_plName(pid)}?`, sub, 'מחק שחקן', ()=>deletePlayer(pid));
+}
+
+function unKoConfirm(pid){
+  if(isViewer()){ notify('צופה בלבד'); return; }
+  showConfirmDialog(`לבטל הדחה של ${_plName(pid)}?`, 'השחקן יסומן שוב כפעיל. סטאק/מושב לא משוחזרים אוטומטית.', 'בטל KO', ()=>unKoPlayer(pid));
+}
+
+function removeRebuyConfirm(pid){
+  if(isViewer()){ notify('צופה בלבד'); return; }
+  const cur = (S.buyins[pid]||{}).rebuy||0;
+  if(cur<=0){ notify('אין Rebuy לביטול'); return; }
+  const name = _plName(pid);
+  showConfirmDialog(`לבטל Rebuy אחד של ${name}?`, `כרגע יש ${cur} — יישארו ${cur-1}.`, 'בטל Rebuy', ()=>doRebuy(pid,-1));
+}
+
+// דיאלוג אישור כללי בעיצוב א׳ (במקום confirm() של הדפדפן, שנחסם/מכוער ב-PWA).
+function showConfirmDialog(title, sub, yesLabel, onYes){
+  document.getElementById('confirm-dialog-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'confirm-dialog-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:20px;direction:rtl';
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#181714;border:1px solid rgba(201,164,92,0.4);border-radius:2px;padding:22px 20px 18px;width:100%;max-width:320px;text-align:center';
+  box.innerHTML = `
+    <div style="font-family:var(--font-serif);font-size:20px;font-weight:700;color:#f1ebdd;line-height:1.3">${title}</div>
+    ${sub?`<div style="font-size:13px;color:#a39a88;margin-top:8px">${sub}</div>`:''}
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button id="cd-yes" style="flex:1.4;min-height:44px;border-radius:2px;border:1px solid rgba(208,138,122,0.7);background:transparent;color:#d08a7a;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer">${yesLabel}</button>
+      <button id="cd-no" style="flex:1;min-height:44px;border-radius:2px;border:1px solid rgba(201,164,92,0.5);background:transparent;color:#e2c27d;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer">חזרה</button>
+    </div>`;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  box.querySelector('#cd-no').onclick = ()=>overlay.remove();
+  box.querySelector('#cd-yes').onclick = ()=>{ overlay.remove(); onYes(); };
+}
+
 function renderPlayerList(){
   const cont=document.getElementById('player-list');
   if(!S.playerLib.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div>אין שחקנים</div>';return;}
@@ -2428,6 +2492,7 @@ function renderPlayerList(){
     // סטטוס) + שורת כפתורים מתחת (40px, קו מתאר) + פרופיל מורחב עם רשת HUD.
     // כל ה-handlers (doBuyin/doRebuy/koPlayerFromList/...) ללא שינוי.
     const isKO = S.koOrder.includes(p.id);
+    const canRebuy = b.buyin>0; // +R רק לשחקן שביצע BuyIn
     let statusTxt, statusCol;
     if(isWinner){ statusTxt='מקום 1'; statusCol='#e2c27d'; }
     else if(isKO){ statusTxt='הודח'; statusCol='#d08a7a'; }
@@ -2497,12 +2562,12 @@ function renderPlayerList(){
       <div style="display:flex;gap:6px;padding:0 0 12px">
         ${!b.buyin
           ?`<button ${pb('rgba(143,184,164,0.6)','#8fb8a4','1.6')} onclick="doBuyin('${p.id}')">BuyIn</button>`
-          :`<button ${pb('rgba(255,255,255,0.18)','#a39a88','1.6','font-size:12px')} onclick="cancelBuyin('${p.id}')">ביטול BuyIn</button>`}
-        <button ${pb('rgba(201,164,92,0.5)','#e2c27d','1')} onclick="doRebuy('${p.id}',1)">+R</button>
-        <button ${pb('rgba(201,164,92,0.3)','#a39a88','1')} onclick="doRebuy('${p.id}',-1)">−R</button>
+          :`<button ${pb('rgba(255,255,255,0.18)','#a39a88','1.6','font-size:12px')} onclick="cancelBuyinChecked('${p.id}')">ביטול BuyIn</button>`}
+        <button ${canRebuy?pb('rgba(201,164,92,0.5)','#e2c27d','1'):pb('rgba(255,255,255,0.12)','#5f5a50','1')} onclick="addRebuyChecked('${p.id}')" ${canRebuy?'':'title="Rebuy רק לשחקן שביצע BuyIn"'}>+R</button>
+        <button ${pb('rgba(201,164,92,0.3)','#a39a88','1')} onclick="removeRebuyConfirm('${p.id}')">−R</button>
         ${!isKO&&b.buyin>0?`<button ${pb('rgba(208,138,122,0.6)','#d08a7a','1.2')} onclick="koPlayerFromList('${p.id}')">KO</button>`:''}
-        ${isKO?`<button ${pb('rgba(201,164,92,0.5)','#e2c27d','1.2')} onclick="unKoPlayer('${p.id}')" title="בטל סימון-הדחה">בטל KO</button>`:''}
-        <button aria-label="מחק שחקן" ${pb('rgba(208,138,122,0.3)','#d08a7a','0 0 40px','width:40px;font-size:14px')} onclick="deletePlayer('${p.id}')">✕</button>
+        ${isKO?`<button ${pb('rgba(201,164,92,0.5)','#e2c27d','1.2')} onclick="unKoConfirm('${p.id}')" title="בטל סימון-הדחה">בטל KO</button>`:''}
+        <button aria-label="מחק שחקן" ${pb('rgba(208,138,122,0.3)','#d08a7a','0 0 40px','width:40px;font-size:14px')} onclick="deletePlayerConfirm('${p.id}')">✕</button>
       </div>`;
 
     return`<div style="border-bottom:1px solid rgba(255,255,255,0.07);${isKO?'opacity:0.6;':''}">
