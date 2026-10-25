@@ -2413,7 +2413,7 @@ function fixTournFinishOrders(){
 
 // ── כללי BuyIn / Rebuy / מחיקה / KO במסך השחקנים (2026-10-25) ──
 // כל הכללים כאן כמעטפות סביב הפונקציות ב-game.js/features.js (שלא שונו):
-//  • Rebuy (+R) רק לשחקן שביצע BuyIn.
+//  • Rebuy (+R) רק לשחקן שביצע BuyIn ולא הודח.
 //  • ביטול BuyIn: אסור אם יש Rebuy; אחרת — דיאלוג אישור.
 //  • −R, מחיקת שחקן, "בטל KO": דיאלוג אישור עם אפשרות לחזור.
 // נתיבי השולחן (doRebuyActive, חלונית Rebuy במושב) לא עוברים דרכן.
@@ -2423,6 +2423,7 @@ function addRebuyChecked(pid){
   if(isViewer()){ notify('צופה בלבד'); return; }
   const b = S.buyins[pid];
   if(!b || !(b.buyin>0)){ notify('אפשר להוסיף Rebuy רק לשחקן שביצע BuyIn'); return; }
+  if(S.koOrder.includes(pid)){ notify('לא ניתן להוסיף Rebuy לשחקן שהודח — בטל קודם את ה-KO'); return; }
   doRebuy(pid,1);
 }
 
@@ -2443,6 +2444,20 @@ function deletePlayerConfirm(pid){
 function unKoConfirm(pid){
   if(isViewer()){ notify('צופה בלבד'); return; }
   showConfirmDialog(`לבטל הדחה של ${_plName(pid)}?`, 'השחקן יסומן שוב כפעיל. סטאק/מושב לא משוחזרים אוטומטית.', 'בטל KO', ()=>unKoPlayer(pid));
+}
+
+// הוספת שחקן מהשדה המשולב חיפוש/הוספה: חוסם כפילות (אותו שם, בלי רגישות
+// לאותיות/רווחים) כדי שלחיצה על "הוסף" כשהשחקן כבר קיים לא תיצור עותק.
+function addPlayerChecked(){
+  if(isViewer()){ notify('צופה בלבד'); return; }
+  const inp = document.getElementById('new-pname');
+  const name = (inp?.value||'').trim();
+  if(!name) return;
+  if(S.playerLib.some(p=>(p.name||'').trim().toLowerCase()===name.toLowerCase())){
+    notify(`השחקן "${name}" כבר קיים ברשימה`);
+    return;
+  }
+  addPlayer();
 }
 
 function removeRebuyConfirm(pid){
@@ -2479,7 +2494,14 @@ function renderPlayerList(){
   const cont=document.getElementById('player-list');
   if(!S.playerLib.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div>אין שחקנים</div>';return;}
   const swp=assignPos();
-  cont.innerHTML=sortedLib().map(p=>{
+  // שדה "חיפוש / הוספת שחקן" (#new-pname) מסנן גם את הרשימה בזמן ההקלדה.
+  const _q=(document.getElementById('new-pname')?.value||'').trim().toLowerCase();
+  const _lib=_q?sortedLib().filter(p=>(p.name||'').toLowerCase().includes(_q)):sortedLib();
+  if(_q&&!_lib.length){
+    cont.innerHTML=`<div style="text-align:center;color:#a39a88;font-size:14px;padding:28px 10px;line-height:1.6">אין שחקן בשם "<span style="color:#f1ebdd">${_q.replace(/</g,'&lt;')}</span>"<br><span style="font-size:12px">לחץ "הוסף" כדי ליצור אותו</span></div>`;
+    return;
+  }
+  cont.innerHTML=_lib.map(p=>{
     const b=S.buyins[p.id]||{buyin:0,rebuy:0};
     const inGame=S.seats.some(s=>s.playerId===p.id);
     const hands=S.handLog.filter(h=>(h.seats||[]).some(s=>s.playerId===p.id));
@@ -2492,7 +2514,7 @@ function renderPlayerList(){
     // סטטוס) + שורת כפתורים מתחת (40px, קו מתאר) + פרופיל מורחב עם רשת HUD.
     // כל ה-handlers (doBuyin/doRebuy/koPlayerFromList/...) ללא שינוי.
     const isKO = S.koOrder.includes(p.id);
-    const canRebuy = b.buyin>0; // +R רק לשחקן שביצע BuyIn
+    const canRebuy = b.buyin>0 && !isKO; // +R רק לשחקן שביצע BuyIn ולא הודח
     let statusTxt, statusCol;
     if(isWinner){ statusTxt='מקום 1'; statusCol='#e2c27d'; }
     else if(isKO){ statusTxt='הודח'; statusCol='#d08a7a'; }
@@ -2563,7 +2585,7 @@ function renderPlayerList(){
         ${!b.buyin
           ?`<button ${pb('rgba(143,184,164,0.6)','#8fb8a4','1.6')} onclick="doBuyin('${p.id}')">BuyIn</button>`
           :`<button ${pb('rgba(255,255,255,0.18)','#a39a88','1.6','font-size:12px')} onclick="cancelBuyinChecked('${p.id}')">ביטול BuyIn</button>`}
-        <button ${canRebuy?pb('rgba(201,164,92,0.5)','#e2c27d','1'):pb('rgba(255,255,255,0.12)','#5f5a50','1')} onclick="addRebuyChecked('${p.id}')" ${canRebuy?'':'title="Rebuy רק לשחקן שביצע BuyIn"'}>+R</button>
+        <button ${canRebuy?pb('rgba(201,164,92,0.5)','#e2c27d','1'):pb('rgba(255,255,255,0.12)','#5f5a50','1')} onclick="addRebuyChecked('${p.id}')" ${canRebuy?'':'title="Rebuy רק לשחקן פעיל (BuyIn, לא הודח)"'}>+R</button>
         <button ${pb('rgba(201,164,92,0.3)','#a39a88','1')} onclick="removeRebuyConfirm('${p.id}')">−R</button>
         ${!isKO&&b.buyin>0?`<button ${pb('rgba(208,138,122,0.6)','#d08a7a','1.2')} onclick="koPlayerFromList('${p.id}')">KO</button>`:''}
         ${isKO?`<button ${pb('rgba(201,164,92,0.5)','#e2c27d','1.2')} onclick="unKoConfirm('${p.id}')" title="בטל סימון-הדחה">בטל KO</button>`:''}
