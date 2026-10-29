@@ -300,5 +300,5 @@ input,select,textarea{font-family:inherit}
 /* TIMER HIDDEN (2026-10-23, claude/design-direction-A.md): הסתרה בתצוגה בלבד — כל פונקציות הטיימר ב-render.js נשארות.
    !important כי render.js קובע style.display ישירות על #timer-controls. להחזרה: להסיר class="hide-timer" מה-<body>. */
 body.hide-timer .timer-ui{display:none!important}
-body.hide-timer #blind-timer-bar{padding-top:6px;padding-bottom:6px}
-body.hide-timer #timer-prize-row{margin-top:0;padding-top:0;border-top:none}
+/* כשהטיימר מוסתר, כל הסרגל (שנשאר רק עם שורת קופה/פעילים/1מקום) כפול ל-statsbar — מסתירים אותו כולו (2026-10-29). הלוגיקה ב-updateTimerDisplay נשארת (האלמנטים עדיין ב-DOM). */
+body.hide-timer #blind-timer-bar{display:none!important}
