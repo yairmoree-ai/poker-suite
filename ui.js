@@ -2500,6 +2500,9 @@ function toggleActiveOnly(){
 }
 function renderPlayerList(){
   const cont=document.getElementById('player-list');
+  // לצופה שורת ההוספה מוסתרת (render.js) — נשארת רק הכותרת; מורידים את הריפוד והקו התחתון של העטיפה הנעולה כדי שלא ייווצר קו כפול
+  const _stickyBox=document.getElementById('player-search-sticky');
+  if(_stickyBox){ _stickyBox.style.borderBottom=isViewer()?'none':''; _stickyBox.style.paddingBottom=isViewer()?'0':''; }
   if(!S.playerLib.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div>אין שחקנים</div>';return;}
   const swp=assignPos();
   // שדה "חיפוש / הוספת שחקן" (#new-pname) מסנן גם את הרשימה בזמן ההקלדה.

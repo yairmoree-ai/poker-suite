@@ -199,6 +199,8 @@
   <!-- PLAYERS -->
   <div id="players-view" class="list-view" style="display:none;background:#0f0e0c">
     <!-- עיצוב א׳: כותרת סריף + קו זהב; כפתורי הפעולה בקו מתאר (הוסף = זהב מלא-מתאר). -->
+    <!-- כותרת + כפתורים + שדה החיפוש/הוספה נעולים בראש הרשימה בגלילה, עם קו הפרדה מתחתיהם (2026-10-29) -->
+    <div id="player-search-sticky" style="position:sticky;top:0;z-index:20;background:#0f0e0c;padding:10px 0 12px;margin:-10px 0 8px;border-bottom:1px solid rgba(201,164,92,0.3)">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <div style="font-family:var(--font-serif);font-size:24px;font-weight:700;color:#e2c27d;margin-left:auto">שחקנים</div>
       <!-- כפתור "+ הוסף" בסרגל הוסר (2026-10-29): כפילות עם כפתור "הוסף" שצמוד לשדה החיפוש/הוספה -->
@@ -206,8 +208,7 @@
       <button id="btn-restore" onclick="document.getElementById('import-box').style.display='flex'" style="min-height:36px;padding:0 12px;border-radius:2px;border:1px solid rgba(201,164,92,0.22);background:transparent;color:#a39a88;font-family:var(--font-ui);font-size:12px;cursor:pointer">📂 שחזור</button>
     </div>
     <div style="height:1px;background:rgba(201,164,92,0.3);margin:-4px 0 8px"></div>
-    <div id="diag-box" style="display:none;background:#181714;border:1px solid rgba(201,164,92,0.3);border-radius:10px;padding:10px;margin-bottom:10px;font-size:11px;color:#f1ebdd;word-break:break-all"></div>
-    <div id="add-player-row" style="display:block;background:#181714;border:1px solid rgba(201,164,92,0.22);border-radius:2px;padding:12px;margin-bottom:12px">
+    <div id="add-player-row" style="display:block;background:#181714;border:1px solid rgba(201,164,92,0.22);border-radius:2px;padding:12px;margin-bottom:0">
       <div style="font-size:12px;color:var(--muted);margin-bottom:7px">חיפוש או הוספת שחקן</div>
       <div style="display:flex;gap:8px">
         <div style="flex:1;position:relative;display:flex">
@@ -216,6 +217,8 @@
         </div>
         <button onclick="addPlayerChecked()" style="min-height:40px;padding:0 18px;border-radius:2px;border:1px solid #c9a45c;background:transparent;color:#e2c27d;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer">הוסף</button>
       </div>    </div>
+    </div>
+    <div id="diag-box" style="display:none;background:#181714;border:1px solid rgba(201,164,92,0.3);border-radius:10px;padding:10px;margin-bottom:10px;font-size:11px;color:#f1ebdd;word-break:break-all"></div>
     <div id="player-list"></div>
   </div>
 </div>
