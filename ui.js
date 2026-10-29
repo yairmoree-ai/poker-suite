@@ -2490,15 +2490,34 @@ function showConfirmDialog(title, sub, yesLabel, onYes){
   box.querySelector('#cd-yes').onclick = ()=>{ overlay.remove(); onYes(); };
 }
 
+let _activeOnly=false; // סינון רשימת השחקנים ל"פעילים בלבד" — זמן-ריצה בלבד, לא נשמר
+// נלחץ על תיבת "פעילים" בסרגל העליון. מחוץ ללשונית שחקנים: עובר אליה ומפעיל את הסינון; בתוכה: מחליף מצב.
+function toggleActiveOnly(){
+  const inPlayers=document.getElementById('players-view')?.style.display==='block';
+  if(!inPlayers){ _activeOnly=true; showView('players'); }
+  else _activeOnly=!_activeOnly;
+  renderPlayerList();
+}
 function renderPlayerList(){
   const cont=document.getElementById('player-list');
   if(!S.playerLib.length){cont.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div>אין שחקנים</div>';return;}
   const swp=assignPos();
   // שדה "חיפוש / הוספת שחקן" (#new-pname) מסנן גם את הרשימה בזמן ההקלדה.
   const _q=(document.getElementById('new-pname')?.value||'').trim().toLowerCase();
-  const _lib=_q?sortedLib().filter(p=>(p.name||'').toLowerCase().includes(_q)):sortedLib();
-  if(_q&&!_lib.length){
-    cont.innerHTML=`<div style="text-align:center;color:#a39a88;font-size:14px;padding:28px 10px;line-height:1.6">אין שחקן בשם "<span style="color:#f1ebdd">${_q.replace(/</g,'&lt;')}</span>"<br><span style="font-size:12px">לחץ "הוסף" כדי ליצור אותו</span></div>`;
+  let _lib=_q?sortedLib().filter(p=>(p.name||'').toLowerCase().includes(_q)):sortedLib();
+  // סינון "פעילים בלבד": שחקן עם BuyIn שלא הודח (אותה הגדרה כמו activeTournPlayers)
+  const _actSet=new Set(activeTournPlayers());
+  const _actBox=document.getElementById('sbox-active');
+  if(_actBox){
+    _actBox.style.borderColor=_activeOnly?'rgba(95,196,122,0.7)':'';
+    _actBox.style.background=_activeOnly?'rgba(95,196,122,0.12)':'';
+    const _actLbl=_actBox.querySelector('label'); if(_actLbl) _actLbl.style.color=_activeOnly?'#5fc47a':'';
+  }
+  if(_activeOnly) _lib=_lib.filter(p=>_actSet.has(p.id));
+  if(!_lib.length&&(_q||_activeOnly)){
+    cont.innerHTML=_q
+      ?`<div style="text-align:center;color:#a39a88;font-size:14px;padding:28px 10px;line-height:1.6">אין ${_activeOnly?'שחקן פעיל':'שחקן'} בשם "<span style="color:#f1ebdd">${_q.replace(/</g,'&lt;')}</span>"<br><span style="font-size:12px">${_activeOnly?'בטל את סינון "פעילים בלבד" כדי לחפש בכולם':'לחץ "הוסף" כדי ליצור אותו'}</span></div>`
+      :`<div style="text-align:center;color:#a39a88;font-size:14px;padding:28px 10px;line-height:1.6">אין שחקנים פעילים כרגע</div>`;
     return;
   }
   cont.innerHTML=_lib.map(p=>{

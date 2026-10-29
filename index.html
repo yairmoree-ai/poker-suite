@@ -71,7 +71,7 @@
     <div class="sbox"><label>שחקנים</label><div class="val" id="stat-players">0</div></div>
     <div class="sbox"><label>Rebuy</label><div class="val" id="stat-rebuys">0</div></div>
     <div class="sbox"><label>כניסות</label><div class="val" id="stat-entries">0</div></div>
-    <div class="sbox"><label>פעילים</label><div class="val" id="stat-active">0/0</div></div>
+    <div class="sbox" id="sbox-active" onclick="toggleActiveOnly()" style="cursor:pointer" title="סנן שחקנים פעילים"><label>פעילים <svg width="8" height="8" viewBox="0 0 10 10" style="vertical-align:-1px;margin-right:2px" aria-hidden="true"><path d="M0.5 1h9L6 5.2V9L4 8V5.2z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg></label><div class="val" id="stat-active">0/0</div></div>
     <div class="sbox"><label>קופת פרסים</label><div class="val" id="stat-prize">₪0</div></div>
     <div class="sbox" id="sbox-surprises" style="display:none"><label>הפתעות (מצטבר)</label><div class="val" id="stat-surprises">₪0</div></div>
   </div>
@@ -215,8 +215,7 @@
           <button id="new-pname-clear" type="button" title="נקה" aria-label="נקה" onmousedown="event.preventDefault()" onclick="const i=document.getElementById('new-pname');i.value='';renderPlayerList();this.style.display='none';i.blur()" style="display:none;position:absolute;left:6px;top:50%;transform:translateY(-50%);width:22px;height:22px;align-items:center;justify-content:center;border:none;border-radius:50%;background:rgba(201,164,92,0.15);color:#c9a45c;font-size:14px;line-height:1;padding:0;cursor:pointer">×</button>
         </div>
         <button onclick="addPlayerChecked()" style="min-height:40px;padding:0 18px;border-radius:2px;border:1px solid #c9a45c;background:transparent;color:#e2c27d;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer">הוסף</button>
-      </div>
-    </div>
+      </div>    </div>
     <div id="player-list"></div>
   </div>
 </div>
