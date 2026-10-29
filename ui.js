@@ -2597,7 +2597,7 @@ function renderPlayerList(){
         <div style="width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1px solid ${inGame?'rgba(143,184,164,0.7)':'rgba(201,164,92,0.5)'};display:flex;align-items:center;justify-content:center;font-family:var(--font-serif);font-size:18px;font-weight:700;color:#e2c27d">${p.name[0].toUpperCase()}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
-            <span style="font-family:var(--font-serif);font-size:19px;font-weight:700;line-height:1.15">${p.name}</span>
+            <span style="font-family:var(--font-serif);font-size:19px;font-weight:700;line-height:1.15${isKO?';color:#e07b6a':b.buyin>0?';color:#5fc47a':''}">${p.name}</span>
             ${pt?`<span style="font-size:10px;letter-spacing:0.12em;color:${pt.color};border:1px solid ${pt.color};padding:0 6px">${pt.label}</span>`:''}
             ${b.rebuy>0?`<span style="font-family:var(--font-serif);font-size:16px;font-weight:700;color:#e2c27d">(${b.rebuy})</span>`:''}
           </div>
