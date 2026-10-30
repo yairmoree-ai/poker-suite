@@ -440,7 +440,10 @@ function computeLeaderboard(){
       st.points += pointsForPlace;
       st.nights += 1;
       if(f.place===1) st.wins += 1;
-      const spent = buyin * (1 + (f.rebuy||0));
+      // Rebuy חינם: ה-10 וה-16 של אותו שחקן (אותה הגדרה כמו calcFreeRebuys) — לא נספרים כהוצאה
+      const rb = f.rebuy||0;
+      const paidRebuys = rb - (rb>=10?1:0) - (rb>=16?1:0);
+      const spent = buyin * (1 + paidRebuys);
       const won = prizeByPlace[f.place] || 0;
       st.profit += (won - spent);
     });
