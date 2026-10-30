@@ -1352,8 +1352,20 @@ function saveTournName(ti, name){
 function deleteTournament(ti){
   // מחיקה — אדמין בלבד (2026-10-15: קודם גם צופה יכל למחוק, רק בזיכרון המקומי שלו)
   if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
-  markDeleted('tourns',S.tournLog[ti]?.id);
-  S.tournLog.splice(ti,1); persist(); renderTournList();
+  const t=S.tournLog[ti];
+  if(!t) return;
+  // אישור לפני מחיקה (2026-10-30). המחיקה עצמה לפי id ולא לפי אינדקס — אם הרשימה השתנתה בסנכרון בזמן שהדיאלוג פתוח, לא נמחק טורניר אחר.
+  const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const label=[t.name,t.date].filter(Boolean).map(esc).join(' · ')||'הטורניר';
+  showConfirmDialog('למחוק את הטורניר?', label+'<br>אפשר לשחזר רק מגיבוי Drive (נוצר ב-08:00 וב-22:00), אם הטורניר נכלל בו.', 'מחק טורניר', ()=>_doDeleteTournament(t.id));
+}
+function _doDeleteTournament(id){
+  if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
+  const idx=S.tournLog.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  markDeleted('tourns',id);
+  S.tournLog.splice(idx,1); persist(); renderTournList();
+  notify('הטורניר נמחק');
 }
 
 // עריכת סדר-סיום לטורניר שכבר נשמר — למקרים כמו "סימנתי בטעות את המנצח

@@ -931,7 +931,7 @@ function _computeAllPlayerStats(){
       const name = f.name || f.pid;
       if(!name || /^\d+$/.test(name)) return;
       if(!stats[name]) stats[name]={paid:0, won:0};
-      stats[name].paid += (1+(f.rebuy||0)) * buyin;
+      stats[name].paid += playerSpent(buyin, f.rebuy);
       stats[name].won += prizes[f.place]||0;
     });
   });
@@ -1016,7 +1016,7 @@ function showPlayerDetail(encodedName){
     (t.finishOrder||[]).forEach(f=>{
       const fname = f.name || f.pid;
       if(fname !== name) return;
-      const paid = (1+(f.rebuy||0)) * buyin;
+      const paid = playerSpent(buyin, f.rebuy);
       const won = prizes[f.place]||0;
       rows.push({date:t.date||'', tournName:t.name||'', place:f.place, paid, won, net:won-paid, rebuy:f.rebuy||0, paidPlace:!!prizes[f.place]});
     });
