@@ -1017,8 +1017,9 @@ function showPlayerDetail(encodedName){
       const fname = f.name || f.pid;
       if(fname !== name) return;
       const paid = playerSpent(buyin, f.rebuy);
-      const won = prizes[f.place]||0;
-      rows.push({date:t.date||'', tournName:t.name||'', place:f.place, paid, won, net:won-paid, rebuy:f.rebuy||0, paidPlace:!!prizes[f.place]});
+      const won = prizes[f.place]||0; // כסף ו-ITM — לפי המקום הבודד (החלוקה הכספית נקבעת בנפרד)
+      // place = מקום אפקטיבי (תיקו על מקום 1 → שניהם 1): משמש לנצחונות, ממוצע מקום, פודיום, פילוח ותצוגה
+      rows.push({date:t.date||'', tournName:t.name||'', place:effPlaceOf(f), paid, won, net:won-paid, rebuy:f.rebuy||0, paidPlace:!!prizes[f.place]});
     });
   });
   if(!rows.length){ notify('אין נתונים לשחקן זה'); return; }

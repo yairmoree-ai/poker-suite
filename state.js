@@ -439,7 +439,7 @@ function computeLeaderboard(){
       }
       st.points += pointsForPlace;
       st.nights += 1;
-      if(f.place===1) st.wins += 1;
+      if(effPlaceOf(f)===1) st.wins += 1;
       const spent = playerSpent(buyin, f.rebuy);
       const won = prizeByPlace[f.place] || 0;
       st.profit += (won - spent);
@@ -452,6 +452,9 @@ function computeLeaderboard(){
 // חינם (אותה הגדרה כמו calcFreeRebuys). משמש את הלידרבורד ואת מסך ה-Statistics/פירוט שחקן (features.js).
 const paidRebuysOf = r => { r=r||0; return r - (r>=10?1:0) - (r>=16?1:0); };
 const playerSpent = (buyin, rebuy) => (buyin||0) * (1 + paidRebuysOf(rebuy));
+// מקום "אפקטיבי" לצורך ניצחון: שחקן בתיקו שכולל את מקום 1 (tieGroup) נחשב מנצח, גם אם ה-place הבודד שלו 2.
+// ה-place עצמו לא משתנה (פרסים ותצוגה עדיין לפיו).
+const effPlaceOf = f => (f && f.tieGroup && f.tieGroup.length>1) ? Math.min(...f.tieGroup) : (f && f.place);
 
 function calcPaidEntries(){
   const totalR = totalRebuys();
