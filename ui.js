@@ -671,35 +671,43 @@ function showHandDetail(hid){
   const winnerNames = (h.winners||[]).map(w=>w.name).join(' + ');
   hdr.innerHTML = '<div><div style="font-size:14px;font-weight:800;color:#c9a45c">'+h.date+'</div><div style="font-size:11px;color:#a39a88">'+h.blinds+(h.anteStr?' · '+h.anteStr:'')+(h.label?' · '+h.label:'')+'</div>'+(winnerNames?'<div style="font-size:12px;font-weight:700;color:#5fc47a;margin-top:3px">🏆 '+winnerNames+'</div>':'')+'</div>';
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'background:none;border:none;color:#a39a88;font-size:22px;cursor:pointer;padding:4px';
+  closeBtn.style.cssText = 'background:none;border:none;color:#a39a88;font-size:20px;cursor:pointer;padding:2px 4px';
   closeBtn.textContent = '✕';
   closeBtn.onclick = ()=>overlay.remove();
   
   // Analyze button
   const analyzeBtn = document.createElement('button');
   analyzeBtn.className = 'share-hide';
-  analyzeBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.1);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+  analyzeBtn.style.cssText = 'padding:4px 8px;border-radius:7px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.1);color:#c9a45c;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap';
   analyzeBtn.textContent = '🔍 נתח יד';
   analyzeBtn.onclick = ()=>analyzeHand(h);
 
   // Share button
   const shareBtn = document.createElement('button');
   shareBtn.className = 'share-hide';
-  shareBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+  shareBtn.style.cssText = 'padding:4px 8px;border-radius:7px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap';
   shareBtn.textContent = '📤 שתף יד';
   shareBtn.onclick = ()=>shareHandImage(h, box);
 
   // Replay button
   const replayBtn = document.createElement('button');
   replayBtn.className = 'share-hide';
-  replayBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.1);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px';
+  replayBtn.style.cssText = 'padding:4px 8px;border-radius:7px;border:1px solid rgba(201,164,92,0.4);background:rgba(201,164,92,0.1);color:#c9a45c;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap';
   replayBtn.textContent = '▶️ Replay';
   replayBtn.onclick = ()=>showHandReplayer(h.id);
+
+  // ייצוא היד הזו ל-PokerTracker
+  const ptBtn = document.createElement('button');
+  ptBtn.className = 'share-hide';
+  ptBtn.style.cssText = 'padding:4px 8px;border-radius:7px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.1);color:#5fc47a;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap';
+  ptBtn.textContent = '🎯 PT';
+  ptBtn.onclick = ()=>exportHandsToPokerTracker([h.id]);
 
   closeBtn.className = 'share-hide';
   hdr.appendChild(analyzeBtn);
   hdr.appendChild(replayBtn);
   hdr.appendChild(shareBtn);
+  if(!isViewer()) hdr.appendChild(ptBtn);
   hdr.appendChild(closeBtn);
   box.appendChild(hdr);
 
