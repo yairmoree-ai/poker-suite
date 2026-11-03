@@ -2431,24 +2431,23 @@ function renderSeats(){
     el.dataset.seat=i;
     el.style.left=`${x}%`;
     el.style.top=`${y}%`;
+    // המושב הוא גם כפתור וגם אזור עריכת סטאק — לא מקטינים לפי מספר שחקנים
+    // (הוקטן ב-2026-11-03 ובוטל באותו יום: מטרות לחיצה קטנות מדי).
     el.style.transform=`translate(-50%,-50%) scale(${_seatScale})`;
     if(isCurActor){
       el.classList.add('is-actor');
       el.style.transform=`translate(-50%,-50%) scale(${_seatScale*1.35})`;
       el.style.zIndex='30';
     }
-    el.innerHTML=`<div class="${cls}" style="width:88px;min-height:64px;box-sizing:border-box" onclick="if(event.target.closest('button'))return;clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
+    el.innerHTML=`<div class="${cls}" style="${seat?.playerId?'width:88px;min-height:64px;border-radius:12px':'width:60px;height:60px;min-height:60px;border-radius:50%;margin:0 auto'};box-sizing:border-box" onclick="if(event.target.closest('button'))return;clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
       ${seat?.playerId?`
-        <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:1px">
-          ${seat.pos&&S.btnLocked?`<span class="seat-pos" style="background:${PC[seat.pos]||'#c9a45c'}35;color:${PC[seat.pos]||'#c9a45c'};font-size:9px;font-weight:900;padding:2px 6px;border:1px solid ${PC[seat.pos]||'#c9a45c'}50">${seat.pos}</span>`:''}
-        </div>
         <div class="seat-name">${name||'?'}</div>
         ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a6a54;font-size:10px">(${sbb}) </span>`:''}<span style="font-size:9px">${seat.stack.toLocaleString()}</span></div>`:''}
         ${seat.playerId&&(S.btnLocked||S._showdownMode)&&!seat.folded?`<div class="seat-cards-mini" style="display:flex;gap:3px;margin-top:3px;justify-content:center">${[0,1].map(i2=>{const c=(seat.cards||[])[i2];return c?`<button onclick="openSeatCardPicker(${seat.seatIdx},${i2})" style="width:20px;height:28px;border-radius:3px;background:#f4efe3;border:1px solid #c9bfa6;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;cursor:pointer;box-sizing:border-box"><span style="font-size:15px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:12px;color:${SC[c.suit]};line-height:1">${c.suit}</span></button>`:`<button onclick="openSeatCardPicker(${seat.seatIdx},${i2})" style="width:20px;height:28px;border-radius:3px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="font-size:10px;color:rgba(255,255,255,0.25)">+</span></button>`;}).join('')}</div>`:''}
         ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טרן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טרן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
     const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&(seat.folded||seat.sittingOut||!S.btnLocked);
     const isSittingOut = seat.sittingOut||false;
-    return(showBtn?`<button onclick="event.stopPropagation();setBTN(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(201,164,92,0.5);background:rgba(201,164,92,0.15);color:#c9a45c;font-size:10px;font-weight:900;cursor:pointer;width:100%">🎯 BTN</button>`:'')
+    return('')
     +(showRebuy?`
       <button onclick="event.stopPropagation();doSeatRebuy(${seat.seatIdx})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid rgba(95,196,122,0.6);background:rgba(95,196,122,0.2);color:#5fc47a;font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">+ Rebuy</button>
       <button onclick="event.stopPropagation();setSittingOut(${seat.seatIdx},${!isSittingOut})" style="margin-top:2px;padding:2px 6px;border-radius:4px;border:1px solid ${isSittingOut?'rgba(91,155,213,0.6)':'rgba(255,200,50,0.5)'};background:${isSittingOut?'rgba(91,155,213,0.2)':'rgba(255,200,50,0.1)'};color:${isSittingOut?'#5b9bd5':'#FFB347'};font-size:9px;font-weight:900;cursor:pointer;width:100%;z-index:10;position:relative">${isSittingOut?'▶ חזור':'⏸ Sit Out'}</button>
@@ -2582,6 +2581,19 @@ function renderSeats(){
     if(S._autoWinners && S._autoWinners.includes(i) && seat?.playerId){
       el.style.boxShadow = '0 0 24px rgba(95,196,122,0.9)';
       el.style.border = '2px solid #5fc47a';
+    }
+    // עמדה / כפתור BTN מחוץ למושב (מעליו). pos נשאר pointer-events:none; BTN הוא כפתור אמיתי.
+    if(seat?.playerId){
+      const _isActBtns = isCurActor && !isFold && !isAlin;
+      const _topPx = _isActBtns ? -48 : null;   // מעל שורת F/CH של המושב שתורו לפעול
+      const _tStyle = _topPx!==null ? `top:${_topPx}px;` : '';
+      if(seat.pos && S.btnLocked){
+        const _pc = PC[seat.pos]||'#c9a45c';
+        el.insertAdjacentHTML('beforeend',`<span class="seat-pos-out" style="${_tStyle}background:${_pc}35;color:${_pc};border:1px solid ${_pc}60${isFold?';opacity:.45':''}">${seat.pos}</span>`);
+      }
+      if(!isViewer() && !S.btnLocked && (seat.stack||0)>0){
+        el.insertAdjacentHTML('beforeend',`<button class="btn-pick" onclick="event.stopPropagation();setBTN(${seat.seatIdx})">🎯 BTN</button>`);
+      }
     }
     cont.appendChild(el);
   }
