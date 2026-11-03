@@ -2436,7 +2436,13 @@ function renderSeats(){
     el.style.transform=`translate(-50%,-50%) scale(${_seatScale})`;
     if(isCurActor){
       el.classList.add('is-actor');
-      el.style.transform=`translate(-50%,-50%) scale(${_seatScale*1.35})`;
+      // המושב המוגדל (וכפתוריו) גדל סימטרית ונכנס ללוח/לקלפי הפלופ במרכז — מזיזים
+      // אותו מעט החוצה, הרחק ממרכז השולחן. גודל וכפתורים לא משתנים.
+      const _ww=(document.getElementById('table-wrap')?.offsetWidth)||300, _wh=(document.getElementById('table-wrap')?.offsetHeight)||400;
+      const _vx=(x-50)/100*_ww, _vy=(y-50)/100*_wh, _vl=Math.hypot(_vx,_vy)||1;
+      const _push=16;
+      el._shX=_vx/_vl*_push; el._shY=_vy/_vl*_push;
+      el.style.transform=`translate(calc(-50% + ${el._shX.toFixed(1)}px),calc(-50% + ${el._shY.toFixed(1)}px)) scale(${_seatScale*1.35})`;
       el.style.zIndex='30';
     }
     el.innerHTML=`<div class="${cls}" style="${seat?.playerId?'width:88px;min-height:64px;border-radius:12px':'width:60px;height:60px;min-height:60px;border-radius:50%;margin:0 auto'};box-sizing:border-box" onclick="if(event.target.closest('button'))return;clickSeat(${i})" oncontextmenu="event.preventDefault();showPlayerHUD(${i})">
@@ -2596,6 +2602,29 @@ function renderSeats(){
       }
     }
     cont.appendChild(el);
+    // מושב מוגדל + כפתוריו לא אמורים לכסות את קלפי הלוח: אם יש חפיפה, מזיזים
+    // אותו אנכית (למעלה אם הוא מעל הלוח, למטה אם מתחתיו) עד שאין חפיפה.
+    if(isCurActor){
+      try{
+        const bc=document.getElementById('board-cards');
+        if(bc && bc.offsetParent!==null){
+          const br=bc.getBoundingClientRect();
+          let u=el.getBoundingClientRect();
+          let top=u.top,bottom=u.bottom,left=u.left,right=u.right;
+          el.querySelectorAll('button').forEach(b=>{const r=b.getBoundingClientRect();top=Math.min(top,r.top);bottom=Math.max(bottom,r.bottom);left=Math.min(left,r.left);right=Math.max(right,r.right);});
+          const hOver = right>br.left+2 && left<br.right-2;
+          const vOver = bottom>br.top+2 && top<br.bottom-2;
+          if(hOver && vOver){
+            const above = (u.top+u.bottom)/2 < (br.top+br.bottom)/2;
+            const dy = above ? -(bottom-br.top+6) : (br.bottom-top+6);
+            if(Math.abs(dy)<=90){
+              el._shY += dy;
+              el.style.transform=`translate(calc(-50% + ${el._shX.toFixed(1)}px),calc(-50% + ${el._shY.toFixed(1)}px)) scale(${_seatScale*1.35})`;
+            }
+          }
+        }
+      }catch(e){}
+    }
   }
 
   // כיסא דילר קבוע — ימין אמצע
