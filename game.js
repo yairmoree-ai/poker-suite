@@ -1657,6 +1657,25 @@ function clearTable(){
 }
 
 function setTableSize(n){
+  // לפני: S.seats.filter(seatIdx<n) מחק בשקט כל שחקן שישב במושב שנחתך,
+  // והשאיר מושב ריק אחר. עכשיו שחקנים ממושבים שנחתכים עוברים למושבים
+  // פנויים; אם אין מקום (או שיד בעיצומה) — לא משנים ומודיעים.
+  const dropped = S.seats.filter(s=>s.seatIdx>=n && s.playerId);
+  if(dropped.length){
+    const seated = S.seats.filter(s=>s.playerId).length;
+    if(seated>n){ notify('יש '+seated+' שחקנים בשולחן — הסר שחקנים לפני הקטנת השולחן'); render(); return; }
+    if(S.btnLocked){ notify('אי אפשר לשנות גודל שולחן באמצע יד'); render(); return; }
+    const taken = new Set(S.seats.filter(s=>s.seatIdx<n && s.playerId).map(s=>s.seatIdx));
+    // מעדיפים מושבים פנויים קרובים לאינדקס המקורי כדי לשמור על סדר סביר
+    dropped.sort((a,b)=>a.seatIdx-b.seatIdx).forEach(s=>{
+      let free=-1;
+      for(let i=0;i<n;i++){ if(!taken.has(i)){ free=i; break; } }
+      if(free>=0){ taken.add(free); s.seatIdx=free; }
+    });
+    // מושב ריק יעבור/יימחק רק אם לא תפס אינדקס של שחקן
+    S.seats = S.seats.filter(s=>s.playerId ? true : (s.seatIdx<n && !taken.has(s.seatIdx)));
+    if(S.btnSeat!=null && S.btnSeat>=n) S.btnSeat=null;
+  }
   S.tableSize=n; S.seats=S.seats.filter(s=>s.seatIdx<n);
   persist(); render();
 }
