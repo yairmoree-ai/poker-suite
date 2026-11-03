@@ -2198,14 +2198,20 @@ function _handToPSFormat(hand, handNumber){
   // "Uncalled bet" — מטפל רק במקרה הפשוט/הנפוץ: כולם קיפלו מול השחקן
   // האחרון שנשאר (לא מטפל ב-side-pots של all-in מרובה-שחקנים בסכומים
   // שונים — הגבלה ידועה, מסומנת).
-  // כללי: שחקן יחיד ששילם יותר מכל השאר — ההפרש מעל השני-הכי-גבוה חוזר אליו
-  // (מכסה גם all-in קצר מול הימור גדול, לא רק "כולם קיפלו").
+  // Uncalled bet: שחקן יחיד ששילם יותר מכל השאר, וכל שאר השחקנים או קיפלו או
+  // הם all-in בסכום קטן יותר. אם יש שחקן פעיל (לא all-in) ששילם פחות — ייתכן
+  // שהיד תועדה חלקית, ואז לא ממציאים החזר.
   {
     const paidList = seats.map(s=>({s, p:totalPaid[s.playerName]||0})).sort((a,b)=>b.p-a.p);
     if(paidList.length>1 && paidList[0].p - paidList[1].p > 0.0000001){
-      const w = paidList[0].s, uncalled = paidList[0].p - paidList[1].p;
-      lines.push(`Uncalled bet (${uncalled}) returned to ${_disp(w.playerName)}`);
-      totalPaid[w.playerName] = paidList[0].p - uncalled;
+      const top = paidList[0];
+      const othersOk = paidList.slice(1).every(x=>
+        foldedNames.has(x.s.playerName) || (x.s.actions||[]).some(a=>a.type==='All-in'));
+      if(stillActive.length===1 || othersOk){
+        const uncalled = top.p - paidList[1].p;
+        lines.push(`Uncalled bet (${uncalled}) returned to ${_disp(top.s.playerName)}`);
+        totalPaid[top.s.playerName] = top.p - uncalled;
+      }
     }
   }
 
@@ -2304,7 +2310,16 @@ function exportHandsToPokerTracker(handIds){
   const selected = handIds && handIds.length ? all.filter(h=>handIds.includes(h.id)) : all;
   if(!selected.length){ notify('לא נבחרו ידיים לייצוא'); return; }
   const sorted = [...selected].sort((a,b)=>handTs(a)-handTs(b));
-  const formatted = sorted.map((h,i)=>({hand:h, text:_handToPSFormat(h, i+1)}));
+  // מספר יד ייחודי ויציב (לפי חותמת הזמן של היד) — לא i+1: אחרת כל ייצוא מתחיל
+  // שוב מ-#HG1, ו-PokerTracker מזהה כפילויות לפי מספר היד ומדלג על ידיים "שכבר יובאו"
+  // (בעיקר כשמייצאים יד אחת בכל פעם, או כמה ייצואים בנפרד).
+  const _usedNums = new Set();
+  const formatted = sorted.map((h,i)=>{
+    let num = Math.floor(handTs(h)) || (i+1);
+    while(_usedNums.has(num)) num++;
+    _usedNums.add(num);
+    return {hand:h, text:_handToPSFormat(h, num)};
+  });
   const failed = formatted.filter(f=>!f.text);
   const succeeded = formatted.filter(f=>f.text);
   const text = succeeded.map(f=>f.text).join('\n\n\n');
