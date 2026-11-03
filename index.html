@@ -312,7 +312,20 @@
 <!-- SETTINGS BOX -->
 <div id="settings-box" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
   <div style="background:#181714;border:1px solid rgba(201,164,92,0.4);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
-    <div style="font-size:14px;font-weight:800;color:#c9a45c;margin-bottom:14px">⚙️ הגדרות סנכרון</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:14px;font-weight:800;color:#c9a45c">⚙️ הגדרות סנכרון</div><button onclick="document.getElementById('settings-box').style.display='none'" aria-label="סגור" style="background:none;border:none;color:#a39a88;font-size:20px;line-height:1;width:36px;height:36px;margin:-8px;cursor:pointer;padding:0">✕</button></div>
+    <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#f1ebdd;margin-bottom:6px">🔄 ברירת מחדל Rebuy</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="rebuy-default-inp" value="50000" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#14130f;color:#f1ebdd;font-size:13px;outline:none;text-align:center;-webkit-appearance:none" onchange="S.defaultRebuyAmount=parseInt(this.value)||50000;persist();notify('ברירת מחדל עודכנה ✓')">
+        <span style="font-size:11px;color:#5a5870">₪</span>
+      </div>
+    </div>
+    <button onclick="showStatistics()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(201,164,92,0.3);background:rgba(201,164,92,0.08);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">📊 Statistics</button>
+    <button onclick="showPotTrainer()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(201,164,92,0.3);background:rgba(201,164,92,0.08);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">🎯 מאמן קופה — תרגול</button>
+    <button onclick="showChipCounter()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(201,164,92,0.3);background:rgba(201,164,92,0.08);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">🔢 ספירת קופה מצ'יפים (צילום)</button>
+    <button onclick="showUsersManager()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(91,155,213,0.3);background:rgba(91,155,213,0.08);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px" id="btn-users-mgmt">👥 ניהול משתמשים</button>
+    <button id="settings-adv-btn" onclick="const a=document.getElementById('settings-advanced');const o=a.style.display==='none';a.style.display=o?'block':'none';this.textContent=o?'תצוגה פשוטה ▴':'⚙️ מתקדם ▾'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#a39a88;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px">⚙️ מתקדם ▾</button>
+    <div id="settings-advanced" style="display:none;margin-bottom:8px">
     <div id="viewer-url-row" style="display:none;background:rgba(91,155,213,0.08);border:1px solid rgba(91,155,213,0.25);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:11px;font-weight:700;color:#5b9bd5;margin-bottom:6px">👁 קישור לצופים</div>
       <div style="font-size:10px;color:#5a5870;margin-bottom:7px">שתף עם שחקנים — יראו את הטורניר שלך בלבד</div>
@@ -320,13 +333,6 @@
       <div style="display:flex;gap:7px">
         <button onclick="const u=document.getElementById('viewer-url-display').textContent;navigator.clipboard?.writeText(u);notify('קישור הועתק ✓')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(91,155,213,0.4);background:rgba(91,155,213,0.1);color:#5b9bd5;font-size:11px;font-weight:700;cursor:pointer">📋 העתק קישור</button>
         <button onclick="const u=document.getElementById('viewer-url-display').textContent;const t='הצטרף לצפייה בטורניר 🃏\n'+u;navigator.share?navigator.share({title:'Poker Suite',text:t,url:u}):navigator.clipboard?.writeText(t);notify('שותף ✓')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(95,196,122,0.4);background:rgba(95,196,122,0.08);color:#5fc47a;font-size:11px;font-weight:700;cursor:pointer">📤 שתף</button>
-      </div>
-    </div>
-    <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:#f1ebdd;margin-bottom:6px">🔄 ברירת מחדל Rebuy</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input type="number" id="rebuy-default-inp" value="50000" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:#14130f;color:#f1ebdd;font-size:13px;outline:none;text-align:center;-webkit-appearance:none" onchange="S.defaultRebuyAmount=parseInt(this.value)||50000;persist();notify('ברירת מחדל עודכנה ✓')">
-        <span style="font-size:11px;color:#5a5870">₪</span>
       </div>
     </div>
     <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:12px">
@@ -355,12 +361,9 @@
         <button onclick="document.getElementById('settings-box').style.display='none';document.getElementById('import-box').style.display='flex'" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#8a8090;font-size:12px;cursor:pointer">📂 שחזר</button>
       </div>
     </div>
-    <button onclick="migrateFromSheets()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(224,123,106,0.3);background:rgba(224,123,106,0.08);color:#e07b6a;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">🔀 מיגרציה מ-Sheets ל-Firebase</button>
+    <button onclick="migrateFromSheets()" hidden style="display:none;width:100%;padding:10px;border-radius:9px;border:1px solid rgba(224,123,106,0.3);background:rgba(224,123,106,0.08);color:#e07b6a;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">🔀 מיגרציה מ-Sheets ל-Firebase</button>
     <button onclick="showDriveRestore()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(95,196,122,0.3);background:rgba(95,196,122,0.08);color:#5fc47a;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">🔍 שחזר מגיבוי Drive</button>
-    <button onclick="showStatistics()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(201,164,92,0.3);background:rgba(201,164,92,0.08);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">📊 Statistics</button>
-    <button onclick="showPotTrainer()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(201,164,92,0.3);background:rgba(201,164,92,0.08);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">🎯 מאמן קופה — תרגול</button>
-    <button onclick="showChipCounter()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(201,164,92,0.3);background:rgba(201,164,92,0.08);color:#c9a45c;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">🔢 ספירת קופה מצ'יפים (צילום)</button>
-    <button onclick="showUsersManager()" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(91,155,213,0.3);background:rgba(91,155,213,0.08);color:#5b9bd5;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px" id="btn-users-mgmt">👥 ניהול משתמשים</button>
+    </div>
     <button onclick="document.getElementById('settings-box').style.display='none'" style="width:100%;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5a5870;font-size:13px;cursor:pointer">סגור</button>
   </div>
 </div>
