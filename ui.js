@@ -2137,7 +2137,9 @@ function _handToPSFormat(hand, handNumber){
         case 'Check': lines.push(`${_disp(a.playerName)}: checks`); break;
         case 'Call': lines.push(`${_disp(a.playerName)}: calls ${delta||0}`); streetTotal[a.playerName]=prevTotal+delta; break;
         case 'All-in':
-          lines.push(`${_disp(a.playerName)}: ${highBet>0?'raises '+raiseBy+' to '+newTotal:'bets '+delta} and is all-in`);
+          // all-in קצר מההימור הקיים (או שווה לו) הוא call ולא raise — אחרת יוצא
+          // "raises -400 to 600" / "raises 0 to X" ש-PT דוחה.
+          lines.push(`${_disp(a.playerName)}: ${highBet<=0?'bets '+delta:(newTotal<=highBet?'calls '+delta:'raises '+raiseBy+' to '+newTotal)} and is all-in`);
           streetTotal[a.playerName]=newTotal; highBet=Math.max(highBet,newTotal); break;
         default: // Raise, Open, 3bet, 4bet
           if(highBet>0){
@@ -2166,7 +2168,7 @@ function _handToPSFormat(hand, handNumber){
   seats.forEach(s=>{
     let paid = 0;
     (s.actions||[]).forEach(a=>{
-      if(['SB','BB','Ante','Call','Raise','Open','3bet','4bet','All-in'].includes(a.type)){
+      if(['SB','BB','Ante','Call','Raise','Open','Bet','3bet','4bet','5bet','All-in'].includes(a.type)){
         paid += parseFloat(a.amount)||0;
       }
     });
@@ -2179,15 +2181,14 @@ function _handToPSFormat(hand, handNumber){
   // "Uncalled bet" — מטפל רק במקרה הפשוט/הנפוץ: כולם קיפלו מול השחקן
   // האחרון שנשאר (לא מטפל ב-side-pots של all-in מרובה-שחקנים בסכומים
   // שונים — הגבלה ידועה, מסומנת).
-  if(stillActive.length===1){
-    const w = stillActive[0];
-    const wPaid = totalPaid[w.playerName]||0;
-    const others = seats.filter(s=>s!==w).map(s=>totalPaid[s.playerName]||0);
-    const maxOther = others.length ? Math.max(...others) : 0;
-    const uncalled = wPaid - maxOther;
-    if(uncalled > 0.0000001){
+  // כללי: שחקן יחיד ששילם יותר מכל השאר — ההפרש מעל השני-הכי-גבוה חוזר אליו
+  // (מכסה גם all-in קצר מול הימור גדול, לא רק "כולם קיפלו").
+  {
+    const paidList = seats.map(s=>({s, p:totalPaid[s.playerName]||0})).sort((a,b)=>b.p-a.p);
+    if(paidList.length>1 && paidList[0].p - paidList[1].p > 0.0000001){
+      const w = paidList[0].s, uncalled = paidList[0].p - paidList[1].p;
       lines.push(`Uncalled bet (${uncalled}) returned to ${_disp(w.playerName)}`);
-      totalPaid[w.playerName] = wPaid - uncalled;
+      totalPaid[w.playerName] = paidList[0].p - uncalled;
     }
   }
 

@@ -2279,23 +2279,23 @@ function renderTableShape(){
   svg.style.borderRadius = '50%';
   svg.innerHTML = `<defs>
     <radialGradient id="gFelt" cx="50%" cy="40%">
-      <stop offset="0%" stop-color="oklch(0.42 0.12 155)"/>
-      <stop offset="100%" stop-color="oklch(0.22 0.07 150)"/>
+      <stop offset="0%" stop-color="#1a3a2b"/>
+      <stop offset="100%" stop-color="#12261c"/>
     </radialGradient>
     <linearGradient id="gRail" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="oklch(0.32 0.07 150)"/>
-      <stop offset="100%" stop-color="oklch(0.22 0.05 150)"/>
+      <stop offset="0%" stop-color="#241f17"/>
+      <stop offset="100%" stop-color="#181714"/>
     </linearGradient>
   </defs>
   <!-- outer rail: inset 8% -->
   <ellipse cx="${cx}" cy="${cy}" rx="${railR.rx}" ry="${railR.ry}" fill="url(#gRail)" filter="drop-shadow(0 20px 40px rgba(0,0,0,0.7))"/>
-  <ellipse cx="${cx}" cy="${cy}" rx="${railR.rx}" ry="${railR.ry}" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+  <ellipse cx="${cx}" cy="${cy}" rx="${railR.rx}" ry="${railR.ry}" fill="none" stroke="rgba(201,164,92,0.35)" stroke-width="1"/>
   <!-- felt: inset 13% -->
   <ellipse cx="${cx}" cy="${cy}" rx="${feltR.rx}" ry="${feltR.ry}" fill="url(#gFelt)" filter="drop-shadow(inset 0 0 40px rgba(0,0,0,0.5))"/>
   <!-- inner highlight -->
   <ellipse cx="${cx}" cy="${cy}" rx="${hiR.rx}" ry="${hiR.ry}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
   <!-- gold ring -->
-  <ellipse cx="${cx}" cy="${cy}" rx="${goldR.rx}" ry="${goldR.ry}" fill="none" stroke="rgba(201,164,92,0.08)" stroke-width="0.8"/>`;
+  <ellipse cx="${cx}" cy="${cy}" rx="${goldR.rx}" ry="${goldR.ry}" fill="none" stroke="rgba(201,164,92,0.18)" stroke-width="0.8"/>`;
 
   // עדכן כפתור orientation  // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
@@ -2444,7 +2444,7 @@ function renderSeats(){
         </div>
         <div class="seat-name">${name||'?'}</div>
         ${(seat.stack>=0&&seat.playerId)?`<div class="seat-stack" id="stack-div-${seat.seatIdx}" onclick="event.stopPropagation();inlineEditStack(${seat.seatIdx},this)" style="cursor:pointer;user-select:none">${sbb?`<span style="color:#5a6a54;font-size:10px">(${sbb}) </span>`:''}<span style="font-size:9px">${seat.stack.toLocaleString()}</span></div>`:''}
-        ${seat.playerId&&(S.btnLocked||S._showdownMode)&&!seat.folded?`<div class="seat-cards-mini" style="display:flex;gap:3px;margin-top:3px;justify-content:center">${[0,1].map(i2=>{const c=(seat.cards||[])[i2];return c?`<button onclick="openSeatCardPicker(${seat.seatIdx},${i2})" style="width:20px;height:28px;border-radius:3px;background:#fff;border:1px solid #ddd;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;cursor:pointer;box-sizing:border-box"><span style="font-size:15px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:12px;color:${SC[c.suit]};line-height:1">${c.suit}</span></button>`:`<button onclick="openSeatCardPicker(${seat.seatIdx},${i2})" style="width:20px;height:28px;border-radius:3px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="font-size:10px;color:rgba(255,255,255,0.25)">+</span></button>`;}).join('')}</div>`:''}
+        ${seat.playerId&&(S.btnLocked||S._showdownMode)&&!seat.folded?`<div class="seat-cards-mini" style="display:flex;gap:3px;margin-top:3px;justify-content:center">${[0,1].map(i2=>{const c=(seat.cards||[])[i2];return c?`<button onclick="openSeatCardPicker(${seat.seatIdx},${i2})" style="width:20px;height:28px;border-radius:3px;background:#f4efe3;border:1px solid #c9bfa6;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;cursor:pointer;box-sizing:border-box"><span style="font-size:15px;font-weight:900;color:${SC[c.suit]};line-height:1">${c.rank}</span><span style="font-size:12px;color:${SC[c.suit]};line-height:1">${c.suit}</span></button>`:`<button onclick="openSeatCardPicker(${seat.seatIdx},${i2})" style="width:20px;height:28px;border-radius:3px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="font-size:10px;color:rgba(255,255,255,0.25)">+</span></button>`;}).join('')}</div>`:''}
         ${(()=>{const bCnt=S.board.filter(Boolean).length;const cSt=bCnt===0?'פרה-פלופ':bCnt<=3?'פלופ':bCnt===4?'טרן':'ריבר';const cSa=(seat.actions||[]).filter(a=>a.street===cSt&&a.type!=='SB'&&a.type!=='BB');const showUndo=!isViewer()&&cSa.length>0&&(()=>{const allSt=['פרה-פלופ','פלופ','טרן','ריבר'];const stIdx=allSt.indexOf(cSt);const nextDealt=stIdx===0?S.board[0]!=null:stIdx===1?S.board[3]!=null:stIdx===2?S.board[4]!=null:false;return !nextDealt;})();const showBtn=!isViewer()&&!S.btnLocked&&seat.playerId&&(seat.stack||0)>0;
     const showRebuy=!isViewer()&&seat.playerId&&(seat.stack||0)===0&&(seat.folded||seat.sittingOut||!S.btnLocked);
     const isSittingOut = seat.sittingOut||false;
@@ -2473,8 +2473,8 @@ function renderSeats(){
       const seatI=i;
       const canCheck = getCallAmount(seatI)===0;
       const topDefs=[];
-      topDefs.push({lbl:'F', cb:function(){quickAction(seatI,'Fold');},  bg:'rgba(140,50,50,0.95)', help:'Fold'});
-      if(canCheck) topDefs.push({lbl:'CH',cb:function(){quickAction(seatI,'Check');}, bg:'rgba(50,120,60,0.95)', help:'Check'});
+      topDefs.push({lbl:'F', cb:function(){quickAction(seatI,'Fold');},  bg:'#8a2e2a', help:'Fold'});
+      if(canCheck) topDefs.push({lbl:'CH',cb:function(){quickAction(seatI,'Check');}, bg:'#2f6b45', help:'Check'});
       const topTW=topDefs.length*(bSize+gap)-gap, topSX=(sw-topTW)/2;
       topDefs.forEach((b,bi)=>{
         const btn=document.createElement('button');
@@ -2513,9 +2513,9 @@ function renderSeats(){
       // BOTTOM: C, R, AI below seat
       const botDefs=[];
       const callAmt = getCallAmount(seatI);
-      if(callAmt > 0) botDefs.push({lbl:'C', cb:function(){quickAction(seatI,'Call');}, bg:'rgba(40,80,160,0.95)', help:'Call'});
-      if(canPlayerRaise(seatI)) botDefs.push({lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},  bg:'rgba(160,110,30,0.95)', help:'Raise'});
-      botDefs.push({lbl:'AI',cb:function(){showQuickInput(seatI,'All-in');},  bg:'rgba(160,40,40,0.95)', help:'All-in'});
+      if(callAmt > 0) botDefs.push({lbl:'C', cb:function(){quickAction(seatI,'Call');}, bg:'#3a5a7a', help:'Call'});
+      if(canPlayerRaise(seatI)) botDefs.push({lbl:'R', cb:function(){showQuickInput(seatI,'Raise');},  bg:'#a8864a', help:'Raise'});
+      botDefs.push({lbl:'AI',cb:function(){showQuickInput(seatI,'All-in');},  bg:'#b3261e', help:'All-in'});
       const botTW=botDefs.length*(bSize+gap)-gap, botSX=(sw-botTW)/2;
       botDefs.forEach((b,bi)=>{
         const btn=document.createElement('button');
