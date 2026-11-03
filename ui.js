@@ -483,6 +483,15 @@ function showHandReplayer(hid){
     shareLinkBtn.onclick = shareReplayerAsLink;
     hdrRow2.appendChild(shareVidBtn);
     hdrRow2.appendChild(shareLinkBtn);
+    // ייצוא היד הזו ל-PokerTracker — לא לצופה (הייצוא קורא מ-S.handLog המקומי של האדמין)
+    if(!isViewer() && (S.handLog||[]).some(x=>x.id===_replayerHand.id)){
+      const ptBtn = document.createElement('button');
+      ptBtn.id = 'replayer-pt-btn';
+      ptBtn.style.cssText = 'flex:1;background:rgba(95,196,122,0.12);border:1px solid rgba(95,196,122,0.4);color:#5fc47a;font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;cursor:pointer';
+      ptBtn.textContent = '🎯 ייצוא ל-PT';
+      ptBtn.onclick = ()=>exportHandsToPokerTracker([_replayerHand.id]);
+      hdrRow2.appendChild(ptBtn);
+    }
     box.appendChild(hdrRow2);
   }
 
