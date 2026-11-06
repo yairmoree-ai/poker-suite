@@ -2439,7 +2439,7 @@ function renderSeats(){
     const name=seat?.playerId?pName(seat.playerId):null;
     const isAct=activeSeat===i, isFold=seat?.folded, isAlin=seat?.allin;
     const bb=getBB();
-    const sbb=seat?.stack&&bb?(seat.stack/bb).toFixed(1):null;
+    const sbb=seat?.stack&&bb?String(+(seat.stack/bb).toFixed(1)):null;
     const lastAct=seat?.actions?.filter(a=>a.type!=='SB'&&a.type!=='BB').slice(-1)[0];
     const blindAct=seat?.actions?.filter(a=>a.type==='SB'||a.type==='BB').slice(-1)[0];
     const displayAct = lastAct||blindAct;
