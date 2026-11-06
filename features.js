@@ -1150,7 +1150,7 @@ function showPlayerDetail(encodedName){
 // ===== Log כניסות ופעילות (Super Admin) =====
 // הנתונים נשמרים ב-Worker (KV, 180 יום). כאן רק תצוגה: GET /logs. כל שדה מוצג מוּבְרַח (esc) כי שם המשתמש בניסיון כניסה הוא קלט חופשי של זר.
 let _logState = {items:[], cursor:null, filter:'all', loading:false};
-const _LOG_LABELS = {'login':'כניסה','verify':'חידוש סשן','create-user':'יצירת משתמש','update-sheets-url':'עדכון Sheets','change-password':'שינוי סיסמה','reset-password':'איפוס סיסמה','users-list':'רשימת משתמשים','view-logs':'צפייה בלוג','viewer-lookup':'כניסת צופה','setup-admin':'הגדרת מנהל ראשון','analyze-hand':'ניתוח AI','verify-superadmin':'אימות Super Admin'};
+const _LOG_LABELS = {'hand-saved':'יד נשמרה','hand-deleted':'יד נמחקה','tourn-saved':'טורניר נשמר','tourn-reset':'איפוס טורניר','tourn-deleted':'טורניר נמחק','tourn-renamed':'שם טורניר שונה','tourn-edited':'סדר סיום עודכן','pt-export':'ייצוא PT','login':'כניסה','verify':'חידוש סשן','create-user':'יצירת משתמש','update-sheets-url':'עדכון Sheets','change-password':'שינוי סיסמה','reset-password':'איפוס סיסמה','users-list':'רשימת משתמשים','view-logs':'צפייה בלוג','viewer-lookup':'כניסת צופה','setup-admin':'הגדרת מנהל ראשון','analyze-hand':'ניתוח AI','verify-superadmin':'אימות Super Admin'};
 function _logEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function closeLogViewer(){ document.getElementById('log-overlay')?.remove(); }
 async function openLogViewer(){
@@ -1197,9 +1197,9 @@ function renderLogs(){
   const f=_logState.filter;
   if(fl){
     const chip=(k,t)=>'<button onclick="setLogFilter(\''+k+'\')" style="flex:1;padding:6px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid '+(f===k?'#c9a45c':'rgba(255,255,255,0.15)')+';background:'+(f===k?'rgba(201,164,92,0.15)':'transparent')+';color:'+(f===k?'#c9a45c':'#a39a88')+'">'+t+'</button>';
-    fl.innerHTML=chip('all','הכול')+chip('fail','כשלונות ✗')+chip('login','כניסות');
+    fl.innerHTML=chip('all','הכול')+chip('fail','כשלונות ✗')+chip('login','כניסות')+chip('activity','ידיים/טורנירים');
   }
-  const rows=_logState.items.filter(e=>f==='all'||(f==='fail'&&!e.ok)||(f==='login'&&e.event==='login'));
+  const rows=_logState.items.filter(e=>f==='all'||(f==='fail'&&!e.ok)||(f==='login'&&e.event==='login')||(f==='activity'&&_LOG_ACTIVITY.has(e.event)));
   if(!rows.length){ list.innerHTML='<div style="padding:14px;text-align:center">אין רשומות</div>'; }
   else list.innerHTML=rows.map(e=>{
     const t=new Date(e.ts).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -1213,4 +1213,30 @@ function renderLogs(){
       '</div>';
   }).join('');
   const more=document.getElementById('log-more'); if(more) more.style.display=_logState.cursor?'block':'none';
+}
+
+
+// ===== דיווח פעילות (ידיים/טורנירים) ל-Log =====
+// נשלח ל-Worker (POST /log-event) עם ה-token של המנהל — הזהות נקבעת בשרת. אם אין חיבור/כשל — מתעלמים בשקט (לא משפיע על הפעולה).
+const _LOG_ACTIVITY = new Set(['hand-saved','hand-deleted','tourn-saved','tourn-reset','tourn-deleted','tourn-renamed','tourn-edited','pt-export']);
+function logActivity(event, detail){
+  try{
+    if(typeof isViewer==='function' && isViewer()) return;
+    const token = currentUser?.token || localStorage.getItem('auth_token') || '';
+    if(!token || typeof AUTH_WORKER_URL==='undefined') return;
+    fetch(AUTH_WORKER_URL+'/log-event',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({event,detail:String(detail||'').slice(0,80)})}).catch(()=>{});
+  }catch(e){}
+}
+function _handLogDetail(h){
+  try{
+    const names=(h.seats||[]).map(s=>s.playerName).filter(Boolean).join('/');
+    return (h.blinds||'')+' · '+names+(h.finalPot?' · קופה '+h.finalPot:'');
+  }catch(e){ return ''; }
+}
+function _tournLogDetail(t){
+  try{
+    if(!t) return '';
+    const w=(t.finishOrder||[]).find(f=>f.place===1);
+    return [t.name,t.date].filter(Boolean).join(' · ')+(w?' · 🏆 '+w.name:'');
+  }catch(e){ return ''; }
 }

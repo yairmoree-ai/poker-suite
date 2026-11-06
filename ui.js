@@ -1188,6 +1188,7 @@ function renderHandList(){
 function deleteHand(hi){
   const hand = S.handLog[hi];
   markDeleted('hands',hand?.id);
+  if(hand) logActivity('hand-deleted', _handLogDetail(hand));
   S.handLog.splice(hi,1); persist(); renderHandList();
   // מחק גם מ-Firebase — אחרת syncFromSheets ימזג את היד חזרה תוך 10 שניות
   if(hand?.id && !isViewer() && !isLocal() && currentUser?.username){
@@ -1283,6 +1284,7 @@ function saveTournament(tournName, tieActive){if(isViewer()){notify('צופה ב
     blinds:`${getBlinds().sb}/${getBlinds().bb}`
   };
   S.tournLog=[t,...S.tournLog];
+  logActivity('tourn-saved', _tournLogDetail(t));
   persist(); renderTournList(); notify('טורניר נשמר ✓');
 }
 function resetTournament(){if(isViewer()){notify('צופה בלבד');return;}
@@ -1324,6 +1326,7 @@ function doSaveAndReset(){
 
 function doResetTournament(){
   if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
+  logActivity('tourn-reset', 'BuyIn '+totalBuyins()+' · Rebuy '+totalRebuys());
   // Reset blind timer
   S.blindLevel = 0;
   S.blindTimer.running = false;
@@ -1362,7 +1365,7 @@ function editTournName(ti){
 
 function saveTournName(ti, name){
   if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
-  if(S.tournLog[ti]) S.tournLog[ti].name = name.trim();
+  if(S.tournLog[ti]){ logActivity('tourn-renamed', (S.tournLog[ti].name||'—')+' ← '+name.trim()); S.tournLog[ti].name = name.trim(); }
   persist();
 }
 
@@ -1381,6 +1384,7 @@ function _doDeleteTournament(id){
   const idx=S.tournLog.findIndex(x=>x.id===id);
   if(idx<0) return;
   markDeleted('tourns',id);
+  logActivity('tourn-deleted', _tournLogDetail(S.tournLog[idx]));
   S.tournLog.splice(idx,1); persist(); renderTournList();
   notify('הטורניר נמחק');
 }
@@ -1436,6 +1440,7 @@ function renderEditFinishOrderHTML(ti){
 
 function swapTournFinishPlace(ti, idx, dir){
   if(isViewer()||!isAdmin()){notify('צופה בלבד');return;}
+  logActivity('tourn-edited', 'שינוי סדר סיום · '+_tournLogDetail(S.tournLog[ti]));
   const t = S.tournLog[ti];
   if(!t || !t.finishOrder) return;
   const finish = t.finishOrder.slice().sort((a,b)=>a.place-b.place); // same object refs as t.finishOrder
@@ -2309,6 +2314,7 @@ function exportHandsToPokerTracker(handIds){
   const all = S.handLog||[];
   const selected = handIds && handIds.length ? all.filter(h=>handIds.includes(h.id)) : all;
   if(!selected.length){ notify('לא נבחרו ידיים לייצוא'); return; }
+  logActivity('pt-export', selected.length+' ידיים');
   const sorted = [...selected].sort((a,b)=>handTs(a)-handTs(b));
   // מספר יד ייחודי ויציב (לפי חותמת הזמן של היד) — לא i+1: אחרת כל ייצוא מתחיל
   // שוב מ-#HG1, ו-PokerTracker מזהה כפילויות לפי מספר היד ומדלג על ידיים "שכבר יובאו"

@@ -928,6 +928,7 @@ function autoSaveAndPromptReset(winnerSeatIdxs){
     winners: (S._lastWinners||[]).map(w=>({...w}))
   };
   S.handLog=[hand,...S.handLog];
+  logActivity('hand-saved', _handLogDetail(hand));
   persist();
   syncToSheets(false);
   notify('💾 יד נשמרה – '+label);
@@ -1513,6 +1514,7 @@ function confirmResetHand(){
       winners: (S._lastWinners||[]).map(w=>({...w}))
     };
     S.handLog=[hand,...S.handLog];
+    logActivity('hand-saved', _handLogDetail(hand));
     overlay.remove();
     resetHand();
     notify('💾 '+label+' נשמרה');
@@ -1575,6 +1577,7 @@ function saveHandWithLabel(){
     winners: (S._lastWinners||[]).map(w=>({...w}))
   };
   S.handLog=[hand,...S.handLog];
+  logActivity('hand-saved', _handLogDetail(hand));
   resetHand();
   syncToSheets(false);
   notify('יד נשמרה ✓');
