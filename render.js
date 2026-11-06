@@ -2244,8 +2244,9 @@ function renderTableShape(){
     }
   });
 
-  const seatOverflowMargin = _tableLandscape ? 60 : 110; // בלרוחב הגובה הזמין מוגבל מלכתחילה, אז שומרים פחות מרווח
-  const maxW = Math.min(vw - 40, _tableLandscape ? 640 : 360);
+  const _stad = getTableStyle()==='stadium';
+  const seatOverflowMargin = _stad ? (_tableLandscape ? 20 : 30) : (_tableLandscape ? 60 : 110); // בלרוחב הגובה הזמין מוגבל מלכתחילה, אז שומרים פחות מרווח
+  const maxW = _stad ? Math.min(vw - 8, _tableLandscape ? 640 : 380) : Math.min(vw - 40, _tableLandscape ? 640 : 360);
   const maxH = Math.max(vh - usedTop - seatOverflowMargin, 180); // 180 = רצפת ביטחון שהשולחן לא ייעלם
   let w, h;
   if(_tableLandscape){
@@ -2264,8 +2265,34 @@ function renderTableShape(){
 
   wrap.style.width = w + 'px';
   wrap.style.height = h + 'px';
-  wrap.style.borderRadius = '50%';
   wrap.style.overflow = 'visible';
+  if(_stad){
+    wrap.style.borderRadius = '0';
+    svg.style.borderRadius = '0';
+    _stadium = _buildStadium(w,h,_tableLandscape,_seatScale);
+    const g=_stadium;
+    svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    // מלבן מעוגל לפי המסלול: בעמידה רוחב=A אורך=B; בלרוחב מחליפים
+    const rect=(inset)=>{
+      const r0=g.rr-inset, along=g.Ltot+2*g.rr-2*inset, start=g.railEnd+inset;
+      const x=g.landscape?start:g.cx-r0, y=g.landscape?g.cx-r0:start;
+      const rw=g.landscape?along:2*r0, rh=g.landscape?2*r0:along;
+      return {x,y,rw,rh,r:r0};
+    };
+    const R0=rect(0),R1=rect(9),R2=rect(14),R3=rect(19);
+    const rc=(o,extra)=>`<rect x="${o.x.toFixed(1)}" y="${o.y.toFixed(1)}" width="${o.rw.toFixed(1)}" height="${o.rh.toFixed(1)}" rx="${o.r.toFixed(1)}" ry="${o.r.toFixed(1)}" ${extra}/>`;
+    svg.innerHTML=`<defs>
+      <radialGradient id="gFelt" cx="50%" cy="40%"><stop offset="0%" stop-color="#1a3a2b"/><stop offset="100%" stop-color="#12261c"/></radialGradient>
+      <linearGradient id="gRail" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#241f17"/><stop offset="100%" stop-color="#181714"/></linearGradient>
+    </defs>
+    ${rc(R0,'fill="url(#gRail)" filter="drop-shadow(0 20px 40px rgba(0,0,0,0.7))"')}
+    ${rc(R0,'fill="none" stroke="rgba(201,164,92,0.35)" stroke-width="1"')}
+    ${rc(R1,'fill="url(#gFelt)"')}
+    ${rc(R2,'fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"')}
+    ${rc(R3,'fill="none" stroke="rgba(201,164,92,0.18)" stroke-width="0.8"')}`;
+  } else {
+    _stadium = null;
+  wrap.style.borderRadius = '50%';
 
   // viewBox ופרמטרי האליפסה — מוחלפים (rx<->ry, מרכז) בין אנכי לאופקי
   const vbW = _tableLandscape ? 400 : 300;
@@ -2296,7 +2323,10 @@ function renderTableShape(){
   <ellipse cx="${cx}" cy="${cy}" rx="${hiR.rx}" ry="${hiR.ry}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
   <!-- gold ring -->
   <ellipse cx="${cx}" cy="${cy}" rx="${goldR.rx}" ry="${goldR.ry}" fill="none" stroke="rgba(201,164,92,0.18)" stroke-width="0.8"/>`;
+  }
 
+  const tsBtn=document.getElementById('btn-tablestyle');
+  if(tsBtn) tsBtn.textContent=_stad?'אצטדיון · עבור לאליפסה':'אליפסה · עבור לאצטדיון';
   // עדכן כפתור orientation  // עדכן כפתור orientation
   const orientBtn = document.getElementById('btn-orientation');
   if(orientBtn) orientBtn.textContent = S.tableOrientation==='horizontal' ? '⇔ אופקי' : '⇅ אנכי';
@@ -2442,6 +2472,15 @@ function renderSeats(){
       const _vx=(x-50)/100*_ww, _vy=(y-50)/100*_wh, _vl=Math.hypot(_vx,_vy)||1;
       const _push=16;
       el._shX=_vx/_vl*_push; el._shY=_vy/_vl*_push;
+      if(getTableStyle()==='stadium' && _stadium){
+        // באצטדיון המושבים צמודים לקצה הגלם: דחיפה החוצה הייתה מוציאה את המושב המוגדל מהמסך.
+        // במושב צד — מזיזים מעט פנימה (בגובה אותו קו); במושב קצה — דוחפים החוצה כמו קודם.
+        const _onSide = _tableLandscape ? Math.abs(_vy) > _stadium.rr*0.9 : Math.abs(_vx) > _stadium.rr*0.9;
+        if(_onSide){
+          const _in = 88*0.175*_seatScale; // חצי מהתוספת של הגדלת ×1.35
+          if(_tableLandscape){ el._shX=0; el._shY=-Math.sign(_vy)*_in*0.7; } else { el._shY=0; el._shX=-Math.sign(_vx)*_in; }
+        }
+      }
       el.style.transform=`translate(calc(-50% + ${el._shX.toFixed(1)}px),calc(-50% + ${el._shY.toFixed(1)}px)) scale(${_seatScale*1.35})`;
       el.style.zIndex='30';
     }
@@ -2708,7 +2747,11 @@ function renderSeats(){
 function renderBoard(){
   const cont=document.getElementById('board-cards'); cont.innerHTML='';
   const labels=['F1','F2','F3','T','R'];
-  const sw=Math.min(Math.max(28,Math.floor((document.getElementById('table-wrap').offsetWidth||300)*0.062)),36);
+  let sw=Math.min(Math.max(28,Math.floor((document.getElementById('table-wrap').offsetWidth||300)*0.062)),36);
+  if(getTableStyle()==='stadium' && _stadium && !_tableLandscape){
+    // בשולחן האצטדיון הלבד צר יותר — מתאימים את גודל קלפי הלוח כך ש-5 קלפים ייכנסו בו
+    sw=Math.max(22,Math.min(36,Math.floor((2*(_stadium.rr-9)-16-14)/5)));
+  }
   S.board.forEach((card,i)=>{
     const wrap=document.createElement('div'); wrap.style='text-align:center';
     const btn=document.createElement('button');

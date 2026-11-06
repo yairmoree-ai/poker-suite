@@ -483,7 +483,54 @@ function assignPos(){
   return S.seats.map(s=>{const pi=rot.indexOf(s.seatIdx);return{...s,pos:pi>=0?(labels[pi]||''):''}; });
 }
 
+// ===== צורת שולחן =====
+// 'stadium' (ברירת מחדל, מ-2026-11-06): שולחן מעוגל-קצוות עם צדדים ישרים, מושבים מחוץ לשולחן.
+// 'ellipse': העיצוב הקודם (אליפסה, מושבים על הקצה). נשמר מקומית בלבד (localStorage), לא מסונכרן.
+function getTableStyle(){
+  try{ return localStorage.getItem('ps_tablestyle')==='ellipse' ? 'ellipse' : 'stadium'; }catch(e){ return 'stadium'; }
+}
+function setTableStyle(v){
+  try{ localStorage.setItem('ps_tablestyle', v==='ellipse'?'ellipse':'stadium'); }catch(e){}
+  if(typeof render==='function') render();
+}
+// גיאומטריית אצטדיון בפיקסלים של table-wrap — מחושבת ב-renderTableShape()
+let _stadium=null;
+function _buildStadium(w,h,landscape,seatScale){
+  // מסגרת "רוחב/אורך": A = המימד הצר (רוחב בעמידה), B = המימד הארוך
+  const A = landscape ? h : w, B = landscape ? w : h;
+  const sw2 = 44*seatScale, sh2 = 32*seatScale;
+  const sideHalf = landscape ? sh2 : sw2;   // חצי מידת המושב מאונך לצד הארוך
+  const endHalf  = landscape ? sw2 : sh2;   // חצי מידת המושב לאורך הציר הארוך
+  const rr = Math.max(40, A/2 - 2*sideHalf - 6);        // חצי רוחב הפס (עד הרייל)
+  const railEnd = endHalf*1.9;                          // מרחק קצה הרייל מקצה הגלם
+  const Ltot = Math.max(0, B - 2*railEnd - 2*rr);       // אורך הקטע הישר
+  const cx = A/2, capTop = railEnd + rr, capBot = B - railEnd - rr;
+  const Rx = rr + sideHalf + 8;                         // מסלול מושבים: רדיוס רוחבי
+  const Ry = rr + (railEnd - endHalf);                  // מסלול מושבים: רדיוס בקצוות
+  // פוליליין צפוף של מסלול המושבים, מתחיל באמצע הקצה העליון, בכיוון השעון
+  const pts=[]; const N=120;
+  for(let k=0;k<=N/4;k++){const a=(k/(N/4))*Math.PI/2; pts.push([cx+Rx*Math.sin(a), capTop-Ry*Math.cos(a)]);}
+  pts.push([cx+Rx, capBot]);
+  for(let k=1;k<=N/2;k++){const a=(k/(N/2))*Math.PI; pts.push([cx+Rx*Math.cos(a), capBot+Ry*Math.sin(a)]);}
+  pts.push([cx-Rx, capTop]);
+  for(let k=1;k<=N/4;k++){const a=(k/(N/4))*Math.PI/2; pts.push([cx-Rx*Math.cos(a), capTop-Ry*Math.sin(a)]);}
+  const cum=[0]; for(let k=1;k<pts.length;k++){cum.push(cum[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]));}
+  return {w,h,landscape,A,B,rr,railEnd,Ltot,cx,capTop,capBot,pts,cum,P:cum[cum.length-1]};
+}
+function _stadiumPoint(g,s){
+  s=((s%g.P)+g.P)%g.P; let k=1; while(k<g.cum.length-1 && g.cum[k]<s) k++;
+  const t=(s-g.cum[k-1])/((g.cum[k]-g.cum[k-1])||1);
+  const x=g.pts[k-1][0]+(g.pts[k][0]-g.pts[k-1][0])*t, y=g.pts[k-1][1]+(g.pts[k][1]-g.pts[k-1][1])*t;
+  return g.landscape ? {px:y,py:x} : {px:x,py:y}; // בלרוחב מחליפים צירים
+}
 function getSeatXY(i,count){
+  if(getTableStyle()==='stadium' && _stadium){
+    const p=_stadiumPoint(_stadium, i*_stadium.P/Math.max(count,1));
+    return {x:p.px/_stadium.w*100, y:p.py/_stadium.h*100};
+  }
+  return _getSeatXY_ellipse(i,count);
+}
+function _getSeatXY_ellipse(i,count){
   const gapDeg = count<=4 ? 50 : count<=6 ? 40 : count<=7 ? 32 : 22;
   let rx = count>=8 ? 42 : 36;
   let ry = count>=8 ? 46 : 40;
@@ -495,5 +542,6 @@ function getSeatXY(i,count){
   return{x:50+rx*Math.cos(angle), y:50+ry*Math.sin(angle)};
 }
 function getDealerSeatXY(){
+  if(getTableStyle()==='stadium') return _tableLandscape ? {x:50+14, y:50+18} : {x:50, y:50+17};
   return _tableLandscape ? {x:50, y:50+36} : {x:50+36, y:50};
 }
