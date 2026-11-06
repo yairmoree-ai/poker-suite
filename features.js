@@ -392,6 +392,8 @@ function toggleSettings(){
   loadGSUrl();
   const rebuyInp = document.getElementById('rebuy-default-inp');
   if(rebuyInp) rebuyInp.value = S.defaultRebuyAmount||50000;
+  const logBtn = document.getElementById('btn-log');
+  if(logBtn) logBtn.style.display = isSuperAdmin() ? 'block' : 'none';
   const usersBtn = document.getElementById('btn-users-mgmt');
   if(usersBtn) usersBtn.style.display = (currentUser?.role==='superadmin')?'block':'none';
 
@@ -1142,4 +1144,73 @@ function showPlayerDetail(encodedName){
   // שהצ'יפ הנבחר יישאר גלוי בכל מעבר.
   const selectedChip = document.getElementById('player-switcher-selected');
   if(selectedChip) selectedChip.scrollIntoView({inline:'center', block:'nearest'});
+}
+
+
+// ===== Log כניסות ופעילות (Super Admin) =====
+// הנתונים נשמרים ב-Worker (KV, 180 יום). כאן רק תצוגה: GET /logs. כל שדה מוצג מוּבְרַח (esc) כי שם המשתמש בניסיון כניסה הוא קלט חופשי של זר.
+let _logState = {items:[], cursor:null, filter:'all', loading:false};
+const _LOG_LABELS = {'login':'כניסה','verify':'חידוש סשן','create-user':'יצירת משתמש','update-sheets-url':'עדכון Sheets','change-password':'שינוי סיסמה','reset-password':'איפוס סיסמה','users-list':'רשימת משתמשים','view-logs':'צפייה בלוג','viewer-lookup':'כניסת צופה','setup-admin':'הגדרת מנהל ראשון','analyze-hand':'ניתוח AI','verify-superadmin':'אימות Super Admin'};
+function _logEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function closeLogViewer(){ document.getElementById('log-overlay')?.remove(); }
+async function openLogViewer(){
+  if(!isSuperAdmin()){ notify('נדרש Super Admin'); return; }
+  const sb=document.getElementById('settings-box'); if(sb) sb.style.display='none';
+  closeLogViewer();
+  _logState={items:[], cursor:null, filter:'all', loading:false};
+  const ov=document.createElement('div');
+  ov.id='log-overlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);overflow-y:auto;direction:rtl';
+  ov.onclick=e=>{ if(e.target===ov) closeLogViewer(); };
+  ov.innerHTML='<div style="max-width:430px;margin:16px auto;background:#14130f;border:1px solid rgba(201,164,92,0.3);border-radius:16px;padding:14px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="font-size:15px;font-weight:800;color:#c9a45c">📋 Log</span>'+
+    '<span><button onclick="loadLogs(true)" style="background:none;border:1px solid rgba(255,255,255,0.15);color:#a39a88;border-radius:7px;padding:3px 9px;font-size:11px;cursor:pointer;margin-left:6px">↻ רענן</button>'+
+    '<button onclick="closeLogViewer()" style="background:none;border:none;color:#8a8799;font-size:20px;cursor:pointer">✕</button></span></div>'+
+    '<div id="log-filters" style="display:flex;gap:6px;margin-bottom:10px"></div>'+
+    '<div id="log-list" style="font-size:11px;color:#a39a88">טוען...</div>'+
+    '<button id="log-more" onclick="loadLogs(false)" style="display:none;width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#a39a88;font-size:12px;cursor:pointer">טען עוד</button></div>';
+  document.body.appendChild(ov);
+  await loadLogs(true);
+}
+async function loadLogs(reset){
+  if(_logState.loading) return;
+  _logState.loading=true;
+  if(reset){ _logState.items=[]; _logState.cursor=null; }
+  const token=currentUser?.token||localStorage.getItem('auth_token')||'';
+  try{
+    const resp=await fetch(AUTH_WORKER_URL+'/logs?limit=100'+(_logState.cursor?'&cursor='+encodeURIComponent(_logState.cursor):''),{headers:{'Authorization':'Bearer '+token}});
+    const data=await resp.json();
+    if(!data.ok){ const l=document.getElementById('log-list'); if(l) l.innerHTML='<div style="color:#e07b6a">'+_logEsc(data.error||'שגיאה')+'</div>'; _logState.loading=false; return; }
+    _logState.items=_logState.items.concat(data.logs||[]);
+    _logState.cursor=data.cursor||null;
+  }catch(e){
+    const l=document.getElementById('log-list'); if(l) l.innerHTML='<div style="color:#e07b6a">שגיאה: '+_logEsc(e.message)+'</div>';
+    _logState.loading=false; return;
+  }
+  _logState.loading=false;
+  renderLogs();
+}
+function setLogFilter(f){ _logState.filter=f; renderLogs(); }
+function renderLogs(){
+  const list=document.getElementById('log-list'); if(!list) return;
+  const fl=document.getElementById('log-filters');
+  const f=_logState.filter;
+  if(fl){
+    const chip=(k,t)=>'<button onclick="setLogFilter(\''+k+'\')" style="flex:1;padding:6px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid '+(f===k?'#c9a45c':'rgba(255,255,255,0.15)')+';background:'+(f===k?'rgba(201,164,92,0.15)':'transparent')+';color:'+(f===k?'#c9a45c':'#a39a88')+'">'+t+'</button>';
+    fl.innerHTML=chip('all','הכול')+chip('fail','כשלונות ✗')+chip('login','כניסות');
+  }
+  const rows=_logState.items.filter(e=>f==='all'||(f==='fail'&&!e.ok)||(f==='login'&&e.event==='login'));
+  if(!rows.length){ list.innerHTML='<div style="padding:14px;text-align:center">אין רשומות</div>'; }
+  else list.innerHTML=rows.map(e=>{
+    const t=new Date(e.ts).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const col=e.ok?'#6bb08a':'#e07b6a';
+    const loc=[e.city,e.country].filter(Boolean).join(', ');
+    return '<div style="padding:8px;background:#0d0c09;border-radius:8px;margin-bottom:5px;border-right:3px solid '+col+'">'+
+      '<div style="display:flex;justify-content:space-between;gap:6px"><b style="color:#f1ebdd;font-size:12px">'+(e.ok?'✓ ':'✗ ')+_logEsc(_LOG_LABELS[e.event]||e.event)+(e.username?' · <bdi dir="ltr">@'+_logEsc(e.username)+'</bdi>':'')+'</b><span style="direction:ltr;white-space:nowrap">'+_logEsc(t)+'</span></div>'+
+      (e.detail?'<div style="color:'+col+'">'+_logEsc(e.detail)+'</div>':'')+
+      '<div style="direction:ltr;text-align:left;word-break:break-all;color:#6f6a5c">'+_logEsc(e.ip)+(loc?' · '+_logEsc(loc):'')+'</div>'+
+      (e.ua?'<div style="direction:ltr;text-align:left;word-break:break-all;color:#55513f;font-size:10px">'+_logEsc(e.ua)+'</div>':'')+
+      '</div>';
+  }).join('');
+  const more=document.getElementById('log-more'); if(more) more.style.display=_logState.cursor?'block':'none';
 }
