@@ -74,6 +74,9 @@ input,select,textarea{font-family:inherit}
 #seats-container{position:absolute;inset:0;z-index:10;pointer-events:none;overflow:visible}
 #bet-chips-container{position:absolute;inset:0;z-index:15;pointer-events:none;overflow:visible}
 .seat-el{position:absolute;transform:translate(-50%,-50%);z-index:10;pointer-events:auto;transition:transform .1s;overflow:visible}
+/* לחיצה ארוכה על מושב פותחת HUD — בלי בחירת טקסט / תפריט מערכת (שדות קלט נשארים ניתנים לעריכה) */
+.seat-el{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.seat-el input,.seat-el textarea{-webkit-user-select:text;user-select:text}
 /* Lovable-inspired seat */
 /* Lovable Seat.tsx style */
 .seat-btn{
