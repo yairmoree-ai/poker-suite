@@ -1150,7 +1150,7 @@ function showPlayerDetail(encodedName){
 // ===== Log כניסות ופעילות (Super Admin) =====
 // הנתונים נשמרים ב-Worker (KV, 180 יום). כאן רק תצוגה: GET /logs. כל שדה מוצג מוּבְרַח (esc) כי שם המשתמש בניסיון כניסה הוא קלט חופשי של זר.
 let _logState = {items:[], cursor:null, filter:'all', loading:false};
-const _LOG_LABELS = {'hand-saved':'יד נשמרה','hand-deleted':'יד נמחקה','tourn-saved':'טורניר נשמר','tourn-reset':'איפוס טורניר','tourn-deleted':'טורניר נמחק','tourn-renamed':'שם טורניר שונה','tourn-edited':'סדר סיום עודכן','pt-export':'ייצוא PT','login':'כניסה','verify':'חידוש סשן','create-user':'יצירת משתמש','update-sheets-url':'עדכון Sheets','change-password':'שינוי סיסמה','reset-password':'איפוס סיסמה','users-list':'רשימת משתמשים','view-logs':'צפייה בלוג','viewer-lookup':'כניסת צופה','setup-admin':'הגדרת מנהל ראשון','analyze-hand':'ניתוח AI','verify-superadmin':'אימות Super Admin'};
+const _LOG_LABELS = {'hand-saved':'יד נשמרה','hand-deleted':'יד נמחקה','tourn-saved':'טורניר נשמר','tourn-reset':'איפוס טורניר','tourn-deleted':'טורניר נמחק','tourn-renamed':'שם טורניר שונה','tourn-edited':'סדר סיום עודכן','pt-export':'ייצוא PT','rebuy-after-ko':'Rebuy אחרי הדחה','login':'כניסה','verify':'חידוש סשן','create-user':'יצירת משתמש','update-sheets-url':'עדכון Sheets','change-password':'שינוי סיסמה','reset-password':'איפוס סיסמה','users-list':'רשימת משתמשים','view-logs':'צפייה בלוג','viewer-lookup':'כניסת צופה','setup-admin':'הגדרת מנהל ראשון','analyze-hand':'ניתוח AI','verify-superadmin':'אימות Super Admin'};
 function _logEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function closeLogViewer(){ document.getElementById('log-overlay')?.remove(); }
 async function openLogViewer(){
@@ -1218,7 +1218,7 @@ function renderLogs(){
 
 // ===== דיווח פעילות (ידיים/טורנירים) ל-Log =====
 // נשלח ל-Worker (POST /log-event) עם ה-token של המנהל — הזהות נקבעת בשרת. אם אין חיבור/כשל — מתעלמים בשקט (לא משפיע על הפעולה).
-const _LOG_ACTIVITY = new Set(['hand-saved','hand-deleted','tourn-saved','tourn-reset','tourn-deleted','tourn-renamed','tourn-edited','pt-export']);
+const _LOG_ACTIVITY = new Set(['hand-saved','hand-deleted','tourn-saved','tourn-reset','tourn-deleted','tourn-renamed','tourn-edited','pt-export','rebuy-after-ko']);
 function logActivity(event, detail){
   try{
     if(typeof isViewer==='function' && isViewer()) return;

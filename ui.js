@@ -2474,7 +2474,11 @@ function addRebuyChecked(pid){
   if(isViewer()){ notify('צופה בלבד'); return; }
   const b = S.buyins[pid];
   if(!b || !(b.buyin>0)){ notify('אפשר להוסיף Rebuy רק לשחקן שביצע BuyIn'); return; }
-  if(S.koOrder.includes(pid)){ notify('לא ניתן להוסיף Rebuy לשחקן שהודח — בטל קודם את ה-KO'); return; }
+  if(S.koOrder.includes(pid)){
+    // תיקון בדיעבד: שחקן שכבר הודח (למשל נגמר המשחק ונתגלה שחסר לו Rebuy). מקום ההדחה לא משתנה — רק מספר ה-Rebuy.
+    showConfirmDialog(`להוסיף Rebuy ל${_plName(pid)}?`, 'השחקן כבר הודח — זהו תיקון בדיעבד. מקום ההדחה לא ישתנה, רק מספר ה-Rebuy וקופת הפרסים.', 'הוסף Rebuy', ()=>{ logActivity('rebuy-after-ko', _plName(pid)); doRebuy(pid,1); });
+    return;
+  }
   doRebuy(pid,1);
 }
 
@@ -2658,7 +2662,7 @@ function renderPlayerList(){
         ${!b.buyin
           ?`<button ${pb('rgba(143,184,164,0.6)','#8fb8a4','1.6')} onclick="doBuyin('${p.id}')">BuyIn</button>`
           :`<button ${pb('rgba(255,255,255,0.18)','#a39a88','1.6','font-size:12px')} onclick="cancelBuyinChecked('${p.id}')">ביטול BuyIn</button>`}
-        <button ${canRebuy?pb('rgba(201,164,92,0.5)','#e2c27d','1'):pb('rgba(255,255,255,0.12)','#5f5a50','1')} onclick="addRebuyChecked('${p.id}')" ${canRebuy?'':'title="Rebuy רק לשחקן פעיל (BuyIn, לא הודח)"'}>+R</button>
+        <button ${canRebuy?pb('rgba(201,164,92,0.5)','#e2c27d','1'):(isKO&&b.buyin>0?pb('rgba(201,164,92,0.3)','#a39a88','1'):pb('rgba(255,255,255,0.12)','#5f5a50','1'))} onclick="addRebuyChecked('${p.id}')" ${isKO&&b.buyin>0?'title="תיקון בדיעבד: Rebuy לשחקן שהודח (מקום ההדחה לא משתנה)"':''}>+R</button>
         <button ${pb('rgba(201,164,92,0.3)','#a39a88','1')} onclick="removeRebuyConfirm('${p.id}')">−R</button>
         ${!isKO&&b.buyin>0?`<button ${pb('rgba(208,138,122,0.6)','#d08a7a','1.2')} onclick="koPlayerFromList('${p.id}')">KO</button>`:''}
         ${isKO?`<button ${pb('rgba(201,164,92,0.5)','#e2c27d','1.2')} onclick="unKoConfirm('${p.id}')" title="בטל סימון-הדחה">בטל KO</button>`:''}
